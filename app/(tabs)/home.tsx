@@ -114,22 +114,21 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.gradientBg}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={primaryColor}
-            colors={[primaryColor]}
-          />
-        }
-      >
+    <ScrollView 
+      style={{ flex: 1, backgroundColor: '#ffffff' }}
+      contentContainerStyle={{ paddingBottom: 20 }}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={primaryColor}
+          colors={[primaryColor]}
+        />
+      }
+    >
 
-        <View style={{ backgroundColor: '#ffffff', marginTop: 10 }}>
+        <View style={{ backgroundColor: '#ffffff' }}>
           {/* My Wallet Section */}
           <MyWallet
             isAuthenticated={isAuthenticated}
@@ -258,8 +257,8 @@ export default function HomeScreen() {
           
           {/* End of Products Message */}
           {!loading && !error && products.length > 0 && (
-            <View style={{...styles.endMessageContainer, marginTop: -10}}>
-              <Text style={styles.endMessage}>Products displays reached the end</Text>
+            <View style={{...styles.endMessageContainer}}>
+              <Text style={styles.endMessage}>Products displays reached the end.</Text>
             </View>
           )}
 
@@ -270,9 +269,7 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
-      </ScrollView>
-      
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 
@@ -284,14 +281,15 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     backgroundColor: '#ffffff', // Explicit white background
+    paddingBottom: 20,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 40,
     backgroundColor: '#ffffff', // Explicit white background
     flexGrow: 1,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 20,
     backgroundColor: '#ffffff', // Explicit white background
   },
   sectionHeader: {
