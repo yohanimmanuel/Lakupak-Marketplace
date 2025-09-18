@@ -16,6 +16,7 @@ import { Product } from '../../data/sampleProducts';
 import { MarketplaceProduct } from '../../services/marketplace';
 import { formatCurrency } from '../../utils/currencyUtils';
 import { marketplaceService } from '../../services/marketplace';
+import BuyNowModal from './BuyNowModal';
 // Removed theme color imports - using explicit colors
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -26,7 +27,7 @@ type ProductType = Product | MarketplaceProduct;
 interface ProductMarketplaceProps {
   product: ProductType;
   onAddToCart: (product: ProductType) => void;
-  onBuyNow: (product: ProductType) => void;
+  onBuyNow: (product: ProductType, quantity?: number) => void;
   onChatSeller: () => void;
   onShare: () => void;
   onToggleFavorite: (productId: string) => void;
@@ -76,6 +77,7 @@ export default function ProductMarketplace({
 
   // Card view state
   const [showModal, setShowModal] = useState(false);
+  const [showBuyNowModal, setShowBuyNowModal] = useState(false);
 
   // Get current image for display
   const images = safeGetArray(product.images);
@@ -158,6 +160,15 @@ export default function ProductMarketplace({
 
   const handleCloseModal = () => {
     setShowModal(false);
+  };
+
+  const handleBuyNowPress = () => {
+    setShowBuyNowModal(true);
+  };
+
+  const handleBuyNowConfirm = (product: ProductType, quantity: number) => {
+    onBuyNow(product, quantity);
+    setShowBuyNowModal(false);
   };
 
   const renderStars = (rating: number, size: number = 16) => {
@@ -379,6 +390,14 @@ export default function ProductMarketplace({
             type="full"
           />
         </Modal>
+
+        {/* Buy Now Modal */}
+        <BuyNowModal
+          visible={showBuyNowModal}
+          product={product}
+          onClose={() => setShowBuyNowModal(false)}
+          onConfirm={handleBuyNowConfirm}
+        />
       </>
     );
   };
@@ -817,7 +836,7 @@ export default function ProductMarketplace({
       
       <TouchableOpacity
         style={[styles.buyNowButton, { backgroundColor: '#059c2d' }]}
-        onPress={() => onBuyNow(product)}
+        onPress={handleBuyNowPress}
       >
         <Text style={styles.buyNowText}>
           Buy Now
@@ -848,6 +867,14 @@ export default function ProductMarketplace({
       <View style={styles.stickyActionButtons}>
         {renderActionButtons()}
       </View>
+      
+      {/* Buy Now Modal */}
+      <BuyNowModal
+        visible={showBuyNowModal}
+        product={product}
+        onClose={() => setShowBuyNowModal(false)}
+        onConfirm={handleBuyNowConfirm}
+      />
     </View>
   );
 }

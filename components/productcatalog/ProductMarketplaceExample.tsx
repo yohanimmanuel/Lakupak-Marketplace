@@ -29,22 +29,18 @@ export default function ProductMarketplaceExample() {
   };
 
   const handleAddToCart = (product: Product) => {
-    console.log('Added to cart:', product.name);
     // Implement add to cart logic
   };
 
   const handleBuyNow = (product: Product) => {
-    console.log('Buy now:', product.name);
     // Implement buy now logic
   };
 
   const handleChatSeller = () => {
-    console.log('Chat with seller');
     // Implement chat functionality
   };
 
   const handleShare = () => {
-    console.log('Share product');
     // Implement share functionality
   };
 
@@ -54,7 +50,6 @@ export default function ProductMarketplaceExample() {
         ? prev.filter(id => id !== productId)
         : [...prev, productId]
     );
-    console.log('Toggle favorite:', productId);
   };
 
   const handleRefresh = async () => {
@@ -66,7 +61,6 @@ export default function ProductMarketplaceExample() {
 
   const handleLoadMore = async () => {
     // Implement load more logic
-    console.log('Loading more products...');
   };
 
   if (viewMode === 'detail' && selectedProduct) {

@@ -19,8 +19,10 @@ import ProductMarketplace from '../../components/productcatalog/ProductMarketpla
 
 // Hooks
 import { useAuthStore } from '../../stores/authStore';
+import { useDataStore } from '../../stores/dataStore';
 import { sampleProducts, Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
+import { SkeletonLoader, ProductSkeleton, UserInfoSkeleton } from '../../components/SkeletonLoader';
 // Removed theme color imports - using explicit colors
 
 export default function HomeScreen() {
@@ -34,6 +36,16 @@ export default function HomeScreen() {
   const token = useAuthStore(s => s.token);
   const user = useAuthStore(s => s.user);
   const isAuthenticated = !!token && !!user;
+
+  // Data state from cache
+  const { 
+    products: cachedProducts, 
+    user: cachedUser,
+    isProductsLoading,
+    isUserLoading,
+    loadProductsData,
+    refreshAllData 
+  } = useDataStore();
   
 
   // Scroll tracking for progress bar
@@ -44,38 +56,24 @@ export default function HomeScreen() {
   // State
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [products, setProducts] = useState<MarketplaceProduct[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch products from API
-  const fetchProducts = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await marketplaceService.getProducts({ limit: 20 });
-      setProducts(response.products);
-    } catch (err) {
-      console.error('Failed to fetch products:', err);
-      setError('Failed to load products');
-      // Fallback to sample data if API fails
-      setProducts(sampleProducts as MarketplaceProduct[]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Load products on mount
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+  // Use cached products or fallback to sample data
+  const products = cachedProducts.length > 0 ? cachedProducts : (sampleProducts as MarketplaceProduct[]);
+  const loading = isProductsLoading && cachedProducts.length === 0;
 
   // Handlers
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchProducts();
-    setRefreshing(false);
-  }, [fetchProducts]);
+    setError(null);
+    try {
+      await refreshAllData(token || undefined);
+    } catch (err) {
+      setError('Failed to refresh data');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshAllData, token]);
 
   // Handle category scroll
   const handleCategoryScroll = (event: any) => {
@@ -95,6 +93,16 @@ export default function HomeScreen() {
 
   const handleAddToCart = useCallback((product: Product) => {
     // Add to cart
+  }, []);
+
+  const handleBuyNow = useCallback((product: Product, quantity?: number) => {
+    if (quantity) {
+      // Handle buy now with quantity
+      // TODO: Implement buy now logic
+    } else {
+      // Handle buy now without quantity (full view)
+      // TODO: Implement buy now logic
+    }
   }, []);
 
   const handleToggleFavorite = useCallback((productId: string) => {
@@ -198,10 +206,23 @@ export default function HomeScreen() {
         {/* Featured Products Section */}
         <View style={[styles.section, { backgroundColor: '#ffffff', marginTop: 15, marginBottom: -10 }]}>
           
-          {/* Loading State */}
+          {/* Loading State with Skeleton */}
           {loading && (
-            <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading products...</Text>
+            <View style={styles.productsContainer}>
+              <View style={styles.leftColumn}>
+                {[1, 2, 3].map((i) => (
+                  <View key={i} style={styles.productItem}>
+                    <ProductSkeleton />
+                  </View>
+                ))}
+              </View>
+              <View style={styles.rightColumn}>
+                {[1, 2, 3].map((i) => (
+                  <View key={i} style={styles.productItem}>
+                    <ProductSkeleton />
+                  </View>
+                ))}
+              </View>
             </View>
           )}
 
@@ -209,7 +230,7 @@ export default function HomeScreen() {
           {error && !loading && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity onPress={fetchProducts} style={styles.retryButton}>
+              <TouchableOpacity onPress={handleRefresh} style={styles.retryButton}>
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
@@ -225,7 +246,7 @@ export default function HomeScreen() {
                       product={product}
                       onPress={handleProductPress}
                       onAddToCart={handleAddToCart}
-                      onBuyNow={() => {}}
+                      onBuyNow={handleBuyNow}
                       onChatSeller={() => {}}
                       onShare={() => {}}
                       onToggleFavorite={handleToggleFavorite}
@@ -242,7 +263,7 @@ export default function HomeScreen() {
                       product={product}
                       onPress={handleProductPress}
                       onAddToCart={handleAddToCart}
-                      onBuyNow={() => {}}
+                      onBuyNow={handleBuyNow}
                       onChatSeller={() => {}}
                       onShare={() => {}}
                       onToggleFavorite={handleToggleFavorite}

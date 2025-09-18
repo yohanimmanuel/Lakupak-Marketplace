@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuthStore } from '@/stores/authStore';
+import { useDataStore } from '@/stores/dataStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -47,11 +48,20 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { hydrateFromStorage } = useAuthStore();
+  const { hydrateFromStorage, token } = useAuthStore();
+  const { refreshAllData } = useDataStore();
 
   useEffect(() => {
-    hydrateFromStorage();
-  }, [hydrateFromStorage]);
+    const initializeApp = async () => {
+      // Hydrate auth state first
+      await hydrateFromStorage();
+      
+      // Preload all data immediately
+      await refreshAllData(token);
+    };
+    
+    initializeApp();
+  }, [hydrateFromStorage, refreshAllData, token]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
