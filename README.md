@@ -1,50 +1,96 @@
-# Welcome to your Expo app 👋
+# 🤗 Laku-Marketplace (Mobile) 🤗
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
+Laku-Marketplace is the buyer-facing mobile app for Laku-Laku. It enables verified retailers (warungs, kiosks, small shops) to browse products, place orders, track deliveries, and reorder quickly. Built with React Native (Expo) and connected to the existing Laku-Laku backend (Next.js + Prisma).
 
-## Get started
+## Key Security & Trust Principles
+- Verified buyer access; pricing and offers scoped to approved distributors.
+- Role-based data isolation; buyers see only their own orders and eligible catalogs.
+- Messaging/notifications respect opt-in consent.
 
-1. Install dependencies
+## Why Laku-Marketplace
+- Wholesale-first buyer UX (carton/box, quick reorder, low bandwidth).
+- Tight integration with distributor dashboards (inventory, fulfillment, analytics).
+- Remote-first confirmations and push updates reduce field visits.
 
-   ```bash
-   npm install
-   ```
+## Core Features
+- Browse/search marketplace (category, brand, region filters)
+- Product details with variants and tiered pricing
+- Cart and checkout (COD/bank transfer in MVP)
+- Order tracking with status timeline and notifications
+- Quick reorder from past orders and favorites
+- Account management: addresses, contact info, notifications
 
-2. Start the app
+## Business Model
+- Seller-side commission on transactions
+- Optional value-added services: logistics, financing, promotions
 
-   ```bash
-   npx expo start
-   ```
+## Technical Architecture
+- React Native + Expo Router (TypeScript)
+- State: Zustand; Data: React Query + Axios; Validation: Zod
+- Notifications: Expo Notifications; Secure Storage: Expo Secure Store
+- SVG & Icons: react-native-svg + lucide-react-native
+- Styling: NativeWind (Tailwind for React Native)
 
-In the output, you'll find options to open the app in a
+## Getting Started
+1) Prerequisites: Node LTS, Git, Android Studio/Xcode (optional for emulators)
+2) Install dependencies:
+```
+npm install
+```
+3) Start the app:
+```
+npx expo start
+```
+4) Open on device (Expo Go) or emulator via the Metro menu.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+## Environment
+Define API base URL and feature flags in `app.config.ts` (or via env):
+```
+export default ({ config }) => ({
+  ...config,
+  extra: {
+    API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:3000',
+  },
+});
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Data & APIs
+- Uses existing Laku-Laku endpoints (users, products, orders, buyers)
+- Typed DTOs; Zod validation at request/response boundaries
+- React Query for caching and mutations (cart, checkout, orders)
 
-## Learn more
+## Navigation
+- Expo Router tabs: Home, Catalog, Cart, Orders, Account
+- Stack screens for product details and checkout
 
-To learn more about developing your project with Expo, look at the following resources:
+## State Management
+- `useAuthStore`: token, profile, login/logout
+- `useCartStore`: items, add/update/remove, totals
+- `useFiltersStore`: category/brand/price/region filters
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Styling
+- NativeWind with Tailwind classnames
+- Align colors/typography with Laku-Laku design system
 
-## Join the community
+## Testing
+- Jest + jest-expo for unit tests
+- (Optional) Detox for E2E
 
-Join our community of developers creating universal apps.
+## Build & Release
+- Dev: `npx expo start`
+- Android: `npx expo prebuild && npx expo run:android` or EAS Build
+- iOS (macOS): `npx expo prebuild && npx expo run:ios` or EAS Build
+- OTA: `expo publish` (when using Expo Updates)
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Roadmap
+- Payments SDK (Midtrans/Xendit) beyond COD/transfer
+- Deep links (WhatsApp confirmations, order status)
+- Offline catalog/cart with background sync
+- Multi-language and accessibility
+
+## Contributing
+TypeScript strict (no `any`), consistent fetch/state patterns, and design tokens.
+
+## License
+MIT License

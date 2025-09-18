@@ -1,0 +1,1659 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Dimensions,
+  StyleSheet,
+  Alert,
+  Modal,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Heart, ImageIcon, Share2, X } from 'lucide-react-native';
+import { Product } from '../../data/sampleProducts';
+import { MarketplaceProduct } from '../../services/marketplace';
+import { formatCurrency } from '../../utils/currencyUtils';
+import { marketplaceService } from '../../services/marketplace';
+// Removed theme color imports - using explicit colors
+
+const { width: screenWidth } = Dimensions.get('window');
+const cardWidth = (screenWidth - 48) / 2; // 2 columns with padding
+
+type ProductType = Product | MarketplaceProduct;
+
+interface ProductMarketplaceProps {
+  product: ProductType;
+  onAddToCart: (product: ProductType) => void;
+  onBuyNow: (product: ProductType) => void;
+  onChatSeller: () => void;
+  onShare: () => void;
+  onToggleFavorite: (productId: string) => void;
+  onClose?: () => void;
+  isFavorite?: boolean;
+  type?: 'card' | 'full';
+  onPress?: (product: ProductType) => void;
+}
+
+export default function ProductMarketplace({
+  product,
+  onAddToCart,
+  onBuyNow,
+  onChatSeller,
+  onShare,
+  onToggleFavorite,
+  onClose,
+  isFavorite = false,
+  type = 'full',
+  onPress,
+}: ProductMarketplaceProps) {
+  // Using explicit colors instead of theme colors
+  const primaryColor = '#0a61d7'; // Blue
+  const backgroundColor = '#ffffff'; // White
+  const textColor = '#111827'; // Black
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+
+  // Safe value getters to prevent undefined/null errors
+  const safeGetString = (value: any, fallback: string = ''): string => {
+    if (value === null || value === undefined) return fallback;
+    return String(value);
+  };
+
+  const safeGetNumber = (value: any, fallback: number = 0): number => {
+    if (value === null || value === undefined) return fallback;
+    const num = Number(value);
+    return isNaN(num) ? fallback : num;
+  };
+
+  const safeGetArray = (value: any, fallback: any[] = []): any[] => {
+    if (!Array.isArray(value)) return fallback;
+    return value;
+  };
+
+  // Card view state
+  const [showModal, setShowModal] = useState(false);
+
+  // Get current image for display
+  const images = safeGetArray(product.images);
+  const currentImage = images.length > 0 
+    ? safeGetString(images[currentImageIndex] || images[0])
+    : null;
+
+  // Fetch related products from the same category
+  useEffect(() => {
+    const fetchRelatedProducts = async () => {
+      const category = safeGetString(product.category);
+      if (!category) return;
+      
+      try {
+        setLoadingRelated(true);
+        const response = await marketplaceService.getProducts({
+          category: category,
+          limit: 4
+        });
+        
+        // Filter out the current product
+        const productId = safeGetString(product.id);
+        const filtered = response.products.filter(p => p.id !== productId);
+        setRelatedProducts(filtered.slice(0, 4));
+      } catch (error) {
+        console.error('Failed to fetch related products:', error);
+        setRelatedProducts([]);
+      } finally {
+        setLoadingRelated(false);
+      }
+    };
+
+    fetchRelatedProducts();
+  }, [product.category, product.id]);
+
+  // Handle scroll for image carousel
+  const handleImageScroll = (event: any) => {
+    const { contentOffset, layoutMeasurement } = event.nativeEvent;
+    const index = Math.round(contentOffset.x / layoutMeasurement.width);
+    if (index !== currentImageIndex && index >= 0 && index < images.length) {
+      setCurrentImageIndex(index);
+    }
+  };
+
+  // Use the imported formatCurrency utility
+
+
+  const getStockStatusColor = (status: string) => {
+    switch (status) {
+      case 'In Stock':
+        return '#059c2d';
+      case 'Low Stock':
+        return '#F59E0B';
+      case 'Out of Stock':
+        return '#EF4444';
+      default:
+        return '#6B7280';
+    }
+  };
+
+  // Card view functions
+  const nextImage = () => {
+    if (images.length > 1) {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (images.length > 1) {
+      setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+    }
+  };
+
+  const handleCardPress = () => {
+    setShowModal(true);
+    if (onPress) {
+      onPress(product);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+  };
+
+  const renderStars = (rating: number, size: number = 16) => {
+    const safeRating = safeGetNumber(rating);
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <Ionicons
+          key={i}
+          name={i <= safeRating ? 'star' : 'star-outline'}
+          size={size}
+          color="#FCD34D"
+          style={{ marginRight: 2 }}
+        />
+      );
+    }
+    return <View style={{ flexDirection: 'row' }}>{stars}</View>;
+  };
+
+  // Card view rendering functions
+  const renderCardImageCarousel = () => {
+    if (images.length === 0) {
+      return (
+        <View style={styles.cardImagePlaceholder}>
+          <Ionicons name="image-outline" size={40} color="#9CA3AF" />
+        </View>
+      );
+    }
+
+    if (images.length === 1) {
+      return <Image source={{ uri: safeGetString(images[0]) }} style={styles.cardProductImage} />;
+    }
+
+    const currentImage = safeGetString(images[currentImageIndex] || images[0]);
+    
+    return (
+      <View style={styles.cardCarouselContainer}>
+        <Image 
+          source={{ uri: currentImage }} 
+          style={styles.cardProductImage} 
+        />
+        
+        {/* Navigation arrows */}
+        <TouchableOpacity style={styles.cardCarouselArrowLeft} onPress={prevImage}>
+          <Ionicons name="chevron-back" size={20} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.cardCarouselArrowRight} onPress={nextImage}>
+          <Ionicons name="chevron-forward" size={20} color="white" />
+        </TouchableOpacity>
+        
+        {/* Dots indicator */}
+        <View style={styles.cardDotsContainer}>
+          {images.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.cardDot,
+                { backgroundColor: index === currentImageIndex ? 'white' : 'rgba(255,255,255,0.5)' }
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderCardDiscountTag = () => {
+    const discount = safeGetNumber(product.discount);
+    if (discount <= 0) return null;
+    
+    return (
+      <View style={styles.cardDiscountTag}>
+        <Text style={styles.cardDiscountTagText}>-{discount}%</Text>
+        {safeGetString(product.brand) && (
+          <Text style={styles.cardBrandTagText}>{safeGetString(product.brand)}</Text>
+        )}
+      </View>
+    );
+  };
+
+  const renderCardPromoBadge = () => {
+    const badges = safeGetArray(product.badges);
+    if (badges.length === 0) return null;
+    
+    return (
+      <View style={styles.cardPromoBadge}>
+        <Text style={styles.cardPromoBadgeText}>9.9</Text>
+        <View style={styles.cardPromoTextContainer}>
+          {badges.map((badge, index) => (
+            <Text key={index} style={styles.cardPromoText}>
+              {safeGetString(badge).toUpperCase()}
+            </Text>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
+  const renderCardPreferredTag = () => {
+    if (!Boolean(product.isPreferred)) return null;
+    
+    return (
+      <View style={styles.cardPreferredTag}>
+        <Text style={styles.cardPreferredText}>Preferred</Text>
+      </View>
+    );
+  };
+
+  const renderCardView = () => {
+    return (
+      <>
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor }]}
+          onPress={handleCardPress}
+          activeOpacity={0.8}
+        >
+          {/* Image Container */}
+          <View style={styles.cardImageContainer}>
+            {renderCardImageCarousel()}
+            
+            {/* Discount Tag */}
+            {renderCardDiscountTag()}
+            
+            {/* Favorite Button */}
+            {onToggleFavorite && (
+              <TouchableOpacity
+                style={styles.cardFavoriteButton}
+                onPress={() => onToggleFavorite(product.id)}
+              >
+                <Ionicons
+                  name={isFavorite ? 'heart' : 'heart-outline'}
+                  size={16}
+                  color={isFavorite ? '#EF4444' : '#9CA3AF'}
+                />
+              </TouchableOpacity>
+            )}
+            
+            {/* Promo Badge */}
+            {renderCardPromoBadge()}
+            
+            {/* Preferred Tag */}
+            {renderCardPreferredTag()}
+          </View>
+
+          {/* Product Info */}
+          <View style={styles.cardProductInfo}>
+            {/* Product Name */}
+            <Text style={[styles.cardProductName, { color: textColor }]} numberOfLines={2}>
+              {safeGetString(product.name, 'Unknown Product')}
+            </Text>
+
+            {/* Rating */}
+            <View style={styles.cardRatingContainer}>
+              {renderStars(safeGetNumber(product.rating), 12)}
+              <Text style={styles.cardRatingText}>{safeGetNumber(product.rating)}</Text>
+            </View>
+
+            {/* Price */}
+            <View style={styles.cardPriceContainer}>
+              {safeGetNumber(product.originalPrice) > safeGetNumber(product.price) && (
+                <Text style={styles.cardOriginalPrice}>
+                  {formatCurrency(safeGetNumber(product.originalPrice))}
+                </Text>
+              )}
+              <Text style={[styles.cardPrice, { color: primaryColor }]}>
+                {formatCurrency(safeGetNumber(product.price))}
+              </Text>
+            </View>
+
+            {/* Sales Info */}
+            <Text style={styles.cardSalesInfo}>{safeGetString(product.soldCount, '0')} sold</Text>
+
+            {/* Stock Status */}
+            <Text
+              style={[
+                styles.cardStockStatus,
+                { color: getStockStatusColor(safeGetString(product.stockStatus, 'In Stock')) },
+              ]}
+            >
+              {safeGetString(product.stockStatus, 'In Stock')}
+            </Text>
+
+            {/* Shipping Info */}
+            {product.shippingInfo && (
+              <View style={styles.cardShippingInfo}>
+                <Text style={styles.cardShippingLocation}>{product.shippingInfo.location}</Text>
+              </View>
+            )}
+
+            {/* Add to Cart Button */}
+            {onAddToCart && (
+              <TouchableOpacity
+                style={[styles.cardAddToCartButton, { backgroundColor: primaryColor }]}
+                onPress={() => onAddToCart(product)}
+              >
+                <Ionicons name="cart-outline" size={14} color="white" />
+                <Text style={styles.cardAddToCartText}>Add</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Product Marketplace Modal */}
+        <Modal
+          visible={showModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={handleCloseModal}
+        >
+          <ProductMarketplace
+            product={product}
+            onAddToCart={onAddToCart || (() => {})}
+            onBuyNow={onBuyNow}
+            onChatSeller={onChatSeller}
+            onShare={onShare}
+            onToggleFavorite={onToggleFavorite || (() => {})}
+            onClose={handleCloseModal}
+            isFavorite={isFavorite}
+            type="full"
+          />
+        </Modal>
+      </>
+    );
+  };
+
+  const renderImageCarousel = () => {
+    return (
+      <View style={styles.imageContainer}>
+        
+        {/* Action Buttons */}
+          <View style={styles.imageActions}>
+            <TouchableOpacity style={styles.actionButton} onPress={onClose}>
+              <X size={20} color="#374151" />
+            </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => onToggleFavorite(product.id)}
+          >
+            <Heart
+              fill={isFavorite ? '#EF4444' : 'none'}
+              size={20}
+              color={isFavorite ? '#EF4444' : '#374151'}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={onShare}>
+            <Share2 size={20} color="#374151" />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Product Image Carousel with ScrollView */}
+        {images.length > 1 ? (
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleImageScroll}
+            scrollEventThrottle={16}
+            style={styles.imageScrollView}
+          >
+            {images.map((image, index) => (
+              <View key={index} style={styles.imageSlide}>
+                <Image source={{ uri: safeGetString(image) }} style={styles.productImage} />
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={styles.imageTouchArea}>
+            {currentImage ? (
+              <Image source={{ uri: currentImage }} style={styles.productImage} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <ImageIcon size={60} color="#9CA3AF" />
+                <Text style={styles.noImageText}>No Image Available</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Image Counter - Show current/total */}
+        {images.length > 1 && (
+          <View style={styles.imageCounter}>
+            <Text style={styles.imageCounterText}>
+              {currentImageIndex + 1}/{images.length}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const renderProductInfo = () => (
+    <View style={styles.section}>
+      {/* Product Name & Badge */}
+      <View style={styles.productHeader}>
+        <Text style={[styles.productName, { color: textColor }]}>
+          {safeGetString(product.name, 'Unknown Product')}
+        </Text>
+        <View style={styles.bestSellerBadge}>
+          <Text style={styles.badgeText}>BEST SELLER</Text>
+        </View>
+      </View>
+
+      {/* Rating & Sales */}
+      <View style={styles.ratingContainer}>
+        <View style={styles.ratingInfo}>
+          {renderStars(safeGetNumber(product.rating), 16)}
+          <Text style={[styles.ratingText, { color: textColor }]}>
+            {safeGetNumber(product.rating)}
+          </Text>
+        </View>
+        <Text style={styles.reviewCount}>({safeGetNumber(product.reviewCount)} reviews)</Text>
+        <Text style={styles.separator}>•</Text>
+        <Text style={styles.soldCount}>Sold {safeGetString(product.soldCount, '0')}</Text>
+      </View>
+
+      {/* Pricing */}
+      <View style={styles.pricingContainer}>
+        <View style={styles.priceRow}>
+          <Text style={[styles.currentPrice, { color: primaryColor }]}>
+            {formatCurrency(safeGetNumber(product.price))}
+          </Text>
+          {safeGetNumber(product.originalPrice) > 0 && (
+            <>
+              <Text style={styles.originalPrice}>
+                {formatCurrency(safeGetNumber(product.originalPrice))}
+              </Text>
+              {safeGetNumber(product.discount) > 0 && (
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountText}>-{safeGetNumber(product.discount)}%</Text>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+        <Text style={styles.shippingNote}>
+          Free shipping for orders above {formatCurrency(500000)}
+        </Text>
+      </View>
+
+      {/* Stock Status */}
+      <View style={styles.stockContainer}>
+        <Text style={styles.stockLabel}>Stock:</Text>
+        <Text
+          style={[
+            styles.stockStatus,
+            { color: getStockStatusColor(safeGetString(product.stockStatus, 'In Stock')) },
+          ]}
+        >
+          {safeGetString(product.stockStatus, 'In Stock')} ({safeGetNumber(product.stock)} units)
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderSellerInfo = () => (
+    <View style={[styles.section, styles.sellerSection]}>
+      <Text style={[styles.sectionTitle, { color: textColor }]}>
+        Seller Information
+      </Text>
+      
+      <View style={styles.sellerHeader}>
+        <View style={styles.sellerAvatar}>
+          <Text style={styles.avatarText}>
+            {safeGetString(product.seller?.name, 'U').charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.sellerInfo}>
+          <View style={styles.sellerNameRow}>
+            <Text style={[styles.sellerName, { color: textColor }]}>
+              {safeGetString(product.seller?.name, 'Unknown Company')}
+            </Text>
+            {Boolean(product.seller?.isOfficial) && (
+              <View style={styles.officialBadge}>
+                <Text style={styles.officialText}>OFFICIAL STORE</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.sellerRating}>
+            {renderStars(safeGetNumber(product.seller?.rating), 12)}
+            <Text style={styles.sellerRatingText}>
+              {safeGetNumber(product.seller?.rating)} ({safeGetNumber(product.seller?.reviewCount)}+ ratings)
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderYouMayAlsoLike = () => {
+    if (loadingRelated) {
+      return (
+        <View style={[styles.section, styles.youMayAlsoLikeSection]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>
+              You may also like
+            </Text>
+          </View>
+          <Text style={[styles.sectionSubtitle, { color: '#6B7280' }]}>
+            More products in {safeGetString(product.category, 'General')}
+          </Text>
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading related products...</Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (relatedProducts.length === 0) {
+      return null; // Don't show section if no related products
+    }
+
+    return (
+      <View style={[styles.section, styles.youMayAlsoLikeSection]}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>
+            You may also like
+          </Text>
+        </View>
+        <Text style={[styles.sectionSubtitle, { color: '#6B7280' }]}>
+          More products in {safeGetString(product.category, 'General')}
+        </Text>
+        
+        {/* Product Grid Layout like home.tsx */}
+        <View style={styles.relatedProductsGrid}>
+          <View style={styles.leftColumn}>
+            {relatedProducts.filter((_, index) => index % 2 === 0).map((relatedProduct) => (
+              <View key={relatedProduct.id} style={styles.relatedProductItem}>
+                <ProductMarketplace
+                  product={relatedProduct}
+                  onPress={() => {}}
+                  onAddToCart={onAddToCart}
+                  onBuyNow={onBuyNow}
+                  onChatSeller={onChatSeller}
+                  onShare={onShare}
+                  onToggleFavorite={onToggleFavorite}
+                  isFavorite={false}
+                  type="card"
+                />
+              </View>
+            ))}
+          </View>
+          <View style={styles.rightColumn}>
+            {relatedProducts.filter((_, index) => index % 2 === 1).map((relatedProduct) => (
+              <View key={relatedProduct.id} style={styles.relatedProductItem}>
+                <ProductMarketplace
+                  product={relatedProduct}
+                  onPress={() => {}}
+                  onAddToCart={onAddToCart}
+                  onBuyNow={onBuyNow}
+                  onChatSeller={onChatSeller}
+                  onShare={onShare}
+                  onToggleFavorite={onToggleFavorite}
+                  isFavorite={false}
+                  type="card"
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderProductDetails = () => (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: textColor }]}>
+        Product Details
+      </Text>
+      
+      <View style={styles.detailsList}>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Brand:</Text>
+          <Text style={[styles.detailValue, { color: textColor }]}>
+            {safeGetString(product.brand, 'Unknown')}
+          </Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Category:</Text>
+          <Text style={[styles.detailValue, { color: textColor }]}>
+            {safeGetString(product.category, 'General')}
+          </Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Package Type:</Text>
+          <Text style={[styles.detailValue, { color: textColor }]}>
+            {safeGetString(product.packageType, 'Piece')}
+          </Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Qty of Pieces per Package:</Text>
+          <Text style={[styles.detailValue, { color: textColor }]}>
+            {safeGetNumber(product.piecesPerPackage, 1)} pieces
+          </Text>
+        </View>
+        <View style={styles.detailItem}>
+          <Text style={styles.detailLabel}>Price per Package:</Text>
+          <Text style={[styles.detailValue, { color: textColor }]}>
+            {formatCurrency(safeGetNumber(product.price) * safeGetNumber(product.piecesPerPackage, 1))}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.descriptionContainer}>
+        <Text style={[styles.descriptionTitle, { color: textColor }]}>
+          Description
+        </Text>
+        <Text style={[styles.description, { color: textColor }]}>
+          {safeGetString(product.description, 'No description available')}
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderReviews = () => (
+    <View style={styles.section}>
+      <View style={styles.reviewsHeader}>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>
+          Customer Reviews
+        </Text>
+        {safeGetNumber(product.reviews?.totalReviews) > 0 && (
+          <TouchableOpacity>
+            <Text style={[styles.viewAllText, { color: primaryColor }]}>
+              View All ({safeGetNumber(product.reviews?.totalReviews)})
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {safeGetNumber(product.reviews?.totalReviews) === 0 ? (
+        <View style={styles.noReviewsContainer}>
+          <Ionicons name="chatbubbles-outline" size={48} color="#9CA3AF" />
+          <Text style={[styles.noReviewsTitle, { color: textColor }]}>
+            No Reviews Yet
+          </Text>
+          <Text style={styles.noReviewsSubtitle}>
+            Be the first to review this product!
+          </Text>
+          <TouchableOpacity style={[styles.submitReviewButton, { backgroundColor: primaryColor }]}>
+            <Ionicons name="star-outline" size={16} color="white" />
+            <Text style={styles.submitReviewText}>Submit Review</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <View style={styles.ratingBreakdown}>
+            <View style={styles.overallRating}>
+              <Text style={[styles.overallRatingNumber, { color: textColor }]}>
+                {safeGetNumber(product.reviews?.overallRating)}
+              </Text>
+              {renderStars(safeGetNumber(product.reviews?.overallRating), 16)}
+              <Text style={styles.totalReviews}>
+                {safeGetNumber(product.reviews?.totalReviews)} reviews
+              </Text>
+            </View>
+            
+            <View style={styles.ratingBars}>
+              {[5, 4, 3, 2, 1].map((rating) => (
+                <View key={rating} style={styles.ratingBar}>
+                  <Text style={styles.ratingLabel}>{rating}⭐</Text>
+                  <View style={styles.barContainer}>
+                    <View
+                      style={[
+                        styles.bar,
+                        { width: `${safeGetNumber(product.reviews?.totalReviews) > 0 ? (safeGetNumber(product.reviews?.breakdown?.[rating]) / safeGetNumber(product.reviews?.totalReviews, 1)) * 100 : 0}%` }
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.barCount}>
+                    {safeGetNumber(product.reviews?.breakdown?.[rating])}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {product.reviews?.sampleReview && (
+            <View style={styles.sampleReview}>
+              <View style={styles.reviewerAvatar}>
+                <Text style={styles.reviewerAvatarText}>
+                  {safeGetString(product.reviews.sampleReview.user, 'U').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.reviewContent}>
+                <View style={styles.reviewHeader}>
+                  {renderStars(safeGetNumber(product.reviews.sampleReview.rating), 12)}
+                  <Text style={styles.reviewerName}>
+                    {safeGetString(product.reviews.sampleReview.user, 'Anonymous')}
+                  </Text>
+                  <Text style={styles.reviewDate}>
+                    {safeGetString(product.reviews.sampleReview.date, 'Recently')}
+                  </Text>
+                </View>
+                <Text style={[styles.reviewComment, { color: textColor }]}>
+                  "{safeGetString(product.reviews.sampleReview.comment, 'No comment')}"
+                </Text>
+              </View>
+            </View>
+          )}
+        </>
+      )}
+    </View>
+  );
+
+  const renderAssurance = () => (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: textColor }]}>
+        Product Assurance
+      </Text>
+      
+      <View style={styles.assuranceGrid}>
+        {Boolean(product.assurance?.halalCertified) && (
+          <View style={[styles.assuranceItem, styles.halalAssurance]}>
+            <Ionicons name="checkmark-circle" size={16} color="#059c2d" />
+            <Text style={styles.assuranceText}>Halal Certified</Text>
+          </View>
+        )}
+        {Boolean(product.assurance?.bpomApproved) && (
+          <View style={[styles.assuranceItem, styles.bpomAssurance]}>
+            <Ionicons name="shield-checkmark" size={16} color="#3B82F6" />
+            <Text style={styles.assuranceText}>BPOM Approved</Text>
+          </View>
+        )}
+        <View style={[styles.assuranceItem, styles.returnAssurance]}>
+          <Ionicons name="lock-closed" size={16} color="#8B5CF6" />
+          <Text style={styles.assuranceText}>
+            {safeGetNumber(product.assurance?.returnPolicyDays, 7)}-Day Return
+          </Text>
+        </View>
+        {Boolean(product.assurance?.originalProduct) && (
+          <View style={[styles.assuranceItem, styles.originalAssurance]}>
+            <Ionicons name="cube" size={16} color="#F59E0B" />
+            <Text style={styles.assuranceText}>Original Product</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderActionButtons = () => (
+    <View style={styles.actionButtonsContainer}>
+      <TouchableOpacity
+        style={styles.chatButton}
+        onPress={onChatSeller}
+      >
+        <Ionicons name="chatbubble-outline" size={20} color="#111827" />
+        <Text style={styles.chatText}>Chat Now</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        style={[styles.addToCartButton, { backgroundColor: primaryColor }]}
+        onPress={() => onAddToCart(product)}
+      >
+        <Ionicons name="cart-outline" size={20} color="white" />
+        <Text style={styles.addToCartText}>Add to Cart</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        style={[styles.buyNowButton, { backgroundColor: '#059c2d' }]}
+        onPress={() => onBuyNow(product)}
+      >
+        <Text style={styles.buyNowText}>
+          Buy Now
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Return card view if type is 'card'
+  if (type === 'card') {
+    return renderCardView();
+  }
+
+  // Return full view (default)
+  return (
+    <View style={[styles.container, { backgroundColor }]}>
+      <ScrollView style={styles.scrollContent}>
+        {renderImageCarousel()}
+        {renderProductInfo()}
+        {renderProductDetails()}
+        {renderAssurance()}
+        {renderReviews()}
+        {renderSellerInfo()}
+        {renderYouMayAlsoLike()}
+      </ScrollView>
+      
+      {/* Sticky Action Buttons */}
+      <View style={styles.stickyActionButtons}>
+        {renderActionButtons()}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  // Card view styles
+  card: {
+    width: cardWidth,
+    borderRadius: 8,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    overflow: 'hidden',
+  },
+  cardImageContainer: {
+    position: 'relative',
+    height: 140,
+    backgroundColor: '#F9FAFB',
+  },
+  cardProductImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  cardImagePlaceholder: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  cardCarouselContainer: {
+    position: 'relative',
+    width: '100%',
+  },
+  cardCarouselArrowLeft: {
+    position: 'absolute',
+    left: 8,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardCarouselArrowRight: {
+    position: 'absolute',
+    right: 8,
+    top: '50%',
+    transform: [{ translateY: -10 }],
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardDotsContainer: {
+    position: 'absolute',
+    bottom: 8,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  cardDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  cardDiscountTag: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  cardDiscountTagText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  cardBrandTagText: {
+    color: 'white',
+    fontSize: 8,
+    fontWeight: '600',
+  },
+  cardFavoriteButton: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 24,
+    height: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardPromoBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: '#EF4444',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  cardPromoBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  cardPromoTextContainer: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  cardPromoText: {
+    color: 'white',
+    fontSize: 8,
+    fontWeight: '600',
+  },
+  cardPreferredTag: {
+    position: 'absolute',
+    top: 8,
+    left: '50%',
+    transform: [{ translateX: -25 }],
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  cardPreferredText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  cardProductInfo: {
+    padding: 8,
+  },
+  cardProductName: {
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  cardRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  cardRatingText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  cardPriceContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 2,
+    marginBottom: 2,
+  },
+  cardPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  cardOriginalPrice: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
+  },
+  cardSalesInfo: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  cardStockStatus: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  cardShippingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  cardShippingLocation: {
+    fontSize: 11,
+    color: '#9CA3AF',
+  },
+  cardAddToCartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  cardAddToCartText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  // Full view styles
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+    marginBottom: 50, // Add padding to prevent content from being hidden behind sticky buttons
+  },
+  stickyActionButtons: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingBottom: 8, // Reduced padding for safe area
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  imageContainer: {
+    position: 'relative',
+    height: 250,
+  },
+  imagePlaceholder: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: 250,
+  },
+  productImage: {
+    width: '100%',
+    height: 250,
+    resizeMode: 'cover',
+    zIndex: 2,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 40,
+    height: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 4,
+  },
+  imageActions: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'column',
+    zIndex: 3,
+    gap: 8,
+  },
+  actionButton: {
+    width: 32,
+    height: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  imageCounter: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  imageCounterText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  imageScrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  imageSlide: {
+    width: screenWidth,
+    height: 250,
+  },
+  imageTouchArea: {
+    flex: 1,
+    width: '100%',
+  },
+  noImageText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    marginTop: 8,
+  },
+  section: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  youMayAlsoLikeSection: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderBottomWidth: 0,
+  },
+  sellerSection: {
+    backgroundColor: '#FFFFFF',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  productHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  productName: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+  },
+  bestSellerBadge: {
+    backgroundColor: '#059c2d',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  ratingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  reviewCount: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  separator: {
+    fontSize: 14,
+    color: '#D1D5DB',
+  },
+  soldCount: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  pricingContainer: {
+    marginBottom: 12,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 4,
+  },
+  currentPrice: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  originalPrice: {
+    fontSize: 18,
+    color: '#6B7280',
+    textDecorationLine: 'line-through',
+  },
+  discountBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  discountText: {
+    color: '#DC2626',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  shippingNote: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  stockContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stockLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  stockStatus: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  sellerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  sellerAvatar: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#DBEAFE',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#3B82F6',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  sellerInfo: {
+    flex: 1,
+  },
+  sellerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  sellerName: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  officialBadge: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  officialText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  sellerRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  sellerRatingText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  sellerMetrics: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  metricItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  metricValue: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  shippingOptions: {
+    gap: 8,
+  },
+  shippingOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+  },
+  standardShipping: {
+    backgroundColor: '#ECFDF5',
+  },
+  expressShipping: {
+    backgroundColor: '#EFF6FF',
+  },
+  sameDayShipping: {
+    backgroundColor: '#F3E8FF',
+  },
+  shippingIcon: {
+    marginRight: 8,
+  },
+  shippingName: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  shippingPrice: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  detailsList: {
+    gap: 8,
+    marginBottom: 16,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  descriptionContainer: {
+    marginTop: 8,
+  },
+  descriptionTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  description: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  reviewsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  ratingBreakdown: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 16,
+  },
+  overallRating: {
+    alignItems: 'center',
+  },
+  overallRatingNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  totalReviews: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  ratingBars: {
+    flex: 1,
+    gap: 4,
+  },
+  ratingBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ratingLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    width: 24,
+  },
+  barContainer: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  bar: {
+    height: '100%',
+    backgroundColor: '#FCD34D',
+  },
+  barCount: {
+    fontSize: 12,
+    color: '#6B7280',
+    width: 24,
+    textAlign: 'right',
+  },
+  sampleReview: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  reviewerAvatar: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reviewerAvatarText: {
+    color: '#6B7280',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  reviewContent: {
+    flex: 1,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  reviewerName: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#D1D5DB',
+  },
+  reviewComment: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  noReviewsContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 16,
+  },
+  noReviewsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  noReviewsSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  submitReviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  submitReviewText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  assuranceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  assuranceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 8,
+    borderRadius: 6,
+    flex: 1,
+    minWidth: '45%',
+  },
+  halalAssurance: {
+    backgroundColor: '#ECFDF5',
+  },
+  bpomAssurance: {
+    backgroundColor: '#EFF6FF',
+  },
+  returnAssurance: {
+    backgroundColor: '#F3E8FF',
+  },
+  originalAssurance: {
+    backgroundColor: '#FFFBEB',
+  },
+  assuranceText: {
+    fontSize: 12,
+    color: '#374151',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  chatButton: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingVertical: 5,
+    backgroundColor: '#F3F4F6', // Gray background
+    borderRadius: 8,
+  },
+  chatText: {
+    color: '#111827', // Black text
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  addToCartButton: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  addToCartText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  buyNowButton: {
+    flex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  buyNowText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sectionHeader: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  relatedProductsGrid: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  leftColumn: {
+    flex: 1,
+  },
+  rightColumn: {
+    flex: 1,
+  },
+  relatedProductItem: {
+    marginBottom: 8,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+});

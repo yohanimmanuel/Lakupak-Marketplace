@@ -1,0 +1,239 @@
+// Currency configuration based on server location
+export interface CurrencyConfig {
+  code: string;
+  symbol: string;
+  name: string;
+  locale: string;
+  formatOptions: Intl.NumberFormatOptions;
+}
+
+// Default currency configurations - matches all currencies from regionConfig.ts
+export const CURRENCY_CONFIGS: Record<string, CurrencyConfig> = {
+  'IDR': {
+    code: 'IDR',
+    symbol: 'Rp',
+    name: 'Indonesian Rupiah',
+    locale: 'id-ID',
+    formatOptions: {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }
+  },
+  'USD': {
+    code: 'USD',
+    symbol: '$',
+    name: 'US Dollar',
+    locale: 'en-US',
+    formatOptions: {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  },
+  'SGD': {
+    code: 'SGD',
+    symbol: 'S$',
+    name: 'Singapore Dollar',
+    locale: 'en-SG',
+    formatOptions: {
+      style: 'currency',
+      currency: 'SGD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  },
+  'MYR': {
+    code: 'MYR',
+    symbol: 'RM',
+    name: 'Malaysian Ringgit',
+    locale: 'ms-MY',
+    formatOptions: {
+      style: 'currency',
+      currency: 'MYR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  },
+  'THB': {
+    code: 'THB',
+    symbol: '฿',
+    name: 'Thai Baht',
+    locale: 'th-TH',
+    formatOptions: {
+      style: 'currency',
+      currency: 'THB',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  },
+  'PHP': {
+    code: 'PHP',
+    symbol: '₱',
+    name: 'Philippine Peso',
+    locale: 'en-PH',
+    formatOptions: {
+      style: 'currency',
+      currency: 'PHP',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  },
+  'VND': {
+    code: 'VND',
+    symbol: '₫',
+    name: 'Vietnamese Dong',
+    locale: 'vi-VN',
+    formatOptions: {
+      style: 'currency',
+      currency: 'VND',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }
+  },
+  'JPY': {
+    code: 'JPY',
+    symbol: '¥',
+    name: 'Japanese Yen',
+    locale: 'ja-JP',
+    formatOptions: {
+      style: 'currency',
+      currency: 'JPY',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }
+  },
+  'KRW': {
+    code: 'KRW',
+    symbol: '₩',
+    name: 'South Korean Won',
+    locale: 'ko-KR',
+    formatOptions: {
+      style: 'currency',
+      currency: 'KRW',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }
+  },
+  'AUD': {
+    code: 'AUD',
+    symbol: 'A$',
+    name: 'Australian Dollar',
+    locale: 'en-AU',
+    formatOptions: {
+      style: 'currency',
+      currency: 'AUD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  },
+  'GBP': {
+    code: 'GBP',
+    symbol: '£',
+    name: 'British Pound Sterling',
+    locale: 'en-GB',
+    formatOptions: {
+      style: 'currency',
+      currency: 'GBP',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  },
+  'EUR': {
+    code: 'EUR',
+    symbol: '€',
+    name: 'Euro',
+    locale: 'de-DE',
+    formatOptions: {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  }
+};
+
+// Get currency configuration
+export const getCurrencyConfig = (currencyCode?: string): CurrencyConfig => {
+  const code = currencyCode || 'IDR'; // Default to IDR for Indonesian market
+  return CURRENCY_CONFIGS[code] || CURRENCY_CONFIGS['IDR'];
+};
+
+// Format currency with proper locale
+export const formatCurrencyWithLocale = (amount: number, currencyCode?: string): string => {
+  const config = getCurrencyConfig(currencyCode);
+  
+  try {
+    // For currencies with custom symbols, use custom formatting
+    if (currencyCode === 'SGD' || currencyCode === 'AUD') {
+      return `${config.symbol}${amount.toLocaleString(config.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    
+    // For currencies with 0 decimal places, use custom formatting
+    if (currencyCode === 'IDR' || currencyCode === 'VND' || currencyCode === 'JPY' || currencyCode === 'KRW') {
+      return `${config.symbol}${amount.toLocaleString(config.locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    }
+    
+    // For other currencies, use Intl.NumberFormat
+    return new Intl.NumberFormat(config.locale, config.formatOptions).format(amount);
+  } catch (error) {
+    // Fallback to simple formatting
+    return `${config.symbol} ${amount.toLocaleString(config.locale)}`;
+  }
+};
+
+// Get currency symbol
+export const getCurrencySymbol = (currencyCode?: string): string => {
+  const config = getCurrencyConfig(currencyCode);
+  return config.symbol;
+};
+
+// Validate currency code
+export const isValidCurrency = (currencyCode: string): boolean => {
+  return currencyCode in CURRENCY_CONFIGS;
+};
+
+// Format number according to currency locale (without currency symbol)
+export const formatNumberByCurrency = (value: string | number, currencyCode?: string): string => {
+  const config = getCurrencyConfig(currencyCode);
+  const num = typeof value === 'string' ? parseFloat(value.replace(/[^\d.-]/g, '')) : value;
+  if (isNaN(num)) return '0';
+  
+  try {
+    return num.toLocaleString(config.locale, {
+      minimumFractionDigits: config.formatOptions.minimumFractionDigits,
+      maximumFractionDigits: config.formatOptions.maximumFractionDigits
+    });
+  } catch (error) {
+    return num.toLocaleString(config.locale);
+  }
+};
+
+// Parse formatted number back to number according to currency rules
+export const parseNumberByCurrency = (value: string, currencyCode?: string): number => {
+  const config = getCurrencyConfig(currencyCode);
+  
+  // For IDR (Indonesian), dots are thousands separators, commas are decimals
+  if (config.locale === 'id-ID') {
+    // Remove dots (thousands separators) and replace commas with dots (decimal separators)
+    const cleaned = value.replace(/\./g, '').replace(/,/g, '.');
+    return parseFloat(cleaned) || 0;
+  }
+  
+  // For other currencies, use standard parsing (commas for thousands, dots for decimals)
+  const cleaned = value.replace(/[^\d.-]/g, '');
+  return parseFloat(cleaned) || 0;
+};
+
+// Get placeholder text for price input based on currency
+export const getPricePlaceholder = (currencyCode?: string): string => {
+  const config = getCurrencyConfig(currencyCode);
+  
+  if (config.locale === 'id-ID') {
+    return "e.g., 150.000 or 25,50";
+  }
+  
+  return "e.g., 150,000 or 25.00";
+};
