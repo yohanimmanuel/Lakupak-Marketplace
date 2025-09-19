@@ -5,9 +5,9 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
-import { useColorScheme } from '@/components/useColorScheme';
-import { useAuthStore } from '@/stores/authStore';
-import { useDataStore } from '@/stores/dataStore';
+import { useColorScheme } from './components/useColorScheme';
+import { useAuthStore } from '../stores/authStore';
+import { useDataStore } from '../stores/dataStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -57,7 +57,7 @@ function RootLayoutNav() {
       await hydrateFromStorage();
       
       // Preload all data immediately
-      await refreshAllData(token);
+      await refreshAllData(token || undefined);
     };
     
     initializeApp();
@@ -202,6 +202,27 @@ function RootLayoutNav() {
         <Stack.Screen name="useraccounts/consent/helpcenter" options={{ presentation: 'modal', title: 'Help Center', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
         <Stack.Screen name="useraccounts/consent/security-privacy" options={{ presentation: 'modal', title: 'Security & Privacy', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
         <Stack.Screen name="useraccounts/consent/community-rules" options={{ presentation: 'modal', title: 'Community Rules', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        
+        {/* Checkout Screen */}
+        <Stack.Screen 
+          name="components/productcatalog/checkout" 
+          options={{ 
+            presentation: 'modal',
+            title: 'Checkout',
+            headerStyle: { backgroundColor: '#ffffff' },
+            headerTitleStyle: { color: '#111827' },
+            headerTintColor: '#0a61d7',
+          }} 
+        />
+        
+        {/* Product Modal Screen */}
+        <Stack.Screen 
+          name="product" 
+          options={{ 
+            presentation: 'modal',
+            headerShown: false,
+          }} 
+        />
         
       </Stack>
     </ThemeProvider>

@@ -1,8 +1,10 @@
 // Product Catalog Components
 export { default as ProductMarketplace } from './ProductMarketplace';
-export { default as ProductCard } from './ProductCard';
 export { default as ProductGrid } from './ProductGrid';
+export { default as BuyNowModal } from './BuyNowModal';
 // ProductMarketplaceExample removed - using real data instead
 
-// Re-export types if needed
-export type { default as Product } from './ProductMarketplace';
+// Default export for Expo Router
+export default function ProductCatalogIndex() {
+  return null;
+}

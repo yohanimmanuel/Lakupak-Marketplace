@@ -36,6 +36,13 @@ export interface MarketplaceProduct {
     responseTime: string;
     deliverySpeed: string;
     returnPolicy: string;
+    company?: {
+      name: string;
+      businessAddress?: string;
+      businessPhone?: string;
+      businessEmail?: string;
+      industryType?: string;
+    };
   };
   shipping: {
     standard: { price: number; free: boolean };

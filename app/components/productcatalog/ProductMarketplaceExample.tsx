@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from 'react-native';
 import ProductMarketplace from './ProductMarketplace';
 import ProductGrid from './ProductGrid';
-import Colors from '@/constants/Colors';
+import Colors from '../../../constants/Colors';
 import { useColorScheme } from '../useColorScheme';
 import { useThemeColor } from '../Themed';
-import { sampleProducts, Product } from '../../data/sampleProducts';
+import { sampleProducts, Product } from '../../../data/sampleProducts';
 
 export default function ProductMarketplaceExample() {
   const colorScheme = useColorScheme();

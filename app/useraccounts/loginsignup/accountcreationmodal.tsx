@@ -567,6 +567,7 @@ export default function AccountCreationModal() {
               position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
               backgroundColor: 'rgba(0,0,0,0.35)',
               opacity: backdropAnim,
+              zIndex: 9999,
             }}
           >
             <Pressable style={{ flex: 1 }} onPress={closeCountryPicker} />
@@ -577,6 +578,7 @@ export default function AccountCreationModal() {
               position: 'absolute', left: 0, right: 0, bottom: 0,
               backgroundColor: '#ffffff', borderTopLeftRadius: 16, borderTopRightRadius: 16,
               maxHeight: '70%',
+              zIndex: 10000,
               transform: [{ translateY: sheetAnim.interpolate({ inputRange: [0, 1], outputRange: [500, 0] }) }],
             }}
           >

@@ -2,3 +2,8 @@
 export function useClientOnlyValue<S, C>(server: S, client: C): S | C {
   return client;
 }
+
+// Default export for Expo Router
+export default function UseClientOnlyValueComponent() {
+  return null;
+}

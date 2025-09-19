@@ -7,12 +7,23 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, View } from '@/components/Themed';
+import { Text, View } from '../components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 
 // Components
-import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
-import { SkeletonLoader, ProductSkeleton } from '../../components/SkeletonLoader';
+import ProductMarketplace from '../components/productcatalog/ProductMarketplace';
+// import { SkeletonLoader, ProductSkeleton } from '../components/SkeletonLoader';
+
+// Temporary skeleton component
+const ProductSkeleton = () => (
+  <View style={{ backgroundColor: '#ffffff', borderRadius: 8, padding: 12, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}>
+    <View style={{ width: '100%', height: 120, backgroundColor: '#e5e7eb', borderRadius: 6, marginBottom: 8 }} />
+    <View style={{ paddingHorizontal: 4 }}>
+      <View style={{ height: 16, backgroundColor: '#e5e7eb', borderRadius: 4, marginBottom: 6 }} />
+      <View style={{ height: 14, backgroundColor: '#e5e7eb', borderRadius: 4, width: '60%' }} />
+    </View>
+  </View>
+);
 import { generateDynamicCategories } from '../../utils/categoryUtils';
 
 // Hooks

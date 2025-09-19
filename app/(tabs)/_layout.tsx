@@ -2,10 +2,10 @@ import React, { useRef, useState } from 'react';
 import { Link, Tabs, usePathname } from 'expo-router';
 import { Pressable, View, TextInput, Animated, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import { useClientOnlyValue } from '../components/useClientOnlyValue';
 import { Home as HomeIcon, Boxes, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquare, MessageSquareText } from 'lucide-react-native';
 import { Settings } from 'lucide-react-native';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function TabLayout() {
   const pathname = usePathname();

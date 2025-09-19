@@ -9,13 +9,15 @@ import {
   Dimensions,
   Animated,
   PanResponder,
+  StatusBar,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Minus, Plus, Package } from 'lucide-react-native';
-import { Product } from '../../data/sampleProducts';
-import { MarketplaceProduct } from '../../services/marketplace';
-import { formatCurrency } from '../../utils/currencyUtils';
+import { Product } from '../../../data/sampleProducts';
+import { MarketplaceProduct } from '../../../services/marketplace';
+import { formatCurrency } from '../../../utils/currencyUtils';
 
-const { height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 type ProductType = Product | MarketplaceProduct;
 
@@ -32,6 +34,7 @@ export default function BuyNowModal({
   onClose,
   onConfirm,
 }: BuyNowModalProps) {
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [slideAnim] = useState(new Animated.Value(screenHeight));
   const [isClosing, setIsClosing] = useState(false);
@@ -137,8 +140,24 @@ export default function BuyNowModal({
   };
 
   const handleConfirm = () => {
-    if (isFormValid) {
-      onConfirm(product, quantity);
+    if (isFormValid && product) {
+      // Navigate to checkout with product details
+      const checkoutParams = {
+        productId: product.id,
+        quantity: quantity.toString(),
+        totalPrice: totalPrice.toString(),
+        productName: safeGetString(product.name, 'Unknown Product'),
+        productImage: safeGetString(product.images?.[0], ''),
+        unitPrice: unitPrice.toString(),
+        packageType: safeGetString(product.packageType, 'Box'),
+        piecesPerPackage: piecesPerPackage.toString(),
+      };
+      
+      router.push({
+        pathname: '/components/productcatalog/checkout',
+        params: checkoutParams,
+      });
+      
       handleClose();
     }
   };
@@ -150,7 +169,9 @@ export default function BuyNowModal({
       transparent
       animationType="none"
       onRequestClose={handleClose}
+      statusBarTranslucent={true}
     >
+      <StatusBar backgroundColor="rgba(0, 0, 0, 0.5)" barStyle="light-content" />
       <View style={styles.overlay}>
         <TouchableOpacity
           style={styles.backdrop}
@@ -296,14 +317,16 @@ export default function BuyNowModal({
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+    width: screenWidth,
+    height: screenHeight,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+    zIndex: 9999, // Ensure modal appears on top
   },
   backdrop: {
     flex: 1,
@@ -312,8 +335,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingBottom: 10, // Safe area padding
+    paddingBottom: 18, // Safe area padding
     maxHeight: screenHeight * 0.8,
+    zIndex: 10000, // Higher than overlay
   },
   handleBar: {
     alignSelf: 'center',

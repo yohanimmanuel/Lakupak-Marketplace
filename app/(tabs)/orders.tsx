@@ -1,5 +1,5 @@
 import { StyleSheet, View as RNView } from 'react-native';
-import { Text, View } from '@/components/Themed';
+import { Text, View } from '../components/Themed';
 
 export default function OrdersScreen() {
   return (

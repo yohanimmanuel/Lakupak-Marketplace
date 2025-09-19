@@ -7,8 +7,8 @@ import {
   RefreshControl,
   Text,
 } from 'react-native';
-import ProductCard from './ProductCard';
-import { Product } from '../../data/sampleProducts';
+import ProductMarketplace from './ProductMarketplace';
+import { Product } from '../../../data/sampleProducts';
 // Removed theme color imports - using explicit colors
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -18,8 +18,8 @@ const cardWidth = (screenWidth - 48) / numColumns; // 2 columns with padding
 interface ProductGridProps {
   products: Product[];
   onProductPress: (product: Product) => void;
-  onAddToCart?: (product: Product) => void;
-  onToggleFavorite?: (productId: string) => void;
+  onAddToCart: (product: Product) => void;
+  onToggleFavorite: (productId: string) => void;
   favorites?: string[];
   onRefresh?: () => Promise<void>;
   onLoadMore?: () => void;
@@ -75,12 +75,16 @@ export default function ProductGrid({
         { width: cardWidth },
         index % 2 === 0 ? styles.leftItem : styles.rightItem
       ]}>
-        <ProductCard
+        <ProductMarketplace
           product={item}
           onPress={onProductPress}
           onAddToCart={onAddToCart}
+          onBuyNow={() => {}}
+          onChatSeller={() => {}}
+          onShare={() => {}}
           onToggleFavorite={onToggleFavorite}
           isFavorite={isFavorite}
+          type="card"
         />
       </View>
     );

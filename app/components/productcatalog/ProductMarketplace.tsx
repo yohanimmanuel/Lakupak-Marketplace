@@ -10,13 +10,14 @@ import {
   Alert,
   Modal,
 } from 'react-native';
+import { router, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Heart, ImageIcon, Share2, X } from 'lucide-react-native';
-import { Product } from '../../data/sampleProducts';
-import { MarketplaceProduct } from '../../services/marketplace';
-import { formatCurrency } from '../../utils/currencyUtils';
-import { marketplaceService } from '../../services/marketplace';
-import BuyNowModal from './BuyNowModal';
+import { Heart, ImageIcon, Share2, X, ArrowLeft } from 'lucide-react-native';
+import { Product } from '../../../data/sampleProducts';
+import { MarketplaceProduct } from '../../../services/marketplace';
+import { formatCurrency } from '../../../utils/currencyUtils';
+import { marketplaceService } from '../../../services/marketplace';
+import ProductImageModal from './ProductImageModal';
 // Removed theme color imports - using explicit colors
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -35,6 +36,8 @@ interface ProductMarketplaceProps {
   isFavorite?: boolean;
   type?: 'card' | 'full';
   onPress?: (product: ProductType) => void;
+  showBackButton?: boolean;
+  onBackPress?: () => void;
 }
 
 export default function ProductMarketplace({
@@ -48,7 +51,11 @@ export default function ProductMarketplace({
   isFavorite = false,
   type = 'full',
   onPress,
+  showBackButton = false,
+  onBackPress,
 }: ProductMarketplaceProps) {
+  const router = useRouter();
+  
   // Using explicit colors instead of theme colors
   const primaryColor = '#0a61d7'; // Blue
   const backgroundColor = '#ffffff'; // White
@@ -57,6 +64,7 @@ export default function ProductMarketplace({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   // Safe value getters to prevent undefined/null errors
   const safeGetString = (value: any, fallback: string = ''): string => {
@@ -77,7 +85,6 @@ export default function ProductMarketplace({
 
   // Card view state
   const [showModal, setShowModal] = useState(false);
-  const [showBuyNowModal, setShowBuyNowModal] = useState(false);
 
   // Get current image for display
   const images = safeGetArray(product.images);
@@ -152,9 +159,15 @@ export default function ProductMarketplace({
   };
 
   const handleCardPress = () => {
-    setShowModal(true);
     if (onPress) {
       onPress(product);
+    } else {
+      // Navigate to product modal instead of opening local modal
+      const router = require('expo-router').useRouter();
+      router.push({
+        pathname: '/product',
+        params: { productId: product.id }
+      });
     }
   };
 
@@ -163,12 +176,7 @@ export default function ProductMarketplace({
   };
 
   const handleBuyNowPress = () => {
-    setShowBuyNowModal(true);
-  };
-
-  const handleBuyNowConfirm = (product: ProductType, quantity: number) => {
-    onBuyNow(product, quantity);
-    setShowBuyNowModal(false);
+    onBuyNow(product);
   };
 
   const renderStars = (rating: number, size: number = 16) => {
@@ -371,33 +379,7 @@ export default function ProductMarketplace({
           </View>
         </TouchableOpacity>
 
-        {/* Product Marketplace Modal */}
-        <Modal
-          visible={showModal}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={handleCloseModal}
-        >
-          <ProductMarketplace
-            product={product}
-            onAddToCart={onAddToCart || (() => {})}
-            onBuyNow={onBuyNow}
-            onChatSeller={onChatSeller}
-            onShare={onShare}
-            onToggleFavorite={onToggleFavorite || (() => {})}
-            onClose={handleCloseModal}
-            isFavorite={isFavorite}
-            type="full"
-          />
-        </Modal>
-
-        {/* Buy Now Modal */}
-        <BuyNowModal
-          visible={showBuyNowModal}
-          product={product}
-          onClose={() => setShowBuyNowModal(false)}
-          onConfirm={handleBuyNowConfirm}
-        />
+        {/* Product Marketplace Modal - Now handled by navigation */}
       </>
     );
   };
@@ -406,24 +388,27 @@ export default function ProductMarketplace({
     return (
       <View style={styles.imageContainer}>
         
+        {/* Back Button Overlay - Only show if showBackButton is true */}
+        {showBackButton && onBackPress && (
+          <TouchableOpacity style={styles.backButtonOverlay} onPress={onBackPress}>
+            <ArrowLeft size={24} color="#111827" />
+          </TouchableOpacity>
+        )}
+        
         {/* Action Buttons */}
           <View style={styles.imageActions}>
-            <TouchableOpacity style={styles.actionButton} onPress={onClose}>
-              <X size={20} color="#374151" />
-            </TouchableOpacity>
-          
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => onToggleFavorite(product.id)}
           >
             <Heart
               fill={isFavorite ? '#EF4444' : 'none'}
-              size={20}
+              size={24}
               color={isFavorite ? '#EF4444' : '#374151'}
             />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={onShare}>
-            <Share2 size={20} color="#374151" />
+            <Share2 size={24} color="#374151" />
           </TouchableOpacity>
         </View>
         
@@ -438,13 +423,22 @@ export default function ProductMarketplace({
             style={styles.imageScrollView}
           >
             {images.map((image, index) => (
-              <View key={index} style={styles.imageSlide}>
+              <TouchableOpacity 
+                key={index} 
+                style={styles.imageSlide}
+                onPress={() => setShowImageModal(true)}
+                activeOpacity={0.9}
+              >
                 <Image source={{ uri: safeGetString(image) }} style={styles.productImage} />
-              </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         ) : (
-          <View style={styles.imageTouchArea}>
+          <TouchableOpacity 
+            style={styles.imageTouchArea}
+            onPress={() => setShowImageModal(true)}
+            activeOpacity={0.9}
+          >
             {currentImage ? (
               <Image source={{ uri: currentImage }} style={styles.productImage} />
             ) : (
@@ -453,7 +447,7 @@ export default function ProductMarketplace({
                 <Text style={styles.noImageText}>No Image Available</Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* Image Counter - Show current/total */}
@@ -607,7 +601,13 @@ export default function ProductMarketplace({
               <View key={relatedProduct.id} style={styles.relatedProductItem}>
                 <ProductMarketplace
                   product={relatedProduct}
-                  onPress={() => {}}
+                  onPress={() => {
+                    // Navigate to the product modal
+                    router.push({
+                      pathname: '/product',
+                      params: { productId: relatedProduct.id }
+                    });
+                  }}
                   onAddToCart={onAddToCart}
                   onBuyNow={onBuyNow}
                   onChatSeller={onChatSeller}
@@ -624,7 +624,13 @@ export default function ProductMarketplace({
               <View key={relatedProduct.id} style={styles.relatedProductItem}>
                 <ProductMarketplace
                   product={relatedProduct}
-                  onPress={() => {}}
+                  onPress={() => {
+                    // Navigate to the product modal
+                    router.push({
+                      pathname: '/product',
+                      params: { productId: relatedProduct.id }
+                    });
+                  }}
                   onAddToCart={onAddToCart}
                   onBuyNow={onBuyNow}
                   onChatSeller={onChatSeller}
@@ -868,12 +874,12 @@ export default function ProductMarketplace({
         {renderActionButtons()}
       </View>
       
-      {/* Buy Now Modal */}
-      <BuyNowModal
-        visible={showBuyNowModal}
-        product={product}
-        onClose={() => setShowBuyNowModal(false)}
-        onConfirm={handleBuyNowConfirm}
+      {/* Product Image Modal */}
+      <ProductImageModal
+        visible={showImageModal}
+        images={images}
+        onClose={() => setShowImageModal(false)}
+        initialIndex={currentImageIndex}
       />
     </View>
   );
@@ -1098,10 +1104,11 @@ const styles = StyleSheet.create({
   // Full view styles
   container: {
     flex: 1,
+    zIndex: 2,
   },
   scrollContent: {
     flex: 1,
-    marginBottom: 50, // Add padding to prevent content from being hidden behind sticky buttons
+    marginBottom: 60, // Add padding to prevent content from being hidden behind sticky buttons
   },
   stickyActionButtons: {
     position: 'absolute',
@@ -1122,18 +1129,32 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'relative',
-    height: 250,
+    height: 320,
+  },
+  backButtonOverlay: {
+    position: 'absolute',
+    top: 50,
+    left: 16,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
   },
   imagePlaceholder: {
     flex: 1,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
-    height: 250,
+    height: 320,
   },
   productImage: {
     width: '100%',
-    height: 250,
+    height: 320,
     resizeMode: 'cover',
     zIndex: 2,
   },
@@ -1156,24 +1177,24 @@ const styles = StyleSheet.create({
   },
   imageActions: {
     position: 'absolute',
-    top: 16,
+    top: 50,
     right: 16,
     flexDirection: 'column',
     zIndex: 3,
     gap: 8,
   },
   actionButton: {
-    width: 32,
-    height: 32,
+    width: 40,
+    height: 40,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 16,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 5,
   },
   imageCounter: {
     position: 'absolute',
@@ -1611,6 +1632,7 @@ const styles = StyleSheet.create({
   actionButtonsContainer: {
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 10,
   },
   chatButton: {
     flex: 1,
@@ -1655,7 +1677,6 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     alignItems: 'center',
-    marginBottom: 8,
   },
   sectionSubtitle: {
     fontSize: 14,
@@ -1682,5 +1703,29 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
     color: '#6B7280',
+  },
+  
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  headerSpacer: {
+    width: 40, // Same width as close button to center the title
   },
 });

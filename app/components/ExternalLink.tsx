@@ -23,3 +23,8 @@ export function ExternalLink(
     />
   );
 }
+
+// Default export for Expo Router
+export default function ExternalLinkComponent() {
+  return null;
+}

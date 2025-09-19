@@ -8,21 +8,42 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Text, View } from '@/components/Themed';
+import { Text, View } from '../components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 // Components
-import MyWallet from '../../components/paymentcheckout/MyWallet';
-import SaleBanner from '../../components/paymentcheckout/SaleBanner';
-import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
+import MyWallet from '../components/paymentcheckout/MyWallet';
+import SaleBanner from '../components/paymentcheckout/SaleBanner';
+import ProductMarketplace from '../components/productcatalog/ProductMarketplace';
 
 // Hooks
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
 import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
-import { SkeletonLoader, ProductSkeleton, UserInfoSkeleton } from '../../components/SkeletonLoader';
+// import { SkeletonLoader, ProductSkeleton, UserInfoSkeleton } from '../components/SkeletonLoader';
+
+// Temporary skeleton components
+const ProductSkeleton = () => (
+  <View style={{ backgroundColor: '#ffffff', borderRadius: 8, padding: 12, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}>
+    <View style={{ width: '100%', height: 120, backgroundColor: '#e5e7eb', borderRadius: 6, marginBottom: 8 }} />
+    <View style={{ paddingHorizontal: 4 }}>
+      <View style={{ height: 16, backgroundColor: '#e5e7eb', borderRadius: 4, marginBottom: 6 }} />
+      <View style={{ height: 14, backgroundColor: '#e5e7eb', borderRadius: 4, width: '60%' }} />
+    </View>
+  </View>
+);
+
+const UserInfoSkeleton = () => (
+  <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#ffffff', borderRadius: 8, marginBottom: 8 }}>
+    <View style={{ width: 40, height: 40, backgroundColor: '#e5e7eb', borderRadius: 20, marginRight: 12 }} />
+    <View style={{ flex: 1 }}>
+      <View style={{ height: 16, backgroundColor: '#e5e7eb', borderRadius: 4, marginBottom: 4, width: '70%' }} />
+      <View style={{ height: 12, backgroundColor: '#e5e7eb', borderRadius: 4, width: '50%' }} />
+    </View>
+  </View>
+);
 import { generateDynamicCategories } from '../../utils/categoryUtils';
 // Removed theme color imports - using explicit colors
 
@@ -92,8 +113,12 @@ export default function HomeScreen() {
   }, []);
 
   const handleProductPress = useCallback((product: Product) => {
-    // ProductMarketplace will handle its own modal
-  }, []);
+    // Navigate to product modal
+    router.push({
+      pathname: '/product',
+      params: { productId: product.id }
+    });
+  }, [router]);
 
   const handleAddToCart = useCallback((product: Product) => {
     // Add to cart
