@@ -1,30 +1,399 @@
-import { StyleSheet, View as RNView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  StyleSheet,
+  View as RNView,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
+import { Ionicons } from '@expo/vector-icons';
+
+// Components
+import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
+import { SkeletonLoader, ProductSkeleton } from '../../components/SkeletonLoader';
+import { generateDynamicCategories } from '../../utils/categoryUtils';
+
+// Hooks
+import { useAuthStore } from '../../stores/authStore';
+import { useDataStore } from '../../stores/dataStore';
+import { Product } from '../../data/sampleProducts';
+import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
 
 export default function CategoriesScreen() {
+  // Using explicit colors instead of theme colors
+  const backgroundColor = '#ffffff'; // Explicit white
+  const textColor = '#111827'; // Explicit black
+  const primaryColor = '#0a61d7'; // Explicit blue
+
+  // Scroll tracking for progress bar
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [scrollContentWidth, setScrollContentWidth] = useState(0);
+  const [scrollViewWidth, setScrollViewWidth] = useState(0);
+
+  // Auth state
+  const token = useAuthStore(s => s.token);
+  const user = useAuthStore(s => s.user);
+  const isAuthenticated = !!token && !!user;
+
+  // Data state from cache
+  const { 
+    products: cachedProducts, 
+    user: cachedUser,
+    isProductsLoading,
+    isUserLoading,
+    loadProductsData,
+    refreshAllData 
+  } = useDataStore();
+
+  // State
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Use cached products only (no mock data fallback)
+  const products = cachedProducts;
+  const loading = isProductsLoading && cachedProducts.length === 0;
+
+  // Generate dynamic categories from product data
+  const dynamicCategories = generateDynamicCategories(products);
+
+  // Handle category scroll
+  const handleCategoryScroll = (event: any) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    setScrollPosition(contentOffset.x);
+    setScrollContentWidth(contentSize.width);
+    setScrollViewWidth(layoutMeasurement.width);
+  };
+
+  const handleProductPress = useCallback((product: Product) => {
+    // ProductMarketplace will handle its own modal
+  }, []);
+
+  const handleAddToCart = useCallback((product: Product) => {
+    // Add to cart
+  }, []);
+
+  const handleBuyNow = useCallback((product: Product, quantity?: number) => {
+    if (quantity) {
+      // Handle buy now with quantity
+      // TODO: Implement buy now logic
+    } else {
+      // Handle buy now without quantity (full view)
+      // TODO: Implement buy now logic
+    }
+  }, []);
+
+  const handleToggleFavorite = useCallback((productId: string) => {
+    setFavorites(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
+  }, []);
+
+  // Handlers
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      await refreshAllData(token || undefined);
+    } catch (err) {
+      setError('Failed to refresh data');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshAllData, token]);
+
   return (
-    <RNView style={styles.gradientBg}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Categories</Text>
+    <ScrollView 
+      style={{ flex: 1, backgroundColor: '#ffffff' }}
+      contentContainerStyle={{ paddingBottom: 20 }}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={primaryColor}
+          colors={[primaryColor]}
+        />
+      }
+    >
+      {/* Categories Section */}
+      <View style={[styles.section, { backgroundColor: '#ffffff', marginTop: 15, marginBottom: 20 }]}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>
+            Explore by Category
+          </Text>
+          <TouchableOpacity>
+            <Text style={[styles.seeAllText, { color: primaryColor }]}>
+              See all
+            </Text>
+          </TouchableOpacity>
+        </View>
+        
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesContainer}
+          onScroll={handleCategoryScroll}
+          scrollEventThrottle={16}
+        >
+          {dynamicCategories.map((category, index) => (
+            <TouchableOpacity key={index} style={styles.categoryItem}>
+              <View style={[styles.categoryIcon, { backgroundColor: category.color + '20' }]}>
+                <Ionicons name={category.icon as any} size={24} color={category.color} />
+              </View>
+              <Text style={[styles.categoryName, { color: '#111827' }]}>
+                {category.name}
+              </Text>
+              <Text style={[styles.categoryCount, { color: '#6B7280' }]}>
+                {category.count}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        
       </View>
-    </RNView>
+
+      {/* New This Week Section */}
+      <View style={[styles.section, { backgroundColor: '#ffffff', marginTop: 15, marginBottom: -10 }]}>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: textColor }]}>
+            New This Week
+          </Text>
+          <TouchableOpacity>
+            <Text style={[styles.seeAllText, { color: primaryColor }]}>
+              See all
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Loading State with Skeleton */}
+        {loading && (
+          <View style={styles.productsContainer}>
+            <View style={styles.leftColumn}>
+              {[1, 2, 3].map((i) => (
+                <View key={i} style={styles.productItem}>
+                  <ProductSkeleton />
+                </View>
+              ))}
+            </View>
+            <View style={styles.rightColumn}>
+              {[1, 2, 3].map((i) => (
+                <View key={i} style={styles.productItem}>
+                  <ProductSkeleton />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={() => setError(null)} style={styles.retryButton}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Product List */}
+        {!loading && !error && (
+          <View style={styles.productsContainer}>
+            <View style={styles.leftColumn}>
+              {products.slice(0, 6).filter((_, index) => index % 2 === 0).map((product) => (
+                <View key={product.id} style={styles.productItem}>
+                  <ProductMarketplace
+                    product={product}
+                    onPress={handleProductPress}
+                    onAddToCart={handleAddToCart}
+                    onBuyNow={handleBuyNow}
+                    onChatSeller={() => {}}
+                    onShare={() => {}}
+                    onToggleFavorite={handleToggleFavorite}
+                    isFavorite={favorites.includes(product.id)}
+                    type="card"
+                  />
+                </View>
+              ))}
+            </View>
+            <View style={styles.rightColumn}>
+              {products.slice(0, 6).filter((_, index) => index % 2 === 1).map((product) => (
+                <View key={product.id} style={styles.productItem}>
+                  <ProductMarketplace
+                    product={product}
+                    onPress={handleProductPress}
+                    onAddToCart={handleAddToCart}
+                    onBuyNow={handleBuyNow}
+                    onChatSeller={() => {}}
+                    onShare={() => {}}
+                    onToggleFavorite={handleToggleFavorite}
+                    isFavorite={favorites.includes(product.id)}
+                    type="card"
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+        
+        {/* End of Products Message */}
+        {!loading && !error && products.length > 0 && (
+          <View style={{...styles.endMessageContainer}}>
+            <Text style={styles.endMessage}>Products displays reached the end.</Text>
+          </View>
+        )}
+
+        {/* No Products Message */}
+        {!loading && !error && products.length === 0 && (
+          <View style={styles.noProductsContainer}>
+            <Text style={styles.noProductsText}>No products available</Text>
+          </View>
+        )}
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   gradientBg: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffffff', // Explicit white background
   },
-  container: {
+  scrollView: {
     flex: 1,
+    backgroundColor: '#ffffff', // Explicit white background
+    paddingBottom: 20,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+    backgroundColor: '#ffffff', // Explicit white background
+    flexGrow: 1,
+  },
+  section: {
+    marginBottom: 20,
+    backgroundColor: '#ffffff', // Explicit white background
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: '#ffffff', // Explicit white background
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827', // Explicit black
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0a61d7', // Explicit blue
+  },
+  categoriesContainer: {
+    paddingHorizontal: 16,
+    gap: 16,
+  },
+  categoryItem: {
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  categoryIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    marginBottom: 8,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
+  categoryName: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+    color: '#111827', // Explicit black
+  },
+  categoryCount: {
+    fontSize: 10,
+    fontWeight: '400',
+    textAlign: 'center',
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  productsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    backgroundColor: '#ffffff', // Explicit white background
+    gap: 16, // Space between columns
+  },
+  leftColumn: {
+    flex: 1,
+    backgroundColor: '#ffffff', // Explicit white background
+  },
+  rightColumn: {
+    flex: 1,
+    backgroundColor: '#ffffff', // Explicit white background
+  },
+  productItem: {
+    marginBottom: 8, // Space between items in each column
+    backgroundColor: '#ffffff', // Explicit white background
+  },
+  endMessageContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    alignItems: 'center',
+    backgroundColor: '#ffffff', // Explicit white background
+    marginBottom: 0, // Explicitly remove bottom margin
+    paddingBottom: 0, // Explicitly remove bottom padding
+  },
+  endMessage: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontStyle: 'italic',
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  errorContainer: {
+    padding: 40,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#0a61d7',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  noProductsContainer: {
+    padding: 40,
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  noProductsText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
   },
 });

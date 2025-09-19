@@ -20,9 +20,10 @@ import ProductMarketplace from '../../components/productcatalog/ProductMarketpla
 // Hooks
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
-import { sampleProducts, Product } from '../../data/sampleProducts';
+import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
 import { SkeletonLoader, ProductSkeleton, UserInfoSkeleton } from '../../components/SkeletonLoader';
+import { generateDynamicCategories } from '../../utils/categoryUtils';
 // Removed theme color imports - using explicit colors
 
 export default function HomeScreen() {
@@ -58,9 +59,12 @@ export default function HomeScreen() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Use cached products or fallback to sample data
-  const products = cachedProducts.length > 0 ? cachedProducts : (sampleProducts as MarketplaceProduct[]);
+  // Use cached products only (no mock data fallback)
+  const products = cachedProducts;
   const loading = isProductsLoading && cachedProducts.length === 0;
+
+  // Generate dynamic categories from product data
+  const dynamicCategories = generateDynamicCategories(products);
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -157,14 +161,7 @@ export default function HomeScreen() {
             onScroll={handleCategoryScroll}
             scrollEventThrottle={16}
           >
-            {[
-              { name: 'Electronics', icon: 'phone-portrait-outline', color: '#3B82F6' },
-              { name: 'Fashion', icon: 'shirt-outline', color: '#EF4444' },
-              { name: 'Home & Garden', icon: 'home-outline', color: '#10B981' },
-              { name: 'Sports', icon: 'fitness-outline', color: '#F59E0B' },
-              { name: 'Beauty', icon: 'flower-outline', color: '#8B5CF6' },
-              { name: 'Books', icon: 'book-outline', color: '#6B7280' },
-            ].map((category, index) => (
+            {dynamicCategories.map((category, index) => (
               <TouchableOpacity key={index} style={styles.categoryItem}>
                 <View style={[styles.categoryIcon, { backgroundColor: category.color + '20' }]}>
                   <Ionicons name={category.icon as any} size={24} color={category.color} />
@@ -172,25 +169,13 @@ export default function HomeScreen() {
                 <Text style={[styles.categoryName, { color: '#111827' }]}>
                   {category.name}
                 </Text>
+                <Text style={[styles.categoryCount, { color: '#6B7280' }]}>
+                  {category.count}
+                </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
           
-          {/* Progress Bar */}
-          <View style={[styles.progressBarContainer, { marginTop: 20 }]}>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressPill,
-                  {
-                    left: scrollContentWidth > scrollViewWidth 
-                      ? Math.min((scrollPosition / (scrollContentWidth - scrollViewWidth)) * (60 - 15), 60 - 15)
-                      : 0
-                  }
-                ]} 
-              />
-            </View>
-          </View>
         </View>
 
         {/* Sale Banner */}
@@ -352,31 +337,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#111827', // Explicit black
   },
-  progressBarContainer: {
-    alignItems: 'center',
-    marginTop: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#ffffff', // White background
-  },
-  progressBar: {
-    width: 60,
-    height: 3,
-    backgroundColor: '#9CA3AF', // Gray color
-    borderRadius: 2,
-    position: 'relative',
-  },
-  progressPill: {
-    position: 'absolute',
-    top: -6,
-    width: 15,
-    height: 15,
-    backgroundColor: '#0a61d7', // Blue pill
-    borderRadius: 7.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+  categoryCount: {
+    fontSize: 10,
+    fontWeight: '400',
+    textAlign: 'center',
+    color: '#6B7280',
+    marginTop: 2,
   },
   productsContainer: {
     flexDirection: 'row',

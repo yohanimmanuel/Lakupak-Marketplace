@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { sampleProducts, Product } from '../data/sampleProducts'
+import { Product } from '../data/sampleProducts'
 import { marketplaceService, MarketplaceProduct } from '../services/marketplace'
 import { getMe, MobileUser } from '../services/user'
 
@@ -22,8 +22,10 @@ interface DataState {
   setUser: (user: MobileUser | null) => void
   setProducts: (products: MarketplaceProduct[]) => void
   loadUserData: (token: string) => Promise<void>
-  loadProductsData: () => Promise<void>
+  loadProductsData: (forceRefresh?: boolean) => Promise<void>
   refreshAllData: (token?: string) => Promise<void>
+  forceRefreshProducts: () => Promise<void>
+  clearProductsCache: () => void
   clearCache: () => void
 }
 
@@ -64,12 +66,12 @@ export const useDataStore = create<DataState>()(
         }
       },
 
-      loadProductsData: async () => {
+      loadProductsData: async (forceRefresh = false) => {
         const { productsLastUpdated } = get()
         const now = Date.now()
         
-        // Return cached data if still fresh
-        if (productsLastUpdated && (now - productsLastUpdated) < CACHE_DURATION) {
+        // Return cached data if still fresh and not forcing refresh
+        if (!forceRefresh && productsLastUpdated && (now - productsLastUpdated) < CACHE_DURATION) {
           return
         }
 
@@ -82,9 +84,9 @@ export const useDataStore = create<DataState>()(
             isProductsLoading: false 
           })
         } catch (error) {
-          // Fallback to sample data
+          // No fallback to mock data - show empty state instead
           set({ 
-            products: sampleProducts as MarketplaceProduct[], 
+            products: [], 
             productsLastUpdated: now, 
             isProductsLoading: false 
           })
@@ -97,10 +99,36 @@ export const useDataStore = create<DataState>()(
         if (token) {
           promises.push(get().loadUserData(token))
         }
-        promises.push(get().loadProductsData())
+        // Force refresh products (bypass cache) when manually refreshing
+        promises.push(get().forceRefreshProducts())
         
         await Promise.all(promises)
       },
+
+      forceRefreshProducts: async () => {
+        set({ isProductsLoading: true })
+        try {
+          const response = await marketplaceService.getProducts({ limit: 20 })
+          set({ 
+            products: response.products, 
+            productsLastUpdated: Date.now(), 
+            isProductsLoading: false 
+          })
+        } catch (error) {
+          // No fallback to mock data - show empty state instead
+          set({ 
+            products: [], 
+            productsLastUpdated: Date.now(), 
+            isProductsLoading: false 
+          })
+        }
+      },
+
+      clearProductsCache: () => set({
+        products: [],
+        productsLastUpdated: null,
+        isProductsLoading: false,
+      }),
 
       clearCache: () => set({
         user: null,
