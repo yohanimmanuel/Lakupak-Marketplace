@@ -35,7 +35,7 @@ import { MarketplaceProduct } from '../../../services/marketplace';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { useDataStore } from '../../../stores/dataStore';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 type ProductType = Product | MarketplaceProduct;
 
@@ -83,9 +83,9 @@ export default function CheckoutScreen() {
   const [scheduledDateTime, setScheduledDateTime] = useState<Date | null>(null);
   const [pickupDateTime, setPickupDateTime] = useState<Date | null>(null);
   
-  // Animation states
-  const [deliverySlideAnim] = useState(new Animated.Value(0));
-  const [pickupSlideAnim] = useState(new Animated.Value(0));
+  // Animation states - match BuyNowModal system
+  const [deliverySlideAnim] = useState(new Animated.Value(screenHeight));
+  const [pickupSlideAnim] = useState(new Animated.Value(screenHeight));
   const [isDeliveryClosing, setIsDeliveryClosing] = useState(false);
   const [isPickupClosing, setIsPickupClosing] = useState(false);
   
@@ -273,9 +273,7 @@ export default function CheckoutScreen() {
 
   // Handle date/time selection
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
+    setShowDatePicker(false);
     if (selectedDate) {
       setSelectedDate(selectedDate);
     }
@@ -313,31 +311,35 @@ export default function CheckoutScreen() {
     setShowTimeDropdown(false);
   };
 
-  // Handle delivery modal close with animation
+  // Handle delivery modal close with animation - match BuyNowModal system
   const handleDeliveryClose = () => {
+    if (isDeliveryClosing) return; // Prevent multiple close calls
+    
     setIsDeliveryClosing(true);
     Animated.timing(deliverySlideAnim, {
-      toValue: 0,
+      toValue: screenHeight,
       duration: 300,
       useNativeDriver: true,
     }).start(() => {
+      setIsDeliveryClosing(false);
       setShowScheduleModal(false);
       setShowTimeDropdown(false);
-      setIsDeliveryClosing(false);
     });
   };
 
-  // Handle pickup modal close with animation
+  // Handle pickup modal close with animation - match BuyNowModal system
   const handlePickupClose = () => {
+    if (isPickupClosing) return; // Prevent multiple close calls
+    
     setIsPickupClosing(true);
     Animated.timing(pickupSlideAnim, {
-      toValue: 0,
+      toValue: screenHeight,
       duration: 300,
       useNativeDriver: true,
     }).start(() => {
+      setIsPickupClosing(false);
       setShowPickupModal(false);
       setShowTimeDropdown(false);
-      setIsPickupClosing(false);
     });
   };
 
@@ -349,29 +351,31 @@ export default function CheckoutScreen() {
     }
   }, [shippingOptions, selectedShipping]);
 
-  // Handle delivery modal slide animation
+  // Handle delivery modal slide animation - match BuyNowModal system
   useEffect(() => {
-    if (showScheduleModal && !isDeliveryClosing) {
-      deliverySlideAnim.setValue(0); // Reset to initial position
+    if (showScheduleModal) {
+      setIsDeliveryClosing(false);
+      deliverySlideAnim.setValue(screenHeight);
       Animated.timing(deliverySlideAnim, {
-        toValue: 1,
+        toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
     }
-  }, [showScheduleModal, isDeliveryClosing]);
+  }, [showScheduleModal, deliverySlideAnim]);
 
-  // Handle pickup modal slide animation
+  // Handle pickup modal slide animation - match BuyNowModal system
   useEffect(() => {
-    if (showPickupModal && !isPickupClosing) {
-      pickupSlideAnim.setValue(0); // Reset to initial position
+    if (showPickupModal) {
+      setIsPickupClosing(false);
+      pickupSlideAnim.setValue(screenHeight);
       Animated.timing(pickupSlideAnim, {
-        toValue: 1,
+        toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
     }
-  }, [showPickupModal, isPickupClosing]);
+  }, [showPickupModal, pickupSlideAnim]);
 
   // Calculations
   const selectedShippingOption = shippingOptions.find(s => s.id === selectedShipping) || shippingOptions[0];
@@ -636,12 +640,7 @@ export default function CheckoutScreen() {
             style={[
               styles.modalContent,
               {
-                transform: [{
-                  translateY: deliverySlideAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [400, 0],
-                  })
-                }]
+                transform: [{ translateY: deliverySlideAnim }],
               }
             ]}
           >
@@ -670,7 +669,6 @@ export default function CheckoutScreen() {
                     <Text style={styles.dateTimeLabel}>Delivery Date</Text>
                     <Text style={styles.dateTimeValue}>{formatDate(selectedDate)}</Text>
                   </View>
-                  <ChevronDown size={20} color="#6B7280" />
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -693,6 +691,9 @@ export default function CheckoutScreen() {
                       activeOpacity={1}
                     />
                     <View style={styles.timeDropdown}>
+                      <View style={styles.timeDropdownHeader}>
+                        <Text style={styles.timeDropdownHeaderText}>Select Time</Text>
+                      </View>
                       <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
                         {timeOptions.map((time) => (
                           <TouchableOpacity
@@ -756,12 +757,7 @@ export default function CheckoutScreen() {
             style={[
               styles.pickupModalContent,
               {
-                transform: [{
-                  translateY: pickupSlideAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [400, 0],
-                  })
-                }]
+                transform: [{ translateY: pickupSlideAnim }],
               }
             ]}
           >
@@ -798,7 +794,6 @@ export default function CheckoutScreen() {
                     <Text style={styles.dateTimeLabel}>Pickup Date</Text>
                     <Text style={styles.dateTimeValue}>{formatDate(selectedDate)}</Text>
                   </View>
-                  <ChevronDown size={20} color="#6B7280" />
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -821,6 +816,9 @@ export default function CheckoutScreen() {
                       activeOpacity={1}
                     />
                     <View style={styles.timeDropdown}>
+                      <View style={styles.timeDropdownHeader}>
+                        <Text style={styles.timeDropdownHeaderText}>Select Time</Text>
+                      </View>
                       <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
                         {timeOptions.map((time) => (
                           <TouchableOpacity
@@ -868,34 +866,14 @@ export default function CheckoutScreen() {
 
       {/* Date Picker */}
       {showDatePicker && (
-        <Modal
-          visible={showDatePicker}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowDatePicker(false)}
-        >
-          <View style={styles.pickerOverlay}>
-            <View style={styles.pickerContainer}>
-              <View style={styles.pickerHeader}>
-                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={styles.pickerCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <Text style={styles.pickerTitle}>Select Date</Text>
-                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
-                  <Text style={styles.pickerDoneText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleDateChange}
-                minimumDate={new Date()}
-                style={styles.picker}
-              />
-            </View>
-          </View>
-        </Modal>
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleDateChange}
+          minimumDate={new Date()}
+          style={styles.picker}
+        />
       )}
     </View>
   );
@@ -1444,44 +1422,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  // Picker modal styles
-  pickerOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  pickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 20,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    minHeight: 300,
-  },
-  pickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  pickerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  pickerCancelText: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  pickerDoneText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0a61d7',
-  },
   picker: {
     height: 200,
     width: '100%',
@@ -1489,30 +1429,40 @@ const styles = StyleSheet.create({
   // Time dropdown styles
   timeDropdown: {
     position: 'absolute',
-    top: 60,
-    left: 0,
-    right: 0,
+    bottom: 15,
+    width: '80%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    maxHeight: 200,
+    maxHeight: 300,
     zIndex: 1000,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: -4,
     },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 8,
   },
+  timeDropdownHeader: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  timeDropdownHeaderText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
   timeScrollView: {
-    maxHeight: 200,
+    maxHeight: 260,
   },
   timeOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
@@ -1522,6 +1472,7 @@ const styles = StyleSheet.create({
   timeOptionText: {
     fontSize: 16,
     color: '#374151',
+    fontWeight: '500',
   },
   timeOptionTextSelected: {
     color: '#0a61d7',
