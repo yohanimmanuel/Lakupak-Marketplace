@@ -38,16 +38,21 @@ export interface MarketplaceProduct {
     returnPolicy: string;
     company?: {
       name: string;
-      businessAddress?: string;
-      businessPhone?: string;
-      businessEmail?: string;
-      industryType?: string;
+    businessAddress?: string;
+    businessPhone?: string;
+    businessEmail?: string;
+    industryType?: string;
+    pickupAddress?: string;
     };
   };
   shipping: {
-    standard: { price: number; free: boolean };
-    express: { price: number };
-    sameDay: { price: number };
+    preferences: string[];
+    standard: { price: number; free: boolean; available: boolean };
+    express: { price: number; free: boolean; available: boolean };
+    sameDay: { price: number; free: boolean; available: boolean };
+    nextDay: { price: number; free: boolean; available: boolean };
+    scheduled: { price: number; free: boolean; available: boolean };
+    pickup: { price: number; free: boolean; available: boolean };
   };
   assurance: {
     halalCertified: boolean;

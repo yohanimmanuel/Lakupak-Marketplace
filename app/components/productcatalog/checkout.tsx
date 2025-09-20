@@ -8,6 +8,10 @@ import {
   StyleSheet,
   Alert,
   Dimensions,
+  Modal,
+  Platform,
+  StatusBar,
+  Animated,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { 
@@ -21,8 +25,11 @@ import {
   Clock,
   Shield,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Calendar,
+  X
 } from 'lucide-react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { formatCurrency } from '../../../utils/currencyUtils';
@@ -66,12 +73,27 @@ export default function CheckoutScreen() {
   // State
   const [selectedAddress, setSelectedAddress] = useState('default');
   const [selectedPayment, setSelectedPayment] = useState('credit_card');
-  const [selectedShipping, setSelectedShipping] = useState('standard');
+  const [selectedShipping, setSelectedShipping] = useState('');
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showPickupModal, setShowPickupModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState('09:00');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [scheduledDateTime, setScheduledDateTime] = useState<Date | null>(null);
+  const [pickupDateTime, setPickupDateTime] = useState<Date | null>(null);
+  
+  // Animation states
+  const [deliverySlideAnim] = useState(new Animated.Value(0));
+  const [pickupSlideAnim] = useState(new Animated.Value(0));
+  const [isDeliveryClosing, setIsDeliveryClosing] = useState(false);
+  const [isPickupClosing, setIsPickupClosing] = useState(false);
   
   // Get distributor/company information from the product's seller company data
   const distributorInfo = {
     companyName: product?.seller?.company?.name || product?.seller?.name || 'Distributor Company',
     industryType: product?.seller?.company?.industryType || 'Not specified',
+    pickupAddress: product?.seller?.company?.pickupAddress || null,
     contactPerson: product?.seller?.name || 'Not provided',
     phone: product?.seller?.company?.businessPhone || 'Not provided'
   };
@@ -113,34 +135,248 @@ export default function CheckoutScreen() {
     }
   ];
 
-  const shippingOptions = [
-    {
-      id: 'standard',
-      name: 'Standard Delivery',
-      description: '3-5 business days',
-      price: 150000, // Rp 150.000 from configuration
-      estimatedDays: '3-5'
-    },
-    {
-      id: 'express',
-      name: 'Express Delivery',
-      description: '1-2 business days',
-      price: 200000, // Higher price for express
-      estimatedDays: '1-2'
-    },
-    {
-      id: 'same_day',
-      name: 'Same Day Delivery',
-      description: 'Same day delivery (Jakarta only)',
-      price: 300000, // Premium price for same day
-      estimatedDays: 'Same day'
+  // Get available shipping options from distributor's preferences
+  const getAvailableShippingOptions = () => {
+    if (!product?.shipping) return [];
+    
+    const options = [];
+    
+    // Standard Delivery
+    if (product.shipping.standard.available) {
+      options.push({
+        id: 'standard',
+        name: 'Standard Delivery',
+        description: '3-5 business days',
+        price: product.shipping.standard.price,
+        estimatedDays: '3-5',
+        free: product.shipping.standard.free
+      });
     }
+    
+    // Express Shipping
+    if (product.shipping.express.available) {
+      options.push({
+        id: 'express',
+        name: 'Express Shipping',
+        description: '1-2 business days',
+        price: product.shipping.express.price,
+        estimatedDays: '1-2',
+        free: product.shipping.express.free
+      });
+    }
+    
+    // Same-day Delivery
+    if (product.shipping.sameDay.available) {
+      options.push({
+        id: 'same_day',
+        name: 'Same-day Delivery',
+        description: 'Same day delivery',
+        price: product.shipping.sameDay.price,
+        estimatedDays: 'Same day',
+        free: product.shipping.sameDay.free
+      });
+    }
+    
+    // Next-day Delivery
+    if (product.shipping.nextDay.available) {
+      options.push({
+        id: 'next_day',
+        name: 'Next-day Delivery',
+        description: 'Next business day delivery',
+        price: product.shipping.nextDay.price,
+        estimatedDays: '1 day',
+        free: product.shipping.nextDay.free
+      });
+    }
+    
+    // Scheduled Delivery
+    if (product.shipping.scheduled.available) {
+      options.push({
+        id: 'scheduled',
+        name: 'Scheduled Delivery',
+        description: 'Schedule your preferred delivery time',
+        price: product.shipping.scheduled.price,
+        estimatedDays: 'As scheduled',
+        free: product.shipping.scheduled.free
+      });
+    }
+    
+    // Pickup Available
+    if (product.shipping.pickup.available) {
+      options.push({
+        id: 'pickup',
+        name: 'Pickup Available',
+        description: 'Pick up at distributor warehouse',
+        price: 0, // Always free for pickup
+        estimatedDays: 'Immediate',
+        free: true
+      });
+    }
+    
+    return options;
+  };
+
+  const shippingOptions = getAvailableShippingOptions();
+
+  // Time options for dropdown
+  const timeOptions = [
+    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+    '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+    '16:00', '16:30', '17:00', '17:30',
   ];
+
+  // Helper functions for date/time formatting
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const formatDateTime = (date: Date, time: string) => {
+    const [hours, minutes] = time.split(':');
+    const combined = new Date(date);
+    combined.setHours(parseInt(hours), parseInt(minutes));
+    return combined.toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  // Handle shipping option selection
+  const handleShippingSelection = (optionId: string) => {
+    if (optionId === 'scheduled') {
+      setShowScheduleModal(true);
+    } else if (optionId === 'pickup') {
+      setShowPickupModal(true);
+    } else {
+      setSelectedShipping(optionId);
+    }
+  };
+
+  // Handle date/time selection
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      setSelectedDate(selectedDate);
+    }
+  };
+
+  const handleTimeSelect = (time: string) => {
+    setSelectedTime(time);
+    setShowTimeDropdown(false);
+  };
+
+  // Close dropdown when clicking outside
+  const handleCloseDropdown = () => {
+    setShowTimeDropdown(false);
+  };
+
+  // Confirm scheduled delivery
+  const confirmScheduledDelivery = () => {
+    const [hours, minutes] = selectedTime.split(':');
+    const combinedDateTime = new Date(selectedDate);
+    combinedDateTime.setHours(parseInt(hours), parseInt(minutes));
+    setScheduledDateTime(combinedDateTime);
+    setSelectedShipping('scheduled');
+    setShowScheduleModal(false);
+    setShowTimeDropdown(false);
+  };
+
+  // Confirm pickup
+  const confirmPickup = () => {
+    const [hours, minutes] = selectedTime.split(':');
+    const combinedDateTime = new Date(selectedDate);
+    combinedDateTime.setHours(parseInt(hours), parseInt(minutes));
+    setPickupDateTime(combinedDateTime);
+    setSelectedShipping('pickup');
+    setShowPickupModal(false);
+    setShowTimeDropdown(false);
+  };
+
+  // Handle delivery modal close with animation
+  const handleDeliveryClose = () => {
+    setIsDeliveryClosing(true);
+    Animated.timing(deliverySlideAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowScheduleModal(false);
+      setShowTimeDropdown(false);
+      setIsDeliveryClosing(false);
+    });
+  };
+
+  // Handle pickup modal close with animation
+  const handlePickupClose = () => {
+    setIsPickupClosing(true);
+    Animated.timing(pickupSlideAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowPickupModal(false);
+      setShowTimeDropdown(false);
+      setIsPickupClosing(false);
+    });
+  };
+
+  // Set default shipping option when component loads
+  useEffect(() => {
+    if (shippingOptions.length > 0 && !selectedShipping) {
+      // Standard shipping is always available, so use it as default
+      setSelectedShipping('standard');
+    }
+  }, [shippingOptions, selectedShipping]);
+
+  // Handle delivery modal slide animation
+  useEffect(() => {
+    if (showScheduleModal && !isDeliveryClosing) {
+      deliverySlideAnim.setValue(0); // Reset to initial position
+      Animated.timing(deliverySlideAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showScheduleModal, isDeliveryClosing]);
+
+  // Handle pickup modal slide animation
+  useEffect(() => {
+    if (showPickupModal && !isPickupClosing) {
+      pickupSlideAnim.setValue(0); // Reset to initial position
+      Animated.timing(pickupSlideAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showPickupModal, isPickupClosing]);
 
   // Calculations
   const selectedShippingOption = shippingOptions.find(s => s.id === selectedShipping) || shippingOptions[0];
   const subtotal = totalPrice;
-  const shippingCost = selectedShippingOption.price;
+  const shippingCost = selectedShippingOption ? selectedShippingOption.price : 0;
   const total = subtotal + shippingCost;
 
   const handlePlaceOrder = () => {
@@ -243,35 +479,68 @@ export default function CheckoutScreen() {
                 <Truck size={20} color="#0a61d7" />
                 <Text style={styles.shippingTitle}>Shipping Method</Text>
               </View>
-              {shippingOptions.map((option) => (
-                <TouchableOpacity
-                  key={option.id}
-                  style={[
-                    styles.shippingOption,
-                    selectedShipping === option.id && styles.shippingOptionSelected
-                  ]}
-                  onPress={() => setSelectedShipping(option.id)}
-                >
-                  <View style={styles.shippingInfo}>
-                    <Text style={styles.shippingName}>{option.name}</Text>
-                    <Text style={styles.shippingDescription}>{option.description}</Text>
-                    <View style={styles.shippingTime}>
-                      <Clock size={14} color="#6B7280" />
-                      <Text style={styles.shippingTimeText}>
-                        Estimated delivery: {option.estimatedDays} days
-                      </Text>
+              {shippingOptions.length > 0 ? (
+                shippingOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[
+                      styles.shippingOption,
+                      selectedShipping === option.id && styles.shippingOptionSelected
+                    ]}
+                    onPress={() => handleShippingSelection(option.id)}
+                  >
+                    <View style={styles.shippingInfo}>
+                      <Text style={styles.shippingName}>{option.name}</Text>
+                      <Text style={styles.shippingDescription}>{option.description}</Text>
+                      <View style={styles.shippingTime}>
+                        <Clock size={14} color="#6B7280" />
+                        <Text style={styles.shippingTimeText}>
+                          {option.id === 'pickup' 
+                            ? (selectedShipping === 'pickup' && pickupDateTime ? `Pickup scheduled: ${pickupDateTime.toLocaleString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                              })}` : 'Available for pickup')
+                            : option.id === 'scheduled'
+                            ? (selectedShipping === 'scheduled' && scheduledDateTime ? `Delivery scheduled: ${scheduledDateTime.toLocaleString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                              })}` : 'Schedule your preferred delivery time')
+                            : `Estimated delivery: ${option.estimatedDays}`
+                          }
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <View style={styles.shippingPrice}>
-                    <Text style={styles.shippingPriceText}>
-                      {formatCurrency(option.price)}
-                    </Text>
-                    {selectedShipping === option.id && (
-                      <CheckCircle size={20} color="#0a61d7" />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+                    <View style={styles.shippingPrice}>
+                      <Text style={[
+                        styles.shippingPriceText,
+                        option.free && styles.freeText
+                      ]}>
+                        {option.free ? 'FREE' : formatCurrency(option.price)}
+                      </Text>
+                      {selectedShipping === option.id && (
+                        <CheckCircle size={20} color="#0a61d7" />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.noShippingCard}>
+                  <Text style={styles.noShippingText}>
+                    No shipping options available for this distributor.
+                  </Text>
+                  <Text style={styles.noShippingSubtext}>
+                    Please contact the distributor directly for delivery arrangements.
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -339,7 +608,7 @@ export default function CheckoutScreen() {
       <View style={styles.bottomBar}>
         <View style={styles.totalSection}>
           <Text style={styles.bottomTotalLabel}>Total</Text>
-          <Text style={styles.bottomTotalValue}>{formatCurrency(totalPrice)}</Text>
+          <Text style={styles.bottomTotalValue}>{formatCurrency(total)}</Text>
         </View>
         <TouchableOpacity 
           style={styles.placeOrderButton}
@@ -348,6 +617,286 @@ export default function CheckoutScreen() {
           <Text style={styles.placeOrderText}>Place Order</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Scheduled Delivery Modal */}
+      <Modal
+        visible={showScheduleModal}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => setShowScheduleModal(false)}
+        statusBarTranslucent={true}
+      >
+        <StatusBar backgroundColor="rgba(0, 0, 0, 0.5)" barStyle="light-content" />
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={handleDeliveryClose}
+        >
+          <Animated.View 
+            style={[
+              styles.modalContent,
+              {
+                transform: [{
+                  translateY: deliverySlideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [400, 0],
+                  })
+                }]
+              }
+            ]}
+          >
+            <TouchableOpacity 
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={{ flex: 1 }}
+            >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Schedule Delivery</Text>
+              <TouchableOpacity onPress={handleDeliveryClose}>
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.modalSubtitle}>Choose your preferred delivery date and time</Text>
+              
+              <View style={styles.dateTimeSection}>
+                <TouchableOpacity 
+                  style={styles.dateTimeButton}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Calendar size={20} color="#0a61d7" />
+                  <View style={styles.dateTimeInfo}>
+                    <Text style={styles.dateTimeLabel}>Delivery Date</Text>
+                    <Text style={styles.dateTimeValue}>{formatDate(selectedDate)}</Text>
+                  </View>
+                  <ChevronDown size={20} color="#6B7280" />
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.dateTimeButton}
+                  onPress={() => setShowTimeDropdown(!showTimeDropdown)}
+                >
+                  <Clock size={20} color="#0a61d7" />
+                  <View style={styles.dateTimeInfo}>
+                    <Text style={styles.dateTimeLabel}>Delivery Time</Text>
+                    <Text style={styles.dateTimeValue}>{formatTime(selectedTime)}</Text>
+                  </View>
+                  <ChevronDown size={20} color="#6B7280" />
+                </TouchableOpacity>
+                
+                {showTimeDropdown && (
+                  <>
+                    <TouchableOpacity 
+                      style={styles.dropdownOverlay}
+                      onPress={handleCloseDropdown}
+                      activeOpacity={1}
+                    />
+                    <View style={styles.timeDropdown}>
+                      <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
+                        {timeOptions.map((time) => (
+                          <TouchableOpacity
+                            key={time}
+                            style={[
+                              styles.timeOption,
+                              selectedTime === time && styles.timeOptionSelected
+                            ]}
+                            onPress={() => handleTimeSelect(time)}
+                          >
+                            <Text style={[
+                              styles.timeOptionText,
+                              selectedTime === time && styles.timeOptionTextSelected
+                            ]}>
+                              {formatTime(time)}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </>
+                )}
+              </View>
+              
+            </View>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={handleDeliveryClose}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.confirmButton}
+                onPress={confirmScheduledDelivery}
+              >
+                <Text style={styles.confirmButtonText}>Confirm Delivery</Text>
+              </TouchableOpacity>
+            </View>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Pickup Modal */}
+      <Modal
+        visible={showPickupModal}
+        transparent={true}
+        animationType="none"
+        onRequestClose={() => setShowPickupModal(false)}
+        statusBarTranslucent={true}
+      >
+        <StatusBar backgroundColor="rgba(0, 0, 0, 0.5)" barStyle="light-content" />
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={handlePickupClose}
+        >
+          <Animated.View 
+            style={[
+              styles.pickupModalContent,
+              {
+                transform: [{
+                  translateY: pickupSlideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [400, 0],
+                  })
+                }]
+              }
+            ]}
+          >
+            <TouchableOpacity 
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={{ flex: 1 }}
+            >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Schedule Pickup</Text>
+              <TouchableOpacity onPress={handlePickupClose}>
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.modalSubtitle}>Choose your preferred pickup date and time</Text>
+              
+              <View style={styles.pickupInfo}>
+                <Text style={styles.pickupAddressLabel}>Pickup Location:</Text>
+                <Text style={styles.pickupAddress}>{distributorInfo.companyName}</Text>
+                <Text style={styles.pickupAddressDetail}>
+                  {distributorInfo.pickupAddress}
+                </Text>
+              </View>
+              
+              <View style={styles.dateTimeSection}>
+                <TouchableOpacity 
+                  style={styles.dateTimeButton}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Calendar size={20} color="#0a61d7" />
+                  <View style={styles.dateTimeInfo}>
+                    <Text style={styles.dateTimeLabel}>Pickup Date</Text>
+                    <Text style={styles.dateTimeValue}>{formatDate(selectedDate)}</Text>
+                  </View>
+                  <ChevronDown size={20} color="#6B7280" />
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.dateTimeButton}
+                  onPress={() => setShowTimeDropdown(!showTimeDropdown)}
+                >
+                  <Clock size={20} color="#0a61d7" />
+                  <View style={styles.dateTimeInfo}>
+                    <Text style={styles.dateTimeLabel}>Pickup Time</Text>
+                    <Text style={styles.dateTimeValue}>{formatTime(selectedTime)}</Text>
+                  </View>
+                  <ChevronDown size={20} color="#6B7280" />
+                </TouchableOpacity>
+                
+                {showTimeDropdown && (
+                  <>
+                    <TouchableOpacity 
+                      style={styles.dropdownOverlay}
+                      onPress={handleCloseDropdown}
+                      activeOpacity={1}
+                    />
+                    <View style={styles.timeDropdown}>
+                      <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
+                        {timeOptions.map((time) => (
+                          <TouchableOpacity
+                            key={time}
+                            style={[
+                              styles.timeOption,
+                              selectedTime === time && styles.timeOptionSelected
+                            ]}
+                            onPress={() => handleTimeSelect(time)}
+                          >
+                            <Text style={[
+                              styles.timeOptionText,
+                              selectedTime === time && styles.timeOptionTextSelected
+                            ]}>
+                              {formatTime(time)}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </>
+                )}
+              </View>
+              
+            </View>
+            
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={handlePickupClose}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.confirmButton}
+                onPress={confirmPickup}
+              >
+                <Text style={styles.confirmButtonText}>Confirm Pickup</Text>
+              </TouchableOpacity>
+            </View>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Date Picker */}
+      {showDatePicker && (
+        <Modal
+          visible={showDatePicker}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.pickerOverlay}>
+            <View style={styles.pickerContainer}>
+              <View style={styles.pickerHeader}>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.pickerCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <Text style={styles.pickerTitle}>Select Date</Text>
+                <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                  <Text style={styles.pickerDoneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+                style={styles.picker}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -742,5 +1291,248 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  freeText: {
+    color: '#10b981',
+    fontWeight: '600',
+  },
+  noShippingCard: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  noShippingText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#92400E',
+    marginBottom: 4,
+  },
+  noShippingSubtext: {
+    fontSize: 12,
+    color: '#A16207',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    minHeight: 380,
+    maxHeight: '90%',
+  },
+  // Pickup modal needs more height due to pickup address info
+  pickupModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    minHeight: 520,
+    maxHeight: '95%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  modalBody: {
+    flex: 1,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginBottom: 20,
+  },
+  pickupInfo: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 10,
+  },
+  pickupAddressLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 4,
+  },
+  pickupAddress: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  pickupAddressDetail: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+  },
+  dateTimeSection: {
+    marginBottom: 24,
+    position: 'relative',
+  },
+  dateTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    minHeight: 60,
+  },
+  dateTimeInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  dateTimeLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 2,
+  },
+  dateTimeValue: {
+    fontSize: 16,
+    color: '#111827',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  confirmButton: {
+    flex: 1,
+    backgroundColor: '#0a61d7',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginLeft: 8,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  // Picker modal styles
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    minHeight: 300,
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  pickerCancelText: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  pickerDoneText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0a61d7',
+  },
+  picker: {
+    height: 200,
+    width: '100%',
+  },
+  // Time dropdown styles
+  timeDropdown: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    maxHeight: 200,
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  timeScrollView: {
+    maxHeight: 200,
+  },
+  timeOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  timeOptionSelected: {
+    backgroundColor: '#F0F7FF',
+  },
+  timeOptionText: {
+    fontSize: 16,
+    color: '#374151',
+  },
+  timeOptionTextSelected: {
+    color: '#0a61d7',
+    fontWeight: '600',
+  },
+  dropdownOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 999,
   },
 });
