@@ -29,10 +29,15 @@ import { generateDynamicCategories } from '../../utils/categoryUtils';
 // Hooks
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
+import { useCartStore } from '../../stores/cartStore';
+import { useRouter } from 'expo-router';
 import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
 
 export default function CategoriesScreen() {
+  const router = useRouter();
+  const { addItem } = useCartStore();
+  
   // Using explicit colors instead of theme colors
   const backgroundColor = '#ffffff'; // Explicit white
   const textColor = '#111827'; // Explicit black
@@ -79,12 +84,12 @@ export default function CategoriesScreen() {
   };
 
   const handleProductPress = useCallback((product: Product) => {
-    // ProductMarketplace will handle its own modal
-  }, []);
+    router.push({
+      pathname: '/product',
+      params: { productId: product.id }
+    });
+  }, [router]);
 
-  const handleAddToCart = useCallback((product: Product) => {
-    // Add to cart
-  }, []);
 
   const handleBuyNow = useCallback((product: Product, quantity?: number) => {
     if (quantity) {
@@ -220,7 +225,7 @@ export default function CategoriesScreen() {
                   <ProductMarketplace
                     product={product}
                     onPress={handleProductPress}
-                    onAddToCart={handleAddToCart}
+                    onAddToCart={(product, quantity) => addItem(product, quantity)}
                     onBuyNow={handleBuyNow}
                     onChatSeller={() => {}}
                     onShare={() => {}}
@@ -237,7 +242,7 @@ export default function CategoriesScreen() {
                   <ProductMarketplace
                     product={product}
                     onPress={handleProductPress}
-                    onAddToCart={handleAddToCart}
+                    onAddToCart={(product, quantity) => addItem(product, quantity)}
                     onBuyNow={handleBuyNow}
                     onChatSeller={() => {}}
                     onShare={() => {}}

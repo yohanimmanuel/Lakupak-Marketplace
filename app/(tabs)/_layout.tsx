@@ -6,6 +6,7 @@ import { useClientOnlyValue } from '../components/useClientOnlyValue';
 import { Home as HomeIcon, Boxes, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquare, MessageSquareText } from 'lucide-react-native';
 import { Settings } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
+import CartBadge from '../components/CartBadge';
 
 export default function TabLayout() {
   const pathname = usePathname();
@@ -56,22 +57,17 @@ export default function TabLayout() {
   const rightIconsBlue = (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 20 }}>
       <Link href="/messages" asChild>
-        <Pressable style={{ paddingHorizontal: 10 }}>
-          {({ pressed }) => (
-            <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? '#f3f4f6' : 'transparent' }}>
-              <MessageSquareText color={inactiveGrey} size={22} />
-            </View>
-          )}
-        </Pressable>
+        <ShrinkIcon style={{ marginLeft: 8, marginRight: 6, paddingHorizontal: 8 }}>
+          <MessageSquareText color={inactiveGrey} size={22} />
+        </ShrinkIcon>
       </Link>
       <Link href="/cart" asChild>
-        <Pressable>
-          {({ pressed }) => (
-            <View style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? '#f3f4f6' : 'transparent' }}>
-              <ShoppingCart color={inactiveGrey} size={22} />
-            </View>
-          )}
-        </Pressable>
+        <ShrinkIcon>
+          <View style={{ position: 'relative' }}>
+            <ShoppingCart color={inactiveGrey} size={22} />
+            <CartBadge size={16} color="#ffffff" backgroundColor="#EF4444" />
+          </View>
+        </ShrinkIcon>
       </Link>
     </View>
   );
@@ -108,7 +104,10 @@ export default function TabLayout() {
               </Link>
               <Link href="/cart" asChild>
                 <ShrinkIcon style={{ marginRight: -2, marginLeft: 4 }}>
-                  <ShoppingCart color="#ffffff" size={22} />
+                  <View style={{ position: 'relative' }}>
+                    <ShoppingCart color="#ffffff" size={22} />
+                    <CartBadge size={16} color="#ffffff" backgroundColor="#EF4444" />
+                  </View>
                 </ShrinkIcon>
               </Link>
             </View>
@@ -189,7 +188,10 @@ export default function TabLayout() {
               </Link>
               <Link href="/cart" asChild>
                 <ShrinkIcon>
-                  <ShoppingCart color="#ffffff" size={22} />
+                  <View style={{ position: 'relative' }}>
+                    <ShoppingCart color="#ffffff" size={22} />
+                    <CartBadge size={16} color="#ffffff" backgroundColor="#EF4444" />
+                  </View>
                 </ShrinkIcon>
               </Link>
             </View>

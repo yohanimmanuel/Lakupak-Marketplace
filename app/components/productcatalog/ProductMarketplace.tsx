@@ -12,9 +12,11 @@ import {
 } from 'react-native';
 import { router, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Heart, ImageIcon, Share2, X, ArrowLeft } from 'lucide-react-native';
+import { Heart, ImageIcon, Share2, X, ArrowLeft, ShoppingCart } from 'lucide-react-native';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
+import BuyNowModal from './BuyNowModal';
+import CartBadge from '../CartBadge';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { marketplaceService } from '../../../services/marketplace';
 import ProductImageModal from './ProductImageModal';
@@ -27,7 +29,7 @@ type ProductType = Product | MarketplaceProduct;
 
 interface ProductMarketplaceProps {
   product: ProductType;
-  onAddToCart: (product: ProductType) => void;
+  onAddToCart: (product: ProductType, quantity?: number) => void;
   onBuyNow: (product: ProductType, quantity?: number) => void;
   onChatSeller: () => void;
   onShare: () => void;
@@ -65,6 +67,7 @@ export default function ProductMarketplace({
   const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [showAddToCartModal, setShowAddToCartModal] = useState(false);
 
   // Safe value getters to prevent undefined/null errors
   const safeGetString = (value: any, fallback: string = ''): string => {
@@ -110,7 +113,6 @@ export default function ProductMarketplace({
         const filtered = response.products.filter(p => p.id !== productId);
         setRelatedProducts(filtered.slice(0, 4));
       } catch (error) {
-        console.error('Failed to fetch related products:', error);
         setRelatedProducts([]);
       } finally {
         setLoadingRelated(false);
@@ -366,16 +368,6 @@ export default function ProductMarketplace({
               </View>
             )}
 
-            {/* Add to Cart Button */}
-            {onAddToCart && (
-              <TouchableOpacity
-                style={[styles.cardAddToCartButton, { backgroundColor: primaryColor }]}
-                onPress={() => onAddToCart(product)}
-              >
-                <Ionicons name="cart-outline" size={14} color="white" />
-                <Text style={styles.cardAddToCartText}>Add</Text>
-              </TouchableOpacity>
-            )}
           </View>
         </TouchableOpacity>
 
@@ -407,6 +399,20 @@ export default function ProductMarketplace({
               color={isFavorite ? '#EF4444' : '#374151'}
             />
           </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              onAddToCart(product, 1);
+              router.push('/cart');
+            }}
+          >
+            <View style={{ position: 'relative' }}>
+              <ShoppingCart size={24} color="#374151" />
+              <CartBadge size={16} color="#ffffff" backgroundColor="#EF4444" />
+            </View>
+          </TouchableOpacity>
+          
           <TouchableOpacity style={styles.actionButton} onPress={onShare}>
             <Share2 size={24} color="#374151" />
           </TouchableOpacity>
@@ -834,7 +840,7 @@ export default function ProductMarketplace({
       
       <TouchableOpacity
         style={[styles.addToCartButton, { backgroundColor: primaryColor }]}
-        onPress={() => onAddToCart(product)}
+        onPress={() => setShowAddToCartModal(true)}
       >
         <Ionicons name="cart-outline" size={20} color="white" />
         <Text style={styles.addToCartText}>Add to Cart</Text>
@@ -880,6 +886,18 @@ export default function ProductMarketplace({
         images={images}
         onClose={() => setShowImageModal(false)}
         initialIndex={currentImageIndex}
+      />
+      
+      {/* Add to Cart Modal */}
+      <BuyNowModal
+        visible={showAddToCartModal}
+        product={product}
+        onClose={() => setShowAddToCartModal(false)}
+        onConfirm={(product, quantity) => {
+          onAddToCart(product, quantity);
+          setShowAddToCartModal(false);
+        }}
+        mode="cart"
       />
     </View>
   );

@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Minus, Plus, Package } from 'lucide-react-native';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
+import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -26,6 +27,7 @@ interface BuyNowModalProps {
   product: ProductType | null;
   onClose: () => void;
   onConfirm: (product: ProductType, quantity: number) => void;
+  mode?: 'buy' | 'cart';
 }
 
 export default function BuyNowModal({
@@ -33,7 +35,9 @@ export default function BuyNowModal({
   product,
   onClose,
   onConfirm,
+  mode = 'buy',
 }: BuyNowModalProps) {
+  const { addItem } = useCartStore();
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [slideAnim] = useState(new Animated.Value(screenHeight));
@@ -141,24 +145,30 @@ export default function BuyNowModal({
 
   const handleConfirm = () => {
     if (isFormValid && product) {
-      // Navigate to checkout with product details
-      const checkoutParams = {
-        productId: product.id,
-        quantity: quantity.toString(),
-        totalPrice: totalPrice.toString(),
-        productName: safeGetString(product.name, 'Unknown Product'),
-        productImage: safeGetString(product.images?.[0], ''),
-        unitPrice: unitPrice.toString(),
-        packageType: safeGetString(product.packageType, 'Box'),
-        piecesPerPackage: piecesPerPackage.toString(),
-      };
-      
-      router.push({
-        pathname: '/components/productcatalog/checkout',
-        params: checkoutParams,
-      });
-      
-      handleClose();
+      if (mode === 'cart') {
+        // Add to cart logic - directly call cart store
+        addItem(product, quantity);
+        handleClose();
+      } else {
+        // Navigate to checkout with product details
+        const checkoutParams = {
+          productId: product.id,
+          quantity: quantity.toString(),
+          totalPrice: totalPrice.toString(),
+          productName: safeGetString(product.name, 'Unknown Product'),
+          productImage: safeGetString(product.images?.[0], ''),
+          unitPrice: unitPrice.toString(),
+          packageType: safeGetString(product.packageType, 'Box'),
+          piecesPerPackage: piecesPerPackage.toString(),
+        };
+        
+        router.push({
+          pathname: '/components/productcatalog/checkout',
+          params: checkoutParams,
+        });
+        
+        handleClose();
+      }
     }
   };
 
@@ -194,7 +204,7 @@ export default function BuyNowModal({
           
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Buy Now</Text>
+            <Text style={styles.headerTitle}>{mode === 'cart' ? 'Add to Cart' : 'Buy Now'}</Text>
           </View>
 
           {/* Product Info */}
@@ -297,6 +307,7 @@ export default function BuyNowModal({
           <TouchableOpacity
             style={[
               styles.buyNowButton,
+              { backgroundColor: mode === 'cart' ? '#0a61d7' : '#059c2d' },
               !isFormValid && styles.buyNowButtonDisabled,
             ]}
             onPress={handleConfirm}
@@ -306,7 +317,12 @@ export default function BuyNowModal({
               styles.buyNowText,
               !isFormValid && styles.buyNowTextDisabled,
             ]}>
-              {isFormValid ? `Buy Now - ${formatCurrency(totalPrice)}` : 'Select Quantity'}
+              {isFormValid 
+                ? (mode === 'cart' 
+                  ? 'Add to Cart' 
+                  : `Buy Now - ${formatCurrency(totalPrice)}`)
+                : 'Select Quantity'
+              }
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -517,7 +533,6 @@ const styles = StyleSheet.create({
   },
   buyNowButton: {
     marginHorizontal: 10,
-    backgroundColor: '#0a61d7',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

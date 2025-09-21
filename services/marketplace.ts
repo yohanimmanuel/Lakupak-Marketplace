@@ -128,7 +128,6 @@ export const marketplaceService = {
       
       return data;
     } catch (error) {
-      console.error('Failed to fetch marketplace products:', error);
       throw error;
     }
   },
