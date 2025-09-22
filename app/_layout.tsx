@@ -8,6 +8,7 @@ import { useEffect } from 'react';
 import { useColorScheme } from './components/useColorScheme';
 import { useAuthStore } from '../stores/authStore';
 import { useDataStore } from '../stores/dataStore';
+import { useCartStore } from '../stores/cartStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -50,11 +51,15 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { hydrateFromStorage, token } = useAuthStore();
   const { refreshAllData } = useDataStore();
+  const { initializeCart } = useCartStore();
 
   useEffect(() => {
     const initializeApp = async () => {
       // Hydrate auth state first
       await hydrateFromStorage();
+      
+      // Initialize cart immediately after auth
+      initializeCart();
       
       // Preload all data immediately
       await refreshAllData(token || undefined);

@@ -30,7 +30,7 @@ export default function CartScreen() {
   // Cart store - use single subscription to ensure re-renders
   const cartStore = useCartStore();
   const cartItems = cartStore.items;
-  const { removeItem, updateQuantity, toggleSelect, selectAll, getSelectedItems, getTotalPrice, getTotalSaved, getSelectedItemCount, clearCart } = cartStore;
+  const { removeItem, updateQuantity, toggleSelect, selectAll, getSelectedItems, getTotalPrice, getTotalSaved, getSelectedItemCount, clearCart, initializeCart } = cartStore;
 
   
   // Data store for products
@@ -66,6 +66,9 @@ export default function CartScreen() {
 
   // Clear any test data on mount
   useEffect(() => {
+    // Initialize cart immediately on app start
+    initializeCart();
+    
     // Remove any test products that might be in the cart
     const testItems = cartItems.filter(item => 
       item.product.name === 'Test Product' || 
