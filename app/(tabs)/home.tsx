@@ -20,6 +20,8 @@ import ProductMarketplace from '../components/productcatalog/ProductMarketplace'
 // Hooks
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
+import { useUserActivityStore } from '../../stores/userActivityStore';
+import { useCartStore } from '../../stores/cartStore';
 import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
 // import { SkeletonLoader, ProductSkeleton, UserInfoSkeleton } from '../components/SkeletonLoader';
@@ -68,6 +70,11 @@ export default function HomeScreen() {
     loadProductsData,
     refreshAllData 
   } = useDataStore();
+
+  // User activity store
+  const { toggleLikedProduct } = useUserActivityStore();
+  const likedProducts = useUserActivityStore(state => state.likedProducts);
+  const { addItem } = useCartStore();
   
 
   // Scroll tracking for progress bar
@@ -134,13 +141,15 @@ export default function HomeScreen() {
     }
   }, []);
 
-  const handleToggleFavorite = useCallback((productId: string) => {
-    setFavorites(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  }, []);
+  const handleToggleFavorite = useCallback(async (productId: string) => {
+    if (!user?.id) {
+      return;
+    }
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      await toggleLikedProduct(productId, product);
+    }
+  }, [user?.id, products, toggleLikedProduct]);
 
   const handleSaleBannerPress = useCallback(() => {
     // Handle sale banner press
@@ -260,7 +269,7 @@ export default function HomeScreen() {
                       onChatSeller={() => {}}
                       onShare={() => {}}
                       onToggleFavorite={handleToggleFavorite}
-                      isFavorite={favorites.includes(product.id)}
+                      isFavorite={likedProducts.includes(product.id)}
                       type="card"
                     />
                   </View>
@@ -277,7 +286,7 @@ export default function HomeScreen() {
                       onChatSeller={() => {}}
                       onShare={() => {}}
                       onToggleFavorite={handleToggleFavorite}
-                      isFavorite={favorites.includes(product.id)}
+                      isFavorite={likedProducts.includes(product.id)}
                       type="card"
                     />
                   </View>

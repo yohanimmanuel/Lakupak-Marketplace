@@ -20,6 +20,8 @@ import CartBadge from '../CartBadge';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { marketplaceService } from '../../../services/marketplace';
 import ProductImageModal from './ProductImageModal';
+import { useUserActivityStore } from '../../../stores/userActivityStore';
+import { useAuthStore } from '../../../stores/authStore';
 // Removed theme color imports - using explicit colors
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -57,6 +59,9 @@ export default function ProductMarketplace({
   onBackPress,
 }: ProductMarketplaceProps) {
   const router = useRouter();
+  const addViewedProduct = useUserActivityStore(state => state.addViewedProduct);
+  const likedProducts = useUserActivityStore(state => state.likedProducts);
+  const { user } = useAuthStore();
   
   // Using explicit colors instead of theme colors
   const primaryColor = '#0a61d7'; // Blue
@@ -94,6 +99,16 @@ export default function ProductMarketplace({
   const currentImage = images.length > 0 
     ? safeGetString(images[currentImageIndex] || images[0])
     : null;
+
+  // Track viewed product when component mounts (for full view only)
+  useEffect(() => {
+    if (type === 'full' && user?.id) {
+      // Only track if it's a MarketplaceProduct (has all required fields)
+      if ('originalPrice' in product && typeof product.originalPrice === 'number') {
+        addViewedProduct(safeGetString(product.id), product as MarketplaceProduct);
+      }
+    }
+  }, [product.id, type, addViewedProduct, product, user?.id]);
 
   // Fetch related products from the same category
   useEffect(() => {
@@ -161,6 +176,11 @@ export default function ProductMarketplace({
   };
 
   const handleCardPress = () => {
+    // Track viewed product when user clicks on it
+    if (user?.id && 'originalPrice' in product && typeof product.originalPrice === 'number') {
+      addViewedProduct(safeGetString(product.id), product as MarketplaceProduct);
+    }
+    
     if (onPress) {
       onPress(product);
     } else {
@@ -309,9 +329,9 @@ export default function ProductMarketplace({
                 onPress={() => onToggleFavorite(product.id)}
               >
                 <Ionicons
-                  name={isFavorite ? 'heart' : 'heart-outline'}
+                  name={likedProducts.includes(safeGetString(product.id)) ? 'heart' : 'heart-outline'}
                   size={16}
-                  color={isFavorite ? '#EF4444' : '#9CA3AF'}
+                  color={likedProducts.includes(safeGetString(product.id)) ? '#EF4444' : '#9CA3AF'}
                 />
               </TouchableOpacity>
             )}
@@ -394,9 +414,9 @@ export default function ProductMarketplace({
             onPress={() => onToggleFavorite(product.id)}
           >
             <Heart
-              fill={isFavorite ? '#EF4444' : 'none'}
+              fill={likedProducts.includes(safeGetString(product.id)) ? '#EF4444' : 'none'}
               size={24}
-              color={isFavorite ? '#EF4444' : '#374151'}
+              color={likedProducts.includes(safeGetString(product.id)) ? '#EF4444' : '#374151'}
             />
           </TouchableOpacity>
           
@@ -619,7 +639,7 @@ export default function ProductMarketplace({
                   onChatSeller={onChatSeller}
                   onShare={onShare}
                   onToggleFavorite={onToggleFavorite}
-                  isFavorite={false}
+                  isFavorite={likedProducts.includes(relatedProduct.id)}
                   type="card"
                 />
               </View>
@@ -642,7 +662,7 @@ export default function ProductMarketplace({
                   onChatSeller={onChatSeller}
                   onShare={onShare}
                   onToggleFavorite={onToggleFavorite}
-                  isFavorite={false}
+                  isFavorite={likedProducts.includes(relatedProduct.id)}
                   type="card"
                 />
               </View>

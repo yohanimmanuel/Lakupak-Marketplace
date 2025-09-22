@@ -29,6 +29,7 @@ import { generateDynamicCategories } from '../../utils/categoryUtils';
 // Hooks
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
+import { useUserActivityStore } from '../../stores/userActivityStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useRouter } from 'expo-router';
 import { Product } from '../../data/sampleProducts';
@@ -37,6 +38,9 @@ import { marketplaceService, MarketplaceProduct } from '../../services/marketpla
 export default function CategoriesScreen() {
   const router = useRouter();
   const { addItem } = useCartStore();
+  const { toggleLikedProduct } = useUserActivityStore();
+  const likedProducts = useUserActivityStore(state => state.likedProducts);
+  const { user } = useAuthStore();
   
   // Using explicit colors instead of theme colors
   const backgroundColor = '#ffffff'; // Explicit white
@@ -50,8 +54,8 @@ export default function CategoriesScreen() {
 
   // Auth state
   const token = useAuthStore(s => s.token);
-  const user = useAuthStore(s => s.user);
-  const isAuthenticated = !!token && !!user;
+  const authUser = useAuthStore(s => s.user);
+  const isAuthenticated = !!token && !!authUser;
 
   // Data state from cache
   const { 
@@ -101,13 +105,15 @@ export default function CategoriesScreen() {
     }
   }, []);
 
-  const handleToggleFavorite = useCallback((productId: string) => {
-    setFavorites(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  }, []);
+  const handleToggleFavorite = useCallback(async (productId: string) => {
+    if (!authUser?.id) {
+      return;
+    }
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      await toggleLikedProduct(productId, product);
+    }
+  }, [authUser?.id, products, toggleLikedProduct]);
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -230,7 +236,7 @@ export default function CategoriesScreen() {
                     onChatSeller={() => {}}
                     onShare={() => {}}
                     onToggleFavorite={handleToggleFavorite}
-                    isFavorite={favorites.includes(product.id)}
+                    isFavorite={likedProducts.includes(product.id)}
                     type="card"
                   />
                 </View>
@@ -247,7 +253,7 @@ export default function CategoriesScreen() {
                     onChatSeller={() => {}}
                     onShare={() => {}}
                     onToggleFavorite={handleToggleFavorite}
-                    isFavorite={favorites.includes(product.id)}
+                    isFavorite={likedProducts.includes(product.id)}
                     type="card"
                   />
                 </View>

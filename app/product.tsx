@@ -6,12 +6,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ProductMarketplace from './components/productcatalog/ProductMarketplace';
 import BuyNowModal from './components/productcatalog/BuyNowModal';
 import { useDataStore } from '../stores/dataStore';
+import { useUserActivityStore } from '../stores/userActivityStore';
+import { useAuthStore } from '../stores/authStore';
 
 export default function ProductModal() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { products } = useDataStore();
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const { toggleLikedProduct } = useUserActivityStore();
+  const likedProducts = useUserActivityStore(state => state.likedProducts);
+  const { user } = useAuthStore();
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   
   // Find the product by ID from params
@@ -41,16 +45,14 @@ export default function ProductModal() {
     // Share functionality
   };
 
-  const handleToggleFavorite = (productId: string) => {
-    setFavorites(prev => {
-      const newFavorites = new Set(prev);
-      if (newFavorites.has(productId)) {
-        newFavorites.delete(productId);
-      } else {
-        newFavorites.add(productId);
-      }
-      return newFavorites;
-    });
+  const handleToggleFavorite = async (productId: string) => {
+    if (!user?.id) {
+      return;
+    }
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      await toggleLikedProduct(productId, product);
+    }
   };
 
   const handleBuyNowConfirm = (product: any, quantity: number) => {
@@ -93,7 +95,7 @@ export default function ProductModal() {
         onShare={handleShare}
         onToggleFavorite={handleToggleFavorite}
         onClose={handleClose}
-        isFavorite={favorites.has(product.id)}
+        isFavorite={likedProducts.includes(product.id)}
         type="full"
         showBackButton={true}
         onBackPress={handleClose}
