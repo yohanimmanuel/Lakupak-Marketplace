@@ -34,6 +34,7 @@ import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { useDataStore } from '../../../stores/dataStore';
+import { useCartStore } from '../../../stores/cartStore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -57,6 +58,10 @@ export default function CheckoutScreen() {
   // Get user data from store
   const { user: cachedUser, products } = useDataStore();
   
+  // Get cart data
+  const cartStore = useCartStore();
+  const selectedCartItems = cartStore.getSelectedItems();
+  
   // Parse parameters
   const productId = params.productId || '';
   const quantity = parseInt(params.quantity || '1');
@@ -67,8 +72,29 @@ export default function CheckoutScreen() {
   const packageType = params.packageType || 'Box';
   const piecesPerPackage = parseInt(params.piecesPerPackage || '1');
 
-  // Get the actual product data
+  // Determine if this is a cart checkout or single product checkout
+  const isCartCheckout = selectedCartItems.length > 0 && !productId;
+  
+  // Get the actual product data (for single product checkout)
   const product = products.find(p => p.id === productId);
+  
+  // Group cart items by distributor
+  const groupByDistributor = (items: typeof selectedCartItems) => {
+    const grouped: { [key: string]: typeof selectedCartItems } = {};
+    
+    items.forEach(item => {
+      const distributorId = (item.product as MarketplaceProduct).seller?.name || 'unknown';
+      if (!grouped[distributorId]) {
+        grouped[distributorId] = [];
+      }
+      grouped[distributorId].push(item);
+    });
+    
+    return grouped;
+  };
+  
+  const distributorGroups = isCartCheckout ? groupByDistributor(selectedCartItems) : {};
+  
 
   // State
   const [selectedAddress, setSelectedAddress] = useState('default');
@@ -89,14 +115,17 @@ export default function CheckoutScreen() {
   const [isDeliveryClosing, setIsDeliveryClosing] = useState(false);
   const [isPickupClosing, setIsPickupClosing] = useState(false);
   
-  // Get distributor/company information from the product's seller company data
-  const distributorInfo = {
+  // Get distributor/company information
+  const getDistributorInfo = (product: MarketplaceProduct) => ({
     companyName: product?.seller?.company?.name || product?.seller?.name || 'Distributor Company',
     industryType: product?.seller?.company?.industryType || 'Not specified',
     pickupAddress: product?.seller?.company?.pickupAddress || null,
     contactPerson: product?.seller?.name || 'Not provided',
     phone: product?.seller?.company?.businessPhone || 'Not provided'
-  };
+  });
+  
+  // For single product checkout
+  const distributorInfo = product ? getDistributorInfo(product as MarketplaceProduct) : null;
 
   // Use real user data for delivery address
   const addresses = [
@@ -136,73 +165,74 @@ export default function CheckoutScreen() {
   ];
 
   // Get available shipping options from distributor's preferences
-  const getAvailableShippingOptions = () => {
-    if (!product?.shipping) return [];
+  const getAvailableShippingOptions = (productData?: MarketplaceProduct) => {
+    const targetProduct = productData || product;
+    if (!targetProduct?.shipping) return [];
     
     const options = [];
     
     // Standard Delivery
-    if (product.shipping.standard.available) {
+    if (targetProduct.shipping.standard.available) {
       options.push({
         id: 'standard',
         name: 'Standard Delivery',
         description: '3-5 business days',
-        price: product.shipping.standard.price,
+        price: targetProduct.shipping.standard.price,
         estimatedDays: '3-5',
-        free: product.shipping.standard.free
+        free: targetProduct.shipping.standard.free
       });
     }
     
     // Express Shipping
-    if (product.shipping.express.available) {
+    if (targetProduct.shipping.express.available) {
       options.push({
         id: 'express',
         name: 'Express Shipping',
         description: '1-2 business days',
-        price: product.shipping.express.price,
+        price: targetProduct.shipping.express.price,
         estimatedDays: '1-2',
-        free: product.shipping.express.free
+        free: targetProduct.shipping.express.free
       });
     }
     
     // Same-day Delivery
-    if (product.shipping.sameDay.available) {
+    if (targetProduct.shipping.sameDay.available) {
       options.push({
         id: 'same_day',
         name: 'Same-day Delivery',
         description: 'Same day delivery',
-        price: product.shipping.sameDay.price,
+        price: targetProduct.shipping.sameDay.price,
         estimatedDays: 'Same day',
-        free: product.shipping.sameDay.free
+        free: targetProduct.shipping.sameDay.free
       });
     }
     
     // Next-day Delivery
-    if (product.shipping.nextDay.available) {
+    if (targetProduct.shipping.nextDay.available) {
       options.push({
         id: 'next_day',
         name: 'Next-day Delivery',
         description: 'Next business day delivery',
-        price: product.shipping.nextDay.price,
+        price: targetProduct.shipping.nextDay.price,
         estimatedDays: '1 day',
-        free: product.shipping.nextDay.free
+        free: targetProduct.shipping.nextDay.free
       });
     }
     
     // Scheduled Delivery
-    if (product.shipping.scheduled.available) {
+    if (targetProduct.shipping.scheduled.available) {
       options.push({
         id: 'scheduled',
         name: 'Scheduled Delivery',
         description: 'Schedule your preferred delivery time',
-        price: product.shipping.scheduled.price,
+        price: targetProduct.shipping.scheduled.price,
         estimatedDays: 'As scheduled',
-        free: product.shipping.scheduled.free
+        free: targetProduct.shipping.scheduled.free
       });
     }
     
     // Pickup Available
-    if (product.shipping.pickup.available) {
+    if (targetProduct.shipping.pickup.available) {
       options.push({
         id: 'pickup',
         name: 'Pickup Available',
@@ -216,7 +246,7 @@ export default function CheckoutScreen() {
     return options;
   };
 
-  const shippingOptions = getAvailableShippingOptions();
+  const shippingOptions = getAvailableShippingOptions(product);
 
   // Time options for dropdown
   const timeOptions = [
@@ -378,9 +408,36 @@ export default function CheckoutScreen() {
   }, [showPickupModal, pickupSlideAnim]);
 
   // Calculations
-  const selectedShippingOption = shippingOptions.find(s => s.id === selectedShipping) || shippingOptions[0];
-  const subtotal = totalPrice;
-  const shippingCost = selectedShippingOption ? selectedShippingOption.price : 0;
+  const calculateSubtotal = () => {
+    if (isCartCheckout) {
+      return selectedCartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+    }
+    return totalPrice;
+  };
+  
+  const calculateShippingCost = () => {
+    if (isCartCheckout) {
+      // For cart checkout, we need to calculate shipping for each distributor group
+      let totalShipping = 0;
+      Object.values(distributorGroups).forEach(group => {
+        if (group.length > 0) {
+          const firstProduct = group[0].product as MarketplaceProduct;
+          const shippingOptions = getAvailableShippingOptions(firstProduct);
+          const selectedOption = shippingOptions.find(s => s.id === selectedShipping) || shippingOptions[0];
+          if (selectedOption) {
+            totalShipping += selectedOption.price;
+          }
+        }
+      });
+      return totalShipping;
+    }
+    
+    const selectedShippingOption = shippingOptions.find(s => s.id === selectedShipping) || shippingOptions[0];
+    return selectedShippingOption ? selectedShippingOption.price : 0;
+  };
+  
+  const subtotal = calculateSubtotal();
+  const shippingCost = calculateShippingCost();
   const total = subtotal + shippingCost;
 
   const handlePlaceOrder = () => {
@@ -404,24 +461,27 @@ export default function CheckoutScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+
       <ScrollView 
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 100 }} // Add space for sticky bottom bar
         showsVerticalScrollIndicator={false}
       >
-        {/* Business Information */}
-        <View style={[styles.section]}>
-          <View style={styles.businessCard}>
-            <View style={styles.sectionTitleContainer}>
-              <Building2 size={20} color="#0a61d7" />
-              <Text style={styles.sectionTitle}>Business Information</Text>
+        {/* Business Information - Only show for single product checkout */}
+        {!isCartCheckout && distributorInfo && (
+          <View style={[styles.section]}>
+            <View style={styles.businessCard}>
+              <View style={styles.sectionTitleContainer}>
+                <Building2 size={20} color="#0a61d7" />
+                <Text style={styles.sectionTitle}>Business Information</Text>
+              </View>
+              <Text style={styles.businessName}>{distributorInfo.companyName}</Text>
+              <Text style={styles.businessType}>Industry: {distributorInfo.industryType}</Text>
+              <Text style={styles.businessDetails}>Contact: {distributorInfo.contactPerson}</Text>
+              <Text style={styles.businessDetails}>Phone: {distributorInfo.phone}</Text>
             </View>
-            <Text style={styles.businessName}>{distributorInfo.companyName}</Text>
-            <Text style={styles.businessType}>Industry: {distributorInfo.industryType}</Text>
-            <Text style={styles.businessDetails}>Contact: {distributorInfo.contactPerson}</Text>
-            <Text style={styles.businessDetails}>Phone: {distributorInfo.phone}</Text>
           </View>
-        </View>
+        )}
 
         {/* Delivery Address */}
         <View style={styles.section}>
@@ -445,109 +505,225 @@ export default function CheckoutScreen() {
         </View>
 
         {/* Order Details & Shipping Method */}
-        <View style={styles.section}>
-          <View style={styles.productCard}>
-            <View style={styles.sectionTitleContainer}>
-              <Package size={20} color="#0a61d7" />
-              <Text style={styles.sectionTitle}>Order Details & Shipping</Text>
-            </View>
+        {isCartCheckout ? (
+          // Cart checkout - show separate sections for each distributor
+          Object.entries(distributorGroups).map(([distributorId, items]) => {
+            const firstProduct = items[0].product as MarketplaceProduct;
+            const distributorInfo = getDistributorInfo(firstProduct);
+            const shippingOptions = getAvailableShippingOptions(firstProduct);
             
-            {/* Product Row - Shopee Style */}
-            <View style={styles.productRow}>
-              <View style={styles.productImageContainer}>
-                {productImage ? (
-                  <Image source={{ uri: productImage }} style={styles.productImage} />
+            return (
+              <View key={distributorId} style={[styles.section, styles.distributorSection]}>
+                <View style={styles.productCard}>
+                  <View style={styles.sectionTitleContainer}>
+                    <Building2 size={20} color="#0a61d7" />
+                    <Text style={styles.sectionTitle}>{distributorInfo.companyName}</Text>
+                  </View>
+                  
+                  {/* Products from this distributor */}
+                  {items.map((item, index) => (
+                    <View key={item.id} style={[styles.productRow, index > 0 && styles.productRowSpacing]}>
+                      <View style={styles.productImageContainer}>
+                        {item.product.images?.[0] ? (
+                          <Image source={{ uri: item.product.images[0] }} style={styles.productImage} />
+                        ) : (
+                          <View style={styles.imagePlaceholder}>
+                            <Package size={32} color="#9CA3AF" />
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.productDetails}>
+                        <Text style={styles.productName} numberOfLines={2}>{item.product.name}</Text>
+                        <Text style={styles.productSpecs}>Variant: {item.variant}</Text>
+                        <View style={styles.priceRow}>
+                          <Text style={styles.productPrice}>
+                            {formatCurrency(item.product.price)} each
+                          </Text>
+                          <Text style={styles.quantityBadge}>x{item.quantity}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                  
+                  {/* Shipping Options for this distributor */}
+                  <View style={styles.shippingSection}>
+                    <View style={styles.shippingTitleContainer}>
+                      <Truck size={20} color="#0a61d7" />
+                      <Text style={styles.shippingTitle}>Shipping Method</Text>
+                    </View>
+                    {shippingOptions.length > 0 ? (
+                      shippingOptions.map((option) => (
+                        <TouchableOpacity
+                          key={option.id}
+                          style={[
+                            styles.shippingOption,
+                            selectedShipping === option.id && styles.shippingOptionSelected
+                          ]}
+                          onPress={() => handleShippingSelection(option.id)}
+                        >
+                          <View style={styles.shippingInfo}>
+                            <Text style={styles.shippingName}>{option.name}</Text>
+                            <Text style={styles.shippingDescription}>{option.description}</Text>
+                            <View style={styles.shippingTime}>
+                              <Clock size={14} color="#6B7280" />
+                              <Text style={styles.shippingTimeText}>
+                                {option.id === 'pickup' 
+                                  ? (selectedShipping === 'pickup' && pickupDateTime ? `Pickup scheduled: ${pickupDateTime.toLocaleString('en-US', {
+                                      weekday: 'short',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}` : 'Available for pickup')
+                                  : option.id === 'scheduled'
+                                  ? (selectedShipping === 'scheduled' && scheduledDateTime ? `Delivery scheduled: ${scheduledDateTime.toLocaleString('en-US', {
+                                      weekday: 'short',
+                                      month: 'short',
+                                      day: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}` : 'Schedule your preferred delivery time')
+                                  : `Estimated delivery: ${option.estimatedDays}`
+                                }
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={styles.shippingPrice}>
+                            <Text style={[
+                              styles.shippingPriceText,
+                              option.free && styles.freeText
+                            ]}>
+                              {option.free ? 'FREE' : formatCurrency(option.price)}
+                            </Text>
+                            {selectedShipping === option.id && (
+                              <CheckCircle size={20} color="#0a61d7" />
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))
+                    ) : (
+                      <View style={styles.noShippingCard}>
+                        <Text style={styles.noShippingText}>
+                          No shipping options available for this distributor.
+                        </Text>
+                        <Text style={styles.noShippingSubtext}>
+                          Please contact the distributor directly for delivery arrangements.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              </View>
+            );
+          })
+        ) : (
+          // Single product checkout
+          <View style={styles.section}>
+            <View style={styles.productCard}>
+              <View style={styles.sectionTitleContainer}>
+                <Package size={20} color="#0a61d7" />
+                <Text style={styles.sectionTitle}>Order Details & Shipping</Text>
+              </View>
+              
+              {/* Product Row - Shopee Style */}
+              <View style={styles.productRow}>
+                <View style={styles.productImageContainer}>
+                  {productImage ? (
+                    <Image source={{ uri: productImage }} style={styles.productImage} />
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <Package size={32} color="#9CA3AF" />
+                    </View>
+                  )}
+                </View>
+                <View style={styles.productDetails}>
+                  <Text style={styles.productName} numberOfLines={2}>{productName}</Text>
+                  <Text style={styles.productSpecs}>
+                    {piecesPerPackage} pieces per {packageType}
+                  </Text>
+                  <View style={styles.priceRow}>
+                    <Text style={styles.productPrice}>
+                      {formatCurrency(unitPrice)} per piece
+                    </Text>
+                    <Text style={styles.quantityBadge}>x{quantity}</Text>
+                  </View>
+                </View>
+              </View>
+              
+              {/* Shipping Options */}
+              <View style={styles.shippingSection}>
+                <View style={styles.shippingTitleContainer}>
+                  <Truck size={20} color="#0a61d7" />
+                  <Text style={styles.shippingTitle}>Shipping Method</Text>
+                </View>
+                {shippingOptions.length > 0 ? (
+                  shippingOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option.id}
+                      style={[
+                        styles.shippingOption,
+                        selectedShipping === option.id && styles.shippingOptionSelected
+                      ]}
+                      onPress={() => handleShippingSelection(option.id)}
+                    >
+                      <View style={styles.shippingInfo}>
+                        <Text style={styles.shippingName}>{option.name}</Text>
+                        <Text style={styles.shippingDescription}>{option.description}</Text>
+                        <View style={styles.shippingTime}>
+                          <Clock size={14} color="#6B7280" />
+                          <Text style={styles.shippingTimeText}>
+                            {option.id === 'pickup' 
+                              ? (selectedShipping === 'pickup' && pickupDateTime ? `Pickup scheduled: ${pickupDateTime.toLocaleString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })}` : 'Available for pickup')
+                              : option.id === 'scheduled'
+                              ? (selectedShipping === 'scheduled' && scheduledDateTime ? `Delivery scheduled: ${scheduledDateTime.toLocaleString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })}` : 'Schedule your preferred delivery time')
+                              : `Estimated delivery: ${option.estimatedDays}`
+                            }
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.shippingPrice}>
+                        <Text style={[
+                          styles.shippingPriceText,
+                          option.free && styles.freeText
+                        ]}>
+                          {option.free ? 'FREE' : formatCurrency(option.price)}
+                        </Text>
+                        {selectedShipping === option.id && (
+                          <CheckCircle size={20} color="#0a61d7" />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  ))
                 ) : (
-                  <View style={styles.imagePlaceholder}>
-                    <Package size={32} color="#9CA3AF" />
+                  <View style={styles.noShippingCard}>
+                    <Text style={styles.noShippingText}>
+                      No shipping options available for this distributor.
+                    </Text>
+                    <Text style={styles.noShippingSubtext}>
+                      Please contact the distributor directly for delivery arrangements.
+                    </Text>
                   </View>
                 )}
               </View>
-              <View style={styles.productDetails}>
-                <Text style={styles.productName} numberOfLines={2}>{productName}</Text>
-                <Text style={styles.productSpecs}>
-                  {piecesPerPackage} pieces per {packageType}
-                </Text>
-                <View style={styles.priceRow}>
-                  <Text style={styles.productPrice}>
-                    {formatCurrency(unitPrice)} per piece
-                  </Text>
-                  <Text style={styles.quantityBadge}>x{quantity}</Text>
-                </View>
-              </View>
-            </View>
-            
-            {/* Shipping Options */}
-            <View style={styles.shippingSection}>
-              <View style={styles.shippingTitleContainer}>
-                <Truck size={20} color="#0a61d7" />
-                <Text style={styles.shippingTitle}>Shipping Method</Text>
-              </View>
-              {shippingOptions.length > 0 ? (
-                shippingOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.id}
-                    style={[
-                      styles.shippingOption,
-                      selectedShipping === option.id && styles.shippingOptionSelected
-                    ]}
-                    onPress={() => handleShippingSelection(option.id)}
-                  >
-                    <View style={styles.shippingInfo}>
-                      <Text style={styles.shippingName}>{option.name}</Text>
-                      <Text style={styles.shippingDescription}>{option.description}</Text>
-                      <View style={styles.shippingTime}>
-                        <Clock size={14} color="#6B7280" />
-                        <Text style={styles.shippingTimeText}>
-                          {option.id === 'pickup' 
-                            ? (selectedShipping === 'pickup' && pickupDateTime ? `Pickup scheduled: ${pickupDateTime.toLocaleString('en-US', {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true
-                              })}` : 'Available for pickup')
-                            : option.id === 'scheduled'
-                            ? (selectedShipping === 'scheduled' && scheduledDateTime ? `Delivery scheduled: ${scheduledDateTime.toLocaleString('en-US', {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true
-                              })}` : 'Schedule your preferred delivery time')
-                            : `Estimated delivery: ${option.estimatedDays}`
-                          }
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.shippingPrice}>
-                      <Text style={[
-                        styles.shippingPriceText,
-                        option.free && styles.freeText
-                      ]}>
-                        {option.free ? 'FREE' : formatCurrency(option.price)}
-                      </Text>
-                      {selectedShipping === option.id && (
-                        <CheckCircle size={20} color="#0a61d7" />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={styles.noShippingCard}>
-                  <Text style={styles.noShippingText}>
-                    No shipping options available for this distributor.
-                  </Text>
-                  <Text style={styles.noShippingSubtext}>
-                    Please contact the distributor directly for delivery arrangements.
-                  </Text>
-                </View>
-              )}
             </View>
           </View>
-        </View>
+        )}
 
         {/* Payment Method */}
         <View style={styles.section}>
@@ -589,7 +765,12 @@ export default function CheckoutScreen() {
               <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Shipping ({selectedShippingOption.name})</Text>
+              <Text style={styles.summaryLabel}>
+                {isCartCheckout 
+                  ? `Shipping (${Object.keys(distributorGroups).length} distributor${Object.keys(distributorGroups).length > 1 ? 's' : ''})`
+                  : `Shipping (${shippingOptions.find(s => s.id === selectedShipping)?.name || 'Standard'})`
+                }
+              </Text>
               <Text style={styles.summaryValue}>{formatCurrency(shippingCost)}</Text>
             </View>
             <View style={[styles.summaryRow, styles.totalRow]}>
@@ -778,9 +959,9 @@ export default function CheckoutScreen() {
               
               <View style={styles.pickupInfo}>
                 <Text style={styles.pickupAddressLabel}>Pickup Location:</Text>
-                <Text style={styles.pickupAddress}>{distributorInfo.companyName}</Text>
+                <Text style={styles.pickupAddress}>{distributorInfo?.companyName || 'Distributor Company'}</Text>
                 <Text style={styles.pickupAddressDetail}>
-                  {distributorInfo.pickupAddress}
+                  {distributorInfo?.pickupAddress || 'Address not available'}
                 </Text>
               </View>
               
@@ -907,6 +1088,9 @@ const styles = StyleSheet.create({
   section: {
     marginTop: 8,
     paddingHorizontal: 8,
+  },
+  distributorSection: {
+    marginTop: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1063,6 +1247,10 @@ const styles = StyleSheet.create({
   productRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+  },
+  productRowSpacing: {
+    marginTop: 5,
+    paddingTop: 5,
   },
   priceRow: {
     flexDirection: 'row',

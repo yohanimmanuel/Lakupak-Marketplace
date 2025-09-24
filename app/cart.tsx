@@ -194,7 +194,15 @@ export default function CartScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.productInfo}>
+      <TouchableOpacity 
+        style={styles.productInfo}
+        onPress={() => {
+          router.push({
+            pathname: '/product',
+            params: { productId: item.product.id }
+          });
+        }}
+      >
         <Image
           source={{ uri: item.product.images?.[0] || 'https://via.placeholder.com/150' }}
           style={styles.productImage}
@@ -231,9 +239,9 @@ export default function CartScreen() {
             <View style={styles.priceContainer}>
               <Text style={styles.price}>{formatCurrency(item.product.price * item.quantity)}</Text>
             </View>
+            </View>
           </View>
-        </View>
-      </View>
+        </TouchableOpacity>
 
     </View>
   );
@@ -341,7 +349,14 @@ export default function CartScreen() {
             <Text style={styles.totalSaved}>Saved {formatCurrency(totalSaved)}</Text>
           </View>
 
-          <TouchableOpacity style={styles.checkoutButton}>
+          <TouchableOpacity 
+            style={styles.checkoutButton}
+            onPress={() => {
+              if (selectedItemCount > 0) {
+                router.push('/components/productcatalog/checkout');
+              }
+            }}
+          >
             <Text style={styles.checkoutButtonText}>Check Out ({selectedItemCount})</Text>
           </TouchableOpacity>
         </View>
@@ -638,6 +653,7 @@ const styles = StyleSheet.create({
   totalContainer: {
     alignItems: 'center',
     flex: 1,
+    marginBottom: 12,
   },
   totalPrice: {
     fontSize: 18,
