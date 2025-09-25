@@ -231,8 +231,24 @@ export const useCartStore = create<CartState>()(
         })
       },
 
-      clearCart: () => {
+      clearCart: async () => {
+        const { items, isOnline } = get()
+        const authState = useAuthStore.getState()
+        const currentUserId = authState.user?.id || null
+        
+        // Clear local state immediately
         set({ items: [] })
+        
+        // Clear from database if user is logged in and online
+        if (currentUserId && isOnline) {
+          try {
+            // Clear all cart items from database
+            await fetch(`${API_BASE_URL}/api/mobile/cart?userId=${currentUserId}`, {
+              method: 'DELETE'
+            })
+          } catch (error) {
+          }
+        }
       },
 
       setCartOpen: (isOpen) => {
@@ -347,15 +363,17 @@ export const useCartStore = create<CartState>()(
       getTotalPrice: () => {
         const { getSelectedItems } = get()
         return getSelectedItems().reduce((total, item) => {
-          return total + (item.product.price * item.quantity)
+          const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1
+          return total + (item.product.price * item.quantity * piecesPerPackage)
         }, 0)
       },
 
       getTotalSaved: () => {
         const { getSelectedItems } = get()
         return getSelectedItems().reduce((total, item) => {
+          const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1
           const originalPrice = (item.product as MarketplaceProduct).originalPrice || item.product.price
-          return total + ((originalPrice - item.product.price) * item.quantity)
+          return total + ((originalPrice - item.product.price) * item.quantity * piecesPerPackage)
         }, 0)
       },
 
@@ -366,7 +384,7 @@ export const useCartStore = create<CartState>()(
 
       getSelectedItemCount: () => {
         const { getSelectedItems } = get()
-        return getSelectedItems().reduce((total, item) => total + item.quantity, 0)
+        return getSelectedItems().length
       },
     })
   // Temporarily disabled AsyncStorage persistence

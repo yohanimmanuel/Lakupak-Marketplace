@@ -237,7 +237,9 @@ export default function CartScreen() {
             </View>
             
             <View style={styles.priceContainer}>
-              <Text style={styles.price}>{formatCurrency(item.product.price * item.quantity)}</Text>
+              <Text style={styles.price}>
+                {formatCurrency(item.product.price * item.quantity * ((item.product as MarketplaceProduct).piecesPerPackage || 1))}
+              </Text>
             </View>
             </View>
           </View>

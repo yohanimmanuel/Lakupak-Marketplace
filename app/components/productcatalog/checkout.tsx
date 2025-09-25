@@ -35,6 +35,7 @@ import { MarketplaceProduct } from '../../../services/marketplace';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore } from '../../../stores/cartStore';
+import { API_BASE_URL } from '../../../services/config';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -410,7 +411,10 @@ export default function CheckoutScreen() {
   // Calculations
   const calculateSubtotal = () => {
     if (isCartCheckout) {
-      return selectedCartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0);
+      return selectedCartItems.reduce((total, item) => {
+        const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
+        return total + (item.product.price * item.quantity * piecesPerPackage);
+      }, 0);
     }
     return totalPrice;
   };
@@ -440,7 +444,9 @@ export default function CheckoutScreen() {
   const shippingCost = calculateShippingCost();
   const total = subtotal + shippingCost;
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
+    try {
+      // Show loading state
     Alert.alert(
       'Order Confirmation',
       `Are you sure you want to place this order for ${formatCurrency(total)}?`,
@@ -449,14 +455,160 @@ export default function CheckoutScreen() {
         { 
           text: 'Place Order', 
           style: 'default',
-          onPress: () => {
-            // TODO: Implement order placement
-            Alert.alert('Success', 'Your order has been placed successfully!');
-            router.back();
+            onPress: async () => {
+              try {
+                // Generate required fields using marketplace user data
+                const buyerId = `LKB-${cachedUser?.id?.toString().padStart(8, '0') || Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
+                const orderDate = new Date().toISOString();
+                const customerEmail = cachedUser?.email || `${addresses[0].phone.replace(/[^0-9]/g, '')}@lakulaku.com`;
+                
+                let createdOrders = [];
+                
+                if (isCartCheckout) {
+                  // Cart checkout - create separate orders for each distributor
+                  const distributorGroups = groupByDistributor(selectedCartItems);
+                  
+                  for (const [distributorId, items] of Object.entries(distributorGroups)) {
+                    // Generate unique order ID for each distributor
+                    const orderId = `LKO-${Date.now()}${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
+                    
+                    // Calculate totals for this distributor's items
+                    const distributorSubtotal = items.reduce((total, item) => {
+                      const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
+                      return total + (item.product.price * item.quantity * piecesPerPackage);
+                    }, 0);
+                    const firstProduct = items[0].product as MarketplaceProduct;
+                    const shippingOptions = getAvailableShippingOptions(firstProduct);
+                    const selectedOption = shippingOptions.find(s => s.id === selectedShipping) || shippingOptions[0];
+                    const distributorShippingCost = selectedOption ? selectedOption.price : 0;
+                    const distributorTotal = distributorSubtotal + distributorShippingCost;
+                    
+                    const orderData = {
+                      orderId: orderId,
+                      buyerId: buyerId,
+                      orderDate: orderDate,
+                      orderItems: items.map(item => ({
+                        productId: item.product.id,
+                        productName: item.product.name,
+                        packageQuantity: item.quantity,
+                        packageType: item.product.packageType || 'Box',
+                        piecesPerPackage: item.product.piecesPerPackage || 1,
+                        pricePerPackage: item.product.price * (item.product.piecesPerPackage || 1),
+                        subtotal: item.product.price * item.quantity * (item.product.piecesPerPackage || 1)
+                      })),
+                      subtotal: distributorSubtotal,
+                      discounts: 0,
+                      shippingFee: distributorShippingCost,
+                      totalAmount: distributorTotal,
+                      totalOrders: items.reduce((sum, item) => {
+                        const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
+                        return sum + (item.quantity * piecesPerPackage);
+                      }, 0),
+                      contactPerson: cachedUser?.name || addresses[0].name,
+                      storeName: cachedUser?.storeName || addresses[0].company,
+                      contactPhone: cachedUser?.phone || addresses[0].phone,
+                      customerEmail: customerEmail,
+                      deliveryAddress: addresses[0].address,
+                      deliveryMethod: selectedShipping === 'pickup' ? 'Pickup' : 'Distributor Fleet',
+                      orderStatus: 'Pending',
+                      paymentStatus: 'Unpaid',
+                      paymentTerms: 'Cash on Delivery',
+                      userId: cachedUser?.id || null
+                    };
+                    
+                    const response = await fetch(`${API_BASE_URL}/api/orders`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(orderData)
+                    });
+
+                    if (!response.ok) {
+                      const errorText = await response.text();
+                      throw new Error(`Failed to create order for ${distributorId}: ${response.status} - ${errorText}`);
+                    }
+
+                    const createdOrder = await response.json();
+                    createdOrders.push(createdOrder);
+                  }
+                  
+                  // Clear cart after all orders are created
+                  await cartStore.clearCart();
+                } else {
+                  // Single product checkout
+                  const orderId = `LKO-${Date.now()}${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
+                  
+                  const orderData = {
+                    orderId: orderId,
+                    buyerId: buyerId,
+                    orderDate: orderDate,
+                    orderItems: [{
+                      productId: productId,
+                      productName: product?.name || 'Product',
+                      packageQuantity: quantity,
+                      packageType: packageType,
+                      piecesPerPackage: piecesPerPackage,
+                      pricePerPackage: unitPrice * piecesPerPackage,
+                      subtotal: totalPrice
+                    }],
+                    subtotal: totalPrice,
+                    discounts: 0,
+                    shippingFee: shippingCost,
+                    totalAmount: total,
+                    totalOrders: quantity * piecesPerPackage,
+                    contactPerson: cachedUser?.name || addresses[0].name,
+                    storeName: cachedUser?.storeName || addresses[0].company,
+                    contactPhone: cachedUser?.phone || addresses[0].phone,
+                    customerEmail: customerEmail,
+                    deliveryAddress: addresses[0].address,
+                    deliveryMethod: selectedShipping === 'pickup' ? 'Pickup' : 'Distributor Fleet',
+                    orderStatus: 'Pending',
+                    paymentStatus: 'Unpaid',
+                    paymentTerms: 'Cash on Delivery',
+                    userId: cachedUser?.id || null
+                  };
+                  
+                  const response = await fetch(`${API_BASE_URL}/api/orders`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(orderData)
+                  });
+
+                  if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Failed to create order: ${response.status} - ${errorText}`);
+                  }
+
+                  const createdOrder = await response.json();
+                  createdOrders.push(createdOrder);
+                }
+
+                // Navigate to payment success page with the first order's details
+                const firstOrder = createdOrders[0];
+                router.push({
+                  pathname: '/payment-success',
+                  params: {
+                    orderId: firstOrder.orderId,
+                    totalAmount: total.toString(),
+                    orderStatus: firstOrder.orderStatus,
+                    orderCount: createdOrders.length.toString()
+                  }
+                });
+
+              } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Failed to place order. Please try again.';
+                Alert.alert('Error', errorMessage);
+              }
           }
         }
       ]
     );
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    }
   };
 
   return (

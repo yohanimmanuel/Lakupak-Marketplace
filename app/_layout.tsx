@@ -220,6 +220,18 @@ function RootLayoutNav() {
           }} 
         />
         
+        {/* Payment Success Screen */}
+        <Stack.Screen 
+          name="payment-success" 
+          options={{ 
+            presentation: 'modal',
+            title: 'Payment Success',
+            headerStyle: { backgroundColor: '#ffffff' },
+            headerTitleStyle: { color: '#111827' },
+            headerTintColor: '#0a61d7',
+          }} 
+        />
+        
         {/* Product Modal Screen */}
         <Stack.Screen 
           name="product" 
