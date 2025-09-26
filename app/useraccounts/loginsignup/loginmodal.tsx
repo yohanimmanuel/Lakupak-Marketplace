@@ -160,8 +160,9 @@ export default function LoginModal() {
                     await setToken(result.token);
                     setUser(result.user);
                     router.replace('/(tabs)/account' as any);
-                  } catch (error: any) {
-                    Alert.alert('Google Sign-in Failed', error.message || 'Something went wrong');
+                  } catch (error: unknown) {
+                    const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
+                    Alert.alert('Google Sign-in Failed', errorMessage);
                   } finally {
                     setIsGoogleLoading(false);
                   }
@@ -240,8 +241,9 @@ export default function LoginModal() {
                         try {
                           const fullPhone = `${selectedCountry.dialCode}${phoneNumber.trim().replace(/\s+/g, '').replace(/^0+/, '')}`;
                           await requestOtp(fullPhone, selectedCountry.code, 'whatsapp');
-                        } catch (e: any) {
-                          Alert.alert('Send failed', 'Could not request WhatsApp OTP. Check network/backend.');
+                        } catch (e: unknown) {
+                          const errorMessage = e instanceof Error ? e.message : 'Could not request WhatsApp OTP. Check network/backend.';
+                          Alert.alert('Send failed', errorMessage);
                         }
                       }}
                       style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 16 }}

@@ -34,7 +34,7 @@ import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { useDataStore } from '../../../stores/dataStore';
-import { useCartStore } from '../../../stores/cartStore';
+import { useCartStore, CartItem } from '../../../stores/cartStore';
 import { API_BASE_URL } from '../../../services/config';
 import { NotificationService } from '../../../services/notificationService';
 
@@ -589,7 +589,7 @@ export default function CheckoutScreen() {
 
                 // Collect product images from cart items or single product
                 const productImages = isCartCheckout 
-                  ? selectedCartItems.map((item: any) => item.product.images?.[0]).filter(Boolean)
+                  ? selectedCartItems.map((item: CartItem) => item.product.images?.[0]).filter(Boolean)
                   : productImage ? [productImage] : [];
                 
                 // Create notifications for successful orders (only once, not per order)

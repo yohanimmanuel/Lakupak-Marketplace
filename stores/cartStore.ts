@@ -11,9 +11,14 @@ interface DatabaseUserActivity {
   id: number;
   userId: number;
   productId: string;
-  productData: any; // Complete product data as JSON
-  activityType: string; // 'cart', 'favorite', 'viewed', 'purchased'
-  metadata: any; // Additional data (quantity, variant, etc.)
+  productData: Product | MarketplaceProduct; // Complete product data as JSON
+  activityType: 'cart' | 'favorite' | 'viewed' | 'purchased';
+  metadata: {
+    quantity?: number;
+    variant?: string;
+    addedAt?: number;
+    selected?: boolean;
+  };
   createdAt: string;
   updatedAt: string;
 }
