@@ -49,7 +49,6 @@ export default function OrdersScreen() {
         
         // If no notifications exist, add some sample data for demonstration
         if (orderNotifications.length === 0) {
-          await addSampleOrderNotifications();
           const allNotifications = await NotificationService.getNotifications();
           const filteredNotifications = allNotifications.filter(n => n.type === 'order');
           setNotifications(filteredNotifications);
@@ -62,17 +61,6 @@ export default function OrdersScreen() {
 
     loadNotifications();
   }, []);
-
-  // Add sample order notifications for demonstration
-  const addSampleOrderNotifications = async () => {
-    try {
-      // Sample order notifications
-      await NotificationService.createOrderNotifications('LKO-12345678', 1);
-      await NotificationService.createShippingNotification('LKO-12345678', 'LKU123456789');
-      await NotificationService.createDeliveryNotification('LKO-12345678', 'LKU123456789');
-    } catch (error) {
-    }
-  };
 
   // Refresh notifications when screen comes into focus
   useFocusEffect(
