@@ -57,7 +57,6 @@ export default function OrdersScreen() {
           setNotifications(orderNotifications);
         }
       } catch (error) {
-        console.error('Error loading notifications:', error);
       }
     };
 
@@ -72,7 +71,6 @@ export default function OrdersScreen() {
       await NotificationService.createShippingNotification('LKO-12345678', 'LKU123456789');
       await NotificationService.createDeliveryNotification('LKO-12345678', 'LKU123456789');
     } catch (error) {
-      console.error('Error adding sample order notifications:', error);
     }
   };
 
@@ -101,7 +99,6 @@ export default function OrdersScreen() {
                 await NotificationService.cleanupOrphanedNotifications(existingOrderIds);
               }
             } catch (apiError) {
-              console.error('Error checking order existence:', apiError);
               // If API fails, just use the current notifications
             }
             
@@ -113,7 +110,7 @@ export default function OrdersScreen() {
             setNotifications(orderNotifications);
           }
         } catch (error) {
-          console.error('Error refreshing notifications:', error);
+          // Handle error silently
         }
       };
 
@@ -184,7 +181,7 @@ export default function OrdersScreen() {
       const updatedNotifications = await NotificationService.getNotifications();
       setNotifications(updatedNotifications);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      // Handle error silently
     }
   };
 
@@ -195,7 +192,7 @@ export default function OrdersScreen() {
       const updatedNotifications = await NotificationService.getNotifications();
       setNotifications(updatedNotifications);
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      // Handle error silently
     }
   };
 

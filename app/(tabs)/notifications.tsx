@@ -45,7 +45,6 @@ export default function NotificationsScreen() {
           setNotifications(nonOrderNotifications);
         }
       } catch (error) {
-        console.error('Error loading notifications:', error);
       }
     };
 
@@ -81,7 +80,6 @@ export default function NotificationsScreen() {
         'Update to the latest version for better performance and new features.'
       );
     } catch (error) {
-      console.error('Error adding sample notifications:', error);
     }
   };
 
@@ -93,7 +91,6 @@ export default function NotificationsScreen() {
         const nonOrderNotifications = storedNotifications.filter(n => n.type !== 'order');
         setNotifications(nonOrderNotifications);
       } catch (error) {
-        console.error('Error refreshing notifications:', error);
       }
     };
 
@@ -125,7 +122,6 @@ export default function NotificationsScreen() {
       const nonOrderNotifications = updatedNotifications.filter(n => n.type !== 'order');
       setNotifications(nonOrderNotifications);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
     }
   };
 
@@ -137,7 +133,6 @@ export default function NotificationsScreen() {
       const nonOrderNotifications = updatedNotifications.filter(n => n.type !== 'order');
       setNotifications(nonOrderNotifications);
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
     }
   };
 

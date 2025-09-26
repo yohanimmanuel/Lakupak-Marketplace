@@ -26,7 +26,6 @@ export class NotificationService {
       }
       return [];
     } catch (error) {
-      console.error('Error getting notifications:', error);
       return [];
     }
   }
@@ -36,7 +35,7 @@ export class NotificationService {
     try {
       await AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
     } catch (error) {
-      console.error('Error saving notifications:', error);
+      // Handle error silently
     }
   }
 
@@ -61,7 +60,7 @@ export class NotificationService {
       notifications.unshift(newNotification); // Add to beginning
       await this.saveNotifications(notifications);
     } catch (error) {
-      console.error('Error adding notification:', error);
+      // Handle error silently
     }
   }
 
@@ -76,7 +75,7 @@ export class NotificationService {
       );
       await this.saveNotifications(updatedNotifications);
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      // Handle error silently
     }
   }
 
@@ -90,7 +89,7 @@ export class NotificationService {
       }));
       await this.saveNotifications(updatedNotifications);
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      // Handle error silently
     }
   }
 
@@ -100,7 +99,6 @@ export class NotificationService {
       const notifications = await this.getNotifications();
       return notifications.filter(notification => !notification.isRead).length;
     } catch (error) {
-      console.error('Error getting unread count:', error);
       return 0;
     }
   }
@@ -130,7 +128,7 @@ export class NotificationService {
         });
       }
     } catch (error) {
-      console.error('Error creating order notifications:', error);
+      // Handle error silently
     }
   }
 
@@ -145,7 +143,6 @@ export class NotificationService {
         status: 'shipped'
       });
     } catch (error) {
-      console.error('Error creating shipping notification:', error);
     }
   }
 
@@ -170,7 +167,6 @@ export class NotificationService {
         status: 'delivered'
       });
     } catch (error) {
-      console.error('Error creating delivery notification:', error);
     }
   }
 
@@ -183,7 +179,6 @@ export class NotificationService {
         message: message
       });
     } catch (error) {
-      console.error('Error creating discount notification:', error);
     }
   }
 
@@ -196,7 +191,6 @@ export class NotificationService {
         message: message
       });
     } catch (error) {
-      console.error('Error creating promotion notification:', error);
     }
   }
 
@@ -209,7 +203,6 @@ export class NotificationService {
         message: message
       });
     } catch (error) {
-      console.error('Error creating update notification:', error);
     }
   }
 
@@ -231,10 +224,9 @@ export class NotificationService {
         );
         
         await this.saveNotifications(validNotifications);
-        console.log(`Cleaned up ${orphanedNotifications.length} orphaned notifications`);
       }
     } catch (error) {
-      console.error('Error cleaning up orphaned notifications:', error);
+      // Handle error silently
     }
   }
 }
