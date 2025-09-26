@@ -36,6 +36,7 @@ import { formatCurrency } from '../../../utils/currencyUtils';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore } from '../../../stores/cartStore';
 import { API_BASE_URL } from '../../../services/config';
+import { NotificationService } from '../../../services/notificationService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -584,6 +585,16 @@ export default function CheckoutScreen() {
 
                   const createdOrder = await response.json();
                   createdOrders.push(createdOrder);
+                }
+
+                // Collect product images from cart items or single product
+                const productImages = isCartCheckout 
+                  ? selectedCartItems.map((item: any) => item.product.images?.[0]).filter(Boolean)
+                  : productImage ? [productImage] : [];
+                
+                // Create notifications for successful orders (only once, not per order)
+                if (createdOrders.length > 0) {
+                  await NotificationService.createOrderNotifications(createdOrders[0].orderId, createdOrders.length, productImages);
                 }
 
                 // Navigate to payment success page with the first order's details
