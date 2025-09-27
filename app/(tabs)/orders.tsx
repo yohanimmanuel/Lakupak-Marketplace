@@ -31,129 +31,119 @@ import {
   MapPin,
   User as UserIcon,
 } from 'lucide-react-native';
-import { useDataStore } from '../../stores/dataStore';
 import { useAuthStore } from '../../stores/authStore';
-import { NotificationService, Notification } from '../../services/notificationService';
 import { API_BASE_URL } from '../../services/config';
+import { Notification } from '../../services/notificationService';
+import { useRouter } from 'expo-router';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function OrdersScreen() {
-  const { user } = useDataStore();
+  const router = useRouter();
   const token = useAuthStore(s => s.token);
   const authUser = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
   
   const isAuthenticated = !!token && !!authUser;
 
+  // SIMPLE: Load immediately when component mounts
   useEffect(() => {
     hydrate();
   }, [hydrate]);
 
-  // Load notifications from storage (only when authenticated)
+  // SIMPLE: Load orders immediately when authenticated
   useEffect(() => {
     if (!isAuthenticated || !authUser?.id) {
       setNotifications([]);
       return;
     }
 
-    const loadNotifications = async () => {
+    const loadOrders = async () => {
+      setIsLoading(true);
       try {
-        // Get user-specific notifications
-        const storedNotifications = await NotificationService.getNotifications(authUser.id);
-        
-        // Filter to only show order notifications
-        const orderNotifications = storedNotifications.filter(n => n.type === 'order');
-        
-        // If no notifications exist, fetch from backend API
-        // ALWAYS fetch fresh - no caching
-        try {
-          try {
-            // Fetch user's orders from mobile API
-            const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${authUser.id}&limit=50`, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            if (response.ok) {
-              const data = await response.json();
-              const orders = data.orders || [];
-              
-              // Create notifications from actual orders with correct status
-              const orderNotifications = orders.map((order: any) => {
-                // Determine the correct title and message based on BOTH order status AND payment status
-                let title = 'Payment Required';
-                let message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing. Once payment is confirmed, we'll start preparing your order for shipment.`;
-                
-                // Check payment status first, then order status
-                if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
-                  title = 'Payment Required';
-                  message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing. Once payment is confirmed, we'll start preparing your order for shipment.`;
-                } else if (order.orderStatus === 'Confirmed') {
-                  title = 'Order Confirmed';
-                  message = `Excellent! Your order ${order.orderId} has been confirmed by our distributor and is now being processed. Our team is preparing your items for packaging. We'll keep you updated on the progress. Expected processing time is 1-2 business days.`;
-                } else if (order.orderStatus === 'Packed') {
-                  title = 'Order Packed';
-                  message = `Fantastic! Your order ${order.orderId} has been carefully packed and is ready for shipment. All items have been quality-checked and securely packaged. Your order will be handed over to our delivery partner soon. You'll receive tracking information once it ships.`;
-                } else if (order.orderStatus === 'Shipped') {
-                  title = 'Order Shipped';
-                  message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you. Our delivery partner has collected your package and it's in transit. You can expect delivery within the estimated timeframe. We'll notify you once it's delivered.`;
-                } else if (order.orderStatus === 'Delivered') {
-                  title = 'Order Delivered';
-                  message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered to your specified address. We hope you're satisfied with your purchase! Please take a moment to rate your experience and leave a review. Thank you for shopping with Laku-Laku!`;
-                } else if (order.orderStatus === 'Cancelled') {
-                  title = 'Order Cancelled';
-                  message = `We regret to inform you that your order ${order.orderId} has been cancelled. This may be due to product unavailability, payment issues, or other circumstances. If you have any questions or concerns, please contact our customer support team. We apologize for any inconvenience caused.`;
-                } else if (order.orderStatus === 'Returned') {
-                  title = 'Order Returned';
-                  message = `Your order ${order.orderId} has been returned to us. We're currently processing the return and will handle any refunds or exchanges according to our return policy. Our customer service team will contact you soon with further details. Thank you for your patience.`;
-                }
-                
-                return {
-                  id: `order_${order.orderId}`,
-                  type: 'order' as const,
-                  title: title,
-                  message: message,
-                  timestamp: new Date(order.createdAt).toLocaleString('en-US', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                  }).replace(',', ''),
-                  isRead: false,
-                  orderId: order.orderId,
-                  status: order.orderStatus?.toLowerCase() as any,
-                  productImage: order.orderItems?.[0]?.images?.[0]
-                };
-              });
-              
-              // FORCE: Just show all orders from API, no storage bullshit
-              setNotifications(orderNotifications);
-            } else {
-              setNotifications([]);
-            }
-          } catch (apiError) {
-            // Fallback to stored notifications
-            setNotifications(orderNotifications);
+        const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${authUser.id}&limit=50`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
-        } catch (error) {
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const orders = data.orders || [];
+          
+          // Convert orders to notifications
+          const orderNotifications = orders.map((order: {
+            orderId: string;
+            paymentStatus: string;
+            orderStatus: string;
+            createdAt: string;
+            orderItems?: Array<{ images?: string[] }>;
+          }) => {
+            let title = 'Payment Required';
+            let message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
+            
+            if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
+              title = 'Payment Required';
+              message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
+            } else if (order.orderStatus === 'Confirmed') {
+              title = 'Order Confirmed';
+              message = `Excellent! Your order ${order.orderId} has been confirmed by our distributor and is now being processed.`;
+            } else if (order.orderStatus === 'Packed') {
+              title = 'Order Packed';
+              message = `Fantastic! Your order ${order.orderId} has been carefully packed and is ready for shipment.`;
+            } else if (order.orderStatus === 'Shipped') {
+              title = 'Order Shipped';
+              message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you.`;
+            } else if (order.orderStatus === 'Delivered') {
+              title = 'Order Delivered';
+              message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered!`;
+            } else if (order.orderStatus === 'Cancelled') {
+              title = 'Order Cancelled';
+              message = `We regret to inform you that your order ${order.orderId} has been cancelled.`;
+            } else if (order.orderStatus === 'Returned') {
+              title = 'Order Returned';
+              message = `Your order ${order.orderId} has been returned to us.`;
+            }
+            
+            return {
+              id: `order_${order.orderId}`,
+              type: 'order',
+              title: title,
+              message: message,
+              timestamp: new Date(order.createdAt).toLocaleString('en-US', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              }).replace(',', ''),
+              isRead: false,
+              orderId: order.orderId,
+              status: order.orderStatus?.toLowerCase(),
+              productImage: order.orderItems?.[0]?.images?.[0]
+            };
+          });
+          
+          setNotifications(orderNotifications);
+        } else {
           setNotifications([]);
         }
       } catch (error) {
         setNotifications([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    loadNotifications();
+    loadOrders();
   }, [isAuthenticated, authUser?.id, token]);
 
-  // Refresh notifications when screen comes into focus (only when authenticated)
+  // SIMPLE: Refresh when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       if (!isAuthenticated || !authUser?.id) {
@@ -161,118 +151,83 @@ export default function OrdersScreen() {
         return;
       }
 
-      const refreshNotifications = async () => {
+      // Just reload the orders - simple and direct
+      const refreshOrders = async () => {
         try {
-          // First, get user-specific notifications
-          const storedNotifications = await NotificationService.getNotifications(authUser.id);
-          const orderNotifications = storedNotifications.filter(n => n.type === 'order');
-          
-          // Extract order IDs from notifications
-          const notificationOrderIds = orderNotifications
-            .map(n => n.orderId)
-            .filter(Boolean) as string[];
-          
-          // Clean up orphaned notifications (notifications for orders that no longer exist)
-          if (notificationOrderIds.length > 0) {
-            try {
-              // Check which orders still exist in the database
-              const response = await fetch(`${API_BASE_URL}/api/orders?checkExists=true&orderIds=${encodeURIComponent(JSON.stringify(notificationOrderIds))}`, {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                }
-              });
-
-              if (response.ok) {
-                const { existingOrderIds } = await response.json();
-                await NotificationService.cleanupOrphanedNotifications(existingOrderIds, authUser.id);
-              }
-            } catch (apiError) {
-              // If API fails, just use the current notifications
+          const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${authUser.id}&limit=50`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
             }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const orders = data.orders || [];
             
-            // Refresh notifications after cleanup
-            const cleanedNotifications = await NotificationService.getNotifications(authUser.id);
-            const cleanedOrderNotifications = cleanedNotifications.filter(n => n.type === 'order');
-            setNotifications(cleanedOrderNotifications);
-          } else {
-            // If no stored notifications, try to fetch from backend
-            try {
-              const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${authUser.id}&limit=50`, {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json'
-                }
-              });
+            const orderNotifications = orders.map((order: {
+              orderId: string;
+              paymentStatus: string;
+              orderStatus: string;
+              createdAt: string;
+              orderItems?: Array<{ images?: string[] }>;
+            }) => {
+              let title = 'Payment Required';
+              let message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation.`;
               
-              if (response.ok) {
-                const data = await response.json();
-                const orders = data.orders || [];
-                
-                const orderNotifications = orders.map((order: any) => {
-                  // Determine the correct title and message based on BOTH order status AND payment status
-                  let title = 'Payment Required';
-                  let message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing. Once payment is confirmed, we'll start preparing your order for shipment.`;
-                  
-                  // Check payment status first, then order status
-                  if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
-                    title = 'Payment Required';
-                    message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
-                  } else if (order.orderStatus === 'Confirmed') {
-                    title = 'Order Confirmed';
-                    message = `Excellent! Your order ${order.orderId} has been confirmed by our distributor and is now being processed. Our team is preparing your items for packaging.`;
-                  } else if (order.orderStatus === 'Packed') {
-                    title = 'Order Packed';
-                    message = `Fantastic! Your order ${order.orderId} has been carefully packed and is ready for shipment. Your order will be handed over to our delivery partner soon.`;
-                  } else if (order.orderStatus === 'Shipped') {
-                    title = 'Order Shipped';
-                    message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you. Our delivery partner has collected your package and it's in transit.`;
-                  } else if (order.orderStatus === 'Delivered') {
-                    title = 'Order Delivered';
-                    message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered to your specified address. We hope you're satisfied with your purchase!`;
-                  } else if (order.orderStatus === 'Cancelled') {
-                    title = 'Order Cancelled';
-                    message = `We regret to inform you that your order ${order.orderId} has been cancelled. This may be due to product unavailability, payment issues, or other circumstances.`;
-                  } else if (order.orderStatus === 'Returned') {
-                    title = 'Order Returned';
-                    message = `Your order ${order.orderId} has been returned to us. We're currently processing the return and will handle any refunds or exchanges according to our return policy.`;
-                  }
-                  
-                  return {
-                    id: `order_${order.orderId}`,
-                    type: 'order' as const,
-                    title: title,
-                    message: message,
-                    timestamp: new Date(order.createdAt).toLocaleString('en-US', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      hour12: false
-                    }).replace(',', ''),
-                    isRead: false,
-                    orderId: order.orderId,
-                    status: order.orderStatus?.toLowerCase() as any,
-                    productImage: order.orderItems?.[0]?.images?.[0]
-                  };
-                });
-                
-                // FORCE: Just show all orders from API, no storage bullshit
-                setNotifications(orderNotifications);
-              } else {
-                setNotifications([]);
+              if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
+                title = 'Payment Required';
+                message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation.`;
+              } else if (order.orderStatus === 'Confirmed') {
+                title = 'Order Confirmed';
+                message = `Excellent! Your order ${order.orderId} has been confirmed by our distributor and is now being processed.`;
+              } else if (order.orderStatus === 'Packed') {
+                title = 'Order Packed';
+                message = `Fantastic! Your order ${order.orderId} has been carefully packed and is ready for shipment.`;
+              } else if (order.orderStatus === 'Shipped') {
+                title = 'Order Shipped';
+                message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you.`;
+              } else if (order.orderStatus === 'Delivered') {
+                title = 'Order Delivered';
+                message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered!`;
+              } else if (order.orderStatus === 'Cancelled') {
+                title = 'Order Cancelled';
+                message = `We regret to inform you that your order ${order.orderId} has been cancelled.`;
+              } else if (order.orderStatus === 'Returned') {
+                title = 'Order Returned';
+                message = `Your order ${order.orderId} has been returned to us.`;
               }
-            } catch (apiError) {
-              setNotifications([]);
-            }
+              
+              return {
+                id: `order_${order.orderId}`,
+                type: 'order',
+                title: title,
+                message: message,
+                timestamp: new Date(order.createdAt).toLocaleString('en-US', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                }).replace(',', ''),
+                isRead: false,
+                orderId: order.orderId,
+                status: order.orderStatus?.toLowerCase(),
+                productImage: order.orderItems?.[0]?.images?.[0]
+              };
+            });
+            
+            setNotifications(orderNotifications);
+          } else {
+            setNotifications([]);
           }
         } catch (error) {
           setNotifications([]);
         }
       };
 
-      refreshNotifications();
+      refreshOrders();
     }, [isAuthenticated, authUser?.id, token])
   );
 
@@ -333,29 +288,17 @@ export default function OrdersScreen() {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const markAsRead = async (notificationId: string) => {
-    if (!isAuthenticated) return;
-    
-    try {
-      await NotificationService.markAsRead(notificationId);
-      // Refresh notifications after marking as read
-      const updatedNotifications = await NotificationService.getNotifications();
-      setNotifications(updatedNotifications);
-    } catch (error) {
-      // Handle error silently
-    }
+    // SIMPLE: Just update local state
+    setNotifications(prev => 
+      prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
+    );
   };
 
   const markAllAsRead = async () => {
-    if (!isAuthenticated) return;
-    
-    try {
-      await NotificationService.markAllAsRead();
-      // Refresh notifications after marking all as read
-      const updatedNotifications = await NotificationService.getNotifications();
-      setNotifications(updatedNotifications);
-    } catch (error) {
-      // Handle error silently
-    }
+    // SIMPLE: Just update local state
+    setNotifications(prev => 
+      prev.map(n => ({ ...n, isRead: true }))
+    );
   };
 
   const toggleDropdown = (notificationId: string) => {
@@ -368,6 +311,64 @@ export default function OrdersScreen() {
       }
       return newSet;
     });
+  };
+
+  const fetchOrderDetails = async (orderId: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/mobile/orders/${orderId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.order;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+      return null;
+    }
+  };
+
+  const handleOrderCardPress = (notification: Notification) => {
+    if (notification.type === 'order' && notification.orderId) {
+      router.push({
+        pathname: '/components/ordersshipment/OrderDetails' as any,
+        params: { orderId: notification.orderId }
+      });
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/mobile/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      });
+      
+      if (response.ok) {
+        // Update local notifications
+        setNotifications(prev => 
+          prev.map(n => 
+            n.orderId === orderId 
+              ? { ...n, status: status.toLowerCase() as 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' }
+              : n
+          )
+        );
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      return false;
+    }
   };
 
   const renderLoginPrompt = () => (
@@ -400,13 +401,20 @@ export default function OrdersScreen() {
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {isAuthenticated ? (
-          /* Order Updates */
-          notifications.length > 0 ? (
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading your orders...</Text>
+            </View>
+          ) : notifications.length > 0 ? (
             notifications.map((notification, index) => {
               const isOpen = openDropdowns.has(notification.id);
               return (
                 <View key={notification.id} style={styles.orderUpdateCard}>
-                  <View style={styles.updateHeader}>
+                  <TouchableOpacity 
+                    style={styles.updateHeader}
+                    onPress={() => handleOrderCardPress(notification)}
+                    activeOpacity={0.7}
+                  >
                     <View style={styles.updateHeaderLeft}>
                       <View style={styles.timelineDot}>
                         {getNotificationIcon(notification)}
@@ -418,7 +426,10 @@ export default function OrdersScreen() {
                       </View>
                     </View>
                     <TouchableOpacity 
-                      onPress={() => toggleDropdown(notification.id)}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        toggleDropdown(notification.id);
+                      }}
                       style={styles.dropdownButton}
                     >
                       {isOpen ? (
@@ -427,7 +438,7 @@ export default function OrdersScreen() {
                         <ChevronDown size={20} color="#6b7280" />
                       )}
                     </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                   
                   {/* Dropdown Content */}
                   {isOpen && (
@@ -470,6 +481,7 @@ export default function OrdersScreen() {
           renderLoginPrompt()
         )}
       </ScrollView>
+
     </View>
   );
 }
@@ -538,6 +550,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 0,
+  },
+  loadingContainer: {
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
   },
   orderUpdateCard: {
     backgroundColor: '#ffffff',

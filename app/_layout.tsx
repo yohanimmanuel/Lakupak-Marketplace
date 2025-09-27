@@ -241,6 +241,24 @@ function RootLayoutNav() {
           }} 
         />
         
+        {/* Order Details Modal Screen */}
+        <Stack.Screen 
+          name="components/ordersshipment/OrderDetails" 
+          options={{ 
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Order Details',
+            headerStyle: {
+              backgroundColor: '#ffffff',
+            },
+            headerTintColor: '#0a61d7',
+            headerTitleStyle: {
+              color: '#111827',
+              fontWeight: '600',
+            },
+          }} 
+        />
+        
       </Stack>
     </ThemeProvider>
   );
