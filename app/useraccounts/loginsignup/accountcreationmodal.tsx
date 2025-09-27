@@ -323,8 +323,64 @@ export default function AccountCreationModal() {
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Continue</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Continue to Phone Verification</Text>
                 </Pressable>
+
+                {/* Skip Phone Verification Option */}
+                <Pressable
+                  onPress={async () => {
+                    if (!signupData.username.trim() || !signupData.password.trim() || !signupData.confirmPassword.trim()) {
+                      Alert.alert('Missing Information', 'Please fill in all fields.');
+                      return;
+                    }
+                    
+                    if (signupData.password !== signupData.confirmPassword) {
+                      Alert.alert('Password Mismatch', 'Passwords do not match.');
+                      return;
+                    }
+                    
+                    if (signupData.password.length < 6) {
+                      Alert.alert('Weak Password', 'Password must be at least 6 characters long.');
+                      return;
+                    }
+                    
+                    try {
+                      // Complete signup without phone verification
+                      await signupStep3(signupData.username.trim(), signupData.password);
+                      
+                      // Create account directly with username/password (skip phone verification)
+                      const { verifyOtp } = await import('../../../services/auth');
+                      const result = await verifyOtp({
+                        phone: '+0000000000', // Dummy phone for testing - will be replaced by backend
+                        countryCode: 'US',
+                        code: '000000', // Dummy OTP code
+                        mode: 'signup',
+                        profile: {
+                          name: signupData.name,
+                          email: signupData.email,
+                          storeName: signupData.storeName,
+                          bio: signupData.bio,
+                          username: signupData.username,
+                          password: signupData.password
+                        }
+                      });
+                      
+                      await setToken(result.token);
+                      setUser(result.user);
+                      Alert.alert('Account Created!', 'Your account has been created successfully.');
+                      router.replace('/(tabs)/account' as any);
+                    } catch (error: any) {
+                      Alert.alert('Signup Failed', error.message || 'Something went wrong');
+                    }
+                  }}
+                  style={{ backgroundColor: '#10b981', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
+                >
+                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Skip Phone Verification</Text>
+                </Pressable>
+                
+                <Text style={{ color: '#6b7280', fontSize: 12, textAlign: 'center', marginBottom: 16 }}>
+                  Phone number is optional. You can add your phone number later in account settings
+                </Text>
               </View>
             )}
 

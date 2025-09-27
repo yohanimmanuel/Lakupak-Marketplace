@@ -36,7 +36,7 @@ export default function PaymentSuccessScreen() {
 
   const handleViewOrders = () => {
     // Navigate to orders page (you can implement this later)
-    router.push('/(tabs)/home');
+    router.push('/(tabs)/orders');
   };
 
   return (
@@ -59,19 +59,6 @@ export default function PaymentSuccessScreen() {
               : 'We have notified the seller to ship out your order.'
             }
           </Text>
-          
-          {/* Order ID */}
-          <View style={styles.orderIdContainer}>
-            <Text style={styles.orderIdLabel}>
-              {orderCount > 1 ? 'Primary Order ID:' : 'Order ID:'}
-            </Text>
-            <Text style={styles.orderIdValue}>{orderId}</Text>
-            {orderCount > 1 && (
-              <Text style={styles.orderCountText}>
-                + {orderCount - 1} more order{orderCount - 1 > 1 ? 's' : ''}
-              </Text>
-            )}
-          </View>
         </View>
 
         {/* Action Buttons */}
@@ -92,7 +79,7 @@ export default function PaymentSuccessScreen() {
           <Text style={styles.statusCardTitle}>Order Status</Text>
           <View style={styles.statusItem}>
             <View style={[styles.statusDot, styles.statusCompleted]} />
-            <Text style={styles.statusText}>Payment Confirmed</Text>
+            <Text style={styles.statusText}>Payment Required</Text>
           </View>
           <View style={styles.statusItem}>
             <View style={[styles.statusDot, styles.statusPending]} />
@@ -180,30 +167,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 22,
-  },
-  orderIdContainer: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  orderIdLabel: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  orderIdValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  orderCountText: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 4,
-    fontStyle: 'italic',
   },
   actionButtonsContainer: {
     flexDirection: 'row',

@@ -170,9 +170,6 @@ export default function CategoriesScreen() {
               <Text style={[styles.categoryName, { color: '#111827' }]}>
                 {category.name}
               </Text>
-              <Text style={[styles.categoryCount, { color: '#6B7280' }]}>
-                {category.count}
-              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>

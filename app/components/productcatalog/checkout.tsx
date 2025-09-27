@@ -35,6 +35,7 @@ import { MarketplaceProduct } from '../../../services/marketplace';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore, CartItem } from '../../../stores/cartStore';
+import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { NotificationService } from '../../../services/notificationService';
 
@@ -59,6 +60,9 @@ export default function CheckoutScreen() {
   
   // Get user data from store
   const { user: cachedUser, products } = useDataStore();
+  
+  // Get auth token
+  const token = useAuthStore(s => s.token);
   
   // Get cart data
   const cartStore = useCartStore();
@@ -101,7 +105,7 @@ export default function CheckoutScreen() {
   // State
   const [selectedAddress, setSelectedAddress] = useState('default');
   const [selectedPayment, setSelectedPayment] = useState('credit_card');
-  const [selectedShipping, setSelectedShipping] = useState('');
+  const [selectedShipping, setSelectedShipping] = useState('standard');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showPickupModal, setShowPickupModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -126,8 +130,27 @@ export default function CheckoutScreen() {
     phone: product?.seller?.company?.businessPhone || 'Not provided'
   });
   
-  // For single product checkout
-  const distributorInfo = product ? getDistributorInfo(product as MarketplaceProduct) : null;
+  // Get distributor information for display
+  const getDistributorsInfo = () => {
+    if (isCartCheckout && selectedCartItems.length > 0) {
+      // Cart checkout - get all unique distributors
+      const distributors = new Map();
+      selectedCartItems.forEach((item: CartItem) => {
+        const product = item.product as MarketplaceProduct;
+        const distributorId = product?.seller?.company?.name || product?.seller?.name || 'unknown';
+        if (!distributors.has(distributorId)) {
+          distributors.set(distributorId, getDistributorInfo(product));
+        }
+      });
+      return Array.from(distributors.values());
+    } else if (product) {
+      // Single product checkout
+      return [getDistributorInfo(product as MarketplaceProduct)];
+    }
+    return [];
+  };
+
+  const distributorsInfo = getDistributorsInfo();
 
   // Use real user data for delivery address
   const addresses = [
@@ -169,24 +192,32 @@ export default function CheckoutScreen() {
   // Get available shipping options from distributor's preferences
   const getAvailableShippingOptions = (productData?: MarketplaceProduct) => {
     const targetProduct = productData || product;
-    if (!targetProduct?.shipping) return [];
-    
-    const options = [];
-    
-    // Standard Delivery
-    if (targetProduct.shipping.standard.available) {
-      options.push({
+    if (!targetProduct?.shipping) {
+      // Fallback: Always provide standard delivery if no shipping data
+      return [{
         id: 'standard',
         name: 'Standard Delivery',
         description: '3-5 business days',
-        price: targetProduct.shipping.standard.price,
+        price: 0,
         estimatedDays: '3-5',
-        free: targetProduct.shipping.standard.free
-      });
+        free: false
+      }];
     }
     
+    const options = [];
+    
+    // Standard Delivery - Always available as default
+    options.push({
+      id: 'standard',
+      name: 'Standard Delivery',
+      description: '3-5 business days',
+      price: targetProduct.shipping.standard?.price, // Default to 15,000 IDR if not specified
+      estimatedDays: '3-5',
+      free: targetProduct.shipping.standard?.free // Default to not free if not specified
+    });
+    
     // Express Shipping
-    if (targetProduct.shipping.express.available) {
+    if (targetProduct.shipping.express?.available) {
       options.push({
         id: 'express',
         name: 'Express Shipping',
@@ -198,7 +229,7 @@ export default function CheckoutScreen() {
     }
     
     // Same-day Delivery
-    if (targetProduct.shipping.sameDay.available) {
+    if (targetProduct.shipping.sameDay?.available) {
       options.push({
         id: 'same_day',
         name: 'Same-day Delivery',
@@ -210,7 +241,7 @@ export default function CheckoutScreen() {
     }
     
     // Next-day Delivery
-    if (targetProduct.shipping.nextDay.available) {
+    if (targetProduct.shipping.nextDay?.available) {
       options.push({
         id: 'next_day',
         name: 'Next-day Delivery',
@@ -222,7 +253,7 @@ export default function CheckoutScreen() {
     }
     
     // Scheduled Delivery
-    if (targetProduct.shipping.scheduled.available) {
+    if (targetProduct.shipping.scheduled?.available) {
       options.push({
         id: 'scheduled',
         name: 'Scheduled Delivery',
@@ -234,7 +265,7 @@ export default function CheckoutScreen() {
     }
     
     // Pickup Available
-    if (targetProduct.shipping.pickup.available) {
+    if (targetProduct.shipping.pickup?.available) {
       options.push({
         id: 'pickup',
         name: 'Pickup Available',
@@ -517,7 +548,7 @@ export default function CheckoutScreen() {
                       userId: cachedUser?.id || null
                     };
                     
-                    const response = await fetch(`${API_BASE_URL}/api/orders`, {
+                    const response = await fetch(`${API_BASE_URL}/api/mobile/orders`, {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
@@ -570,10 +601,11 @@ export default function CheckoutScreen() {
                     userId: cachedUser?.id || null
                   };
                   
-                  const response = await fetch(`${API_BASE_URL}/api/orders`, {
+                  const response = await fetch(`${API_BASE_URL}/api/mobile/orders`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`,
                     },
                     body: JSON.stringify(orderData)
                   });
@@ -592,9 +624,23 @@ export default function CheckoutScreen() {
                   ? selectedCartItems.map((item: CartItem) => item.product.images?.[0]).filter(Boolean)
                   : productImage ? [productImage] : [];
                 
-                // Create notifications for successful orders (only once, not per order)
+                // Create immediate notification for successful order
                 if (createdOrders.length > 0) {
-                  await NotificationService.createOrderNotifications(createdOrders[0].orderId, createdOrders.length, productImages);
+                  const firstOrder = createdOrders[0];
+                  
+                  // Ensure we have valid order data
+                  const orderId = firstOrder.orderId || firstOrder.order_id || 'Unknown';
+                  const orderStatus = firstOrder.orderStatus || firstOrder.order_status || 'Pending';
+                  
+                  // Create immediate notification
+                  await NotificationService.createOrderNotifications(
+                    orderId, 
+                    createdOrders.length, 
+                    productImages, 
+                    cachedUser?.id || null,
+                    orderStatus,
+                    undefined
+                  );
                 }
 
                 // Navigate to payment success page with the first order's details
@@ -630,18 +676,36 @@ export default function CheckoutScreen() {
         contentContainerStyle={{ paddingBottom: 100 }} // Add space for sticky bottom bar
         showsVerticalScrollIndicator={false}
       >
-        {/* Business Information - Only show for single product checkout */}
-        {!isCartCheckout && distributorInfo && (
+        {/* Business Information - Always show distributor info */}
+        {distributorsInfo.length > 0 && (
           <View style={[styles.section]}>
             <View style={styles.businessCard}>
               <View style={styles.sectionTitleContainer}>
                 <Building2 size={20} color="#0a61d7" />
                 <Text style={styles.sectionTitle}>Business Information</Text>
               </View>
-              <Text style={styles.businessName}>{distributorInfo.companyName}</Text>
-              <Text style={styles.businessType}>Industry: {distributorInfo.industryType}</Text>
-              <Text style={styles.businessDetails}>Contact: {distributorInfo.contactPerson}</Text>
-              <Text style={styles.businessDetails}>Phone: {distributorInfo.phone}</Text>
+              
+              {/* Show first distributor + "and more" if multiple */}
+              <Text style={styles.businessName}>
+                {distributorsInfo[0].companyName}
+                {distributorsInfo.length > 1 && ` and ${distributorsInfo.length - 1} more`}
+              </Text>
+              
+              <Text style={styles.businessType}>Industry: {distributorsInfo[0].industryType}</Text>
+              <Text style={styles.businessDetails}>Contact: {distributorsInfo[0].contactPerson}</Text>
+              <Text style={styles.businessDetails}>Phone: {distributorsInfo[0].phone}</Text>
+              
+              {/* Show additional distributors if more than one */}
+              {distributorsInfo.length > 1 && (
+                <View style={styles.additionalDistributors}>
+                  <Text style={styles.additionalDistributorsTitle}>Other Distributors:</Text>
+                  {distributorsInfo.slice(1).map((dist, index) => (
+                    <Text key={index} style={styles.additionalDistributorItem}>
+                      • {dist.companyName} - {dist.industryType}
+                    </Text>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -679,8 +743,8 @@ export default function CheckoutScreen() {
               <View key={distributorId} style={[styles.section, styles.distributorSection]}>
                 <View style={styles.productCard}>
                   <View style={styles.sectionTitleContainer}>
-                    <Building2 size={20} color="#0a61d7" />
-                    <Text style={styles.sectionTitle}>{distributorInfo.companyName}</Text>
+                    <Package size={20} color="#0a61d7" />
+                    <Text style={styles.sectionTitle}>Products from {distributorInfo.companyName}</Text>
                   </View>
                   
                   {/* Products from this distributor */}
@@ -1122,10 +1186,17 @@ export default function CheckoutScreen() {
               
               <View style={styles.pickupInfo}>
                 <Text style={styles.pickupAddressLabel}>Pickup Location:</Text>
-                <Text style={styles.pickupAddress}>{distributorInfo?.companyName || 'Distributor Company'}</Text>
-                <Text style={styles.pickupAddressDetail}>
-                  {distributorInfo?.pickupAddress || 'Address not available'}
+                <Text style={styles.pickupAddress}>
+                  {distributorsInfo.length > 0 ? distributorsInfo[0].companyName : 'Distributor Company'}
                 </Text>
+                <Text style={styles.pickupAddressDetail}>
+                  {distributorsInfo.length > 0 ? (distributorsInfo[0].pickupAddress || 'Address not available') : 'Address not available'}
+                </Text>
+                {distributorsInfo.length > 1 && (
+                  <Text style={styles.pickupAddressNote}>
+                    Note: Multiple pickup locations may apply for different items
+                  </Text>
+                )}
               </View>
               
               <View style={styles.dateTimeSection}>
@@ -1288,6 +1359,23 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  additionalDistributors: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  additionalDistributorsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  additionalDistributorItem: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 4,
   },
   businessName: {
     fontSize: 16,
@@ -1713,6 +1801,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     lineHeight: 20,
+  },
+  pickupAddressNote: {
+    fontSize: 12,
+    color: '#F59E0B',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
   dateTimeSection: {
     marginBottom: 24,

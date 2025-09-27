@@ -14,13 +14,19 @@ export type Notification = {
   productImage?: string;
 };
 
-const NOTIFICATIONS_KEY = 'laku_laku_notifications';
+const NOTIFICATIONS_KEY_PREFIX = 'laku_laku_notifications_';
 
 export class NotificationService {
-  // Get all notifications
-  static async getNotifications(): Promise<Notification[]> {
+  // Get user-specific storage key
+  private static getUserKey(userId: number | null): string {
+    return userId ? `${NOTIFICATIONS_KEY_PREFIX}${userId}` : `${NOTIFICATIONS_KEY_PREFIX}anonymous`;
+  }
+
+  // Get all notifications for a specific user
+  static async getNotifications(userId: number | null = null): Promise<Notification[]> {
     try {
-      const notificationsJson = await AsyncStorage.getItem(NOTIFICATIONS_KEY);
+      const key = this.getUserKey(userId);
+      const notificationsJson = await AsyncStorage.getItem(key);
       if (notificationsJson) {
         return JSON.parse(notificationsJson);
       }
@@ -30,19 +36,20 @@ export class NotificationService {
     }
   }
 
-  // Save notifications
-  static async saveNotifications(notifications: Notification[]): Promise<void> {
+  // Save notifications for a specific user
+  static async saveNotifications(notifications: Notification[], userId: number | null = null): Promise<void> {
     try {
-      await AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications));
+      const key = this.getUserKey(userId);
+      await AsyncStorage.setItem(key, JSON.stringify(notifications));
     } catch (error) {
       // Handle error silently
     }
   }
 
-  // Add a new notification
-  static async addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>): Promise<void> {
+  // Add a new notification for a specific user
+  static async addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>, userId: number | null = null): Promise<void> {
     try {
-      const notifications = await this.getNotifications();
+      const notifications = await this.getNotifications(userId);
       const newNotification: Notification = {
         ...notification,
         id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -58,45 +65,45 @@ export class NotificationService {
       };
       
       notifications.unshift(newNotification); // Add to beginning
-      await this.saveNotifications(notifications);
+      await this.saveNotifications(notifications, userId);
     } catch (error) {
       // Handle error silently
     }
   }
 
   // Mark notification as read
-  static async markAsRead(notificationId: string): Promise<void> {
+  static async markAsRead(notificationId: string, userId: number | null = null): Promise<void> {
     try {
-      const notifications = await this.getNotifications();
+      const notifications = await this.getNotifications(userId);
       const updatedNotifications = notifications.map(notification =>
         notification.id === notificationId
           ? { ...notification, isRead: true }
           : notification
       );
-      await this.saveNotifications(updatedNotifications);
+      await this.saveNotifications(updatedNotifications, userId);
     } catch (error) {
       // Handle error silently
     }
   }
 
   // Mark all notifications as read
-  static async markAllAsRead(): Promise<void> {
+  static async markAllAsRead(userId: number | null = null): Promise<void> {
     try {
-      const notifications = await this.getNotifications();
+      const notifications = await this.getNotifications(userId);
       const updatedNotifications = notifications.map(notification => ({
         ...notification,
         isRead: true
       }));
-      await this.saveNotifications(updatedNotifications);
+      await this.saveNotifications(updatedNotifications, userId);
     } catch (error) {
       // Handle error silently
     }
   }
 
   // Get unread count
-  static async getUnreadCount(): Promise<number> {
+  static async getUnreadCount(userId: number | null = null): Promise<number> {
     try {
-      const notifications = await this.getNotifications();
+      const notifications = await this.getNotifications(userId);
       return notifications.filter(notification => !notification.isRead).length;
     } catch (error) {
       return 0;
@@ -104,17 +111,50 @@ export class NotificationService {
   }
 
   // Create order-related notifications
-  static async createOrderNotifications(orderId: string, orderCount: number = 1, productImages?: string[]): Promise<void> {
+  static async createOrderNotifications(
+    orderId: string, 
+    orderCount: number = 1, 
+    productImages?: string[], 
+    userId: number | null = null,
+    orderStatus?: string,
+    orderDescription?: string
+  ): Promise<void> {
     try {
-      // Payment Confirmed notification
+        // Use provided order status and description directly - no hardcoding
+        const title = orderStatus || 'Payment Required';
+        const message = orderDescription || `Your order ${orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
+      
+      // Map order status to notification status
+      let notificationStatus: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' | undefined = 'pending';
+      if (orderStatus) {
+        switch (orderStatus.toLowerCase()) {
+          case 'confirmed':
+          case 'packed':
+            notificationStatus = 'confirmed';
+            break;
+          case 'shipped':
+            notificationStatus = 'shipped';
+            break;
+          case 'delivered':
+            notificationStatus = 'delivered';
+            break;
+          case 'cancelled':
+            notificationStatus = 'cancelled';
+            break;
+          default:
+            notificationStatus = 'pending';
+        }
+      }
+
+      // Create notification with completely dynamic content
       await this.addNotification({
         type: 'order',
-        title: 'Payment Confirmed',
-        message: `Payment for order ${orderId} has been confirmed and we've notified the seller. Kindly wait for your shipment.`,
+        title: title,
+        message: message,
         orderId: orderId,
-        status: 'confirmed',
+        status: notificationStatus,
         productImage: productImages?.[0] // Use first product image
-      });
+      }, userId);
 
       // If multiple orders, add a summary notification
       if (orderCount > 1) {
@@ -125,7 +165,7 @@ export class NotificationService {
           orderId: orderId,
           status: 'confirmed',
           productImage: productImages?.[0] // Use first product image
-        });
+        }, userId);
       }
     } catch (error) {
       // Handle error silently
@@ -133,7 +173,7 @@ export class NotificationService {
   }
 
   // Create shipping notification
-  static async createShippingNotification(orderId: string, trackingNumber: string): Promise<void> {
+  static async createShippingNotification(orderId: string, trackingNumber: string, userId: number | null = null): Promise<void> {
     try {
       await this.addNotification({
         type: 'order',
@@ -141,13 +181,13 @@ export class NotificationService {
         message: `Parcel ${trackingNumber} for your order ${orderId} has been shipped out by Laku-Laku Logistics. Click here to see order details and track your parcel.`,
         orderId: orderId,
         status: 'shipped'
-      });
+      }, userId);
     } catch (error) {
     }
   }
 
   // Create delivery notification
-  static async createDeliveryNotification(orderId: string, trackingNumber: string): Promise<void> {
+  static async createDeliveryNotification(orderId: string, trackingNumber: string, userId: number | null = null): Promise<void> {
     try {
       await this.addNotification({
         type: 'order',
@@ -156,7 +196,7 @@ export class NotificationService {
         orderId: orderId,
         status: 'delivered',
         actionText: 'Confirm Receipt'
-      });
+      }, userId);
 
       // Add confirm receipt notification
       await this.addNotification({
@@ -165,51 +205,51 @@ export class NotificationService {
         message: `Please check that all items for your order ${orderId} have been delivered. Thank you for shopping with Laku-Laku!`,
         orderId: orderId,
         status: 'delivered'
-      });
+      }, userId);
     } catch (error) {
     }
   }
 
   // Create discount notification
-  static async createDiscountNotification(title: string, message: string): Promise<void> {
+  static async createDiscountNotification(title: string, message: string, userId: number | null = null): Promise<void> {
     try {
       await this.addNotification({
         type: 'discount',
         title: title,
         message: message
-      });
+      }, userId);
     } catch (error) {
     }
   }
 
   // Create promotion notification
-  static async createPromotionNotification(title: string, message: string): Promise<void> {
+  static async createPromotionNotification(title: string, message: string, userId: number | null = null): Promise<void> {
     try {
       await this.addNotification({
         type: 'promotion',
         title: title,
         message: message
-      });
+      }, userId);
     } catch (error) {
     }
   }
 
   // Create update notification
-  static async createUpdateNotification(title: string, message: string): Promise<void> {
+  static async createUpdateNotification(title: string, message: string, userId: number | null = null): Promise<void> {
     try {
       await this.addNotification({
         type: 'update',
         title: title,
         message: message
-      });
+      }, userId);
     } catch (error) {
     }
   }
 
   // Clean up orphaned notifications (notifications for orders that no longer exist)
-  static async cleanupOrphanedNotifications(existingOrderIds: string[]): Promise<void> {
+  static async cleanupOrphanedNotifications(existingOrderIds: string[], userId: number | null = null): Promise<void> {
     try {
-      const notifications = await this.getNotifications();
+      const notifications = await this.getNotifications(userId);
       const orderNotifications = notifications.filter(n => n.type === 'order' && n.orderId);
       
       // Find notifications for orders that no longer exist
@@ -223,7 +263,7 @@ export class NotificationService {
           !(n.type === 'order' && n.orderId && !existingOrderIds.includes(n.orderId))
         );
         
-        await this.saveNotifications(validNotifications);
+        await this.saveNotifications(validNotifications, userId);
       }
     } catch (error) {
       // Handle error silently

@@ -10,6 +10,7 @@ interface UserActivityState {
   viewedProducts: string[] // Array of product IDs (most recent first)
   orderedProducts: string[] // Array of product IDs
   currentUserId: number | null
+  lastViewedResetDate: string // Track when viewed products were last reset
   
   // Actions
   setCurrentUserId: (userId: number) => void
@@ -25,6 +26,7 @@ interface UserActivityState {
   loadUserActivities: (userId: number) => Promise<void>
   refreshUserActivities: () => Promise<void>
   clearAllActivity: () => void
+  clearUserData: () => void
 }
 
 export const useUserActivityStore = create<UserActivityState>()(
@@ -35,6 +37,7 @@ export const useUserActivityStore = create<UserActivityState>()(
       viewedProducts: [],
       orderedProducts: [],
       currentUserId: null,
+      lastViewedResetDate: '',
 
       // Actions
       setCurrentUserId: (userId) => {
@@ -109,17 +112,29 @@ export const useUserActivityStore = create<UserActivityState>()(
         const { currentUserId, viewedProducts } = get()
         if (!currentUserId) return
 
+        // Check if we need to reset viewed products for new day
+        const today = new Date().toDateString()
+        const lastResetDate = get().lastViewedResetDate || ''
+        
+        let newViewedProducts = viewedProducts
+        
+        // Reset viewed products if it's a new day
+        if (lastResetDate !== today) {
+          newViewedProducts = []
+          set({ lastViewedResetDate: today })
+        }
+
         // Optimistic update - update UI immediately
-        const filtered = viewedProducts.filter(id => id !== productId)
-        const newViewedProducts = [productId, ...filtered].slice(0, 10)
-        set({ viewedProducts: newViewedProducts })
+        const filtered = newViewedProducts.filter(id => id !== productId)
+        const updatedViewedProducts = [productId, ...filtered].slice(0, 10)
+        set({ viewedProducts: updatedViewedProducts })
 
         // API call in background
         try {
           await userActivityService.addViewed(currentUserId, productId, productData)
         } catch (error) {
           // Revert on error
-          set({ viewedProducts: viewedProducts })
+          set({ viewedProducts: newViewedProducts })
         }
       },
 
@@ -167,6 +182,10 @@ export const useUserActivityStore = create<UserActivityState>()(
         // Set user ID immediately
         set({ currentUserId: userId })
         
+        // Check if we need to reset viewed products for new day
+        const today = new Date().toDateString()
+        const lastResetDate = get().lastViewedResetDate || ''
+        
         // Load activities in background without blocking UI
         try {
           const [favorites, viewed, purchased] = await Promise.all([
@@ -175,11 +194,15 @@ export const useUserActivityStore = create<UserActivityState>()(
             userActivityService.getActivities(userId, 'purchased')
           ])
 
+          // Reset viewed products if it's a new day
+          const viewedProductIds = lastResetDate !== today ? [] : viewed.map(activity => activity.productId)
+
           set({
             likedProducts: favorites.map(activity => activity.productId),
-            viewedProducts: viewed.map(activity => activity.productId),
+            viewedProducts: viewedProductIds,
             orderedProducts: purchased.map(activity => activity.productId),
-            currentUserId: userId
+            currentUserId: userId,
+            lastViewedResetDate: today
           })
         } catch (error) {
           // Keep existing data on error, don't clear it
@@ -187,8 +210,11 @@ export const useUserActivityStore = create<UserActivityState>()(
       },
 
       refreshUserActivities: async () => {
-        const { currentUserId } = get()
+        const { currentUserId, lastViewedResetDate } = get()
         if (!currentUserId) return
+
+        // Check if we need to reset viewed products for new day
+        const today = new Date().toDateString()
 
         // Load activities in background without blocking UI
         try {
@@ -198,10 +224,14 @@ export const useUserActivityStore = create<UserActivityState>()(
             userActivityService.getActivities(currentUserId, 'purchased')
           ])
 
+          // Reset viewed products if it's a new day
+          const viewedProductIds = lastViewedResetDate !== today ? [] : viewed.map(activity => activity.productId)
+
           set({
             likedProducts: favorites.map(activity => activity.productId),
-            viewedProducts: viewed.map(activity => activity.productId),
-            orderedProducts: purchased.map(activity => activity.productId)
+            viewedProducts: viewedProductIds,
+            orderedProducts: purchased.map(activity => activity.productId),
+            lastViewedResetDate: today
           })
         } catch (error) {
           // Keep existing data on error, don't clear it
@@ -213,13 +243,26 @@ export const useUserActivityStore = create<UserActivityState>()(
           likedProducts: [],
           viewedProducts: [],
           orderedProducts: [],
-          currentUserId: null
+          currentUserId: null,
+          lastViewedResetDate: ''
+        })
+      },
+
+      // Clear data when user logs out or switches
+      clearUserData: () => {
+        set({
+          likedProducts: [],
+          viewedProducts: [],
+          orderedProducts: [],
+          currentUserId: null,
+          lastViewedResetDate: ''
         })
       }
     }),
     {
       name: 'laku-marketplace-user-activity',
       storage: createJSONStorage(() => AsyncStorage),
+      // We'll handle user-specific storage manually in the store methods
     }
   )
 )

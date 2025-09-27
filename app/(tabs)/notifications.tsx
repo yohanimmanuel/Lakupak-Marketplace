@@ -19,65 +19,86 @@ import {
 } from 'lucide-react-native';
 import { useDataStore } from '../../stores/dataStore';
 import { NotificationService, Notification } from '../../services/notificationService';
+import { useAuthStore } from '../../stores/authStore';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function NotificationsScreen() {
   const { user } = useDataStore();
+  const token = useAuthStore(s => s.token);
+  const authUser = useAuthStore(s => s.user);
+  const hydrate = useAuthStore(s => s.hydrateFromStorage);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  
+  const isAuthenticated = !!token && !!authUser;
 
-  // Load notifications from storage
   useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  // Load notifications from storage (only when authenticated)
+  useEffect(() => {
+    if (!isAuthenticated || !authUser?.id) {
+      setNotifications([]);
+      return;
+    }
+
     const loadNotifications = async () => {
       try {
-        const storedNotifications = await NotificationService.getNotifications();
+        const storedNotifications = await NotificationService.getNotifications(authUser.id);
         
         // Filter to only show non-order notifications
         const nonOrderNotifications = storedNotifications.filter(n => n.type !== 'order');
         
         // If no notifications exist, add some sample data for demonstration
         if (nonOrderNotifications.length === 0) {
-          await addSampleNotifications();
-          const allNotifications = await NotificationService.getNotifications();
+          await addSampleNotifications(authUser.id);
+          const allNotifications = await NotificationService.getNotifications(authUser.id);
           const filteredNotifications = allNotifications.filter(n => n.type !== 'order');
           setNotifications(filteredNotifications);
         } else {
           setNotifications(nonOrderNotifications);
         }
       } catch (error) {
+        setNotifications([]);
       }
     };
 
     loadNotifications();
-  }, []);
+  }, [isAuthenticated, authUser?.id]);
 
   // Add sample notifications for demonstration
-  const addSampleNotifications = async () => {
+  const addSampleNotifications = async (userId: number) => {
     try {
       // Sample discount notifications
       await NotificationService.createDiscountNotification(
         'Special Discount Available',
-        'Get 15% off on your next order from Laku-Laku Marketplace. Use code SAVE15 at checkout.'
+        'Get 15% off on your next order from Laku-Laku Marketplace. Use code SAVE15 at checkout.',
+        userId
       );
       await NotificationService.createDiscountNotification(
         'Bulk Order Discount',
-        'Order 10+ items and get 20% discount. Limited time offer!'
+        'Order 10+ items and get 20% discount. Limited time offer!',
+        userId
       );
       
       // Sample promotion notifications
       await NotificationService.createPromotionNotification(
         'New Product Launch',
-        'Check out our latest products from top distributors. Fresh arrivals every week!'
+        'Check out our latest products from top distributors. Fresh arrivals every week!',
+        userId
       );
       await NotificationService.createPromotionNotification(
         'Loyalty Rewards',
-        'Earn points with every purchase and redeem them for exclusive rewards.'
+        'Earn points with every purchase and redeem them for exclusive rewards.',
+        userId
       );
       
       // Sample update notifications
       await NotificationService.createUpdateNotification(
         'App Update Available',
-        'Update to the latest version for better performance and new features.'
+        'Update to the latest version for better performance and new features.',
+        userId
       );
     } catch (error) {
     }
@@ -85,18 +106,24 @@ export default function NotificationsScreen() {
 
   // Refresh notifications when screen comes into focus
   useEffect(() => {
+    if (!isAuthenticated || !authUser?.id) {
+      setNotifications([]);
+      return;
+    }
+
     const refreshNotifications = async () => {
       try {
-        const storedNotifications = await NotificationService.getNotifications();
+        const storedNotifications = await NotificationService.getNotifications(authUser.id);
         const nonOrderNotifications = storedNotifications.filter(n => n.type !== 'order');
         setNotifications(nonOrderNotifications);
       } catch (error) {
+        setNotifications([]);
       }
     };
 
     // Refresh when component mounts
     refreshNotifications();
-  }, []);
+  }, [isAuthenticated, authUser?.id]);
 
   const getNotificationIcon = (notification: Notification) => {
     switch (notification.type) {

@@ -7,10 +7,12 @@ import {
   Image,
   StyleSheet,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, MessageSquareText, Minus, Plus, ShoppingBag, Package, Star, Truck, MapPin, ChevronDown, Trash2 } from 'lucide-react-native';
+import { Link } from 'expo-router';
+import { ArrowLeft, MessageSquareText, Minus, Plus, ShoppingBag, Package, Star, Truck, MapPin, ChevronDown, Trash2, User as UserIcon } from 'lucide-react-native';
 import { Product } from '../data/sampleProducts';
 import { MarketplaceProduct, marketplaceService } from '../services/marketplace';
 import { formatCurrency } from '../utils/currencyUtils';
@@ -18,6 +20,7 @@ import ProductMarketplace from './components/productcatalog/ProductMarketplace';
 import BuyNowModal from './components/productcatalog/BuyNowModal';
 import { useCartStore, CartItem } from '../stores/cartStore';
 import { useDataStore } from '../stores/dataStore';
+import { useAuthStore } from '../stores/authStore';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -26,6 +29,17 @@ type ProductType = Product | MarketplaceProduct;
 export default function CartScreen() {
   const navigation = useNavigation();
   const router = useRouter();
+  
+  // Auth store
+  const token = useAuthStore(s => s.token);
+  const authUser = useAuthStore(s => s.user);
+  const hydrate = useAuthStore(s => s.hydrateFromStorage);
+  
+  const isAuthenticated = !!token && !!authUser;
+
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
   
   // Cart store - use single subscription to ensure re-renders
   const cartStore = useCartStore();
@@ -163,6 +177,29 @@ export default function CartScreen() {
   const totalPrice = getTotalPrice();
   const totalSaved = getTotalSaved();
   const selectedItemCount = getSelectedItemCount();
+
+  const renderLoginPrompt = () => (
+    <View style={styles.loginPromptContainer}>
+      <View style={styles.loginPromptIcon}>
+        <UserIcon color="#0a61d7" size={28} />
+      </View>
+      <Text style={styles.loginPromptTitle}>
+        Create an account to win first-order benefits!
+      </Text>
+      <View style={styles.loginPromptButtons}>
+        <Link href="/useraccounts/loginsignup/loginmodal" asChild>
+          <Pressable style={styles.loginButton}>
+            <Text style={styles.loginButtonText}>Login</Text>
+          </Pressable>
+        </Link>
+        <Link href="/useraccounts/loginsignup/signupmodal" asChild>
+          <Pressable style={styles.signupButton}>
+            <Text style={styles.signupButtonText}>Sign Up</Text>
+          </Pressable>
+        </Link>
+      </View>
+    </View>
+  );
 
   const renderEmptyCart = () => (
     <View style={styles.emptyCartContainer}>
@@ -312,6 +349,17 @@ export default function CartScreen() {
     );
   };
 
+
+  // Show login prompt when not authenticated
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        <ScrollView style={styles.scrollView}>
+          {renderLoginPrompt()}
+        </ScrollView>
+      </View>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -676,5 +724,61 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ffffff',
     fontWeight: '600',
+  },
+  loginPromptContainer: {
+    backgroundColor: '#ffffff',
+    padding: 26,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  loginPromptIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    marginBottom: 16,
+  },
+  loginPromptTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  loginPromptButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  loginButton: {
+    backgroundColor: '#0a61d7',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    flex: 1,
+  },
+  loginButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  signupButton: {
+    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#0a61d7',
+    flex: 1,
+  },
+  signupButtonText: {
+    color: '#0a61d7',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
