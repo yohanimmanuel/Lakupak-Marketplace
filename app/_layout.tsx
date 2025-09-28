@@ -259,6 +259,23 @@ function RootLayoutNav() {
           }} 
         />
         
+        <Stack.Screen 
+          name="components/ordersshipment/DeliveryInformation" 
+          options={{ 
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Delivery Information',
+            headerStyle: {
+              backgroundColor: '#ffffff',
+            },
+            headerTintColor: '#0a61d7',
+            headerTitleStyle: {
+              color: '#111827',
+              fontWeight: '600',
+            },
+          }} 
+        />
+        
       </Stack>
     </ThemeProvider>
   );

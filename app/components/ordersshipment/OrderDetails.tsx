@@ -119,24 +119,6 @@ export default function OrderDetailsModal() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'delivered':
-      case 'received':
-        return '#10b981';
-      case 'shipped':
-        return '#0a61d7';
-      case 'confirmed':
-      case 'packed':
-        return '#f59e0b';
-      case 'cancelled':
-      case 'returned':
-        return '#ef4444';
-      default:
-        return '#6b7280';
-    }
-  };
-
   const getStatusText = (status: string) => {
     switch (status.toLowerCase()) {
       case 'delivered':
@@ -155,6 +137,29 @@ export default function OrderDetailsModal() {
         return 'Your Order is Returned';
       default:
         return 'Your Order is Pending';
+    }
+  };
+
+  const getDeliveryStatusDescription = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return 'Your parcel has been delivered';
+      case 'received':
+        return 'Your order is completed and received';
+      case 'shipped':
+        return 'Your parcel is on the way to you';
+      case 'confirmed':
+        return 'Your order is being prepared for shipment';
+      case 'packed':
+        return 'Your order is packed and ready to ship';
+      case 'cancelled':
+        return 'Your order has been cancelled';
+      case 'returned':
+        return 'Your order is being returned';
+      case 'pending':
+        return 'Your order is being processed';
+      default:
+        return 'Your order is being processed';
     }
   };
 
@@ -203,8 +208,46 @@ export default function OrderDetailsModal() {
     <View style={styles.section}>
       <View style={styles.productCard}>
         <View style={[styles.sectionTitleContainer, styles.shippingTitleContainer]}>
-          <Truck size={20} color="#ffffff" />
           <Text style={[styles.sectionTitle, styles.shippingTitle]}>{getStatusText(order.orderStatus)}</Text>
+        </View>
+        
+        {/* Delivery Status Information */}
+        <View style={styles.deliveryStatusContainer}>
+          {order.assignedLogistics && (
+            <Text style={styles.deliveryMethodText}>
+              {order.assignedLogistics}: {order.trackingNumber || 'N/A'}
+            </Text>
+          )}
+          
+          <View style={styles.deliveryStatusRow}>
+            <Truck size={16} color="#10b981" />
+            <Text style={styles.deliveryStatusText}>
+              {getDeliveryStatusDescription(order.orderStatus)}
+            </Text>
+            <TouchableOpacity 
+              style={styles.chevronButton}
+              onPress={() => router.push({
+                pathname: '/components/ordersshipment/DeliveryInformation' as any,
+                params: { orderId: order.orderId }
+              })}
+            >
+              <ChevronRight size={16} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          
+          {order.updatedAt && (
+            <Text style={styles.deliveryDateTimeText}>
+              {new Date(order.updatedAt).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric'
+              })} {new Date(order.updatedAt).toLocaleTimeString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+              })}
+            </Text>
+          )}
         </View>
         
         {order.assignedLogistics && (
@@ -632,12 +675,45 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginHorizontal: -16,
     marginTop: -16,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingVertical: 12,
     marginBottom: 12,
   },
   shippingTitle: {
     color: '#ffffff',
+  },
+  deliveryStatusContainer: {
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  deliveryMethodText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  deliveryStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  deliveryStatusText: {
+    fontSize: 14,
+    color: '#10b981',
+    fontWeight: '500',
+    marginLeft: 6,
+    flex: 1,
+  },
+  chevronButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  deliveryDateTimeText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
   },
   productCard: {
     backgroundColor: '#ffffff',
