@@ -388,10 +388,13 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: 12,
     paddingHorizontal: 16,
+    marginHorizontal: 8,
     paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   progressHeader: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   progressTitle: {
     fontSize: 16,
@@ -454,9 +457,11 @@ const styles = StyleSheet.create({
   },
   combinedContainer: {
     backgroundColor: '#ffffff',
-    marginHorizontal: 16,
-    marginBottom: 16,
+    marginHorizontal: 8,
+    marginTop: -8,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   orderSummary: {
     flexDirection: 'row',
@@ -508,7 +513,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   timelineItem: {
     flexDirection: 'row',
@@ -572,7 +577,8 @@ const styles = StyleSheet.create({
   },
   timelineTextContainer: {
     flex: 1,
-    paddingTop: 2,
+    marginTop: -6,
+    justifyContent: 'center',
   },
   timelineStatus: {
     fontSize: 14,
