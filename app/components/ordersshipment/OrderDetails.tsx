@@ -82,7 +82,7 @@ interface OrderDetailsModalProps {
 export default function OrderDetailsModal() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const token = useAuthStore(s => s.token);
+  const { token, user } = useAuthStore();
   
   const [order, setOrder] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,7 +112,6 @@ export default function OrderDetailsModal() {
         setOrder(null);
       }
     } catch (error) {
-      console.error('Error fetching order details:', error);
       setOrder(null);
     } finally {
       setIsLoading(false);
@@ -501,12 +500,7 @@ export default function OrderDetailsModal() {
   };
 
   const handleCancelOrder = () => {
-    Alert.alert('Cancel Order', 'Are you sure you want to cancel this order?', [
-      { text: 'No', style: 'cancel' },
-      { text: 'Yes', style: 'destructive', onPress: () => {
-        Alert.alert('Order Cancelled', 'Your order has been cancelled.');
-      }}
-    ]);
+    router.push(`/components/ordersshipment/OrderCancelModal?orderId=${order.orderId}`);
   };
 
   const renderBottomBar = () => {

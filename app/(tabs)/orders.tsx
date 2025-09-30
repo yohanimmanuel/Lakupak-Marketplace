@@ -328,7 +328,6 @@ export default function OrdersScreen() {
       }
       return null;
     } catch (error) {
-      console.error('Error fetching order details:', error);
       return null;
     }
   };
@@ -366,7 +365,6 @@ export default function OrdersScreen() {
       }
       return false;
     } catch (error) {
-      console.error('Error updating order status:', error);
       return false;
     }
   };

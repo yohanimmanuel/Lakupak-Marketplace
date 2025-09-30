@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, Image, Animated, Easing, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, Image, Animated, Easing, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { requestOtp, verifyOtp, loginWithCredentials } from '../../../services/auth';
 // import { signInWithGoogle } from '../../../services/auth'; // Temporarily disabled
@@ -34,6 +34,7 @@ export default function LoginModal() {
   const [code, setCode] = useState('');
   const [devCode, setDevCode] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   useEffect(() => {
     Animated.timing(knobAnim, {
@@ -43,6 +44,16 @@ export default function LoginModal() {
       useNativeDriver: false,
     }).start();
   }, [fingerEnabled, knobAnim]);
+
+  // Keyboard visibility listeners to collapse non-essential sections
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const openMenu = () => {
     setMenuOpen(true);
@@ -89,10 +100,15 @@ export default function LoginModal() {
         headerShown: false,
       }} />
       
-      <LinearGradient
-        colors={['#0a61d7', '#4293fc']}
-        style={{ flex: 1 }}
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
+        <LinearGradient
+          colors={['#0a61d7', '#4293fc']}
+          style={{ flex: 1 }}
+        >
         <View style={{ flex: 1, paddingTop: 50 }}>
           {/* Section 1: Top Navigation Bar */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 }}>
@@ -117,7 +133,8 @@ export default function LoginModal() {
             </Pressable>
           </View>
 
-          {/* Section 2: Voucher Section */}
+          {/* Section 2: Voucher Section (hidden when keyboard open) */}
+          {!isKeyboardVisible && (
           <View style={{ alignItems: 'center', marginBottom: 40, marginTop: 20 }}>
             <Text style={{ color: '#ffffff', fontSize: 20, fontWeight: '600', marginBottom: 20 }}>
               Use your $8.00 Voucher Soon!
@@ -140,15 +157,18 @@ export default function LoginModal() {
               <Text style={{ position: 'absolute', bottom: 10, left: 30, color: '#ffffff', fontSize: 14 }}>✨</Text>
             </View>
           </View>
+          )}
 
           {/* Section 3: Login Options */}
-          <View style={{ backgroundColor: '#ffffff', flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 20, paddingHorizontal: 30, paddingBottom: 140 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-              <View style={{ backgroundColor: '#F5E6B3', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: '#8B7355', fontSize: 12, marginRight: 6 }}>🛡️</Text>
-                <Text style={{ color: '#8B7355', fontSize: 12, fontWeight: '500' }}>Privacy Protection & Secure Payment</Text>
+          <View style={{ backgroundColor: '#ffffff', flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 20, paddingHorizontal: 30, paddingBottom: isKeyboardVisible ? 16 : 140 }}>
+            {!isKeyboardVisible && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                <View style={{ backgroundColor: '#F5E6B3', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ color: '#8B7355', fontSize: 12, marginRight: 6 }}>🛡️</Text>
+                  <Text style={{ color: '#8B7355', fontSize: 12, fontWeight: '500' }}>Privacy Protection & Secure Payment</Text>
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Google Login Button - Temporarily Disabled */}
             {/* {!showPhoneLogin && (
@@ -391,7 +411,8 @@ export default function LoginModal() {
             {/* Sticky area removed from here; handled in footer */}
           </View>
         </View>
-      </LinearGradient>
+        </LinearGradient>
+      </KeyboardAvoidingView>
       {/* Sticky Footer */}
       <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#ffffff', paddingHorizontal: 30, paddingTop: 12, paddingBottom: 24, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
         <View style={{ alignItems: 'center', marginBottom: 12 }}>

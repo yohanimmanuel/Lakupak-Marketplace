@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Pressable, TextInput, Image, ScrollView, Animated, Easing, Alert } from 'react-native';
+import { View, Text, Pressable, TextInput, Image, ScrollView, Animated, Easing, Alert, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { requestOtp, verifyOtp, signupStep1, signupStep2, signupStep3 } from '../../../services/auth';
 // import { signUpWithGoogle } from '../../../services/auth'; // Temporarily disabled for future development
@@ -21,6 +21,7 @@ export default function AccountCreationModal() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [devCode, setDevCode] = useState<string | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   
   // Combined signup state - 4 steps total
   const [signupStep, setSignupStep] = useState(1);
@@ -46,6 +47,16 @@ export default function AccountCreationModal() {
       useNativeDriver: false,
     }).start();
   }, [fingerEnabled, fingerKnobAnim]);
+
+  // Keyboard visibility listeners to collapse non-essential sections
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   
   const sheetAnim = useRef(new Animated.Value(0)).current; // 0 hidden, 1 visible
   const backdropAnim = useRef(new Animated.Value(0)).current; // 0 transparent, 1 opaque
@@ -108,7 +119,12 @@ export default function AccountCreationModal() {
         headerShown: false,
       }} />
       
-      <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
         {/* Top Navigation Bar */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 16, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
           <Pressable 
@@ -126,10 +142,11 @@ export default function AccountCreationModal() {
         </View>
 
         {/* Main Content */}
-        <ScrollView style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20 }}>
+        <ScrollView style={{ flex: 1, paddingHorizontal: 20, paddingTop: 20 }} keyboardShouldPersistTaps="handled">
 
 
-            {/* Step Indicator */}
+            {/* Step Indicator (hidden when keyboard open to preserve space) */}
+            {!isKeyboardVisible && (
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
               {[1, 2, 3, 4].map((step) => (
                 <View key={step} style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -165,6 +182,7 @@ export default function AccountCreationModal() {
                 </View>
               ))}
             </View>
+            )}
 
             {/* Step 1: Name & Email */}
             {signupStep === 1 && (
@@ -584,7 +602,8 @@ export default function AccountCreationModal() {
             </Pressable>
           </View>
         </View>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
 
       {menuOpen && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>

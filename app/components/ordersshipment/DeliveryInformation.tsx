@@ -53,7 +53,7 @@ export default function DeliveryInformation() {
         setOrder(null);
       }
     } catch (error) {
-      console.error('Error fetching order details:', error);
+      setOrder(null);
     } finally {
       setIsLoading(false);
     }
