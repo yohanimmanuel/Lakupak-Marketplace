@@ -17,9 +17,14 @@ export default function AddressesList() {
 
   const load = async () => {
     if (!token) return;
-    const res = await fetch(`${API_BASE_URL}/api/mobile/addresses`, { headers: { Authorization: `Bearer ${token}` } })
-    const data = await res.json()
-    setList(data)
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/mobile/addresses`, { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      setList(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('Failed to load addresses:', error)
+      setList([])
+    }
   }
 
   useEffect(() => { load() }, [token])
@@ -79,7 +84,7 @@ export default function AddressesList() {
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ color: '#6B7280', marginBottom: 8 }}>Address</Text>
-        {list.map((a) => (
+        {(list || []).map((a) => (
           <View key={a.id} style={{ borderWidth: 1, borderColor: selectedIds.has(a.id) && deleteMode ? '#0a61d7' : '#e5e7eb', backgroundColor: selectedIds.has(a.id) && deleteMode ? '#0a61d70d' : '#ffffff', borderRadius: 12, padding: 14, marginBottom: 12 }}>
             {deleteMode && (
               <Pressable onPress={() => toggleSelect(a.id)} hitSlop={10} style={{ position: 'absolute', right: 10, top: 10 }}>

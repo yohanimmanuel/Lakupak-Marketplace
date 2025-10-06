@@ -92,9 +92,16 @@ export const generateDynamicCategories = (products: MarketplaceProduct[]): Dynam
   const categoryCounts: { [key: string]: number } = {};
   
   products.forEach(product => {
-    const category = product.category || 'Uncategorized';
-    categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+    const category = product.category || 'General';
+    if (category && category !== 'Uncategorized' && category !== 'General') {
+      categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+    }
   });
+  
+  // If no categories found, add a default one
+  if (Object.keys(categoryCounts).length === 0) {
+    categoryCounts['General'] = products.length;
+  }
 
   // Convert to array and sort by count (descending)
   const categories = Object.entries(categoryCounts)

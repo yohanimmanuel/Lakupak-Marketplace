@@ -102,7 +102,7 @@ export const marketplaceService = {
     
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.limit) searchParams.append('limit', params.limit.toString());
-    if (params?.category) searchParams.append('category', params.category);
+    if (params?.category) searchParams.append('productType', params.category);
     if (params?.search) searchParams.append('search', params.search);
 
     const url = `${API_BASE_URL}?${searchParams.toString()}`;
