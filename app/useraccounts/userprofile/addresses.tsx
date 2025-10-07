@@ -22,7 +22,6 @@ export default function AddressesList() {
       const data = await res.json()
       setList(Array.isArray(data) ? data : [])
     } catch (error) {
-      console.error('Failed to load addresses:', error)
       setList([])
     }
   }
