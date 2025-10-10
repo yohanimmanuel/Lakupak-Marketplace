@@ -13,9 +13,14 @@ export interface MarketplaceProduct {
   id: string;
   name: string;
   description: string;
-  price: number;
-  originalPrice: number;
+  sellingPrice: number;
+  originalSellingPrice: number;
   discount: number;
+  // Offer integration
+  offerBadge?: 'Discount' | 'Promotion' | 'All Offers' | 'Offer';
+  hasActiveOffer?: boolean;
+  offerId?: string;
+  offerName?: string;
   rating: number;
   reviewCount: number;
   soldCount: string;
@@ -116,13 +121,18 @@ export const marketplaceService = {
       
       const data = await response.json();
       
-      // Format currency values for display
+      // Format currency values for display and map offer fields
       if (data.products) {
         data.products = data.products.map((product: any) => ({
           ...product,
-          price: parseFloat(product.price) || 0,
-          originalPrice: parseFloat(product.originalPrice) || 0,
-          // Keep the raw values for calculations, but ensure they're numbers
+          // Map price fields (support both old and new field names)
+          sellingPrice: parseFloat(product.sellingPrice || product.price) || 0,
+          originalSellingPrice: parseFloat(product.originalSellingPrice || product.originalPrice) || 0,
+          // Keep offer integration fields
+          offerBadge: product.offerBadge,
+          hasActiveOffer: product.hasActiveOffer,
+          offerId: product.offerId,
+          offerName: product.offerName,
         }));
       }
       
@@ -141,7 +151,17 @@ export const marketplaceService = {
       }
       
       const data = await response.json();
-      return data;
+      
+      // Map price fields and offer integration
+      return {
+        ...data,
+        sellingPrice: parseFloat(data.sellingPrice || data.price) || 0,
+        originalSellingPrice: parseFloat(data.originalSellingPrice || data.originalPrice) || 0,
+        offerBadge: data.offerBadge,
+        hasActiveOffer: data.hasActiveOffer,
+        offerId: data.offerId,
+        offerName: data.offerName,
+      };
     } catch (error) {
       throw error;
     }

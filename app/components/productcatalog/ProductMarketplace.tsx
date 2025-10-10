@@ -86,9 +86,37 @@ export default function ProductMarketplace({
     return isNaN(num) ? fallback : num;
   };
 
+
   const safeGetArray = (value: any, fallback: any[] = []): any[] => {
     if (!Array.isArray(value)) return fallback;
     return value;
+  };
+
+  // Helper functions for price fields with fallbacks
+  const getSellingPrice = (): number => {
+    const sp = (product as any).sellingPrice;
+    const p = (product as any).price;
+    if (sp !== undefined && sp !== null) return safeGetNumber(sp);
+    if (p !== undefined && p !== null) return safeGetNumber(p);
+    return 0;
+  };
+
+  const getOriginalSellingPrice = (): number => {
+    const osp = (product as any).originalSellingPrice;
+    const op = (product as any).originalPrice;
+    if (osp !== undefined && osp !== null) return safeGetNumber(osp);
+    if (op !== undefined && op !== null) return safeGetNumber(op);
+    return 0;
+  };
+
+  const getOfferBadge = (): string | undefined => {
+    const badge = (product as any).offerBadge;
+    return badge;
+  };
+
+  const getHasActiveOffer = (): boolean => {
+    const hasOffer = (product as any).hasActiveOffer;
+    return hasOffer === true;
   };
 
   // Card view state
@@ -266,17 +294,42 @@ export default function ProductMarketplace({
   };
 
   const renderCardDiscountTag = () => {
+    // Show offer badge if available, otherwise show percentage discount
+    const offerBadge = getOfferBadge();
     const discount = safeGetNumber(product.discount);
-    if (discount <= 0) return null;
+    const hasActiveOffer = getHasActiveOffer();
     
-    return (
-      <View style={styles.cardDiscountTag}>
-        <Text style={styles.cardDiscountTagText}>-{discount}%</Text>
-        {safeGetString(product.brand) && (
-          <Text style={styles.cardBrandTagText}>{safeGetString(product.brand)}</Text>
-        )}
-      </View>
-    );
+    if (offerBadge && hasActiveOffer) {
+      // Show offer badge (Discount, Promotion, All Offers, Offer)
+      const badgeColors = {
+        'Discount': { bg: '#FEE2E2', text: '#DC2626' }, // red
+        'Promotion': { bg: '#DCFCE7', text: '#16A34A' }, // green  
+        'All Offers': { bg: '#F3E8FF', text: '#9333EA' }, // purple
+        'Offer': { bg: '#DBEAFE', text: '#2563EB' } // blue
+      };
+      
+      const colors = badgeColors[offerBadge as keyof typeof badgeColors] || badgeColors['Offer'];
+      
+      return (
+        <View style={[styles.cardDiscountTag, { backgroundColor: colors.bg }]}>
+          <Text style={[styles.cardDiscountTagText, { color: colors.text }]}>
+            {offerBadge}
+          </Text>
+        </View>
+      );
+    } else if (discount > 0) {
+      // Fallback to percentage discount
+      return (
+        <View style={styles.cardDiscountTag}>
+          <Text style={styles.cardDiscountTagText}>-{discount}%</Text>
+          {safeGetString(product.brand) && (
+            <Text style={styles.cardBrandTagText}>{safeGetString(product.brand)}</Text>
+          )}
+        </View>
+      );
+    }
+    
+    return null;
   };
 
   const renderCardPromoBadge = () => {
@@ -358,13 +411,13 @@ export default function ProductMarketplace({
 
             {/* Price */}
             <View style={styles.cardPriceContainer}>
-              {safeGetNumber(product.originalPrice) > safeGetNumber(product.price) && (
+              {getHasActiveOffer() && getOriginalSellingPrice() > 0 && (
                 <Text style={styles.cardOriginalPrice}>
-                  {formatCurrency(safeGetNumber(product.originalPrice))}
+                  {formatCurrency(getOriginalSellingPrice())}
                 </Text>
               )}
               <Text style={[styles.cardPrice, { color: primaryColor }]}>
-                {formatCurrency(safeGetNumber(product.price))}
+                {formatCurrency(getSellingPrice())}
               </Text>
             </View>
 
@@ -517,16 +570,28 @@ export default function ProductMarketplace({
       <View style={styles.pricingContainer}>
         <View style={styles.priceRow}>
           <Text style={[styles.currentPrice, { color: primaryColor }]}>
-            {formatCurrency(safeGetNumber(product.price))}
+            {formatCurrency(getSellingPrice())}
           </Text>
-          {safeGetNumber(product.originalPrice) > 0 && (
+          {/* Only show strikethrough and badges if product has an active offer */}
+          {getHasActiveOffer() && getOriginalSellingPrice() > 0 && (
             <>
               <Text style={styles.originalPrice}>
-                {formatCurrency(safeGetNumber(product.originalPrice))}
+                {formatCurrency(getOriginalSellingPrice())}
               </Text>
-              {safeGetNumber(product.discount) > 0 && (
-                <View style={styles.discountBadge}>
-                  <Text style={styles.discountText}>-{safeGetNumber(product.discount)}%</Text>
+              {/* Show offer badge */}
+              {getOfferBadge() && (
+                <View style={[styles.discountBadge, { 
+                  backgroundColor: getOfferBadge() === 'Discount' ? '#FEE2E2' :
+                                  getOfferBadge() === 'Promotion' ? '#DCFCE7' :
+                                  getOfferBadge() === 'All Offers' ? '#F3E8FF' : '#DBEAFE'
+                }]}>
+                  <Text style={[styles.discountText, { 
+                    color: getOfferBadge() === 'Discount' ? '#DC2626' :
+                           getOfferBadge() === 'Promotion' ? '#16A34A' :
+                           getOfferBadge() === 'All Offers' ? '#9333EA' : '#2563EB'
+                  }]}>
+                    {getOfferBadge()}
+                  </Text>
                 </View>
               )}
             </>
@@ -707,7 +772,7 @@ export default function ProductMarketplace({
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Price per Package:</Text>
           <Text style={[styles.detailValue, { color: textColor }]}>
-            {formatCurrency(safeGetNumber(product.price) * safeGetNumber(product.piecesPerPackage, 1))}
+            {formatCurrency(getSellingPrice() * safeGetNumber(product.piecesPerPackage, 1))}
           </Text>
         </View>
       </View>
@@ -999,7 +1064,7 @@ const styles = StyleSheet.create({
   cardDiscountTag: {
     position: 'absolute',
     top: 8,
-    right: 8,
+    left: 8,
     backgroundColor: '#EF4444',
     paddingHorizontal: 6,
     paddingVertical: 4,
@@ -1007,6 +1072,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    zIndex: 10,
   },
   cardDiscountTagText: {
     color: 'white',
@@ -1021,7 +1087,7 @@ const styles = StyleSheet.create({
   cardFavoriteButton: {
     position: 'absolute',
     top: 8,
-    left: 8,
+    right: 8,
     width: 24,
     height: 24,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',

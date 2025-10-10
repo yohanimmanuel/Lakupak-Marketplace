@@ -3,9 +3,14 @@ export interface Product {
   id: string;
   name: string;
   description: string;
-  price: number;
-  originalPrice?: number;
+  sellingPrice: number;
+  originalSellingPrice?: number;
   discount?: number;
+  // Offer integration
+  offerBadge?: 'Discount' | 'Promotion' | 'All Offers' | 'Offer';
+  hasActiveOffer?: boolean;
+  offerId?: string;
+  offerName?: string;
   rating: number;
   reviewCount: number;
   soldCount: string;
@@ -64,9 +69,14 @@ export const sampleProducts: Product[] = [
     id: '1',
     name: 'iPhone 17 Pro - Latest Premium Smartphone with Advanced Camera System',
     description: 'Experience the future of mobile technology with the iPhone 17 Pro. Featuring an advanced triple-camera system, A18 Pro chip, and stunning titanium design.',
-    price: 1749000,
-    originalPrice: 1999000,
+    sellingPrice: 1749000,
+    originalSellingPrice: 1999000,
     discount: 12,
+    // Offer integration
+    offerBadge: 'Discount',
+    hasActiveOffer: true,
+    offerId: 'OFF-123',
+    offerName: 'Flash Sale - 12% Off',
     rating: 4.8,
     reviewCount: 127,
     soldCount: '2.5rb+',
@@ -123,7 +133,7 @@ export const sampleProducts: Product[] = [
     id: '2',
     name: 'UCL Football Munich 2025 Final - Official Size 5 Match Ball',
     description: 'Official UEFA Champions League match ball for the 2025 final in Munich. Perfect for professional play and training.',
-    price: 350000,
+    sellingPrice: 350000,
     rating: 4.9,
     reviewCount: 22,
     soldCount: '22 sold',
@@ -181,9 +191,14 @@ export const sampleProducts: Product[] = [
     id: '3',
     name: 'Xiaomi Redmi TWS Wireless Earphones with Freebies - Bluetooth 5.0',
     description: 'High-quality wireless earphones with active noise cancellation, 30-hour battery life, and premium sound quality.',
-    price: 299000,
-    originalPrice: 999000,
+    sellingPrice: 299000,
+    originalSellingPrice: 999000,
     discount: 70,
+    // Offer integration
+    offerBadge: 'Promotion',
+    hasActiveOffer: true,
+    offerId: 'OFF-456',
+    offerName: 'Buy 2 Get 1 Free',
     rating: 4.6,
     reviewCount: 592,
     soldCount: '592 sold',
@@ -241,8 +256,8 @@ export const sampleProducts: Product[] = [
     id: '4',
     name: 'HUGO Motivational Drinking Bottle Set 2 in 1 - 1000ML & 2000ML Water Bottles',
     description: 'Premium motivational water bottle set with measurement markings. Perfect for fitness enthusiasts and health-conscious individuals.',
-    price: 85000,
-    originalPrice: 259000,
+    sellingPrice: 85000,
+    originalSellingPrice: 259000,
     discount: 67,
     rating: 4.8,
     reviewCount: 47,
