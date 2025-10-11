@@ -11,6 +11,11 @@ export interface Product {
   hasActiveOffer?: boolean;
   offerId?: string;
   offerName?: string;
+  promotionDetails?: {
+    minQuantity: number;
+    freeQuantity: number;
+    description: string;
+  };
   rating: number;
   reviewCount: number;
   soldCount: string;

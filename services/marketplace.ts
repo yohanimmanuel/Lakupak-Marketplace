@@ -21,6 +21,11 @@ export interface MarketplaceProduct {
   hasActiveOffer?: boolean;
   offerId?: string;
   offerName?: string;
+  promotionDetails?: {
+    minQuantity: number;
+    freeQuantity: number;
+    description: string;
+  };
   rating: number;
   reviewCount: number;
   soldCount: string;
@@ -133,6 +138,7 @@ export const marketplaceService = {
           hasActiveOffer: product.hasActiveOffer,
           offerId: product.offerId,
           offerName: product.offerName,
+          promotionDetails: product.promotionDetails,
         }));
       }
       
@@ -161,6 +167,7 @@ export const marketplaceService = {
         hasActiveOffer: data.hasActiveOffer,
         offerId: data.offerId,
         offerName: data.offerName,
+        promotionDetails: data.promotionDetails,
       };
     } catch (error) {
       throw error;
