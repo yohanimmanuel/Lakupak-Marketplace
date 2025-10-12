@@ -264,7 +264,26 @@ export default function CartScreen() {
               >
                 <Minus size={16} color="#111827" />
               </TouchableOpacity>
-              <Text style={styles.quantityText}>{item.quantity}</Text>
+              <View style={{alignItems: 'center'}}>
+                <Text style={styles.quantityText}>{item.quantity}</Text>
+                {(() => {
+                  const promotionDetails = (item.product as any)?.promotionDetails;
+                  if (promotionDetails) {
+                    const minQty = promotionDetails.minQuantity || 1;
+                    const freeQty = promotionDetails.freeQuantity || 0;
+                    const qualifyingSets = Math.floor(item.quantity / minQty);
+                    const totalFreeItems = qualifyingSets * freeQty;
+                    if (totalFreeItems > 0) {
+                      return (
+                        <Text style={styles.promotionGiftText}>
+                          +{totalFreeItems} Free
+                        </Text>
+                      );
+                    }
+                  }
+                  return null;
+                })()}
+              </View>
               <TouchableOpacity
                 style={styles.quantityButton}
                 onPress={() => handleQuantityChange(item.id, 1)}
@@ -275,7 +294,7 @@ export default function CartScreen() {
             
             <View style={styles.priceContainer}>
               <Text style={styles.price}>
-                {formatCurrency(item.product.price * item.quantity * ((item.product as MarketplaceProduct).piecesPerPackage || 1))}
+                {formatCurrency((item.product as any).price * item.quantity * ((item.product as MarketplaceProduct).piecesPerPackage || 1))}
               </Text>
             </View>
             </View>
@@ -613,6 +632,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     marginHorizontal: 12,
+  },
+  promotionGiftText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9333EA',
+    marginTop: 2,
   },
   priceContainer: {
     alignItems: 'flex-end',

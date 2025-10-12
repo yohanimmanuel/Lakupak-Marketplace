@@ -27,7 +27,8 @@ import {
   ChevronDown,
   ChevronRight,
   Calendar,
-  X
+  X,
+  Gift
 } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Product } from '../../../data/sampleProducts';
@@ -445,7 +446,7 @@ export default function CheckoutScreen() {
     if (isCartCheckout) {
       return selectedCartItems.reduce((total, item) => {
         const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
-        return total + (item.product.price * item.quantity * piecesPerPackage);
+        return total + ((item.product as any).price * item.quantity * piecesPerPackage);
       }, 0);
     }
     return totalPrice;
@@ -507,7 +508,7 @@ export default function CheckoutScreen() {
                     // Calculate totals for this distributor's items
                     const distributorSubtotal = items.reduce((total, item) => {
                       const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
-                      return total + (item.product.price * item.quantity * piecesPerPackage);
+                      return total + ((item.product as any).price * item.quantity * piecesPerPackage);
                     }, 0);
                     const firstProduct = items[0].product as MarketplaceProduct;
                     const shippingOptions = getAvailableShippingOptions(firstProduct);
@@ -525,8 +526,8 @@ export default function CheckoutScreen() {
                         packageQuantity: item.quantity,
                         packageType: item.product.packageType || 'Box',
                         piecesPerPackage: item.product.piecesPerPackage || 1,
-                        pricePerPackage: item.product.price * (item.product.piecesPerPackage || 1),
-                        subtotal: item.product.price * item.quantity * (item.product.piecesPerPackage || 1)
+                        pricePerPackage: (item.product as any).price * (item.product.piecesPerPackage || 1),
+                        subtotal: (item.product as any).price * item.quantity * (item.product.piecesPerPackage || 1)
                       })),
                       subtotal: distributorSubtotal,
                       discounts: 0,
@@ -764,9 +765,31 @@ export default function CheckoutScreen() {
                         <Text style={styles.productSpecs}>Variant: {item.variant}</Text>
                         <View style={styles.priceRow}>
                           <Text style={styles.productPrice}>
-                            {formatCurrency(item.product.price)} each
+                            {formatCurrency((item.product as any).price)} each
                           </Text>
-                          <Text style={styles.quantityBadge}>x{item.quantity}</Text>
+                          <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
+                            {(() => {
+                              const promotionDetails = (item.product as any)?.promotionDetails;
+                              if (promotionDetails) {
+                                const minQty = promotionDetails.minQuantity || 1;
+                                const freeQty = promotionDetails.freeQuantity || 0;
+                                const qualifyingSets = Math.floor(item.quantity / minQty);
+                                const totalFreeItems = qualifyingSets * freeQty;
+                                if (totalFreeItems > 0) {
+                                  return (
+                                    <View style={styles.promotionGiftBadge}>
+                                      <Gift size={12} color="#9333EA" />
+                                      <Text style={styles.promotionGiftText}>
+                                        +{totalFreeItems} Free
+                                      </Text>
+                                    </View>
+                                  );
+                                }
+                              }
+                              return null;
+                            })()}
+                            <Text style={styles.quantityBadge}>x{item.quantity}</Text>
+                          </View>
                         </View>
                       </View>
                     </View>
@@ -874,7 +897,32 @@ export default function CheckoutScreen() {
                     <Text style={styles.productPrice}>
                       {formatCurrency(unitPrice)} per piece
                     </Text>
-                    <Text style={styles.quantityBadge}>x{quantity}</Text>
+                    <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
+                      {(() => {
+                        // Get promotion details from route params or product
+                        const promotionDetails = (params as any)?.promotionDetails 
+                          ? JSON.parse((params as any).promotionDetails)
+                          : null;
+                        if (promotionDetails) {
+                          const minQty = promotionDetails.minQuantity || 1;
+                          const freeQty = promotionDetails.freeQuantity || 0;
+                          const qualifyingSets = Math.floor(quantity / minQty);
+                          const totalFreeItems = qualifyingSets * freeQty;
+                          if (totalFreeItems > 0) {
+                            return (
+                              <View style={styles.promotionGiftBadge}>
+                                <Gift size={12} color="#9333EA" />
+                                <Text style={styles.promotionGiftText}>
+                                  +{totalFreeItems} Free
+                                </Text>
+                              </View>
+                            );
+                          }
+                        }
+                        return null;
+                      })()}
+                      <Text style={styles.quantityBadge}>x{quantity}</Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -1516,6 +1564,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
+  },
+  promotionGiftBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 4,
+    gap: 4,
+  },
+  promotionGiftText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9333EA',
   },
   quantityRow: {
     flexDirection: 'row',

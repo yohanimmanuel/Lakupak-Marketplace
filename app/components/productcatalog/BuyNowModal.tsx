@@ -126,7 +126,7 @@ export default function BuyNowModal({
 
   const images = safeGetArray(product.images);
   const productImage = images.length > 0 ? safeGetString(images[0]) : null;
-  const unitPrice = safeGetNumber(product.price); // Price per single item
+  const unitPrice = safeGetNumber((product as any).price); // Price per single item
   const piecesPerPackage = safeGetNumber(product.piecesPerPackage, 1);
   const pricePerPackage = unitPrice * piecesPerPackage; // Price per box/package
   const totalPrice = pricePerPackage * quantity; // Total price for all boxes
@@ -143,6 +143,28 @@ export default function BuyNowModal({
     }
   };
 
+  // Calculate promotion free items
+  const calculatePromotionGift = () => {
+    const promotionDetails = (product as any)?.promotionDetails;
+    if (!promotionDetails) return null;
+    
+    const minQty = promotionDetails.minQuantity || 1;
+    const freeQty = promotionDetails.freeQuantity || 0;
+    
+    // Calculate how many free items they get
+    const qualifyingSets = Math.floor(quantity / minQty);
+    const totalFreeItems = qualifyingSets * freeQty;
+    
+    if (totalFreeItems > 0) {
+      return {
+        freeQty: totalFreeItems,
+        totalReceived: quantity + totalFreeItems
+      };
+    }
+    
+    return null;
+  };
+
   const handleConfirm = () => {
     if (isFormValid && product) {
       if (mode === 'cart') {
@@ -151,7 +173,7 @@ export default function BuyNowModal({
         handleClose();
       } else {
         // Navigate to checkout with product details
-        const checkoutParams = {
+        const checkoutParams: Record<string, string> = {
           productId: product.id,
           quantity: quantity.toString(),
           totalPrice: totalPrice.toString(),
@@ -161,6 +183,12 @@ export default function BuyNowModal({
           packageType: safeGetString(product.packageType, 'Box'),
           piecesPerPackage: piecesPerPackage.toString(),
         };
+        
+        // Add promotion details if available
+        const promotionDetails = (product as any)?.promotionDetails;
+        if (promotionDetails) {
+          checkoutParams.promotionDetails = JSON.stringify(promotionDetails);
+        }
         
         router.push({
           pathname: '/components/productcatalog/checkout',
@@ -269,6 +297,11 @@ export default function BuyNowModal({
               
               <View style={styles.quantityDisplay}>
                 <Text style={styles.quantityText}>{quantity}</Text>
+                {calculatePromotionGift() && (
+                  <Text style={styles.promotionGiftText}>
+                    +{calculatePromotionGift()!.freeQty} Free
+                  </Text>
+                )}
               </View>
               
               <TouchableOpacity
@@ -486,6 +519,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
+  },
+  promotionGiftText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9333EA',
+    marginTop: 2,
   },
   stockInfo: {
     flexDirection: 'row',
