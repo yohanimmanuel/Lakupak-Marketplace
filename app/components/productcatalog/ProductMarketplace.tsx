@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { router, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Heart, ImageIcon, Share2, X, ArrowLeft, ShoppingCart } from 'lucide-react-native';
+import { Heart, ImageIcon, Share2, X, ArrowLeft, ShoppingCart, Gift } from 'lucide-react-native';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import BuyNowModal from './BuyNowModal';
@@ -269,15 +269,7 @@ export default function ProductMarketplace({
           style={styles.cardProductImage} 
         />
         
-        {/* Navigation arrows */}
-        <TouchableOpacity style={styles.cardCarouselArrowLeft} onPress={prevImage}>
-          <Ionicons name="chevron-back" size={20} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.cardCarouselArrowRight} onPress={nextImage}>
-          <Ionicons name="chevron-forward" size={20} color="white" />
-        </TouchableOpacity>
-        
-        {/* Dots indicator */}
+        {/* Dots indicator only - no navigation arrows */}
         <View style={styles.cardDotsContainer}>
           {images.map((_, index) => (
             <View
@@ -308,42 +300,19 @@ export default function ProductMarketplace({
     }
     
     if (offerBadge && hasActiveOffer) {
-      // Show offer badge (Discount, Promotion, or both)
-      if (offerBadge === 'All Offers') {
-        // Show both badges stacked
+      // Only show DISCOUNT badge here (top-left corner)
+      // Promotion badge will be shown in the product info section
+      if (offerBadge === 'Discount' || offerBadge === 'All Offers') {
         return (
-          <View style={styles.cardMultiBadgeContainer}>
-            <View style={[styles.cardDiscountTag, { backgroundColor: '#FEE2E2' }]}>
-              <Text style={[styles.cardDiscountTagText, { color: '#DC2626' }]}>
-                {discountPercentage > 0 ? `${discountPercentage}% OFF` : 'Discount'}
-              </Text>
-            </View>
-            <View style={[styles.cardDiscountTag, { backgroundColor: '#F3E8FF', marginTop: 4 }]}>
-              <Text style={[styles.cardDiscountTagText, { color: '#9333EA' }]}>
-                Promotion
-              </Text>
-            </View>
+          <View style={[styles.cardDiscountTag, { backgroundColor: '#FEE2E2' }]}>
+            <Text style={[styles.cardDiscountTagText, { color: '#DC2626' }]}>
+              {discountPercentage > 0 ? `${discountPercentage}% OFF` : 'Discount'}
+            </Text>
           </View>
         );
       }
-      
-      const badgeColors = {
-        'Discount': { bg: '#FEE2E2', text: '#DC2626' }, // red
-        'Promotion': { bg: '#F3E8FF', text: '#9333EA' }, // purple  
-        'Offer': { bg: '#DBEAFE', text: '#2563EB' } // blue
-      };
-      
-      const colors = badgeColors[offerBadge as keyof typeof badgeColors] || badgeColors['Offer'];
-      
-      return (
-        <View style={[styles.cardDiscountTag, { backgroundColor: colors.bg }]}>
-          <Text style={[styles.cardDiscountTagText, { color: colors.text }]}>
-            {offerBadge === 'Discount' && discountPercentage > 0 
-              ? `${discountPercentage}% OFF` 
-              : offerBadge}
-          </Text>
-        </View>
-      );
+      // Don't show anything for Promotion-only here
+      return null;
     } else if (discount > 0) {
       // Fallback to percentage discount
       return (
@@ -452,15 +421,27 @@ export default function ProductMarketplace({
             {/* Sales Info */}
             <Text style={styles.cardSalesInfo}>{safeGetString(product.soldCount, '0')} sold</Text>
 
-            {/* Stock Status */}
-            <Text
-              style={[
-                styles.cardStockStatus,
-                { color: getStockStatusColor(safeGetString(product.stockStatus, 'In Stock')) },
-              ]}
-            >
-              {safeGetString(product.stockStatus, 'In Stock')}
-            </Text>
+            {/* Stock Status and Promotion Badge */}
+            <View style={styles.cardStockRow}>
+              <Text
+                style={[
+                  styles.cardStockStatus,
+                  { color: getStockStatusColor(safeGetString(product.stockStatus, 'In Stock')) },
+                ]}
+              >
+                {safeGetString(product.stockStatus, 'In Stock')}
+              </Text>
+              
+              {/* Promotion Badge */}
+              {(getOfferBadge() === 'Promotion' || getOfferBadge() === 'All Offers') && (product as any)?.promotionDetails && (
+                <View style={styles.cardPromotionBadge}>
+                  <Gift size={10} color="#9333EA" />
+                  <Text style={styles.cardPromotionBadgeText}>
+                    Buy {(product as any).promotionDetails.minQuantity} Get {(product as any).promotionDetails.freeQuantity}
+                  </Text>
+                </View>
+              )}
+            </View>
 
             {/* Shipping Info */}
             {product.shippingInfo && (
@@ -624,9 +605,12 @@ export default function ProductMarketplace({
                       {discountPercentage > 0 ? `${discountPercentage}% OFF` : 'Discount'}
                     </Text>
                   </View>
-                  <View style={[styles.discountBadge, { backgroundColor: '#F3E8FF' }]}>
+                  <View style={[styles.discountBadge, { backgroundColor: '#F3E8FF', flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
+                    <Gift size={10} color="#9333EA" />
                     <Text style={[styles.discountText, { color: '#9333EA' }]}>
-                      Promotion
+                      {(product as any)?.promotionDetails 
+                        ? `Buy ${(product as any).promotionDetails.minQuantity} Get ${(product as any).promotionDetails.freeQuantity}`
+                        : 'Promotion'}
                     </Text>
                   </View>
                 </View>
@@ -636,15 +620,21 @@ export default function ProductMarketplace({
             return (
               <View style={[styles.discountBadge, { 
                 backgroundColor: getOfferBadge() === 'Discount' ? '#FEE2E2' :
-                                getOfferBadge() === 'Promotion' ? '#F3E8FF' : '#DBEAFE'
+                                getOfferBadge() === 'Promotion' ? '#F3E8FF' : '#DBEAFE',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: getOfferBadge() === 'Promotion' ? 4 : 0
               }]}>
+                {getOfferBadge() === 'Promotion' && <Gift size={10} color="#9333EA" />}
                 <Text style={[styles.discountText, { 
                   color: getOfferBadge() === 'Discount' ? '#DC2626' :
                          getOfferBadge() === 'Promotion' ? '#9333EA' : '#2563EB'
                 }]}>
                   {getOfferBadge() === 'Discount' && discountPercentage > 0 
-                    ? `${discountPercentage}% OFF` 
-                    : getOfferBadge()}
+                    ? `${discountPercentage}% OFF`
+                    : getOfferBadge() === 'Promotion' && (product as any)?.promotionDetails
+                      ? `Buy ${(product as any).promotionDetails.minQuantity} Get ${(product as any).promotionDetails.freeQuantity}`
+                      : getOfferBadge()}
                 </Text>
               </View>
             );
@@ -668,37 +658,6 @@ export default function ProductMarketplace({
         </Text>
       </View>
 
-      {/* Buy X Get Y Promotion Notice */}
-      {(product as any)?.promotionDetails && (
-        <View style={styles.promotionNoticeContainer}>
-          <View style={styles.promotionHeader}>
-            <View style={styles.promotionIcon}>
-              <Text style={styles.promotionEmoji}>🎁</Text>
-            </View>
-            <Text style={styles.promotionTitle}>Active Promotion: Buy X Get Y</Text>
-          </View>
-          <Text style={styles.promotionDescription}>
-            {(product as any).promotionDetails.description}
-          </Text>
-          <View style={styles.promotionDetailsRow}>
-            <View style={styles.promotionBadge}>
-              <Text style={styles.promotionBadgeLabel}>Buy:</Text>
-              <Text style={styles.promotionBadgeValue}>
-                {(product as any).promotionDetails.minQuantity} items
-              </Text>
-            </View>
-            <View style={styles.promotionBadge}>
-              <Text style={styles.promotionBadgeLabel}>Get Free:</Text>
-              <Text style={styles.promotionBadgeValue}>
-                {(product as any).promotionDetails.freeQuantity} item{(product as any).promotionDetails.freeQuantity > 1 ? 's' : ''}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.promotionFooter}>
-            ℹ️ Purchase at least {(product as any).promotionDetails.minQuantity} items to receive {(product as any).promotionDetails.freeQuantity} free item{(product as any).promotionDetails.freeQuantity > 1 ? 's' : ''}.
-          </Text>
-        </View>
-      )}
     </View>
   );
 
@@ -1267,10 +1226,30 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 4,
   },
-  cardStockStatus: {
-    fontSize: 14,
-    fontWeight: '500',
+  cardStockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginBottom: 4,
+    flexWrap: 'wrap',
+  },
+  cardStockStatus: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  cardPromotionBadge: {
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  cardPromotionBadgeText: {
+    color: '#9333EA',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
   cardShippingInfo: {
     flexDirection: 'row',
@@ -1534,68 +1513,6 @@ const styles = StyleSheet.create({
   stockStatus: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  promotionNoticeContainer: {
-    marginTop: 16,
-    backgroundColor: '#F0FDF4',
-    borderColor: '#86EFAC',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-  },
-  promotionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  promotionIcon: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#22C55E',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  promotionEmoji: {
-    fontSize: 16,
-  },
-  promotionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#166534',
-  },
-  promotionDescription: {
-    fontSize: 12,
-    color: '#15803D',
-    marginBottom: 12,
-  },
-  promotionDetailsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  promotionBadge: {
-    backgroundColor: '#BBF7D0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  promotionBadgeLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#166534',
-    marginBottom: 2,
-  },
-  promotionBadgeValue: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#166534',
-  },
-  promotionFooter: {
-    fontSize: 11,
-    color: '#15803D',
-    fontStyle: 'italic',
   },
   sellerHeader: {
     flexDirection: 'row',
