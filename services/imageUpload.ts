@@ -46,7 +46,7 @@ export const uploadImageToCloudinaryDirect = async (
       uri: imageUri,
       name: filename,
       type,
-    } as any);
+    } as { uri: string; name: string; type: string });
     
     formData.append('signature', signatureData.signature);
     formData.append('timestamp', signatureData.timestamp.toString());

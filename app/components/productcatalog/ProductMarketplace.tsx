@@ -29,6 +29,12 @@ const cardWidth = (screenWidth - 48) / 2; // 2 columns with padding
 
 type ProductType = Product | MarketplaceProduct;
 
+// Enriched product interface that includes all possible properties
+interface EnrichedProduct extends Product {
+  price?: number; // Alternative field name
+  originalPrice?: number; // Alternative field name
+}
+
 interface ProductMarketplaceProps {
   product: ProductType;
   onAddToCart: (product: ProductType, quantity?: number) => void;
@@ -75,47 +81,47 @@ export default function ProductMarketplace({
   const [showAddToCartModal, setShowAddToCartModal] = useState(false);
 
   // Safe value getters to prevent undefined/null errors
-  const safeGetString = (value: any, fallback: string = ''): string => {
+  const safeGetString = (value: unknown, fallback: string = ''): string => {
     if (value === null || value === undefined) return fallback;
     return String(value);
   };
 
-  const safeGetNumber = (value: any, fallback: number = 0): number => {
+  const safeGetNumber = (value: unknown, fallback: number = 0): number => {
     if (value === null || value === undefined) return fallback;
     const num = Number(value);
     return isNaN(num) ? fallback : num;
   };
 
 
-  const safeGetArray = (value: any, fallback: any[] = []): any[] => {
+  const safeGetArray = (value: unknown, fallback: unknown[] = []): unknown[] => {
     if (!Array.isArray(value)) return fallback;
     return value;
   };
 
   // Helper functions for price fields with fallbacks
   const getSellingPrice = (): number => {
-    const sp = (product as any).sellingPrice;
-    const p = (product as any).price;
+    const sp = product.sellingPrice;
+    const p = (product as EnrichedProduct).price;
     if (sp !== undefined && sp !== null) return safeGetNumber(sp);
     if (p !== undefined && p !== null) return safeGetNumber(p);
     return 0;
   };
 
   const getOriginalSellingPrice = (): number => {
-    const osp = (product as any).originalSellingPrice;
-    const op = (product as any).originalPrice;
+    const osp = product.originalSellingPrice;
+    const op = (product as EnrichedProduct).originalPrice;
     if (osp !== undefined && osp !== null) return safeGetNumber(osp);
     if (op !== undefined && op !== null) return safeGetNumber(op);
     return 0;
   };
 
   const getOfferBadge = (): string | undefined => {
-    const badge = (product as any).offerBadge;
+    const badge = product.offerBadge;
     return badge;
   };
 
   const getHasActiveOffer = (): boolean => {
-    const hasOffer = (product as any).hasActiveOffer;
+    const hasOffer = product.hasActiveOffer;
     return hasOffer === true;
   };
 
@@ -123,7 +129,7 @@ export default function ProductMarketplace({
   const [showModal, setShowModal] = useState(false);
 
   // Get current image for display
-  const images = safeGetArray(product.images);
+  const images = safeGetArray(product.images) as string[];
   const currentImage = images.length > 0 
     ? safeGetString(images[currentImageIndex] || images[0])
     : null;
@@ -166,7 +172,7 @@ export default function ProductMarketplace({
   }, [product.category, product.id]);
 
   // Handle scroll for image carousel
-  const handleImageScroll = (event: any) => {
+  const handleImageScroll = (event: { nativeEvent: { contentOffset: { x: number }; layoutMeasurement: { width: number } } }) => {
     const { contentOffset, layoutMeasurement } = event.nativeEvent;
     const index = Math.round(contentOffset.x / layoutMeasurement.width);
     if (index !== currentImageIndex && index >= 0 && index < images.length) {
@@ -433,11 +439,11 @@ export default function ProductMarketplace({
               </Text>
               
               {/* Promotion Badge */}
-              {(getOfferBadge() === 'Promotion' || getOfferBadge() === 'All Offers') && (product as any)?.promotionDetails && (
+              {(getOfferBadge() === 'Promotion' || getOfferBadge() === 'All Offers') && product?.promotionDetails && (
                 <View style={styles.cardPromotionBadge}>
                   <Gift size={10} color="#9333EA" />
                   <Text style={styles.cardPromotionBadgeText}>
-                    Buy {(product as any).promotionDetails.minQuantity} Get {(product as any).promotionDetails.freeQuantity}
+                    Buy {product.promotionDetails.minQuantity} Get {product.promotionDetails.freeQuantity}
                   </Text>
                 </View>
               )}
@@ -608,8 +614,8 @@ export default function ProductMarketplace({
                   <View style={[styles.discountBadge, { backgroundColor: '#F3E8FF', flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
                     <Gift size={10} color="#9333EA" />
                     <Text style={[styles.discountText, { color: '#9333EA' }]}>
-                      {(product as any)?.promotionDetails 
-                        ? `Buy ${(product as any).promotionDetails.minQuantity} Get ${(product as any).promotionDetails.freeQuantity}`
+                      {product?.promotionDetails 
+                        ? `Buy ${product.promotionDetails.minQuantity} Get ${product.promotionDetails.freeQuantity}`
                         : 'Promotion'}
                     </Text>
                   </View>
@@ -632,8 +638,8 @@ export default function ProductMarketplace({
                 }]}>
                   {getOfferBadge() === 'Discount' && discountPercentage > 0 
                     ? `${discountPercentage}% OFF`
-                    : getOfferBadge() === 'Promotion' && (product as any)?.promotionDetails
-                      ? `Buy ${(product as any).promotionDetails.minQuantity} Get ${(product as any).promotionDetails.freeQuantity}`
+                    : getOfferBadge() === 'Promotion' && product?.promotionDetails
+                      ? `Buy ${product.promotionDetails.minQuantity} Get ${product.promotionDetails.freeQuantity}`
                       : getOfferBadge()}
                 </Text>
               </View>

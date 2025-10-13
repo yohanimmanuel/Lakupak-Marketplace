@@ -9,7 +9,7 @@ export default function MyPurchasesModal() {
   const primaryBlue = '#0a61d7';
   const inactiveGrey = '#6B7280';
   const initialTab = (typeof params.tab === 'string' ? params.tab : 'to-pay') as 'to-pay' | 'to-ship' | 'to-receive' | 'completed' | 'returns' | 'cancelled' | 'to-rate';
-  const [activeTab, setActiveTab] = useState<'to-pay' | 'to-ship' | 'to-receive' | 'completed' | 'returns' | 'cancelled' | 'to-rate'>(initialTab as any);
+  const [activeTab, setActiveTab] = useState<'to-pay' | 'to-ship' | 'to-receive' | 'completed' | 'returns' | 'cancelled' | 'to-rate'>(initialTab);
   const [query, setQuery] = useState('');
 
   const TabItem = ({ label, value }: { label: string; value: typeof activeTab }) => {

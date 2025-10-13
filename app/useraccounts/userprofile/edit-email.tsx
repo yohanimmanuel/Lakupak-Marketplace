@@ -6,7 +6,7 @@ import { updateMe } from '../../../services/user';
 
 export default function EditEmail() {
   const router = useRouter();
-  const user = useAuthStore(s => s.user) as any;
+  const user = useAuthStore(s => s.user);
   const token = useAuthStore(s => s.token) as string | null;
   const setUser = useAuthStore(s => s.setUser);
   const [value, setValue] = useState<string>(user?.email || '');
@@ -15,10 +15,10 @@ export default function EditEmail() {
     try {
       if (!token) return Alert.alert('Unauthorized');
       const updated = await updateMe(token, { email: value });
-      setUser(updated as any);
+      setUser(updated);
       router.back();
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to update');
+    } catch (e: unknown) {
+      Alert.alert('Error', (e instanceof Error ? e.message : 'Failed to update'));
     }
   };
 

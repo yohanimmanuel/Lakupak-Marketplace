@@ -2,7 +2,7 @@
 export interface LogEvent {
   level: 'info' | 'warn' | 'error'
   message: string
-  data?: any
+  data?: Record<string, unknown>
   timestamp: string
   userId?: number
 }
@@ -20,7 +20,7 @@ class MonitoringService {
   private maxLogs = 100 // Keep last 100 logs in memory
 
   // Log events for debugging and monitoring
-  log(level: LogEvent['level'], message: string, data?: any, userId?: number) {
+  log(level: LogEvent['level'], message: string, data?: Record<string, unknown>, userId?: number) {
     const event: LogEvent = {
       level,
       message,
@@ -73,7 +73,7 @@ class MonitoringService {
     } catch (error) {
       const duration = Date.now() - start
       this.trackPerformance(operation, duration, userId)
-      this.log('error', `Failed ${operation}`, error, userId)
+      this.log('error', `Failed ${operation}`, error instanceof Error ? { message: error.message, stack: error.stack } : undefined, userId)
       throw error
     }
   }
@@ -99,13 +99,13 @@ class MonitoringService {
 export const monitoring = new MonitoringService()
 
 // Convenience functions
-export const logInfo = (message: string, data?: any, userId?: number) => 
+export const logInfo = (message: string, data?: Record<string, unknown>, userId?: number) => 
   monitoring.log('info', message, data, userId)
 
-export const logWarn = (message: string, data?: any, userId?: number) => 
+export const logWarn = (message: string, data?: Record<string, unknown>, userId?: number) => 
   monitoring.log('warn', message, data, userId)
 
-export const logError = (message: string, data?: any, userId?: number) => 
+export const logError = (message: string, data?: Record<string, unknown>, userId?: number) => 
   monitoring.log('error', message, data, userId)
 
 export const trackPerformance = (operation: string, duration: number, userId?: number) => 

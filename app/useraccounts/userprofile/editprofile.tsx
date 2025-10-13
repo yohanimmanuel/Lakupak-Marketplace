@@ -55,8 +55,8 @@ export default function EditProfileModal() {
       setUser(updatedUser);
       
       Alert.alert('Success', `${type === 'profile' ? 'Profile picture' : 'Banner image'} updated successfully!`);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || `Failed to update ${type === 'profile' ? 'profile picture' : 'banner image'}`);
+    } catch (error: unknown) {
+      Alert.alert('Error', (error instanceof Error ? error.message : `Failed to update ${type === 'profile' ? 'profile picture' : 'banner image'}`));
     } finally {
       setIsUploading(false);
     }
@@ -86,7 +86,7 @@ export default function EditProfileModal() {
         ) : (
           <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#ffffff' }}>
             <Text style={{ color: '#0a61d7', fontSize: 24, fontWeight: '600' }}>
-              {(user as any)?.username?.charAt(0)?.toUpperCase() || (user as any)?.name?.charAt(0)?.toUpperCase() || 'U'}
+              {user?.username?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </Text>
           </View>
         )}
@@ -117,14 +117,14 @@ export default function EditProfileModal() {
         </Pressable>
       </View>
       
-      <Row title="Username" value={(user as any)?.username || (user as any)?.name} href={{ pathname: '/useraccounts/userprofile/edit-username' }} />
-      <Row title="Name" value={(user as any)?.name} href={{ pathname: '/useraccounts/userprofile/edit-name' }} />
-      <Row title="Store Name" value={(user as any)?.storeName} href={{ pathname: '/useraccounts/userprofile/edit-store-name' }} />
-      <Row title="Bio" value={(user as any)?.bio} href={{ pathname: '/useraccounts/userprofile/edit-bio' }} />
-      <Row title="Phone" value={(user as any)?.phone} href={{ pathname: '/useraccounts/userprofile/edit-phone' }} />
-      <Row title="Email" value={(user as any)?.email} href={{ pathname: '/useraccounts/userprofile/edit-email' }} />
-      <Row title="Address" value={(user as any)?.chosenAddress} href={{ pathname: '/useraccounts/userprofile/addresses' }} />
-      <Row title="Country" value={(user as any)?.country} href={{ pathname: '/useraccounts/userprofile/edit-country' }} />
+      <Row title="Username" value={user?.username || user?.name} href={{ pathname: '/useraccounts/userprofile/edit-username' }} />
+      <Row title="Name" value={user?.name} href={{ pathname: '/useraccounts/userprofile/edit-name' }} />
+      <Row title="Store Name" value={user?.storeName} href={{ pathname: '/useraccounts/userprofile/edit-store-name' }} />
+      <Row title="Bio" value={user?.bio} href={{ pathname: '/useraccounts/userprofile/edit-bio' }} />
+      <Row title="Phone" value={user?.phone} href={{ pathname: '/useraccounts/userprofile/edit-phone' }} />
+      <Row title="Email" value={user?.email} href={{ pathname: '/useraccounts/userprofile/edit-email' }} />
+      <Row title="Address" value={user?.chosenAddress} href={{ pathname: '/useraccounts/userprofile/addresses' }} />
+      <Row title="Country" value={user?.country} href={{ pathname: '/useraccounts/userprofile/edit-country' }} />
     </ScrollView>
   );
 }

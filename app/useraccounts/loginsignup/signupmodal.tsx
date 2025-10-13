@@ -57,7 +57,7 @@ export default function SignUpModal() {
           {/* Section 1: Top Navigation Bar */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 }}>
             <Pressable 
-              onPress={() => router.replace('/(tabs)/account' as any)} 
+              onPress={() => router.replace('/(tabs)/account')} 
               style={{ padding: 8 }}
             >
               <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '600' }}>✕</Text>
@@ -151,9 +151,9 @@ export default function SignUpModal() {
                     const result = await signUpWithGoogle();
                     await setToken(result.token);
                     setUser(result.user);
-                    router.replace('/(tabs)/account' as any);
-                  } catch (error: any) {
-                    Alert.alert('Google Sign-up Failed', error.message || 'Something went wrong');
+                    router.replace('/(tabs)/account');
+                  } catch (error: unknown) {
+                    Alert.alert('Google Sign-up Failed', (error instanceof Error ? error.message : 'Something went wrong'));
                   } finally {
                     setIsGoogleLoading(false);
                   }
@@ -192,7 +192,7 @@ export default function SignUpModal() {
         <View style={{ alignItems: 'center', marginBottom: 12 }}>
           <Text style={{ color: '#6b7280', fontSize: 12, textAlign: 'center' }}>
             By registration, you agree to our{' '}
-            <Text onPress={() => router.push('/useraccounts/consent/security-privacy' as any)} style={{ color: '#0a61d7', textDecorationLine: 'underline' }}>Security and Privacy</Text>.
+            <Text onPress={() => router.push('/useraccounts/consent/security-privacy')} style={{ color: '#0a61d7', textDecorationLine: 'underline' }}>Security and Privacy</Text>.
           </Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -210,7 +210,7 @@ export default function SignUpModal() {
                 backgroundColor: fingerKnobAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: ['#e5e7eb', '#0a61d7'],
-                }) as any,
+                }),
               }}
             >
               <Animated.View
@@ -221,7 +221,7 @@ export default function SignUpModal() {
                   borderRadius: 10,
                   transform: [
                     {
-                      translateX: fingerKnobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }) as any,
+                      translateX: fingerKnobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }),
                     },
                   ],
                 }}
@@ -245,11 +245,11 @@ export default function SignUpModal() {
               width: 200,
             }}
           >
-            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy' as any); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy'); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
               <Text style={{ color: '#111827', fontSize: 14 }}>Security & Privacy</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
-            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter' as any); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter'); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
               <Text style={{ color: '#111827', fontSize: 14 }}>Help Center</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />

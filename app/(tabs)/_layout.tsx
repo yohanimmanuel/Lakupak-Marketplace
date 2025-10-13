@@ -18,13 +18,12 @@ export default function TabLayout() {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
-  const ShrinkIcon = ({ children, ...pressableProps }: { children: React.ReactNode } & React.ComponentProps<typeof Pressable>) => {
+  const ShrinkIcon = ({ children, style, ...pressableProps }: { children: React.ReactNode; style?: object } & Omit<React.ComponentProps<typeof Pressable>, 'style'>) => {
     const s = useRef(new Animated.Value(1)).current;
     const onIn = () => Animated.spring(s, { toValue: 0.92, useNativeDriver: true, friction: 7, tension: 120 }).start();
     const onOut = () => Animated.spring(s, { toValue: 1, useNativeDriver: true, friction: 7, tension: 120 }).start();
-    const { style, ...rest } = pressableProps as any;
     return (
-      <Pressable onPressIn={onIn} onPressOut={onOut} style={[{ paddingHorizontal: 10 }, style]} {...rest}>
+      <Pressable onPressIn={onIn} onPressOut={onOut} style={[{ paddingHorizontal: 10 }, style]} {...pressableProps}>
         <Animated.View style={{ transform: [{ scale: s }] }}>
           {children}
         </Animated.View>
@@ -138,8 +137,8 @@ export default function TabLayout() {
     return <View style={{ height: 0 }} />;
   }
 
-  const TabButton = (props: any) => (
-    <Pressable {...props} style={({ pressed }) => [{ alignItems: 'center', justifyContent: 'center', borderRadius: 9999, paddingVertical: 6 }]} />
+  const TabButton = (props: object) => (
+    <Pressable {...props} style={({ pressed }: { pressed: boolean }) => [{ alignItems: 'center', justifyContent: 'center', borderRadius: 9999, paddingVertical: 6 }]} />
   );
 
   const isOrders = pathname?.endsWith('/orders') || pathname === '/orders';

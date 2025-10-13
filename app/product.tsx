@@ -8,6 +8,9 @@ import BuyNowModal from './components/productcatalog/BuyNowModal';
 import { useDataStore } from '../stores/dataStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { useAuthStore } from '../stores/authStore';
+import type { MarketplaceProduct } from '../services/marketplace';
+
+type ProductType = MarketplaceProduct | { id: string; name: string; sellingPrice?: number; images?: string[]; packageType?: string; piecesPerPackage?: number; };
 
 export default function ProductModal() {
   const router = useRouter();
@@ -29,11 +32,11 @@ export default function ProductModal() {
     router.back();
   };
 
-  const handleAddToCart = (product: any) => {
+  const handleAddToCart = (product: ProductType) => {
     // Add to cart functionality
   };
 
-  const handleBuyNow = (product: any) => {
+  const handleBuyNow = (product: ProductType) => {
     setShowBuyNowModal(true);
   };
 
@@ -55,15 +58,15 @@ export default function ProductModal() {
     }
   };
 
-  const handleBuyNowConfirm = (product: any, quantity: number) => {
+  const handleBuyNowConfirm = (product: ProductType, quantity: number) => {
     // Navigate to checkout with product details
     const checkoutParams = {
       productId: product.id,
       quantity: quantity.toString(),
-      totalPrice: (product.pricePerPackage * quantity).toString(),
+      totalPrice: (((product as { pricePerPackage?: number }).pricePerPackage || product.sellingPrice || 0) * quantity).toString(),
       productName: product.name || 'Unknown Product',
       productImage: product.images?.[0] || '',
-      unitPrice: product.unitPrice?.toString() || '0',
+      unitPrice: (product.sellingPrice || 0).toString(),
       packageType: product.packageType || 'Box',
       piecesPerPackage: product.piecesPerPackage?.toString() || '1',
     };

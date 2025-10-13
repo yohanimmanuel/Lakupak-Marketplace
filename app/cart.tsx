@@ -267,7 +267,7 @@ export default function CartScreen() {
               <View style={{alignItems: 'center'}}>
                 <Text style={styles.quantityText}>{item.quantity}</Text>
                 {(() => {
-                  const promotionDetails = (item.product as any)?.promotionDetails;
+                  const promotionDetails = item.product?.promotionDetails;
                   if (promotionDetails) {
                     const minQty = promotionDetails.minQuantity || 1;
                     const freeQty = promotionDetails.freeQuantity || 0;
@@ -294,7 +294,7 @@ export default function CartScreen() {
             
             <View style={styles.priceContainer}>
               <Text style={styles.price}>
-                {formatCurrency((item.product as any).price * item.quantity * ((item.product as MarketplaceProduct).piecesPerPackage || 1))}
+                {formatCurrency(((item.product as { price?: number }).price || 0) * item.quantity * ((item.product as MarketplaceProduct).piecesPerPackage || 1))}
               </Text>
             </View>
             </View>

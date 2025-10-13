@@ -44,18 +44,18 @@ export default function BuyNowModal({
   const [isClosing, setIsClosing] = useState(false);
 
   // Safe value getters
-  const safeGetString = (value: any, fallback: string = ''): string => {
+  const safeGetString = (value: unknown, fallback: string = ''): string => {
     if (value === null || value === undefined) return fallback;
     return String(value);
   };
 
-  const safeGetNumber = (value: any, fallback: number = 0): number => {
+  const safeGetNumber = (value: unknown, fallback: number = 0): number => {
     if (value === null || value === undefined) return fallback;
     const num = Number(value);
     return isNaN(num) ? fallback : num;
   };
 
-  const safeGetArray = (value: any, fallback: any[] = []): any[] => {
+  const safeGetArray = (value: unknown, fallback: unknown[] = []): unknown[] => {
     if (!Array.isArray(value)) return fallback;
     return value;
   };
@@ -99,7 +99,7 @@ export default function BuyNowModal({
     },
     onPanResponderGrant: () => {
       // Store the initial position
-      slideAnim.setOffset((slideAnim as any)._value);
+      slideAnim.setOffset((slideAnim as Animated.Value & { _value: number })._value);
       slideAnim.setValue(0);
     },
     onPanResponderMove: (_, gestureState) => {
@@ -126,7 +126,7 @@ export default function BuyNowModal({
 
   const images = safeGetArray(product.images);
   const productImage = images.length > 0 ? safeGetString(images[0]) : null;
-  const unitPrice = safeGetNumber((product as any).price); // Price per single item
+  const unitPrice = safeGetNumber((product as { price?: number }).price); // Price per single item
   const piecesPerPackage = safeGetNumber(product.piecesPerPackage, 1);
   const pricePerPackage = unitPrice * piecesPerPackage; // Price per box/package
   const totalPrice = pricePerPackage * quantity; // Total price for all boxes
@@ -145,7 +145,7 @@ export default function BuyNowModal({
 
   // Calculate promotion free items
   const calculatePromotionGift = () => {
-    const promotionDetails = (product as any)?.promotionDetails;
+    const promotionDetails = product?.promotionDetails;
     if (!promotionDetails) return null;
     
     const minQty = promotionDetails.minQuantity || 1;
@@ -185,7 +185,7 @@ export default function BuyNowModal({
         };
         
         // Add promotion details if available
-        const promotionDetails = (product as any)?.promotionDetails;
+        const promotionDetails = product?.promotionDetails;
         if (promotionDetails) {
           checkoutParams.promotionDetails = JSON.stringify(promotionDetails);
         }

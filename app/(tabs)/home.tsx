@@ -108,7 +108,7 @@ export default function HomeScreen() {
   }, [refreshAllData, token]);
 
   // Handle category scroll
-  const handleCategoryScroll = (event: any) => {
+  const handleCategoryScroll = (event: { nativeEvent: { contentOffset: { x: number }; contentSize: { width: number }; layoutMeasurement: { width: number } } }) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     setScrollPosition(contentOffset.x);
     setScrollContentWidth(contentSize.width);
@@ -198,7 +198,7 @@ export default function HomeScreen() {
             {dynamicCategories.map((category, index) => (
               <TouchableOpacity key={index} style={styles.categoryItem}>
                 <View style={[styles.categoryIcon, { backgroundColor: category.color + '20' }]}>
-                  <Ionicons name={category.icon as any} size={24} color={category.color} />
+                  <Ionicons name={category.icon as keyof typeof import('@expo/vector-icons').Ionicons.glyphMap} size={24} color={category.color} />
                 </View>
                 <Text style={[styles.categoryName, { color: '#111827' }]}>
                   {category.name}

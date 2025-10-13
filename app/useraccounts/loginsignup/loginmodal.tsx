@@ -113,7 +113,7 @@ export default function LoginModal() {
           {/* Section 1: Top Navigation Bar */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 }}>
             <Pressable 
-              onPress={() => router.replace('/(tabs)/account' as any)} 
+              onPress={() => router.replace('/(tabs)/account')} 
               style={{ padding: 8 }}
             >
               <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '600' }}>✕</Text>
@@ -179,7 +179,7 @@ export default function LoginModal() {
                     const result = await signInWithGoogle();
                     await setToken(result.token);
                     setUser(result.user);
-                    router.replace('/(tabs)/account' as any);
+                    router.replace('/(tabs)/account');
                   } catch (error: unknown) {
                     const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
                     Alert.alert('Google Sign-in Failed', errorMessage);
@@ -295,13 +295,13 @@ export default function LoginModal() {
                         if (code.trim().length < 4) return;
                         try {
                           const fullPhone = `${selectedCountry.dialCode}${phoneNumber.trim().replace(/\s+/g, '').replace(/^0+/, '')}`;
-                          const res = await verifyOtp({ phone: fullPhone, countryCode: selectedCountry.code, code: code.trim(), profile: undefined, mode: 'login' } as any);
+                          const res = await verifyOtp({ phone: fullPhone, countryCode: selectedCountry.code, code: code.trim(), profile: undefined, mode: 'login' });
                           await setToken(res.token);
                           setUser(res.user);
-                          router.replace('/(tabs)/account' as any);
-                        } catch (e: any) {
+                          router.replace('/(tabs)/account');
+                        } catch (e: unknown) {
                           // Handle specific error cases for phone login
-                          if (e.message.includes('User not found') || e.message.includes('No account found')) {
+                          if (e instanceof Error && (e.message.includes('User not found') || e.message.includes('No account found'))) {
                             Alert.alert(
                               'Account Not Found', 
                               'No account found with this phone number. Please sign up first.',
@@ -310,10 +310,11 @@ export default function LoginModal() {
                                 { text: 'Sign Up', style: 'default', onPress: () => router.push('/useraccounts/loginsignup/signupmodal') }
                               ]
                             );
-                          } else if (e.message.includes('Invalid code')) {
+                          } else if (e instanceof Error && e.message.includes('Invalid code')) {
                             Alert.alert('Invalid Code', 'The verification code is incorrect. Please try again.');
                           } else {
-                            Alert.alert('Verification Failed', e.message || 'Invalid code or network issue. Please try again.');
+                            const errorMessage = e instanceof Error ? e.message : 'Invalid code or network issue. Please try again.';
+                            Alert.alert('Verification Failed', errorMessage);
                           }
                         }
                       }}
@@ -382,10 +383,10 @@ export default function LoginModal() {
                       const result = await loginWithCredentials(username.trim(), password);
                       await setToken(result.token);
                       setUser(result.user);
-                      router.replace('/(tabs)/account' as any);
-                    } catch (error: any) {
+                      router.replace('/(tabs)/account');
+                    } catch (error: unknown) {
                       // Handle specific error cases
-                      if (error.message.includes('User not found') || error.message.includes('Please sign up first')) {
+                      if (error instanceof Error && (error.message.includes('User not found') || error.message.includes('Please sign up first'))) {
                         Alert.alert(
                           'Account Not Found', 
                           'No account found with this username/email. Please sign up first.',
@@ -394,10 +395,11 @@ export default function LoginModal() {
                             { text: 'Sign Up', style: 'default', onPress: () => router.push('/useraccounts/loginsignup/signupmodal') }
                           ]
                         );
-                      } else if (error.message.includes('Invalid username or password')) {
+                      } else if (error instanceof Error && error.message.includes('Invalid username or password')) {
                         Alert.alert('Invalid Credentials', 'The username/email or password is incorrect. Please try again.');
                       } else {
-                        Alert.alert('Login Failed', error.message || 'Something went wrong. Please try again.');
+                        const errorMessage = error instanceof Error ? error.message : 'Something went wrong. Please try again.';
+                        Alert.alert('Login Failed', errorMessage);
                       }
                     }
                   }}
@@ -439,7 +441,7 @@ export default function LoginModal() {
                 backgroundColor: knobAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: ['#e5e7eb', '#0a61d7'],
-                }) as any,
+                }),
               }}
             >
               <Animated.View
@@ -450,7 +452,7 @@ export default function LoginModal() {
                   borderRadius: 10,
                   transform: [
                     {
-                      translateX: knobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }) as any,
+                      translateX: knobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }),
                     },
                   ],
                 }}
@@ -473,11 +475,11 @@ export default function LoginModal() {
               width: 200,
             }}
           >
-            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy' as any); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy'); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
               <Text style={{ color: '#111827', fontSize: 14 }}>Security & Privacy</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
-            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter' as any); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter'); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
               <Text style={{ color: '#111827', fontSize: 14 }}>Help Center</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />

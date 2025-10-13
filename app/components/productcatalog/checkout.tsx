@@ -336,7 +336,7 @@ export default function CheckoutScreen() {
   };
 
   // Handle date/time selection
-  const handleDateChange = (event: any, selectedDate?: Date) => {
+  const handleDateChange = (event: unknown, selectedDate?: Date) => {
     setShowDatePicker(false);
     if (selectedDate) {
       setSelectedDate(selectedDate);
@@ -446,7 +446,7 @@ export default function CheckoutScreen() {
     if (isCartCheckout) {
       return selectedCartItems.reduce((total, item) => {
         const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
-        return total + ((item.product as any).price * item.quantity * piecesPerPackage);
+        return total + ((item.product as { price?: number }).price || 0) * item.quantity * piecesPerPackage;
       }, 0);
     }
     return totalPrice;
@@ -508,7 +508,7 @@ export default function CheckoutScreen() {
                     // Calculate totals for this distributor's items
                     const distributorSubtotal = items.reduce((total, item) => {
                       const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
-                      return total + ((item.product as any).price * item.quantity * piecesPerPackage);
+                      return total + ((item.product as { price?: number }).price || 0) * item.quantity * piecesPerPackage;
                     }, 0);
                     const firstProduct = items[0].product as MarketplaceProduct;
                     const shippingOptions = getAvailableShippingOptions(firstProduct);
@@ -526,8 +526,8 @@ export default function CheckoutScreen() {
                         packageQuantity: item.quantity,
                         packageType: item.product.packageType || 'Box',
                         piecesPerPackage: item.product.piecesPerPackage || 1,
-                        pricePerPackage: (item.product as any).price * (item.product.piecesPerPackage || 1),
-                        subtotal: (item.product as any).price * item.quantity * (item.product.piecesPerPackage || 1)
+                        pricePerPackage: ((item.product as { price?: number }).price || 0) * (item.product.piecesPerPackage || 1),
+                        subtotal: ((item.product as { price?: number }).price || 0) * item.quantity * (item.product.piecesPerPackage || 1)
                       })),
                       subtotal: distributorSubtotal,
                       discounts: 0,
@@ -765,11 +765,11 @@ export default function CheckoutScreen() {
                         <Text style={styles.productSpecs}>Variant: {item.variant}</Text>
                         <View style={styles.priceRow}>
                           <Text style={styles.productPrice}>
-                            {formatCurrency((item.product as any).price)} each
+                            {formatCurrency((item.product as { price?: number }).price || 0)} each
                           </Text>
                           <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                             {(() => {
-                              const promotionDetails = (item.product as any)?.promotionDetails;
+                              const promotionDetails = item.product?.promotionDetails;
                               if (promotionDetails) {
                                 const minQty = promotionDetails.minQuantity || 1;
                                 const freeQty = promotionDetails.freeQuantity || 0;
@@ -900,8 +900,8 @@ export default function CheckoutScreen() {
                     <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                       {(() => {
                         // Get promotion details from route params or product
-                        const promotionDetails = (params as any)?.promotionDetails 
-                          ? JSON.parse((params as any).promotionDetails)
+                        const promotionDetails = (params as { promotionDetails?: string })?.promotionDetails 
+                          ? JSON.parse((params as { promotionDetails: string }).promotionDetails)
                           : null;
                         if (promotionDetails) {
                           const minQty = promotionDetails.minQuantity || 1;

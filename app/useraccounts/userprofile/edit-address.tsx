@@ -7,7 +7,7 @@ import { API_BASE_URL } from '../../../services/config';
 
 export default function EditAddress() {
   const router = useRouter();
-  const user = useAuthStore(s => s.user) as any;
+  const user = useAuthStore(s => s.user);
   const token = useAuthStore(s => s.token) as string | null;
   const setUser = useAuthStore(s => s.setUser);
   const params = useLocalSearchParams<{ id?: string }>();
@@ -31,14 +31,14 @@ export default function EditAddress() {
       if (!token || !id) return
       try {
         const res = await fetch(`${API_BASE_URL}/api/mobile/addresses`, { headers: { Authorization: `Bearer ${token}` } })
-        const list: any[] = await res.json()
+        const list: unknown[] = await res.json()
         const cur = list.find(a => a.id === id)
         if (cur) {
           setFullName(cur.fullName || '')
           setPhone(cur.phone || '')
           setAddress(cur.address || '')
           setIsDefault(!!cur.isDefault)
-          setLabel((cur.label as any) || 'home')
+          setLabel(cur.label || 'home')
         }
       } catch {}
     }
@@ -62,10 +62,10 @@ export default function EditAddress() {
         })
       }
       const updated = await updateMe(token, { name: fullName, phone, chosenAddress: isDefault ? address : undefined });
-      setUser(updated as any);
+      setUser(updated);
       router.back();
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Failed to update');
+    } catch (e: unknown) {
+      Alert.alert('Error', (e instanceof Error ? e.message : 'Failed to update'));
     }
   };
 

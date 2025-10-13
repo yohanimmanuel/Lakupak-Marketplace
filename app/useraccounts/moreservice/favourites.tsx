@@ -8,6 +8,7 @@ import { useCartStore } from '../../../stores/cartStore';
 import { useAuthStore } from '../../../stores/authStore';
 import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
 import { MarketplaceProduct } from '../../../services/marketplace';
+import { Product } from '../../../data/sampleProducts';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -52,11 +53,11 @@ export default function FavouritesModal() {
     setRelatedProducts(related);
   }, [products, getLikedProducts, storeLikedProducts]);
 
-  const handleAddToCart = (product: any, quantity: number = 1) => {
+  const handleAddToCart = (product: Product | MarketplaceProduct, quantity: number = 1) => {
     addItem(product, quantity);
   };
 
-  const handleBuyNow = (product: any, quantity?: number) => {
+  const handleBuyNow = (product: Product | MarketplaceProduct, quantity?: number) => {
     addItem(product, quantity || 1, 'Default');
   };
 

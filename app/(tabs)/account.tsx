@@ -51,16 +51,16 @@ export default function AccountScreen() {
                 ) : (
                   <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: "#ffffff", alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ color: primaryBlue, fontSize: 20, fontWeight: '600' }}>
-                      {(user as any)?.username?.charAt(0)?.toUpperCase() || (user as any)?.name?.charAt(0)?.toUpperCase() || 'U'}
+                      {user?.username?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'U'}
                     </Text>
                   </View>
                 )}
               </View>
               <View style={{ marginLeft: 14, flex: 1 }}>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }} numberOfLines={1}>{(user as any)?.username || user?.name || 'User'}</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }} numberOfLines={1}>{user?.username || user?.name || 'User'}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                   <MapPin color="#6B7280" size={16} />
-                  <Text style={{ color: '#6B7280', marginLeft: 6 }} numberOfLines={1}>{(user as any)?.chosenAddress || '—'}</Text>
+                  <Text style={{ color: '#6B7280', marginLeft: 6 }} numberOfLines={1}>{user?.chosenAddress || '—'}</Text>
                 </View>
               </View>
             </Pressable>

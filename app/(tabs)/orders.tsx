@@ -335,7 +335,7 @@ export default function OrdersScreen() {
   const handleOrderCardPress = (notification: Notification) => {
     if (notification.type === 'order' && notification.orderId) {
       router.push({
-        pathname: '/components/ordersshipment/OrderDetails' as any,
+        pathname: '/components/ordersshipment/OrderDetails',
         params: { orderId: notification.orderId }
       });
     }

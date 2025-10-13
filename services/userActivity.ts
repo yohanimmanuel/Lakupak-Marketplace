@@ -16,7 +16,7 @@ export interface UserActivity {
   productId: string;
   productData: MarketplaceProduct;
   activityType: 'favorite' | 'viewed' | 'purchased';
-  metadata?: any;
+  metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -74,7 +74,7 @@ class UserActivityService {
     productId: string,
     productData: MarketplaceProduct,
     activityType: 'favorite' | 'viewed' | 'purchased',
-    metadata?: any
+    metadata?: Record<string, unknown>
   ): Promise<UserActivity> {
     const response = await this.makeRequest('/api/mobile/user-activity', {
       method: 'POST',
@@ -143,7 +143,7 @@ class UserActivityService {
     userId: number,
     productId: string,
     productData: MarketplaceProduct,
-    metadata?: any
+    metadata?: Record<string, unknown>
   ): Promise<UserActivity> {
     return this.addActivity(userId, productId, productData, 'purchased', metadata);
   }

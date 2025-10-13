@@ -128,7 +128,7 @@ export const marketplaceService = {
       
       // Format currency values for display and map offer fields
       if (data.products) {
-        data.products = data.products.map((product: any) => ({
+        data.products = data.products.map((product: unknown) => ({
           ...product,
           // Map price fields (support both old and new field names)
           sellingPrice: parseFloat(product.sellingPrice || product.price) || 0,

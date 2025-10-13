@@ -39,10 +39,17 @@ interface OrderItem {
   id: string;
   name: string;
   image: string;
+  images?: string[];
   quantity: number;
   unitPrice: number;
   totalPrice: number;
   specifications?: string;
+  packageType?: string;
+  piecesPerPackage?: number;
+  packageQuantity?: number;
+  pricePerPackage?: number;
+  description?: string;
+  productName?: string;
 }
 
 interface ShippingInfo {
@@ -60,22 +67,22 @@ interface DeliveryInfo {
   deliveryInstructions?: string;
 }
 
+interface Order {
+  id: string;
+  status: 'Pending' | 'Confirmed' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Received';
+  orderDate: string;
+  paymentMethod: string;
+  invoiceUrl?: string;
+  items: OrderItem[];
+  shippingInfo: ShippingInfo;
+  totalAmount: number;
+  orderItems?: OrderItem[];
+}
+
 interface OrderDetailsModalProps {
   visible: boolean;
   onClose: () => void;
-  order: {
-    id: string;
-    status: 'Pending' | 'Confirmed' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Received';
-    orderDate: string;
-    paymentMethod: string;
-    invoiceUrl?: string;
-    items: OrderItem[];
-    shippingInfo: ShippingInfo;
-    deliveryInfo: DeliveryInfo;
-    subtotal: number;
-    shippingCost: number;
-    total: number;
-  };
+  order: Order;
   onUpdateOrderStatus?: (orderId: string, status: string) => void;
 }
 
@@ -175,7 +182,7 @@ export default function OrderDetailsModal() {
       
       if (response.ok) {
         setIsReceived(true);
-        setOrder((prev: any) => ({ ...prev, status: 'Received' }));
+        setOrder((prev: Order) => ({ ...prev, status: 'Received' }));
         Alert.alert('Success', 'Order marked as received successfully!');
       } else {
         Alert.alert('Error', 'Failed to update order status');
@@ -226,7 +233,7 @@ export default function OrderDetailsModal() {
             <TouchableOpacity 
               style={styles.chevronButton}
               onPress={() => router.push({
-                pathname: '/components/ordersshipment/DeliveryInformation' as any,
+                pathname: '/components/ordersshipment/DeliveryInformation',
                 params: { orderId: order.orderId }
               })}
             >
@@ -302,7 +309,7 @@ export default function OrderDetailsModal() {
           <Text style={styles.sectionTitle}>Product Information</Text>
         </View>
         
-        {order.orderItems?.map((item: any, index: number) => (
+        {order.orderItems?.map((item: OrderItem, index: number) => (
           <View key={item.id || index} style={styles.productRow}>
             <View style={styles.productImageContainer}>
               {item.images?.[0] ? (

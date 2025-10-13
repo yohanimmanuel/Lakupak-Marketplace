@@ -128,7 +128,7 @@ export default function AccountCreationModal() {
         {/* Top Navigation Bar */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 16, backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
           <Pressable 
-            onPress={() => router.replace('/(tabs)/account' as any)} 
+            onPress={() => router.replace('/(tabs)/account')} 
             style={{ padding: 8 }}
           >
             <ArrowLeft color='#111827' size={24} />
@@ -219,8 +219,8 @@ export default function AccountCreationModal() {
                     try {
                       await signupStep1(signupData.name.trim(), signupData.email.trim());
                       setSignupStep(2);
-                    } catch (error: any) {
-                      Alert.alert('Signup Failed', error.message || 'Something went wrong');
+                    } catch (error: unknown) {
+                      Alert.alert('Signup Failed', (error instanceof Error ? error.message : 'Something went wrong'));
                     }
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
@@ -265,8 +265,8 @@ export default function AccountCreationModal() {
                     try {
                       await signupStep2(signupData.storeName.trim(), signupData.bio.trim());
                       setSignupStep(3);
-                    } catch (error: any) {
-                      Alert.alert('Signup Failed', error.message || 'Something went wrong');
+                    } catch (error: unknown) {
+                      Alert.alert('Signup Failed', (error instanceof Error ? error.message : 'Something went wrong'));
                     }
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
@@ -335,8 +335,8 @@ export default function AccountCreationModal() {
                     try {
                       await signupStep3(signupData.username.trim(), signupData.password);
                       setSignupStep(4);
-                    } catch (error: any) {
-                      Alert.alert('Signup Failed', error.message || 'Something went wrong');
+                    } catch (error: unknown) {
+                      Alert.alert('Signup Failed', (error instanceof Error ? error.message : 'Something went wrong'));
                     }
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
@@ -386,9 +386,9 @@ export default function AccountCreationModal() {
                       await setToken(result.token);
                       setUser(result.user);
                       Alert.alert('Account Created!', 'Your account has been created successfully.');
-                      router.replace('/(tabs)/account' as any);
-                    } catch (error: any) {
-                      Alert.alert('Signup Failed', error.message || 'Something went wrong');
+                      router.replace('/(tabs)/account');
+                    } catch (error: unknown) {
+                      Alert.alert('Signup Failed', (error instanceof Error ? error.message : 'Something went wrong'));
                     }
                   }}
                   style={{ backgroundColor: '#10b981', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
@@ -445,7 +445,7 @@ export default function AccountCreationModal() {
                       try {
                         const fullPhone = `${signupData.countryDialCode}${signupData.phone.trim().replace(/\s+/g, '').replace(/^0+/, '')}`;
                         await requestOtp(fullPhone, signupData.countryCode, 'whatsapp');
-                      } catch (e: any) {
+                      } catch (e: unknown) {
                         Alert.alert('Send failed', 'Could not request WhatsApp OTP. Check network/backend.');
                       }
                     }}
@@ -490,13 +490,13 @@ export default function AccountCreationModal() {
                               password: signupData.password
                             },
                             mode: 'signup' 
-                          } as any);
+                          });
                           
                           await setToken(res.token);
                           setUser(res.user);
-                          router.replace('/(tabs)/account' as any);
-                        } catch (e: any) {
-                          Alert.alert('Verification failed', e.message || 'Invalid code or network/backend issue.');
+                          router.replace('/(tabs)/account');
+                        } catch (e: unknown) {
+                          Alert.alert('Verification failed', (e instanceof Error ? e.message : 'Invalid code or network/backend issue.'));
                         }
                       }}
                       style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
@@ -526,9 +526,9 @@ export default function AccountCreationModal() {
                       const result = await signUpWithGoogle();
                       await setToken(result.token);
                       setUser(result.user);
-                      router.replace('/(tabs)/account' as any);
-                    } catch (error: any) {
-                      Alert.alert('Google Sign-up Failed', error.message || 'Something went wrong');
+                      router.replace('/(tabs)/account');
+                    } catch (error: unknown) {
+                      Alert.alert('Google Sign-up Failed', (error instanceof Error ? error.message : 'Something went wrong'));
                     } finally {
                       setIsGoogleLoading(false);
                     }
@@ -564,7 +564,7 @@ export default function AccountCreationModal() {
           <View style={{ alignItems: 'center', marginBottom: 12 }}>
             <Text style={{ color: '#6b7280', fontSize: 12, textAlign: 'center' }}>
               By registration, you agree to our{' '}
-              <Text onPress={() => router.push('/useraccounts/consent/security-privacy' as any)} style={{ color: '#0a61d7', textDecorationLine: 'underline' }}>Security and Privacy</Text>.
+              <Text onPress={() => router.push('/useraccounts/consent/security-privacy')} style={{ color: '#0a61d7', textDecorationLine: 'underline' }}>Security and Privacy</Text>.
             </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -582,7 +582,7 @@ export default function AccountCreationModal() {
                   backgroundColor: fingerKnobAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: ['#e5e7eb', '#0a61d7'],
-                  }) as any,
+                  }),
                 }}
               >
                 <Animated.View
@@ -593,7 +593,7 @@ export default function AccountCreationModal() {
                     borderRadius: 10,
                     transform: [
                       {
-                        translateX: fingerKnobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }) as any,
+                        translateX: fingerKnobAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 20] }),
                       },
                     ],
                   }}
@@ -619,11 +619,11 @@ export default function AccountCreationModal() {
               width: 200,
             }}
           >
-            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy' as any); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy'); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
               <Text style={{ color: '#111827', fontSize: 14 }}>Security & Privacy</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
-            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter' as any); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter'); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
               <Text style={{ color: '#111827', fontSize: 14 }}>Help Center</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
