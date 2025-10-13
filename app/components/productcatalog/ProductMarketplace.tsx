@@ -654,7 +654,7 @@ export default function ProductMarketplace({
             { color: getStockStatusColor(safeGetString(product.stockStatus, 'In Stock')) },
           ]}
         >
-          {safeGetString(product.stockStatus, 'In Stock')} ({safeGetNumber(product.stock)} units)
+          {safeGetString(product.stockStatus, 'In Stock')} ({safeGetNumber(product.stock)} packages)
         </Text>
       </View>
 

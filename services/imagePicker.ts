@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { uploadImageToCloudinaryDirect } from './imageUpload';
 
 export async function pickImage(): Promise<string | null> {
   try {
@@ -14,11 +15,18 @@ export async function pickImage(): Promise<string | null> {
       aspect: [1, 1],
       quality: 0.7, // Reduced for better performance
       exif: false, // Disable EXIF data for faster processing
-      base64: false, // Don't include base64 for better performance
+      base64: false, // No base64 needed for direct upload
     });
 
     if (!result.canceled && result.assets[0]) {
-      return result.assets[0].uri;
+      // Direct upload to Cloudinary (faster, no base64 conversion)
+      const uploadResult = await uploadImageToCloudinaryDirect(result.assets[0].uri, 'users');
+      
+      if (uploadResult.success && uploadResult.url) {
+        return uploadResult.url;
+      } else {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
     }
 
     return null;
@@ -41,11 +49,18 @@ export async function takePhoto(): Promise<string | null> {
       aspect: [1, 1],
       quality: 0.7, // Reduced for better performance
       exif: false, // Disable EXIF data for faster processing
-      base64: false, // Don't include base64 for better performance
+      base64: false, // No base64 needed for direct upload
     });
 
     if (!result.canceled && result.assets[0]) {
-      return result.assets[0].uri;
+      // Direct upload to Cloudinary (faster, no base64 conversion)
+      const uploadResult = await uploadImageToCloudinaryDirect(result.assets[0].uri, 'users');
+      
+      if (uploadResult.success && uploadResult.url) {
+        return uploadResult.url;
+      } else {
+        throw new Error(uploadResult.error || 'Upload failed');
+      }
     }
 
     return null;
