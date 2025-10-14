@@ -299,10 +299,20 @@ export default function ProductMarketplace({
     const originalPrice = getOriginalSellingPrice();
     const currentPrice = getSellingPrice();
     
-    // Calculate discount percentage if we have both prices
-    let discountPercentage = 0;
-    if (originalPrice > 0 && currentPrice > 0 && currentPrice < originalPrice) {
-      discountPercentage = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+    // Calculate discount display based on type
+    let discountDisplay = 'Discount';
+    if (product.discountType === 'fixed' && product.discountValue) {
+      // Show fixed discount amount
+      discountDisplay = `Rp${product.discountValue.toLocaleString()} OFF`;
+    } else {
+      // Calculate percentage discount if we have both prices
+      let discountPercentage = 0;
+      if (originalPrice > 0 && currentPrice > 0 && currentPrice < originalPrice) {
+        discountPercentage = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+      }
+      if (discountPercentage > 0) {
+        discountDisplay = `${discountPercentage}% OFF`;
+      }
     }
     
     if (offerBadge && hasActiveOffer) {
@@ -312,7 +322,7 @@ export default function ProductMarketplace({
         return (
           <View style={[styles.cardDiscountTag, { backgroundColor: '#FEE2E2' }]}>
             <Text style={[styles.cardDiscountTagText, { color: '#DC2626' }]}>
-              {discountPercentage > 0 ? `${discountPercentage}% OFF` : 'Discount'}
+              {discountDisplay}
             </Text>
           </View>
         );
@@ -597,9 +607,21 @@ export default function ProductMarketplace({
           {getHasActiveOffer() && getOfferBadge() && (() => {
             const originalPrice = getOriginalSellingPrice();
             const currentPrice = getSellingPrice();
-            let discountPercentage = 0;
-            if (originalPrice > 0 && currentPrice > 0 && currentPrice < originalPrice) {
-              discountPercentage = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+            
+            // Calculate discount display based on type
+            let discountDisplay = 'Discount';
+            if (product.discountType === 'fixed' && product.discountValue) {
+              // Show fixed discount amount
+              discountDisplay = `Rp${product.discountValue.toLocaleString()} OFF`;
+            } else {
+              // Calculate percentage discount if we have both prices
+              let discountPercentage = 0;
+              if (originalPrice > 0 && currentPrice > 0 && currentPrice < originalPrice) {
+                discountPercentage = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+              }
+              if (discountPercentage > 0) {
+                discountDisplay = `${discountPercentage}% OFF`;
+              }
             }
             
             if (getOfferBadge() === 'All Offers') {
@@ -608,7 +630,7 @@ export default function ProductMarketplace({
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   <View style={[styles.discountBadge, { backgroundColor: '#FEE2E2' }]}>
                     <Text style={[styles.discountText, { color: '#DC2626' }]}>
-                      {discountPercentage > 0 ? `${discountPercentage}% OFF` : 'Discount'}
+                      {discountDisplay}
                     </Text>
                   </View>
                   <View style={[styles.discountBadge, { backgroundColor: '#F3E8FF', flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
@@ -636,8 +658,8 @@ export default function ProductMarketplace({
                   color: getOfferBadge() === 'Discount' ? '#DC2626' :
                          getOfferBadge() === 'Promotion' ? '#9333EA' : '#2563EB'
                 }]}>
-                  {getOfferBadge() === 'Discount' && discountPercentage > 0 
-                    ? `${discountPercentage}% OFF`
+                  {getOfferBadge() === 'Discount' 
+                    ? discountDisplay
                     : getOfferBadge() === 'Promotion' && product?.promotionDetails
                       ? `Buy ${product.promotionDetails.minQuantity} Get ${product.promotionDetails.freeQuantity}`
                       : getOfferBadge()}

@@ -21,6 +21,8 @@ export interface MarketplaceProduct {
   hasActiveOffer?: boolean;
   offerId?: string;
   offerName?: string;
+  discountType?: 'percentage' | 'fixed' | 'buy_x_get_y';
+  discountValue?: number; // The actual discount amount (for fixed) or percentage (for percentage)
   promotionDetails?: {
     minQuantity: number;
     freeQuantity: number;
