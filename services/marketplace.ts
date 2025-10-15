@@ -127,6 +127,7 @@ export const marketplaceService = {
     limit?: number;
     category?: string;
     search?: string;
+    marketplaceUserId?: number;
   }): Promise<MarketplaceResponse> {
     const searchParams = new URLSearchParams();
     
@@ -134,6 +135,7 @@ export const marketplaceService = {
     if (params?.limit) searchParams.append('limit', params.limit.toString());
     if (params?.category) searchParams.append('productType', params.category);
     if (params?.search) searchParams.append('search', params.search);
+    if (params?.marketplaceUserId) searchParams.append('marketplaceUserId', params.marketplaceUserId.toString());
 
     const url = `${API_BASE_URL}?${searchParams.toString()}`;
     
