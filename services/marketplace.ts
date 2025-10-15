@@ -9,6 +9,24 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+// Interface for raw product data from API
+interface RawProductData {
+  [key: string]: unknown;
+  sellingPrice?: string | number;
+  price?: string | number;
+  originalSellingPrice?: string | number;
+  originalPrice?: string | number;
+  offerBadge?: string;
+  hasActiveOffer?: boolean;
+  offerId?: string;
+  offerName?: string;
+  promotionDetails?: {
+    minQuantity: number;
+    freeQuantity: number;
+    description: string;
+  };
+}
+
 export interface MarketplaceProduct {
   id: string;
   name: string;
@@ -130,11 +148,11 @@ export const marketplaceService = {
       
       // Format currency values for display and map offer fields
       if (data.products) {
-        data.products = data.products.map((product: unknown) => ({
+        data.products = data.products.map((product: MarketplaceProduct) => ({
           ...product,
           // Map price fields (support both old and new field names)
-          sellingPrice: parseFloat(product.sellingPrice || product.price) || 0,
-          originalSellingPrice: parseFloat(product.originalSellingPrice || product.originalPrice) || 0,
+          sellingPrice: parseFloat(String(product.sellingPrice)) || 0,
+          originalSellingPrice: parseFloat(String(product.originalSellingPrice)) || 0,
           // Keep offer integration fields
           offerBadge: product.offerBadge,
           hasActiveOffer: product.hasActiveOffer,
