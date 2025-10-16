@@ -345,6 +345,22 @@ export default function ProductMarketplace({
   };
 
   const renderCardPromoBadge = () => {
+    // Check if product has active promotion offer
+    const hasActiveOffer = getHasActiveOffer();
+    const offerBadge = getOfferBadge();
+    
+    if (hasActiveOffer && (offerBadge === 'Promotion' || offerBadge === 'All Offers') && product?.promotionDetails) {
+      return (
+        <View style={[styles.cardPromotionBadge, styles.cardPromotionBadgeOverlay]}>
+          <Gift size={10} color="#9333EA" />
+          <Text style={styles.cardPromotionBadgeText}>
+            Buy {product.promotionDetails.minQuantity} Get {product.promotionDetails.freeQuantity}
+          </Text>
+        </View>
+      );
+    }
+    
+    // Fallback to original badges logic for other promotions
     const badges = safeGetArray(product.badges);
     if (badges.length === 0) return null;
     
@@ -437,7 +453,7 @@ export default function ProductMarketplace({
             {/* Sales Info */}
             <Text style={styles.cardSalesInfo}>{safeGetString(product.soldCount, '0')} sold</Text>
 
-            {/* Stock Status and Promotion Badge */}
+            {/* Stock Status */}
             <View style={styles.cardStockRow}>
               <Text
                 style={[
@@ -447,16 +463,6 @@ export default function ProductMarketplace({
               >
                 {safeGetString(product.stockStatus, 'In Stock')}
               </Text>
-              
-              {/* Promotion Badge */}
-              {(getOfferBadge() === 'Promotion' || getOfferBadge() === 'All Offers') && product?.promotionDetails && (
-                <View style={styles.cardPromotionBadge}>
-                  <Gift size={10} color="#9333EA" />
-                  <Text style={styles.cardPromotionBadgeText}>
-                    Buy {product.promotionDetails.minQuantity} Get {product.promotionDetails.freeQuantity}
-                  </Text>
-                </View>
-              )}
             </View>
 
             {/* Shipping Info */}
@@ -1273,6 +1279,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
+  },
+  cardPromotionBadgeOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    zIndex: 10,
   },
   cardPromotionBadgeText: {
     color: '#9333EA',

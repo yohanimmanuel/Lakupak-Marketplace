@@ -1,13 +1,7 @@
 // Marketplace API service
-// For mobile development, use your computer's IP address instead of localhost
-// You can find your IP with: ipconfig (Windows) or ifconfig (Mac/Linux)
-const getApiBaseUrl = () => {
-  // For development, replace with your actual IP address
-  // Your IP address: 192.168.0.134
-  return 'http://192.168.0.134:3000/api/marketplace';
-};
+import { API_BASE_URL } from './config';
 
-const API_BASE_URL = getApiBaseUrl();
+const MARKETPLACE_API_URL = `${API_BASE_URL}/api/marketplace`;
 
 // Interface for raw product data from API
 interface RawProductData {
@@ -137,7 +131,7 @@ export const marketplaceService = {
     if (params?.search) searchParams.append('search', params.search);
     if (params?.marketplaceUserId) searchParams.append('marketplaceUserId', params.marketplaceUserId.toString());
 
-    const url = `${API_BASE_URL}?${searchParams.toString()}`;
+    const url = `${MARKETPLACE_API_URL}?${searchParams.toString()}`;
     
     try {
       const response = await fetch(url);
@@ -172,7 +166,7 @@ export const marketplaceService = {
 
   async getProductById(productId: string): Promise<MarketplaceProduct> {
     try {
-      const response = await fetch(`${API_BASE_URL}/${productId}`);
+      const response = await fetch(`${MARKETPLACE_API_URL}/${productId}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
