@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   View as RNView,
@@ -32,6 +32,7 @@ import { useDataStore } from '../../stores/dataStore';
 import { useUserActivityStore } from '../../stores/userActivityStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
 
@@ -64,7 +65,8 @@ export default function CategoriesScreen() {
     isProductsLoading,
     isUserLoading,
     loadProductsData,
-    refreshAllData 
+    refreshAllData,
+    forceRefreshProducts,
   } = useDataStore();
 
   // State
@@ -127,6 +129,21 @@ export default function CategoriesScreen() {
       setRefreshing(false);
     }
   }, [refreshAllData, token]);
+
+  // Revalidate products when screen gains focus
+  useFocusEffect(
+    React.useCallback(() => {
+      forceRefreshProducts();
+    }, [forceRefreshProducts])
+  );
+
+  // Light background refresh while this screen is visible
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      forceRefreshProducts();
+    }, 120000); // 2 minutes
+    return () => clearInterval(intervalId);
+  }, [forceRefreshProducts]);
 
   return (
     <ScrollView 

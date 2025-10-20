@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '../components/Themed';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 // Components
 import MyWallet from '../components/paymentcheckout/MyWallet';
@@ -68,7 +69,8 @@ export default function HomeScreen() {
     isProductsLoading,
     isUserLoading,
     loadProductsData,
-    refreshAllData 
+    refreshAllData,
+    forceRefreshProducts,
   } = useDataStore();
 
   // User activity store
@@ -158,6 +160,21 @@ export default function HomeScreen() {
   const handleWalletItemPress = useCallback((type: string) => {
     // Handle wallet item press
   }, []);
+
+  // Revalidate products when screen gains focus
+  useFocusEffect(
+    React.useCallback(() => {
+      forceRefreshProducts();
+    }, [forceRefreshProducts])
+  );
+
+  // Light background refresh while this screen is visible
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      forceRefreshProducts();
+    }, 120000); // 2 minutes
+    return () => clearInterval(intervalId);
+  }, [forceRefreshProducts]);
 
   return (
     <ScrollView 
