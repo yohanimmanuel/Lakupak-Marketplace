@@ -58,7 +58,7 @@ export default function CartScreen() {
     navigation.setOptions({
       headerShown: true,
       title: 'Shopping Cart',
-      headerStyle: { backgroundColor: '#ffffff' },
+      headerStyle: { backgroundColor: '#f9fafb' },
       headerTitleStyle: { color: '#111827' },
       headerTintColor: '#0a61d7',
       headerBackTitleVisible: false,
@@ -446,7 +446,7 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
   },
   headerRight: {
     flexDirection: 'row',
@@ -471,6 +471,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     paddingTop: 50,
     paddingBottom: 50,
+    backgroundColor: '#f9fafb',
   },
   emptyCartIcon: {
     marginBottom: 24,
@@ -674,6 +675,7 @@ const styles = StyleSheet.create({
   youMayAlsoLikeSection: {
     marginTop: 24,
     paddingHorizontal: 16,
+    backgroundColor: '#f9fafb',
   },
   sectionDivider: {
     flexDirection: 'row',
@@ -693,7 +695,7 @@ const styles = StyleSheet.create({
   },
   relatedProductsGrid: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 8, // Narrower gap between columns
   },
   leftColumn: {
     flex: 1,
@@ -702,7 +704,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   relatedProductItem: {
-    marginBottom: 8,
+    marginBottom: 4, // Narrower gap between items
   },
   checkoutSection: {
     backgroundColor: '#ffffff',
@@ -751,7 +753,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   loginPromptContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
     padding: 26,
     marginTop: 8,
     alignItems: 'center',
@@ -763,8 +765,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
     marginBottom: 16,
   },
   loginPromptTitle: {
@@ -796,8 +796,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#0a61d7',
     flex: 1,
   },
   signupButtonText: {

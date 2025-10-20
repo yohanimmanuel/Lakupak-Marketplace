@@ -390,8 +390,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginHorizontal: 8,
     paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   progressHeader: {
     marginBottom: 20,
@@ -460,15 +458,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     marginTop: -8,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   orderSummary: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
   orderSummaryLeft: {
     flexDirection: 'row',

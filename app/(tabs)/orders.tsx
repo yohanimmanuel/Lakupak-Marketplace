@@ -487,13 +487,13 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
   },
   header: {
     paddingTop: 50,
     paddingBottom: 16,
     paddingHorizontal: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
@@ -561,7 +561,6 @@ const styles = StyleSheet.create({
   },
   orderUpdateCard: {
     backgroundColor: '#ffffff',
-    marginTop: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
@@ -609,7 +608,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     padding: 24,
     alignItems: 'center',
-    marginTop: 8,
     marginHorizontal: 16,
   },
   noOrdersIconContainer: {
@@ -727,7 +725,6 @@ const styles = StyleSheet.create({
   loginPromptContainer: {
     backgroundColor: '#ffffff',
     padding: 26,
-    marginTop: 8,
     alignItems: 'center',
   },
   loginPromptIcon: {

@@ -223,13 +223,13 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
   },
   header: {
     paddingTop: 50,
     paddingBottom: 16,
     paddingHorizontal: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -248,12 +248,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingTop: 0,
   },
   notificationItem: {
     backgroundColor: '#ffffff',
     paddingVertical: 16,
-    paddingHorizontal: 0,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },

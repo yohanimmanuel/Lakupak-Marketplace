@@ -661,8 +661,6 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     marginHorizontal: -16,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
   sectionTitle: {
     fontSize: 16,
@@ -686,8 +684,6 @@ const styles = StyleSheet.create({
   deliveryStatusContainer: {
     marginBottom: 16,
     paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
   deliveryMethodText: {
     fontSize: 14,
@@ -720,8 +716,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   infoRow: {
     flexDirection: 'row',
@@ -746,8 +740,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   shippingRow: {
     flexDirection: 'row',

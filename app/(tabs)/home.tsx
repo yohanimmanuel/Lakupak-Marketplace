@@ -161,7 +161,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView 
-      style={{ flex: 1, backgroundColor: '#ffffff' }}
+      style={{ flex: 1, backgroundColor: '#f9fafb' }}
       contentContainerStyle={{ paddingBottom: 20 }}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -174,7 +174,7 @@ export default function HomeScreen() {
       }
     >
 
-        <View style={{ backgroundColor: '#ffffff' }}>
+        <View style={{ backgroundColor: '#f9fafb' }}>
           {/* My Wallet Section */}
           <MyWallet
             isAuthenticated={isAuthenticated}
@@ -186,7 +186,7 @@ export default function HomeScreen() {
         </View>
 
         {/* Categories Section */}
-        <View style={[styles.section, { backgroundColor: '#ffffff', marginTop: 15, marginBottom: 20 }]}>
+        <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: 20 }]}>
           
           <ScrollView 
             horizontal 
@@ -220,7 +220,7 @@ export default function HomeScreen() {
         />
 
         {/* Featured Products Section */}
-        <View style={[styles.section, { backgroundColor: '#ffffff', marginTop: 15, marginBottom: -10 }]}>
+        <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: -10 }]}>
           
           {/* Loading State with Skeleton */}
           {loading && (
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 20,
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#f9fafb', // Gray background
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -378,26 +378,26 @@ const styles = StyleSheet.create({
   productsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    backgroundColor: '#ffffff', // Explicit white background
-    gap: 16, // Space between columns
+    backgroundColor: '#f9fafb', // Gray background
+    gap: 8, // Space between columns - narrower gap
   },
   leftColumn: {
     flex: 1,
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#f9fafb', // Gray background
   },
   rightColumn: {
     flex: 1,
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#f9fafb', // Gray background
   },
   productItem: {
-    marginBottom: 8, // Space between items in each column
-    backgroundColor: '#ffffff', // Explicit white background
+    marginBottom: 4, // Space between items in each column - narrower gap
+    backgroundColor: '#f9fafb', // Gray background
   },
   endMessageContainer: {
     paddingHorizontal: 16,
     paddingTop: 10,
     alignItems: 'center',
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#f9fafb', // Gray background
     marginBottom: 0, // Explicitly remove bottom margin
     paddingBottom: 0, // Explicitly remove bottom padding
   },

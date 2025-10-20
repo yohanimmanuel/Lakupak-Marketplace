@@ -1386,8 +1386,6 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     marginHorizontal: -16,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
   sectionTitle: {
     fontSize: 16,
@@ -1405,8 +1403,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   additionalDistributors: {
     marginTop: 12,
@@ -1445,8 +1441,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   addressName: {
     fontSize: 16,
@@ -1484,8 +1478,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   shippingSection: {
     marginTop: 16,
@@ -1601,8 +1593,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   shippingOptionSelected: {
     borderColor: '#0a61d7',
@@ -1644,8 +1634,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   paymentOption: {
     flexDirection: 'row',
@@ -1655,8 +1643,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   paymentOptionSelected: {
     borderColor: '#0a61d7',
@@ -1679,8 +1665,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -1779,8 +1763,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3C7',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#F59E0B',
   },
   noShippingText: {
     fontSize: 14,
@@ -1881,8 +1863,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     minHeight: 60,
   },
   dateTimeInfo: {

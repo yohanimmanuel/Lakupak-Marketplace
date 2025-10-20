@@ -152,7 +152,7 @@ export default function BuyAgainModal() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: '#f9fafb' }]}>
       <Stack.Screen options={{
         presentation: 'modal',
         title: 'Buy Again',
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   productsGrid: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    gap: 16,
+    gap: 8, // Narrower gap between columns
   },
   leftColumn: {
     flex: 1,
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   productItem: {
-    marginBottom: 8,
+    marginBottom: 4, // Narrower gap between items
   },
   youMayAlsoLikeSection: {
     marginTop: 24,
@@ -297,6 +297,6 @@ const styles = StyleSheet.create({
   },
   relatedProductsGrid: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 8, // Narrower gap between columns
   },
 });

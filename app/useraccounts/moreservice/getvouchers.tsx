@@ -5,7 +5,7 @@ import { Stack, useRouter } from 'expo-router';
 export default function GetVouchersModal() {
   const router = useRouter();
   return (
-    <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+    <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
       <Stack.Screen options={{
         presentation: 'modal',
         title: 'Get Vouchers',

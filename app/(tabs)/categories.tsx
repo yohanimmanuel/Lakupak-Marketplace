@@ -130,7 +130,7 @@ export default function CategoriesScreen() {
 
   return (
     <ScrollView 
-      style={{ flex: 1, backgroundColor: '#ffffff' }}
+      style={{ flex: 1, backgroundColor: '#f9fafb' }}
       contentContainerStyle={{ paddingBottom: 20 }}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -143,7 +143,7 @@ export default function CategoriesScreen() {
       }
     >
       {/* Categories Section */}
-      <View style={[styles.section, { backgroundColor: '#ffffff', marginTop: 15, marginBottom: 20 }]}>
+      <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: 20 }]}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: textColor }]}>
             Explore by Category
@@ -177,7 +177,7 @@ export default function CategoriesScreen() {
       </View>
 
       {/* New This Week Section */}
-      <View style={[styles.section, { backgroundColor: '#ffffff', marginTop: 15, marginBottom: -10 }]}>
+      <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: -10 }]}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: textColor }]}>
             New This Week
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 20,
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#f9fafb', // Gray background
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     marginBottom: 16,
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#f9fafb', // Gray background
   },
   sectionTitle: {
     fontSize: 18,
@@ -346,26 +346,26 @@ const styles = StyleSheet.create({
   productsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    backgroundColor: '#ffffff', // Explicit white background
-    gap: 16, // Space between columns
+    backgroundColor: '#f9fafb', // Gray background
+    gap: 8, // Space between columns - narrower gap
   },
   leftColumn: {
     flex: 1,
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#f9fafb', // Gray background
   },
   rightColumn: {
     flex: 1,
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#f9fafb', // Gray background
   },
   productItem: {
-    marginBottom: 8, // Space between items in each column
-    backgroundColor: '#ffffff', // Explicit white background
+    marginBottom: 4, // Space between items in each column - narrower gap
+    backgroundColor: '#f9fafb', // Gray background
   },
   endMessageContainer: {
     paddingHorizontal: 16,
     paddingTop: 10,
     alignItems: 'center',
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#f9fafb', // Gray background
     marginBottom: 0, // Explicitly remove bottom margin
     paddingBottom: 0, // Explicitly remove bottom padding
   },
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   loadingContainer: {
     padding: 40,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb', // Gray background
   },
   loadingText: {
     fontSize: 16,
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   errorContainer: {
     padding: 40,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb', // Gray background
   },
   errorText: {
     fontSize: 16,
@@ -401,14 +401,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: '#ffffff',
+    color: '#f9fafb', // Gray background
     fontSize: 16,
     fontWeight: '600',
   },
   noProductsContainer: {
     padding: 40,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb', // Gray background
   },
   noProductsText: {
     fontSize: 16,

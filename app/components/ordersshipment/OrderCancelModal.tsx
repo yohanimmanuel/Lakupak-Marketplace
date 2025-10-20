@@ -287,8 +287,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   orderIdLabel: {
     fontSize: 12,
@@ -304,8 +302,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 8,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   sectionTitle: {
     fontSize: 16,
@@ -318,8 +314,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   reasonItemSelected: {
     backgroundColor: '#eff6ff',
@@ -368,8 +362,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   customReasonLabel: {
     fontSize: 14,
