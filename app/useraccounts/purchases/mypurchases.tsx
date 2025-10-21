@@ -8,6 +8,7 @@ import { marketplaceService, MarketplaceProduct } from '../../../services/market
 import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
 import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
+import { Product } from '@/data/sampleProducts';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -162,7 +163,7 @@ export default function MyPurchasesModal() {
         const ordersData = data.orders || [];
         
         // Transform orders to include seller information
-        const transformedOrders = ordersData.map((order: any) => ({
+        const transformedOrders = ordersData.map((order: Order) => ({
           ...order,
           seller: {
             name: order.storeName || 'Laku-Laku Store',
@@ -345,11 +346,11 @@ export default function MyPurchasesModal() {
   };
 
   // Handler functions for related products
-  const handleAddToCart = (product: any, quantity: number = 1) => {
+  const handleAddToCart = (product: Product | MarketplaceProduct, quantity: number = 1) => {
     addItem(product, quantity);
   };
 
-  const handleBuyNow = (product: any, quantity: number = 1) => {
+  const handleBuyNow = (product: Product | MarketplaceProduct, quantity: number = 1) => {
     addItem(product, quantity);
     router.push('/cart');
   };

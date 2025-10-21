@@ -29,6 +29,7 @@ import {
   User,
   Phone,
   FileText,
+  Gift,
 } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
@@ -50,6 +51,11 @@ interface OrderItem {
   pricePerPackage?: number;
   description?: string;
   productName?: string;
+  promotionDetails?: {
+    minQuantity: number;
+    freeQuantity: number;
+  };
+  promotionDetailsSnapshot?: string;
 }
 
 interface ShippingInfo {
@@ -331,16 +337,53 @@ export default function OrderDetailsModal() {
                 <Text style={styles.productPrice}>
                   {formatCurrency(item.pricePerPackage || item.unitPrice || 0)} per {item.packageType || 'piece'}
                 </Text>
-                <Text style={styles.quantityBadge}>x{item.packageQuantity || item.quantity || 1}</Text>
+                <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
+                  {(() => {
+                    // Try both promotionDetails and promotionDetailsSnapshot
+                    const promotionDetails = item.promotionDetails || (item as any).promotionDetailsSnapshot;
+                    
+                    // Parse promotionDetailsSnapshot if it's a string
+                    let parsedPromotionDetails = promotionDetails;
+                    if (typeof promotionDetails === 'string') {
+                      try {
+                        parsedPromotionDetails = JSON.parse(promotionDetails);
+                      } catch (e) {
+                        // Failed to parse, continue without promotion details
+                      }
+                    }
+                    
+                    if (parsedPromotionDetails) {
+                      const minQty = parsedPromotionDetails.minQuantity || 1;
+                      const freeQty = parsedPromotionDetails.freeQuantity || 0;
+                      const qualifyingSets = Math.floor((item.packageQuantity || item.quantity || 1) / minQty);
+                      const totalFreeItems = qualifyingSets * freeQty;
+                      
+                      if (totalFreeItems > 0) {
+                        return (
+                          <View style={styles.promotionGiftBadge}>
+                            <Gift size={12} color="#9333EA" />
+                            <Text style={styles.promotionGiftText}>
+                              +{totalFreeItems} Free
+                            </Text>
+                          </View>
+                        );
+                      }
+                    }
+                    return null;
+                  })()}
+                  <Text style={styles.quantityBadge}>x{item.packageQuantity || item.quantity || 1}</Text>
+                </View>
               </View>
             </View>
           </View>
         ))}
         
-        {order.shippingFee && (
+        {order.shippingFee !== undefined && (
           <View style={styles.feeRow}>
             <Text style={styles.feeLabel}>Shipping Fee:</Text>
-            <Text style={styles.feeValue}>{formatCurrency(order.shippingFee)}</Text>
+            <Text style={styles.feeValue}>
+              {formatCurrency(order.shippingFee)}
+            </Text>
           </View>
         )}
         
@@ -1132,5 +1175,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
+  },
+  freeText: {
+    color: '#10b981',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  promotionGiftBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 4,
+    gap: 4,
+  },
+  promotionGiftText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9333EA',
   },
 });
