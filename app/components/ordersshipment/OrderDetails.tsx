@@ -226,11 +226,6 @@ export default function OrderDetailsModal() {
         
         {/* Delivery Status Information */}
         <View style={styles.deliveryStatusContainer}>
-          {order.assignedLogistics && (
-            <Text style={styles.deliveryMethodText}>
-              {order.assignedLogistics}: {order.trackingNumber || 'N/A'}
-            </Text>
-          )}
           
           <View style={styles.deliveryStatusRow}>
             <Truck size={16} color="#10b981" />
@@ -301,7 +296,9 @@ export default function OrderDetailsModal() {
         {order.deliveryNote && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Delivery Instruction:</Text>
-            <Text style={styles.infoValue}>{order.deliveryNote}</Text>
+            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
+              {order.deliveryNote}
+            </Text>
           </View>
         )}
       </View>
@@ -820,7 +817,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#111827',
     fontWeight: '500',
-    flex: 2,
+    flex: 1.5,
     textAlign: 'right',
   },
   infoCard: {
