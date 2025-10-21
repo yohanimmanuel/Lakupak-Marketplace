@@ -333,7 +333,7 @@ export default function OrderDetailsModal() {
             {item.productName}
           </Text>
           <Text style={styles.productSpecs}>
-            {item.piecesPerPackage} pieces
+           1 {item.packageType} = {item.piecesPerPackage} pieces
           </Text>
           <View style={styles.priceRow}>
             <View style={styles.priceContainer}>
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#111827',
     fontWeight: '500',
-    flex: 1.5,
+    flex: 1,
     textAlign: 'right',
   },
   infoCard: {
