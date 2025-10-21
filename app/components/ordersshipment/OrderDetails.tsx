@@ -333,26 +333,26 @@ export default function OrderDetailsModal() {
         </View>
         <View style={styles.productDetails}>
           <Text style={styles.productName} numberOfLines={2}>
-            {item.productName || item.name || 'Product'}
+            {item.productName}
           </Text>
           <Text style={styles.productSpecs}>
-            {item.description || item.specifications || ''}
+            {item.piecesPerPackage} pieces
           </Text>
           <View style={styles.priceRow}>
             <View style={styles.priceContainer}>
               {item.originalPriceSnapshot && 
-               parseFloat(item.originalPriceSnapshot) > (item.pricePerPackage || item.unitPrice || 0) ? (
+                parseFloat(item.originalPriceSnapshot) > (item.pricePerPackage || item.unitPrice) ? (
                 <>
                   <Text style={styles.originalPrice}>
-                    {formatCurrency(parseFloat(item.originalPriceSnapshot))} per {item.packageType || 'piece'}
+                    {formatCurrency(parseFloat(item.originalPriceSnapshot))} per {item.packageType}
                   </Text>
                   <Text style={styles.discountedPrice}>
-                    {formatCurrency(item.pricePerPackage || item.unitPrice || 0)} per {item.packageType || 'piece'}
+                    {formatCurrency(item.pricePerPackage || item.unitPrice)} per {item.packageType}
                   </Text>
                 </>
               ) : (
                 <Text style={styles.productPrice}>
-                  {formatCurrency(item.pricePerPackage || item.unitPrice || 0)} per {item.packageType || 'piece'}
+                  {formatCurrency(item.pricePerPackage || item.unitPrice)} per {item.packageType}
                 </Text>
               )}
             </View>
@@ -410,12 +410,6 @@ export default function OrderDetailsModal() {
           {/* Discounted Products Section */}
           {discountedItems.length > 0 && (
             <>
-              <View style={styles.discountSectionHeader}>
-                <Text style={styles.discountSectionTitle}>Discounted Items</Text>
-                <Text style={styles.discountSectionSubtitle}>
-                  {discountedItems.length} item{discountedItems.length > 1 ? 's' : ''} with special pricing
-                </Text>
-              </View>
               {discountedItems.map(renderProductItem)}
             </>
           )}
@@ -423,13 +417,6 @@ export default function OrderDetailsModal() {
           {/* Non-Discounted Products Section */}
           {nonDiscountedItems.length > 0 && (
             <>
-              {discountedItems.length > 0 && <View style={styles.sectionDivider} />}
-              <View style={styles.discountSectionHeader}>
-                <Text style={styles.discountSectionTitle}>Regular Items</Text>
-                <Text style={styles.discountSectionSubtitle}>
-                  {nonDiscountedItems.length} item{nonDiscountedItems.length > 1 ? 's' : ''} at regular pricing
-                </Text>
-              </View>
               {nonDiscountedItems.map(renderProductItem)}
             </>
           )}
