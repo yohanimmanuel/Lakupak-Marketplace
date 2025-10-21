@@ -56,6 +56,7 @@ interface OrderItem {
     freeQuantity: number;
   };
   promotionDetailsSnapshot?: string;
+  originalPriceSnapshot?: string;
 }
 
 interface ShippingInfo {
@@ -307,92 +308,148 @@ export default function OrderDetailsModal() {
     </View>
   );
 
-  const renderProductInfo = () => (
-    <View style={styles.section}>
-      <View style={styles.productCard}>
-        <View style={styles.sectionTitleContainer}>
-          <Package size={20} color="#0a61d7" />
-          <Text style={styles.sectionTitle}>Product Information</Text>
-        </View>
-        
-        {order.orderItems?.map((item: OrderItem, index: number) => (
-          <View key={item.id || index} style={styles.productRow}>
-            <View style={styles.productImageContainer}>
-              {item.images?.[0] ? (
-                <Image source={{ uri: item.images[0] }} style={styles.productImage} />
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Package size={32} color="#9CA3AF" />
-                </View>
-              )}
+  const renderProductInfo = () => {
+    // Filter products into discounted and non-discounted groups
+    const discountedItems = order.orderItems?.filter((item: OrderItem) => 
+      item.originalPriceSnapshot && 
+      parseFloat(item.originalPriceSnapshot) > (item.pricePerPackage || item.unitPrice || 0)
+    ) || [];
+    
+    const nonDiscountedItems = order.orderItems?.filter((item: OrderItem) => 
+      !item.originalPriceSnapshot || 
+      parseFloat(item.originalPriceSnapshot) <= (item.pricePerPackage || item.unitPrice || 0)
+    ) || [];
+
+    const renderProductItem = (item: OrderItem, index: number) => (
+      <View key={item.id || index} style={styles.productRow}>
+        <View style={styles.productImageContainer}>
+          {item.images?.[0] ? (
+            <Image source={{ uri: item.images[0] }} style={styles.productImage} />
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Package size={32} color="#9CA3AF" />
             </View>
-            <View style={styles.productDetails}>
-              <Text style={styles.productName} numberOfLines={2}>
-                {item.productName || item.name || 'Product'}
-              </Text>
-              <Text style={styles.productSpecs}>
-                {item.description || item.specifications || ''}
-              </Text>
-              <View style={styles.priceRow}>
+          )}
+        </View>
+        <View style={styles.productDetails}>
+          <Text style={styles.productName} numberOfLines={2}>
+            {item.productName || item.name || 'Product'}
+          </Text>
+          <Text style={styles.productSpecs}>
+            {item.description || item.specifications || ''}
+          </Text>
+          <View style={styles.priceRow}>
+            <View style={styles.priceContainer}>
+              {item.originalPriceSnapshot && 
+               parseFloat(item.originalPriceSnapshot) > (item.pricePerPackage || item.unitPrice || 0) ? (
+                <>
+                  <Text style={styles.originalPrice}>
+                    {formatCurrency(parseFloat(item.originalPriceSnapshot))} per {item.packageType || 'piece'}
+                  </Text>
+                  <Text style={styles.discountedPrice}>
+                    {formatCurrency(item.pricePerPackage || item.unitPrice || 0)} per {item.packageType || 'piece'}
+                  </Text>
+                </>
+              ) : (
                 <Text style={styles.productPrice}>
                   {formatCurrency(item.pricePerPackage || item.unitPrice || 0)} per {item.packageType || 'piece'}
                 </Text>
-                <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
-                  {(() => {
-                    // Try both promotionDetails and promotionDetailsSnapshot
-                    const promotionDetails = item.promotionDetails || (item as any).promotionDetailsSnapshot;
-                    
-                    // Parse promotionDetailsSnapshot if it's a string
-                    let parsedPromotionDetails = promotionDetails;
-                    if (typeof promotionDetails === 'string') {
-                      try {
-                        parsedPromotionDetails = JSON.parse(promotionDetails);
-                      } catch (e) {
-                        // Failed to parse, continue without promotion details
-                      }
-                    }
-                    
-                    if (parsedPromotionDetails) {
-                      const minQty = parsedPromotionDetails.minQuantity || 1;
-                      const freeQty = parsedPromotionDetails.freeQuantity || 0;
-                      const qualifyingSets = Math.floor((item.packageQuantity || item.quantity || 1) / minQty);
-                      const totalFreeItems = qualifyingSets * freeQty;
-                      
-                      if (totalFreeItems > 0) {
-                        return (
-                          <View style={styles.promotionGiftBadge}>
-                            <Gift size={12} color="#9333EA" />
-                            <Text style={styles.promotionGiftText}>
-                              +{totalFreeItems} Free
-                            </Text>
-                          </View>
-                        );
-                      }
-                    }
-                    return null;
-                  })()}
-                  <Text style={styles.quantityBadge}>x{item.packageQuantity || item.quantity || 1}</Text>
-                </View>
-              </View>
+              )}
+            </View>
+            <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
+              {(() => {
+                // Try both promotionDetails and promotionDetailsSnapshot
+                const promotionDetails = item.promotionDetails || item.promotionDetailsSnapshot;
+                
+                // Parse promotionDetailsSnapshot if it's a string
+                let parsedPromotionDetails: { minQuantity: number; freeQuantity: number } | null = null;
+                if (typeof promotionDetails === 'string') {
+                  try {
+                    parsedPromotionDetails = JSON.parse(promotionDetails);
+                  } catch (e) {
+                    // Failed to parse, continue without promotion details
+                  }
+                } else if (promotionDetails && typeof promotionDetails === 'object') {
+                  parsedPromotionDetails = promotionDetails;
+                }
+                
+                if (parsedPromotionDetails) {
+                  const minQty = parsedPromotionDetails.minQuantity || 1;
+                  const freeQty = parsedPromotionDetails.freeQuantity || 0;
+                  const qualifyingSets = Math.floor((item.packageQuantity || item.quantity || 1) / minQty);
+                  const totalFreeItems = qualifyingSets * freeQty;
+                  
+                  if (totalFreeItems > 0) {
+                    return (
+                      <View style={styles.promotionGiftBadge}>
+                        <Gift size={12} color="#9333EA" />
+                        <Text style={styles.promotionGiftText}>
+                          +{totalFreeItems} Free
+                        </Text>
+                      </View>
+                    );
+                  }
+                }
+                return null;
+              })()}
+              <Text style={styles.quantityBadge}>x{item.packageQuantity || item.quantity || 1}</Text>
             </View>
           </View>
-        ))}
-        
-        {order.shippingFee !== undefined && (
-          <View style={styles.feeRow}>
-            <Text style={styles.feeLabel}>Shipping Fee:</Text>
-            <Text style={styles.feeValue}>
-              {formatCurrency(order.shippingFee)}
-            </Text>
-          </View>
-        )}
-        
-        <View style={styles.orderTotal}>
-          <Text style={styles.orderTotalText}>Order Total: {formatCurrency(order.totalAmount || order.total || 0)}</Text>
         </View>
       </View>
-    </View>
-  );
+    );
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.productCard}>
+          <View style={styles.sectionTitleContainer}>
+            <Package size={20} color="#0a61d7" />
+            <Text style={styles.sectionTitle}>Product Information</Text>
+          </View>
+          
+          {/* Discounted Products Section */}
+          {discountedItems.length > 0 && (
+            <>
+              <View style={styles.discountSectionHeader}>
+                <Text style={styles.discountSectionTitle}>Discounted Items</Text>
+                <Text style={styles.discountSectionSubtitle}>
+                  {discountedItems.length} item{discountedItems.length > 1 ? 's' : ''} with special pricing
+                </Text>
+              </View>
+              {discountedItems.map(renderProductItem)}
+            </>
+          )}
+          
+          {/* Non-Discounted Products Section */}
+          {nonDiscountedItems.length > 0 && (
+            <>
+              {discountedItems.length > 0 && <View style={styles.sectionDivider} />}
+              <View style={styles.discountSectionHeader}>
+                <Text style={styles.discountSectionTitle}>Regular Items</Text>
+                <Text style={styles.discountSectionSubtitle}>
+                  {nonDiscountedItems.length} item{nonDiscountedItems.length > 1 ? 's' : ''} at regular pricing
+                </Text>
+              </View>
+              {nonDiscountedItems.map(renderProductItem)}
+            </>
+          )}
+          
+          {order.shippingFee !== undefined && (
+            <View style={styles.feeRow}>
+              <Text style={styles.feeLabel}>Shipping Fee:</Text>
+              <Text style={styles.feeValue}>
+                {formatCurrency(order.shippingFee)}
+              </Text>
+            </View>
+          )}
+          
+          <View style={styles.orderTotal}>
+            <Text style={styles.orderTotalText}>Order Total: {formatCurrency(order.totalAmount || order.total || 0)}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   const renderSupportCenter = () => (
     <View style={styles.section}>
@@ -1194,5 +1251,40 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#9333EA',
+  },
+  priceContainer: {
+    flex: 1,
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  discountedPrice: {
+    fontSize: 14,
+    color: '#0a61d7',
+    fontWeight: '600',
+  },
+  discountSectionHeader: {
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  discountSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  discountSectionSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 16,
   },
 });

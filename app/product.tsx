@@ -9,6 +9,7 @@ import { useDataStore } from '../stores/dataStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { useAuthStore } from '../stores/authStore';
 import type { MarketplaceProduct } from '../services/marketplace';
+import type { Product } from '../data/sampleProducts';
 
 type ProductType = MarketplaceProduct | { id: string; name: string; sellingPrice?: number; images?: string[]; packageType?: string; piecesPerPackage?: number; };
 
@@ -63,10 +64,11 @@ export default function ProductModal() {
     const checkoutParams = {
       productId: product.id,
       quantity: quantity.toString(),
-      totalPrice: (((product as { pricePerPackage?: number }).pricePerPackage || product.sellingPrice || 0) * quantity).toString(),
+      totalPrice: ((product.sellingPrice || 0) * quantity).toString(),
       productName: product.name || 'Unknown Product',
       productImage: product.images?.[0] || '',
       unitPrice: (product.sellingPrice || 0).toString(),
+      originalPrice: ((product as MarketplaceProduct).originalSellingPrice || (product as Product).originalSellingPrice || 0).toString(),
       packageType: product.packageType || 'Box',
       piecesPerPackage: product.piecesPerPackage?.toString() || '1',
     };

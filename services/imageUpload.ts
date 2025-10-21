@@ -42,11 +42,12 @@ export const uploadImageToCloudinaryDirect = async (
     const match = /\.(\w+)$/.exec(filename);
     const type = match ? `image/${match[1]}` : 'image/jpeg';
     
+    // @ts-ignore - React Native FormData supports file objects with uri, name, type
     formData.append('file', {
       uri: imageUri,
       name: filename,
       type,
-    } as { uri: string; name: string; type: string });
+    });
     
     formData.append('signature', signatureData.signature);
     formData.append('timestamp', signatureData.timestamp.toString());

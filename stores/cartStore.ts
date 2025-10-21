@@ -369,7 +369,7 @@ export const useCartStore = create<CartState>()(
         const { getSelectedItems } = get()
         return getSelectedItems().reduce((total, item) => {
           const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1
-          return total + (item.product.price * item.quantity * piecesPerPackage)
+          return total + (item.product.sellingPrice * item.quantity * piecesPerPackage)
         }, 0)
       },
 
@@ -377,8 +377,8 @@ export const useCartStore = create<CartState>()(
         const { getSelectedItems } = get()
         return getSelectedItems().reduce((total, item) => {
           const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1
-          const originalPrice = (item.product as MarketplaceProduct).originalPrice || item.product.price
-          return total + ((originalPrice - item.product.price) * item.quantity * piecesPerPackage)
+          const originalPrice = (item.product as MarketplaceProduct).originalSellingPrice || item.product.sellingPrice
+          return total + ((originalPrice - item.product.sellingPrice) * item.quantity * piecesPerPackage)
         }, 0)
       },
 

@@ -51,6 +51,7 @@ type CheckoutParams = {
   productName?: string;
   productImage?: string;
   unitPrice?: string;
+  originalPrice?: string;
   packageType?: string;
   piecesPerPackage?: string;
 };
@@ -76,6 +77,7 @@ export default function CheckoutScreen() {
   const productName = params.productName || 'Product';
   const productImage = params.productImage || '';
   const unitPrice = parseFloat(params.unitPrice || '0');
+  const originalPrice = parseFloat(params.originalPrice || '0');
   const packageType = params.packageType || 'Box';
   const piecesPerPackage = parseInt(params.piecesPerPackage || '1');
 
@@ -762,11 +764,27 @@ export default function CheckoutScreen() {
                       </View>
                       <View style={styles.productDetails}>
                         <Text style={styles.productName} numberOfLines={2}>{item.product.name}</Text>
-                        <Text style={styles.productSpecs}>Variant: {item.variant}</Text>
+                        <Text style={styles.productSpecs}>
+                          {(item.product as MarketplaceProduct).piecesPerPackage || 1} pieces per {item.product.packageType}
+                        </Text>
                         <View style={styles.priceRow}>
-                          <Text style={styles.productPrice}>
-                            {formatCurrency((item.product as { price?: number }).price || 0)} each
-                          </Text>
+                          <View style={styles.priceContainer}>
+                            {(item.product as MarketplaceProduct).originalSellingPrice > 0 && 
+                             (item.product as MarketplaceProduct).originalSellingPrice > (item.product as MarketplaceProduct).sellingPrice ? (
+                              <>
+                                <Text style={styles.originalPrice}>
+                                  {formatCurrency((item.product as MarketplaceProduct).originalSellingPrice)} per piece
+                                </Text>
+                                <Text style={styles.discountedPrice}>
+                                  {formatCurrency((item.product as MarketplaceProduct).sellingPrice)} per piece
+                                </Text>
+                              </>
+                            ) : (
+                              <Text style={styles.productPrice}>
+                                {formatCurrency((item.product as { price?: number }).price || 0)} each
+                              </Text>
+                            )}
+                          </View>
                           <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                             {(() => {
                               const promotionDetails = item.product?.promotionDetails;
@@ -894,9 +912,49 @@ export default function CheckoutScreen() {
                     {piecesPerPackage} pieces per {packageType}
                   </Text>
                   <View style={styles.priceRow}>
-                    <Text style={styles.productPrice}>
-                      {formatCurrency(unitPrice)} per piece
-                    </Text>
+                    <View style={styles.priceContainer}>
+                      {(() => {
+                        // Use actual product data if available, otherwise fallback to URL parameters
+                        if (product) {
+                          const actualProduct = product as MarketplaceProduct;
+                          
+                          return actualProduct.originalSellingPrice > 0 && 
+                                 actualProduct.originalSellingPrice > actualProduct.sellingPrice ? (
+                            <>
+                              <Text style={styles.originalPrice}>
+                                {formatCurrency(actualProduct.originalSellingPrice)} per piece
+                              </Text>
+                              <Text style={styles.discountedPrice}>
+                                {formatCurrency(actualProduct.sellingPrice)} per piece
+                              </Text>
+                            </>
+                          ) : (
+                            <Text style={styles.productPrice}>
+                              {formatCurrency(actualProduct.sellingPrice)} per piece
+                            </Text>
+                          );
+                        } else {
+                          // Fallback to URL parameters if product is not found
+                          const originalPriceValue = parseFloat(originalPrice.toString());
+                          const unitPriceValue = parseFloat(unitPrice.toString());
+                          
+                          return originalPriceValue > 0 && originalPriceValue > unitPriceValue ? (
+                            <>
+                              <Text style={styles.originalPrice}>
+                                {formatCurrency(originalPriceValue)} per piece
+                              </Text>
+                              <Text style={styles.discountedPrice}>
+                                {formatCurrency(unitPriceValue)} per piece
+                              </Text>
+                            </>
+                          ) : (
+                            <Text style={styles.productPrice}>
+                              {formatCurrency(unitPriceValue)} per piece
+                            </Text>
+                          );
+                        }
+                      })()}
+                    </View>
                     <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                       {(() => {
                         // Get promotion details from route params or product
@@ -1757,6 +1815,20 @@ const styles = StyleSheet.create({
   },
   freeText: {
     color: '#10b981',
+    fontWeight: '600',
+  },
+  priceContainer: {
+    flex: 1,
+  },
+  originalPrice: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  discountedPrice: {
+    fontSize: 14,
+    color: '#0a61d7',
     fontWeight: '600',
   },
   noShippingCard: {
