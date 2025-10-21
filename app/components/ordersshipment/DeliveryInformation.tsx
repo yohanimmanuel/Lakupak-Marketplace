@@ -338,6 +338,62 @@ export default function DeliveryInformation() {
         {/* Progress Bar */}
         {renderProgressBar()}
 
+        {/* Map GPS Section */}
+        <View style={styles.mapSection}>
+          <View style={styles.mapHeader}>
+            <MapPin size={20} color="#0a61d7" />
+            <Text style={styles.mapTitle}>Delivery Location</Text>
+          </View>
+          <View style={styles.mapPlaceholder}>
+            <MapPin size={48} color="#9CA3AF" />
+            <Text style={styles.mapPlaceholderText}>Map GPS</Text>
+            <Text style={styles.mapPlaceholderSubtext}>Interactive map will be displayed here</Text>
+          </View>
+          
+          {/* Delivery Information Fields */}
+          <View style={styles.deliveryInfoContainer}>
+            <View style={styles.deliveryInfoRow}>
+              <Clock size={16} color="#6B7280" />
+              <View style={styles.deliveryInfoContent}>
+                <Text style={styles.deliveryInfoLabel}>Preferred Delivery Time</Text>
+                <Text style={styles.deliveryInfoValue}>
+                  {order.preferredDeliveryTime || 'Not specified'}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.deliveryInfoRow}>
+              <Truck size={16} color="#6B7280" />
+              <View style={styles.deliveryInfoContent}>
+                <Text style={styles.deliveryInfoLabel}>Assigned Logistics</Text>
+                <Text style={styles.deliveryInfoValue}>
+                  {order.assignedLogistics || 'Not assigned'}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.deliveryInfoRow}>
+              <Package size={16} color="#6B7280" />
+              <View style={styles.deliveryInfoContent}>
+                <Text style={styles.deliveryInfoLabel}>Tracking Number</Text>
+                <Text style={styles.deliveryInfoValue}>
+                  {order.trackingNumber || 'Not available'}
+                </Text>
+              </View>
+            </View>
+            
+            <View style={styles.deliveryInfoRow}>
+              <MapPin size={16} color="#6B7280" />
+              <View style={styles.deliveryInfoContent}>
+                <Text style={styles.deliveryInfoLabel}>Delivery Note</Text>
+                <Text style={styles.deliveryInfoValue}>
+                  {order.deliveryNote || 'No special instructions'}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* Combined Order Summary and Timeline */}
         <View style={styles.combinedContainer}>
           {/* Order Summary */}
@@ -357,11 +413,11 @@ export default function DeliveryInformation() {
                 )}
               </View>
               <View style={styles.orderSummaryInfo}>
-                <Text style={styles.productName}>
-                  {order.orderItems?.[0]?.name || 'Product Name'}
-                </Text>
                 <Text style={styles.orderId}>
-                  {order.orderId || 'N/A'}
+                  Order ID: {order.orderId || 'N/A'}
+                </Text>
+                <Text style={styles.trackingID}>
+                  Delivery Method: {order.deliveryMethod}
                 </Text>
               </View>
             </View>
@@ -458,6 +514,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     marginTop: -8,
     borderRadius: 12,
+    marginBottom: 20,
   },
   orderSummary: {
     flexDirection: 'row',
@@ -490,15 +547,14 @@ const styles = StyleSheet.create({
   orderSummaryInfo: {
     flex: 1,
   },
-  productName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-    marginBottom: 4,
-  },
   orderId: {
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: 'bold',
+  },
+  trackingID: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#111827'
   },
   timelineContainer: {
     padding: 16,
@@ -603,5 +659,71 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: '#6B7280',
+  },
+  // Map GPS Section Styles
+  mapSection: {
+    marginTop: -8,
+    backgroundColor: '#ffffff',
+    margin: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 8,
+  },
+  mapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  mapTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginLeft: 8,
+  },
+  mapPlaceholder: {
+    height: 300,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  mapPlaceholderText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginTop: 8,
+  },
+  mapPlaceholderSubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+  // Delivery Information Styles
+  deliveryInfoContainer: {
+    gap: 16,
+  },
+  deliveryInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 8,
+  },
+  deliveryInfoContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  deliveryInfoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  deliveryInfoValue: {
+    fontSize: 16,
+    color: '#111827',
+    lineHeight: 22,
   },
 });
