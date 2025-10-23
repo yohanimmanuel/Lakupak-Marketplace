@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   noProductsContainer: {
     padding: 40,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
   },
   noProductsText: {
     fontSize: 16,
