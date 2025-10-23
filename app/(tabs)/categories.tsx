@@ -240,7 +240,7 @@ export default function CategoriesScreen() {
         {!loading && !error && (
           <View style={styles.productsContainer}>
             <View style={styles.leftColumn}>
-              {products.slice(0, 6).filter((_, index) => index % 2 === 0).map((product) => (
+              {products.filter((_, index) => index % 2 === 0).map((product) => (
                 <View key={product.id} style={styles.productItem}>
                   <ProductMarketplace
                     product={product}
@@ -257,7 +257,7 @@ export default function CategoriesScreen() {
               ))}
             </View>
             <View style={styles.rightColumn}>
-              {products.slice(0, 6).filter((_, index) => index % 2 === 1).map((product) => (
+              {products.filter((_, index) => index % 2 === 1).map((product) => (
                 <View key={product.id} style={styles.productItem}>
                   <ProductMarketplace
                     product={product}
