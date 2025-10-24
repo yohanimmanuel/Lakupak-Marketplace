@@ -116,6 +116,7 @@ export interface MarketplaceProduct {
     purchasePrice: number;
     sellingPrice: number;
     originalSellingPrice: number | null;
+    moq?: number;
     isDefault: boolean;
     isActive: boolean;
   }[];

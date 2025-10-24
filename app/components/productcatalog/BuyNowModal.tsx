@@ -149,8 +149,13 @@ export default function BuyNowModal({
   const stock = currentVariant?.stockQuantity || safeGetNumber(product.stock);
   const packageType = currentVariant?.packageType || safeGetString(product.packageType, 'Box');
   const variantName = currentVariant?.variantName || 'Single Piece';
-
-  const isFormValid = quantity > 0 && quantity <= stock;
+  
+  // MOQ validation for single piece variants
+  const moq = currentVariant?.moq;
+  const isSinglePiece = variantName === 'Single Piece';
+  const meetsMOQ = !isSinglePiece || !moq || totalPieces >= moq;
+  
+  const isFormValid = quantity > 0 && quantity <= stock && meetsMOQ;
 
   const handleQuantityChange = (change: number) => {
     const newQuantity = quantity + change;
@@ -281,7 +286,7 @@ export default function BuyNowModal({
           {/* Variant Selection */}
           {product && 'variants' in product && product.variants && product.variants.length > 1 && (
             <View style={styles.variantSection}>
-              <Text style={styles.variantLabel}>Package Type:</Text>
+              <Text style={styles.variantLabel}>Variant:</Text>
               <View style={styles.variantContainer}>
                 {product.variants.map((variant) => (
                   <TouchableOpacity
@@ -328,6 +333,15 @@ export default function BuyNowModal({
               <Text style={styles.priceLabel}>Total Pieces:</Text>
               <Text style={styles.priceValue}>{totalPieces} pieces</Text>
             </View>
+            
+            {/* MOQ Warning for Single Piece variants */}
+            {isSinglePiece && moq && !meetsMOQ && (
+              <View style={styles.moqWarning}>
+                <Text style={styles.moqWarningText}>
+                  Minimum order quantity is {moq} pieces. You need {moq - totalPieces} more pieces.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Quantity Section */}
@@ -685,5 +699,20 @@ const styles = StyleSheet.create({
   },
   variantDetailsSelected: {
     color: '#0a61d7',
+  },
+  // MOQ warning styles
+  moqWarning: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#F59E0B',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  moqWarningText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#92400E',
+    textAlign: 'center',
   },
 });
