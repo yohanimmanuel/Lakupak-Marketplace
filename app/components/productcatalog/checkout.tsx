@@ -524,8 +524,23 @@ export default function CheckoutScreen() {
                     
                     // Calculate totals for this distributor's items
                     const distributorSubtotal = items.reduce((total, item) => {
-                      const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
-                      return total + ((item.product as { price?: number }).price || 0) * item.quantity * piecesPerPackage;
+                      // Get variant-specific pricing
+                      const marketplaceProduct = item.product as MarketplaceProduct;
+                      let unitPrice = 0;
+                      let piecesPerPackage = 1;
+                      
+                      if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+                        // Find the selected variant
+                        const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
+                        unitPrice = selectedVariant.sellingPrice || 0;
+                        piecesPerPackage = selectedVariant.piecesPerPackage || 1;
+                      } else {
+                        // Fallback to product-level pricing
+                        unitPrice = (item.product as { price?: number }).price || 0;
+                        piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+                      }
+                      
+                      return total + (unitPrice * item.quantity * piecesPerPackage);
                     }, 0);
                     const firstProduct = items[0].product as MarketplaceProduct;
                     const shippingOptions = getAvailableShippingOptions(firstProduct);
@@ -537,21 +552,54 @@ export default function CheckoutScreen() {
                       orderId: orderId,
                       buyerId: buyerId,
                       orderDate: orderDate,
-                      orderItems: items.map(item => ({
-                        productId: item.product.id,
-                        productName: item.product.name,
-                        packageQuantity: item.quantity,
-                        packageType: item.product.packageType || 'Box',
-                        piecesPerPackage: item.product.piecesPerPackage || 1,
-                        pricePerPackage: ((item.product as { price?: number }).price || 0) * (item.product.piecesPerPackage || 1),
-                        subtotal: ((item.product as { price?: number }).price || 0) * item.quantity * (item.product.piecesPerPackage || 1)
-                      })),
+                      orderItems: items.map(item => {
+                        // Get variant-specific data
+                        const marketplaceProduct = item.product as MarketplaceProduct;
+                        let packageType = 'Box';
+                        let piecesPerPackage = 1;
+                        let unitPrice = 0;
+                        
+                        if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+                          // Find the selected variant
+                          const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
+                          packageType = selectedVariant.packageType || 'Box';
+                          piecesPerPackage = selectedVariant.piecesPerPackage || 1;
+                          unitPrice = selectedVariant.sellingPrice || 0;
+                        } else {
+                          // Fallback to product-level data
+                          packageType = item.product.packageType || 'Box';
+                          piecesPerPackage = item.product.piecesPerPackage || 1;
+                          unitPrice = (item.product as { price?: number }).price || 0;
+                        }
+                        
+                        return {
+                          productId: item.product.id,
+                          productName: item.product.name,
+                          packageQuantity: item.quantity,
+                          packageType: packageType,
+                          piecesPerPackage: piecesPerPackage,
+                          pricePerPackage: unitPrice * piecesPerPackage,
+                          subtotal: unitPrice * item.quantity * piecesPerPackage
+                        };
+                      }),
                       subtotal: distributorSubtotal,
                       discounts: 0,
                       shippingFee: distributorShippingCost,
                       totalAmount: distributorTotal,
                       totalOrders: items.reduce((sum, item) => {
-                        const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
+                        // Get variant-specific piecesPerPackage
+                        const marketplaceProduct = item.product as MarketplaceProduct;
+                        let piecesPerPackage = 1;
+                        
+                        if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+                          // Find the selected variant
+                          const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
+                          piecesPerPackage = selectedVariant.piecesPerPackage || 1;
+                        } else {
+                          // Fallback to product-level data
+                          piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+                        }
+                        
                         return sum + (item.quantity * piecesPerPackage);
                       }, 0),
                       contactPerson: cachedUser?.name || addresses[0].name,
