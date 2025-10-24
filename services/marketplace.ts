@@ -47,6 +47,7 @@ export interface MarketplaceProduct {
   stockStatus: 'In Stock' | 'Low Stock' | 'Out of Stock';
   images: string[];
   category: string;
+  productCategory: string;
   brand: string;
   unit: string;
   packageType: string;
@@ -103,6 +104,21 @@ export interface MarketplaceProduct {
     days: string;
     location: string;
   };
+  // Product variants for selection
+  variants?: {
+    id: number;
+    variantName: string;
+    packageType: string;
+    piecesPerPackage: number;
+    stockQuantity: number;
+    lowStockThreshold: number;
+    stockStatus: string;
+    purchasePrice: number;
+    sellingPrice: number;
+    originalSellingPrice: number | null;
+    isDefault: boolean;
+    isActive: boolean;
+  }[];
 }
 
 export interface MarketplaceResponse {

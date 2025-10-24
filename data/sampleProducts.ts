@@ -25,6 +25,7 @@ export interface Product {
   stockStatus: 'In Stock' | 'Low Stock' | 'Out of Stock';
   images: string[];
   category: string;
+  productCategory: string;
   brand: string;
   unit: string;
   packageType: string;
@@ -95,6 +96,7 @@ export const sampleProducts: Product[] = [
       'https://via.placeholder.com/400x250/FF6B35/FFFFFF?text=Side+View',
     ],
     category: 'Electronics',
+    productCategory: 'Smartphones',
     brand: 'Apple',
     unit: 'pcs',
     packageType: 'Carton',
@@ -150,6 +152,7 @@ export const sampleProducts: Product[] = [
       'https://via.placeholder.com/400x250/10B981/FFFFFF?text=UCL+Football',
     ],
     category: 'Sports & Recreation',
+    productCategory: 'Football',
     brand: 'Adidas',
     unit: 'pcs',
     packageType: 'Box',
@@ -215,6 +218,7 @@ export const sampleProducts: Product[] = [
       'https://via.placeholder.com/400x250/6366F1/FFFFFF?text=Xiaomi+TWS',
     ],
     category: 'Electronics',
+    productCategory: 'Audio',
     brand: 'Xiaomi',
     unit: 'set',
     packageType: 'Case',
@@ -275,6 +279,7 @@ export const sampleProducts: Product[] = [
       'https://via.placeholder.com/400x250/06B6D4/FFFFFF?text=HUGO+Bottles',
     ],
     category: 'Health & Wellness',
+    productCategory: 'Water Bottles',
     brand: 'HUGO',
     unit: 'set',
     packageType: 'Pack',

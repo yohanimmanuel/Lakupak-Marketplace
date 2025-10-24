@@ -447,8 +447,23 @@ export default function CheckoutScreen() {
   const calculateSubtotal = () => {
     if (isCartCheckout) {
       return selectedCartItems.reduce((total, item) => {
-        const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
-        return total + ((item.product as { price?: number }).price || 0) * item.quantity * piecesPerPackage;
+        // Get variant-specific pricing
+        const marketplaceProduct = item.product as MarketplaceProduct;
+        let unitPrice = 0;
+        let piecesPerPackage = 1;
+        
+        if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+          // Find the selected variant
+          const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
+          unitPrice = selectedVariant.sellingPrice || 0;
+          piecesPerPackage = selectedVariant.piecesPerPackage || 1;
+        } else {
+          // Fallback to product-level pricing
+          unitPrice = (item.product as { price?: number }).price || 0;
+          piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+        }
+        
+        return total + (unitPrice * item.quantity * piecesPerPackage);
       }, 0);
     }
     return totalPrice;
@@ -765,25 +780,65 @@ export default function CheckoutScreen() {
                       <View style={styles.productDetails}>
                         <Text style={styles.productName} numberOfLines={2}>{item.product.name}</Text>
                         <Text style={styles.productSpecs}>
-                          {(item.product as MarketplaceProduct).piecesPerPackage || 1} pieces per {item.product.packageType}
+                          {(() => {
+                            // Get variant-specific piecesPerPackage
+                            const marketplaceProduct = item.product as MarketplaceProduct;
+                            let piecesPerPackage = 1;
+                            let packageType = 'Box';
+                            
+                            if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+                              // Find the selected variant
+                              const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
+                              piecesPerPackage = selectedVariant.piecesPerPackage || 1;
+                              packageType = selectedVariant.packageType || 'Box';
+                            } else {
+                              // Fallback to product-level data
+                              piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+                              packageType = item.product.packageType || 'Box';
+                            }
+                            
+                            return `${piecesPerPackage} pieces per ${packageType}`;
+                          })()}
                         </Text>
                         <View style={styles.priceRow}>
                           <View style={styles.priceContainer}>
-                            {(item.product as MarketplaceProduct).originalSellingPrice > 0 && 
-                             (item.product as MarketplaceProduct).originalSellingPrice > (item.product as MarketplaceProduct).sellingPrice ? (
-                              <>
-                                <Text style={styles.originalPrice}>
-                                  {formatCurrency((item.product as MarketplaceProduct).originalSellingPrice)} per piece
-                                </Text>
-                                <Text style={styles.discountedPrice}>
-                                  {formatCurrency((item.product as MarketplaceProduct).sellingPrice)} per piece
-                                </Text>
-                              </>
-                            ) : (
-                              <Text style={styles.productPrice}>
-                                {formatCurrency((item.product as { price?: number }).price || 0)} each
-                              </Text>
-                            )}
+                            {(() => {
+                              // Get variant-specific pricing
+                              const marketplaceProduct = item.product as MarketplaceProduct;
+                              let unitPrice = 0;
+                              let originalPrice = 0;
+                              
+                              if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+                                // Find the selected variant
+                                const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
+                                unitPrice = selectedVariant.sellingPrice || 0;
+                                originalPrice = selectedVariant.originalSellingPrice || 0;
+                              } else {
+                                // Fallback to product-level pricing
+                                unitPrice = marketplaceProduct.sellingPrice || (item.product as { price?: number }).price || 0;
+                                originalPrice = marketplaceProduct.originalSellingPrice || 0;
+                              }
+                              
+                              // Show discount if original price is higher than current price
+                              if (originalPrice > 0 && originalPrice > unitPrice) {
+                                return (
+                                  <>
+                                    <Text style={styles.originalPrice}>
+                                      {formatCurrency(originalPrice)} per piece
+                                    </Text>
+                                    <Text style={styles.discountedPrice}>
+                                      {formatCurrency(unitPrice)} per piece
+                                    </Text>
+                                  </>
+                                );
+                              } else {
+                                return (
+                                  <Text style={styles.productPrice}>
+                                    {formatCurrency(unitPrice)} per piece
+                                  </Text>
+                                );
+                              }
+                            })()}
                           </View>
                           <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                             {(() => {

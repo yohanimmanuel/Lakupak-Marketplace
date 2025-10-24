@@ -294,7 +294,26 @@ export default function CartScreen() {
             
             <View style={styles.priceContainer}>
               <Text style={styles.price}>
-                {formatCurrency(((item.product as { price?: number }).price || 0) * item.quantity * ((item.product as MarketplaceProduct).piecesPerPackage || 1))}
+                {(() => {
+                  // Get variant-specific pricing
+                  const marketplaceProduct = item.product as MarketplaceProduct;
+                  let unitPrice = 0;
+                  let piecesPerPackage = 1;
+                  
+                  if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+                    // Find the selected variant
+                    const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
+                    unitPrice = selectedVariant.sellingPrice || 0;
+                    piecesPerPackage = selectedVariant.piecesPerPackage || 1;
+                  } else {
+                    // Fallback to product-level pricing
+                    unitPrice = (item.product as { price?: number }).price || 0;
+                    piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+                  }
+                  
+                  // Calculate total price: unitPrice * quantity * piecesPerPackage
+                  return formatCurrency(unitPrice * item.quantity * piecesPerPackage);
+                })()}
               </Text>
             </View>
             </View>

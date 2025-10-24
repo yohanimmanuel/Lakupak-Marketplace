@@ -40,6 +40,7 @@ export default function BuyNowModal({
   const { addItem } = useCartStore();
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariant, setSelectedVariant] = useState<number | null>(null);
   const [slideAnim] = useState(new Animated.Value(screenHeight));
   const [isClosing, setIsClosing] = useState(false);
 
@@ -82,6 +83,13 @@ export default function BuyNowModal({
       setQuantity(1);
       setIsClosing(false);
       slideAnim.setValue(screenHeight);
+      
+      // Set default variant if available
+      if (product && 'variants' in product && product.variants && product.variants.length > 0) {
+        const defaultVariant = product.variants.find((v) => v.isDefault) || product.variants[0];
+        setSelectedVariant(defaultVariant.id);
+      }
+      
       // Then animate to 0 with smooth timing
       Animated.timing(slideAnim, {
         toValue: 0,
@@ -89,7 +97,7 @@ export default function BuyNowModal({
         useNativeDriver: true,
       }).start();
     }
-  }, [visible, slideAnim]);
+  }, [visible, slideAnim, product]);
 
   // Pan responder for swipe down to close
   const panResponder = PanResponder.create({
@@ -126,13 +134,21 @@ export default function BuyNowModal({
 
   const images = safeGetArray(product.images);
   const productImage = images.length > 0 ? safeGetString(images[0]) : null;
-  const unitPrice = safeGetNumber((product as { price?: number }).price); // Price per single item
-  const piecesPerPackage = safeGetNumber(product.piecesPerPackage, 1);
+  
+  // Get selected variant or fallback to first variant
+  const currentVariant = selectedVariant && product && 'variants' in product && product.variants 
+    ? product.variants.find((v) => v.id === selectedVariant) || product.variants[0]
+    : product && 'variants' in product ? product.variants?.[0] : null;
+  
+  // Fallback to product-level data if no variants
+  const unitPrice = currentVariant?.sellingPrice || safeGetNumber((product as { price?: number }).price);
+  const piecesPerPackage = currentVariant?.piecesPerPackage || safeGetNumber(product.piecesPerPackage, 1);
   const pricePerPackage = unitPrice * piecesPerPackage; // Price per box/package
   const totalPrice = pricePerPackage * quantity; // Total price for all boxes
   const totalPieces = piecesPerPackage * quantity;
-  const stock = safeGetNumber(product.stock);
-  const packageType = safeGetString(product.packageType, 'Box');
+  const stock = currentVariant?.stockQuantity || safeGetNumber(product.stock);
+  const packageType = currentVariant?.packageType || safeGetString(product.packageType, 'Box');
+  const variantName = currentVariant?.variantName || 'Single Piece';
 
   const isFormValid = quantity > 0 && quantity <= stock;
 
@@ -168,8 +184,8 @@ export default function BuyNowModal({
   const handleConfirm = () => {
     if (isFormValid && product) {
       if (mode === 'cart') {
-        // Add to cart logic - directly call cart store
-        addItem(product, quantity);
+        // Add to cart logic - directly call cart store with variant information
+        addItem(product, quantity, variantName);
         handleClose();
       } else {
         // Navigate to checkout with product details
@@ -180,8 +196,10 @@ export default function BuyNowModal({
           productName: safeGetString(product.name, 'Unknown Product'),
           productImage: safeGetString(product.images?.[0], ''),
           unitPrice: unitPrice.toString(),
-          packageType: safeGetString(product.packageType, 'Box'),
+          packageType: packageType,
           piecesPerPackage: piecesPerPackage.toString(),
+          variantId: selectedVariant?.toString() || '',
+          variantName: variantName,
         };
         
         // Add promotion details if available
@@ -259,6 +277,38 @@ export default function BuyNowModal({
               </Text>
             </View>
           </View>
+
+          {/* Variant Selection */}
+          {product && 'variants' in product && product.variants && product.variants.length > 1 && (
+            <View style={styles.variantSection}>
+              <Text style={styles.variantLabel}>Package Type:</Text>
+              <View style={styles.variantContainer}>
+                {product.variants.map((variant) => (
+                  <TouchableOpacity
+                    key={variant.id}
+                    style={[
+                      styles.variantOption,
+                      selectedVariant === variant.id && styles.variantOptionSelected
+                    ]}
+                    onPress={() => setSelectedVariant(variant.id)}
+                  >
+                    <Text style={[
+                      styles.variantText,
+                      selectedVariant === variant.id && styles.variantTextSelected
+                    ]}>
+                      {variant.variantName}
+                    </Text>
+                    <Text style={[
+                      styles.variantDetails,
+                      selectedVariant === variant.id && styles.variantDetailsSelected
+                    ]}>
+                      {variant.piecesPerPackage} pieces per {variant.packageType}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Price Section */}
           <View style={styles.priceSection}>
@@ -586,5 +636,54 @@ const styles = StyleSheet.create({
   },
   buyNowTextDisabled: {
     color: '#9CA3AF',
+  },
+  // Variant selection styles
+  variantSection: {
+    paddingHorizontal: 15,
+    marginBottom: 10,
+  },
+  variantLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  variantContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  variantOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+    minWidth: 100,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  variantOptionSelected: {
+    borderColor: '#0a61d7',
+    backgroundColor: '#EBF4FF',
+  },
+  variantText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  variantTextSelected: {
+    color: '#0a61d7',
+  },
+  variantDetails: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  variantDetailsSelected: {
+    color: '#0a61d7',
   },
 });

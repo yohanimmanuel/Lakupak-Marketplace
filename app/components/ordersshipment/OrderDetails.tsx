@@ -320,7 +320,7 @@ export default function OrderDetailsModal() {
     const renderProductItem = (item: OrderItem, index: number) => (
       <View key={item.id || index} style={styles.productRow}>
         <View style={styles.productImageContainer}>
-          {item.images?.[0] ? (
+          {item.images && item.images.length > 0 && item.images[0] ? (
             <Image source={{ uri: item.images[0] }} style={styles.productImage} />
           ) : (
             <View style={styles.imagePlaceholder}>
@@ -330,10 +330,10 @@ export default function OrderDetailsModal() {
         </View>
         <View style={styles.productDetails}>
           <Text style={styles.productName} numberOfLines={2}>
-            {item.productName}
+            {item.productName || item.name || 'Unknown Product'}
           </Text>
           <Text style={styles.productSpecs}>
-           1 {item.packageType} = {item.piecesPerPackage} pieces
+           1 {item.packageType || 'piece'} = {item.piecesPerPackage || 1} pieces
           </Text>
           <View style={styles.priceRow}>
             <View style={styles.priceContainer}>

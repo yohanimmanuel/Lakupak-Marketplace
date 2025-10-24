@@ -681,14 +681,14 @@ export default function ProductMarketplace({
 
       {/* Stock Status */}
       <View style={styles.stockContainer}>
-        <Text style={styles.stockLabel}>Stock:</Text>
+        <Text style={styles.stockLabel}>Stock status:</Text>
         <Text
           style={[
             styles.stockStatus,
             { color: getStockStatusColor(safeGetString(product.stockStatus, 'In Stock')) },
           ]}
         >
-          {safeGetString(product.stockStatus, 'In Stock')} ({safeGetNumber(product.stock)} packages)
+          {safeGetString(product.stockStatus, 'In Stock')}
         </Text>
       </View>
 
@@ -830,27 +830,15 @@ export default function ProductMarketplace({
           </Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Category:</Text>
+          <Text style={styles.detailLabel}>Type:</Text>
           <Text style={[styles.detailValue, { color: textColor }]}>
             {safeGetString(product.category, 'General')}
           </Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Package Type:</Text>
+          <Text style={styles.detailLabel}>Category:</Text>
           <Text style={[styles.detailValue, { color: textColor }]}>
-            {safeGetString(product.packageType, 'Piece')}
-          </Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Qty of Pieces per Package:</Text>
-          <Text style={[styles.detailValue, { color: textColor }]}>
-            {safeGetNumber(product.piecesPerPackage, 1)} pieces
-          </Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Price per Package:</Text>
-          <Text style={[styles.detailValue, { color: textColor }]}>
-            {formatCurrency(getSellingPrice() * safeGetNumber(product.piecesPerPackage, 1))}
+            {safeGetString(product.productCategory, 'Piece')}
           </Text>
         </View>
       </View>

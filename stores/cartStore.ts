@@ -368,17 +368,49 @@ export const useCartStore = create<CartState>()(
       getTotalPrice: () => {
         const { getSelectedItems } = get()
         return getSelectedItems().reduce((total, item) => {
-          const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1
-          return total + (item.product.sellingPrice * item.quantity * piecesPerPackage)
+          // Get variant-specific pricing
+          const marketplaceProduct = item.product as MarketplaceProduct;
+          let unitPrice = 0;
+          let piecesPerPackage = 1;
+          
+          if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+            // Find the selected variant
+            const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
+            unitPrice = selectedVariant.sellingPrice || 0;
+            piecesPerPackage = selectedVariant.piecesPerPackage || 1;
+          } else {
+            // Fallback to product-level pricing
+            unitPrice = item.product.sellingPrice || 0;
+            piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+          }
+          
+          return total + (unitPrice * item.quantity * piecesPerPackage);
         }, 0)
       },
 
       getTotalSaved: () => {
         const { getSelectedItems } = get()
         return getSelectedItems().reduce((total, item) => {
-          const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1
-          const originalPrice = (item.product as MarketplaceProduct).originalSellingPrice || item.product.sellingPrice
-          return total + ((originalPrice - item.product.sellingPrice) * item.quantity * piecesPerPackage)
+          // Get variant-specific pricing
+          const marketplaceProduct = item.product as MarketplaceProduct;
+          let unitPrice = 0;
+          let originalPrice = 0;
+          let piecesPerPackage = 1;
+          
+          if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+            // Find the selected variant
+            const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
+            unitPrice = selectedVariant.sellingPrice || 0;
+            originalPrice = selectedVariant.originalSellingPrice || selectedVariant.sellingPrice || 0;
+            piecesPerPackage = selectedVariant.piecesPerPackage || 1;
+          } else {
+            // Fallback to product-level pricing
+            unitPrice = item.product.sellingPrice || 0;
+            originalPrice = marketplaceProduct.originalSellingPrice || item.product.sellingPrice || 0;
+            piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+          }
+          
+          return total + ((originalPrice - unitPrice) * item.quantity * piecesPerPackage);
         }, 0)
       },
 
