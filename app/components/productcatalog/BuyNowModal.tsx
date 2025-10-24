@@ -150,10 +150,15 @@ export default function BuyNowModal({
   const packageType = currentVariant?.packageType || safeGetString(product.packageType, 'Box');
   const variantName = currentVariant?.variantName || 'Single Piece';
   
-  // MOQ validation for single piece variants
+  // MOQ validation for ALL variants
   const moq = currentVariant?.moq;
-  const isSinglePiece = variantName === 'Single Piece';
-  const meetsMOQ = !isSinglePiece || !moq || totalPieces >= moq;
+  const isSinglePieceVariant = (currentVariant?.piecesPerPackage || 1) === 1;
+  
+  // For single piece variants, check against total pieces
+  // For package variants, check against package quantity (not total pieces)
+  const quantityToCheck = isSinglePieceVariant ? totalPieces : quantity;
+  const meetsMOQ = !moq || quantityToCheck >= moq;
+  
   
   const isFormValid = quantity > 0 && quantity <= stock && meetsMOQ;
 
@@ -334,11 +339,11 @@ export default function BuyNowModal({
               <Text style={styles.priceValue}>{totalPieces} pieces</Text>
             </View>
             
-            {/* MOQ Warning for Single Piece variants */}
-            {isSinglePiece && moq && !meetsMOQ && (
+            {/* MOQ Warning for ALL variants */}
+            {moq && !meetsMOQ && (
               <View style={styles.moqWarning}>
                 <Text style={styles.moqWarningText}>
-                  Minimum order quantity is {moq} pieces. You need {moq - totalPieces} more pieces.
+                  Minimum order quantity for {variantName} is {moq} {isSinglePieceVariant ? 'pieces' : variantName.toLowerCase() + 's'}. You need {moq - quantityToCheck} more {isSinglePieceVariant ? 'pieces' : variantName.toLowerCase() + 's'}.
                 </Text>
               </View>
             )}

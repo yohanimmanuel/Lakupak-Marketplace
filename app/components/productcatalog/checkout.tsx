@@ -54,6 +54,8 @@ type CheckoutParams = {
   originalPrice?: string;
   packageType?: string;
   piecesPerPackage?: string;
+  variantId?: string;
+  variantName?: string;
 };
 
 export default function CheckoutScreen() {
@@ -577,6 +579,10 @@ export default function CheckoutScreen() {
                           productName: item.product.name,
                           packageQuantity: item.quantity,
                           packageType: packageType,
+                          variantId: marketplaceProduct.variants && marketplaceProduct.variants.length > 0 
+                            ? marketplaceProduct.variants.find(v => v.variantName === item.variant)?.id 
+                            : undefined,
+                          variantName: item.variant,
                           piecesPerPackage: piecesPerPackage,
                           pricePerPackage: unitPrice * piecesPerPackage,
                           subtotal: unitPrice * item.quantity * piecesPerPackage
@@ -648,7 +654,9 @@ export default function CheckoutScreen() {
                       packageType: packageType,
                       piecesPerPackage: piecesPerPackage,
                       pricePerPackage: unitPrice * piecesPerPackage,
-                      subtotal: totalPrice
+                      subtotal: totalPrice,
+                      variantId: params.variantId ? parseInt(params.variantId) : undefined,
+                      variantName: params.variantName
                     }],
                     subtotal: totalPrice,
                     discounts: 0,

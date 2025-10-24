@@ -116,7 +116,7 @@ export interface MarketplaceProduct {
     purchasePrice: number;
     sellingPrice: number;
     originalSellingPrice: number | null;
-    moq?: number;
+    moq?: number; // Minimum Order Quantity - for all variants
     isDefault: boolean;
     isActive: boolean;
   }[];
