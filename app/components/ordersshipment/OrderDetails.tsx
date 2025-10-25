@@ -53,6 +53,8 @@ interface OrderItem {
   pricePerPackage?: number;
   description?: string;
   productName?: string;
+  variantName?: string;
+  variantNameSnapshot?: string;
   moq?: number;
   promotionDetails?: {
     minQuantity: number;
@@ -79,14 +81,27 @@ interface DeliveryInfo {
 
 interface Order {
   id: string;
+  orderId: string;
   status: 'Pending' | 'Confirmed' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Received';
+  orderStatus: 'Pending' | 'Confirmed' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Received';
   orderDate: string;
   paymentMethod: string;
+  paymentStatus: 'Unpaid' | 'Paid';
+  paymentTerms: string;
   invoiceUrl?: string;
   items: OrderItem[];
   shippingInfo: ShippingInfo;
   totalAmount: number;
+  total: number;
+  shippingFee: number;
   orderItems?: OrderItem[];
+  contactPerson: string;
+  contactPhone: string;
+  deliveryAddress: string;
+  deliveryNote?: string;
+  assignedLogistics?: string;
+  trackingNumber?: string;
+  updatedAt: string;
 }
 
 interface OrderDetailsModalProps {
@@ -101,7 +116,7 @@ export default function OrderDetailsModal() {
   const params = useLocalSearchParams();
   const { token, user } = useAuthStore();
   
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isReceived, setIsReceived] = useState(false);
   const [showAllOrderInfo, setShowAllOrderInfo] = useState(false);
@@ -124,6 +139,15 @@ export default function OrderDetailsModal() {
       
       if (response.ok) {
         const orderData = await response.json();
+        
+        // Map variantNameSnapshot to variantName for each order item
+        if (orderData?.orderItems) {
+          orderData.orderItems = orderData.orderItems.map((item: OrderItem) => ({
+            ...item,
+            variantName: item.variantNameSnapshot || item.variantName
+          }));
+        }
+        
         setOrder(orderData);
         setIsReceived(orderData?.orderStatus === 'Delivered' || orderData?.orderStatus === 'Received');
         
@@ -215,8 +239,10 @@ export default function OrderDetailsModal() {
   };
 
   const handleOrderReceived = async () => {
+    if (!order) return;
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/api/mobile/orders/${order.id}/status`, {
+      const response = await fetch(`${API_BASE_URL}/api/mobile/orders/${orderData.id}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -227,7 +253,7 @@ export default function OrderDetailsModal() {
       
       if (response.ok) {
         setIsReceived(true);
-        setOrder((prev: Order) => ({ ...prev, status: 'Received' }));
+        setOrder((prev: Order | null) => prev ? { ...prev, status: 'Received' } : null);
         Alert.alert('Success', 'Order marked as received successfully!');
       } else {
         Alert.alert('Error', 'Failed to update order status');
@@ -242,7 +268,7 @@ export default function OrderDetailsModal() {
   };
 
   const copyOrderId = () => {
-    Clipboard.setString(order.orderId);
+    Clipboard.setString(orderData.orderId);
     Alert.alert('Copied', 'Order ID copied to clipboard');
   };
 
@@ -259,7 +285,7 @@ export default function OrderDetailsModal() {
     <View style={styles.section}>
       <View style={styles.productCard}>
         <View style={[styles.sectionTitleContainer, styles.shippingTitleContainer]}>
-          <Text style={[styles.sectionTitle, styles.shippingTitle]}>{getStatusText(order.orderStatus)}</Text>
+          <Text style={[styles.sectionTitle, styles.shippingTitle]}>{getStatusText(orderData.orderStatus)}</Text>
         </View>
         
         {/* Delivery Status Information */}
@@ -268,26 +294,26 @@ export default function OrderDetailsModal() {
           <View style={styles.deliveryStatusRow}>
             <Truck size={16} color="#10b981" />
             <Text style={styles.deliveryStatusText}>
-              {getDeliveryStatusDescription(order.orderStatus)}
+              {getDeliveryStatusDescription(orderData.orderStatus)}
             </Text>
             <TouchableOpacity 
               style={styles.chevronButton}
               onPress={() => router.push({
                 pathname: '/components/ordersshipment/DeliveryInformation',
-                params: { orderId: order.orderId }
+                params: { orderId: orderData.orderId }
               })}
             >
               <ChevronRight size={16} color="#6B7280" />
             </TouchableOpacity>
           </View>
           
-          {order.updatedAt && (
+          {orderData.updatedAt && (
             <Text style={styles.deliveryDateTimeText}>
-              {new Date(order.updatedAt).toLocaleDateString('en-GB', {
+              {new Date(orderData.updatedAt).toLocaleDateString('en-GB', {
                 day: '2-digit',
                 month: '2-digit', 
                 year: 'numeric'
-              })} {new Date(order.updatedAt).toLocaleTimeString('en-GB', {
+              })} {new Date(orderData.updatedAt).toLocaleTimeString('en-GB', {
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false
@@ -296,46 +322,46 @@ export default function OrderDetailsModal() {
           )}
         </View>
         
-        {order.assignedLogistics && (
+        {orderData.assignedLogistics && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Carrier:</Text>
-            <Text style={styles.infoValue}>{order.assignedLogistics}</Text>
+            <Text style={styles.infoValue}>{orderData.assignedLogistics}</Text>
           </View>
         )}
         
-        {order.trackingNumber && (
+        {orderData.trackingNumber && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Tracking Number:</Text>
-            <Text style={styles.infoValue}>{order.trackingNumber}</Text>
+            <Text style={styles.infoValue}>{orderData.trackingNumber}</Text>
           </View>
         )}
         
-        {order.contactPerson && (
+        {orderData.contactPerson && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Recipient:</Text>
-            <Text style={styles.infoValue}>{order.contactPerson}</Text>
+            <Text style={styles.infoValue}>{orderData.contactPerson}</Text>
           </View>
         )}
         
-        {order.contactPhone && (
+        {orderData.contactPhone && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Phone:</Text>
-            <Text style={styles.infoValue}>{order.contactPhone}</Text>
+            <Text style={styles.infoValue}>{orderData.contactPhone}</Text>
           </View>
         )}
         
-        {order.deliveryAddress && (
+        {orderData.deliveryAddress && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Address:</Text>
-            <Text style={styles.infoValue}>{order.deliveryAddress}</Text>
+            <Text style={styles.infoValue}>{orderData.deliveryAddress}</Text>
           </View>
         )}
         
-        {order.deliveryNote && (
+        {orderData.deliveryNote && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Delivery Instruction:</Text>
             <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
-              {order.deliveryNote}
+              {orderData.deliveryNote}
             </Text>
           </View>
         )}
@@ -345,12 +371,12 @@ export default function OrderDetailsModal() {
 
   const renderProductInfo = () => {
     // Filter products into discounted and non-discounted groups
-    const discountedItems = order.orderItems?.filter((item: OrderItem) => 
+    const discountedItems = orderData.orderItems?.filter((item: OrderItem) => 
       item.originalPriceSnapshot && 
       parseFloat(item.originalPriceSnapshot) > (item.pricePerPackage || item.unitPrice || 0)
     ) || [];
     
-    const nonDiscountedItems = order.orderItems?.filter((item: OrderItem) => 
+    const nonDiscountedItems = orderData.orderItems?.filter((item: OrderItem) => 
       !item.originalPriceSnapshot || 
       parseFloat(item.originalPriceSnapshot) <= (item.pricePerPackage || item.unitPrice || 0)
     ) || [];
@@ -368,7 +394,7 @@ export default function OrderDetailsModal() {
         </View>
         <View style={styles.productDetails}>
           <Text style={styles.productName} numberOfLines={2}>
-            {item.productName || item.name || 'Unknown Product'}
+            {item.productName || item.name || 'Unknown Product'}{item.variantName ? ` - ${item.variantName}` : ''}
           </Text>
           <Text style={styles.productSpecs}>
            1 {item.packageType || 'piece'} = {item.piecesPerPackage || 1} pieces
@@ -459,17 +485,17 @@ export default function OrderDetailsModal() {
             </>
           )}
           
-          {order.shippingFee !== undefined && (
+          {orderData.shippingFee !== undefined && (
             <View style={styles.feeRow}>
               <Text style={styles.feeLabel}>Shipping Fee:</Text>
               <Text style={styles.feeValue}>
-                {formatCurrency(order.shippingFee)}
+                {formatCurrency(orderData.shippingFee)}
               </Text>
             </View>
           )}
           
           <View style={styles.orderTotal}>
-            <Text style={styles.orderTotalText}>Order Total: {formatCurrency(order.totalAmount || order.total || 0)}</Text>
+            <Text style={styles.orderTotalText}>Order Total: {formatCurrency(orderData.totalAmount || orderData.total || 0)}</Text>
           </View>
         </View>
       </View>
@@ -521,14 +547,14 @@ export default function OrderDetailsModal() {
       {
         key: 'orderId',
         label: 'Order ID:',
-        value: order.orderId,
+        value: orderData.orderId,
         isSpecial: true,
         render: () => (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Order ID:</Text>
             <View style={styles.orderIdContainer}>
               <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="middle">
-                {order.orderId}
+                {orderData.orderId}
               </Text>
               <TouchableOpacity onPress={copyOrderId} style={styles.copyButton}>
                 <Copy size={14} color="#6b7280" />
@@ -540,8 +566,8 @@ export default function OrderDetailsModal() {
       {
         key: 'paymentTerms',
         label: 'Paid by:',
-        value: order.paymentTerms,
-        condition: order.paymentTerms
+        value: orderData.paymentTerms,
+        condition: orderData.paymentTerms
       },
       {
         key: 'invoice',
@@ -559,26 +585,26 @@ export default function OrderDetailsModal() {
       {
         key: 'orderTime',
         label: 'Order Time:',
-        value: order.orderDate ? new Date(order.orderDate).toLocaleString() : null,
-        condition: order.orderDate
+        value: orderData.orderDate ? new Date(orderData.orderDate).toLocaleString() : null,
+        condition: orderData.orderDate
       },
       {
         key: 'paymentTime',
         label: 'Payment Time:',
-        value: order.updatedAt ? new Date(order.updatedAt).toLocaleString() : null,
-        condition: order.paymentStatus === 'Paid' && order.updatedAt
+        value: orderData.updatedAt ? new Date(orderData.updatedAt).toLocaleString() : null,
+        condition: orderData.paymentStatus === 'Paid' && orderData.updatedAt
       },
       {
         key: 'shipTime',
         label: 'Ship Time:',
-        value: order.updatedAt ? new Date(order.updatedAt).toLocaleString() : null,
-        condition: order.orderStatus === 'Shipped' && order.updatedAt
+        value: orderData.updatedAt ? new Date(orderData.updatedAt).toLocaleString() : null,
+        condition: orderData.orderStatus === 'Shipped' && orderData.updatedAt
       },
       {
         key: 'completedTime',
         label: 'Completed Time:',
-        value: order.updatedAt ? new Date(order.updatedAt).toLocaleString() : null,
-        condition: order.orderStatus === 'Delivered' && order.updatedAt
+        value: orderData.updatedAt ? new Date(orderData.updatedAt).toLocaleString() : null,
+        condition: orderData.orderStatus === 'Delivered' && orderData.updatedAt
       }
     ];
 
@@ -632,12 +658,12 @@ export default function OrderDetailsModal() {
   };
 
   const handleCancelOrder = () => {
-    router.push(`/components/ordersshipment/OrderCancelModal?orderId=${order.orderId}`);
+    router.push(`/components/ordersshipment/OrderCancelModal?orderId=${orderData.orderId}`);
   };
 
   const renderBottomBar = () => {
     // Pending payment - show Pay Order and Cancel Order
-    if (order.orderStatus === 'Pending' && order.paymentStatus === 'Unpaid') {
+    if (orderData.orderStatus === 'Pending' && orderData.paymentStatus === 'Unpaid') {
       return (
         <View style={styles.bottomBar}>
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancelOrder}>
@@ -666,7 +692,7 @@ export default function OrderDetailsModal() {
     }
 
     // All other statuses - show Return/Refund and Order Received (disabled unless delivered)
-    const isOrderReceivedEnabled = order.orderStatus === 'Delivered';
+    const isOrderReceivedEnabled = orderData.orderStatus === 'Delivered';
     
     return (
       <View style={styles.bottomBar}>
@@ -707,12 +733,15 @@ export default function OrderDetailsModal() {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Order not found</Text>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Order not found</Text>
         </View>
       </View>
     );
   }
+
+  // TypeScript assertion that order is not null after the check above
+  const orderData = order as Order;
 
   return (
     <View style={styles.container}>

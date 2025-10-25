@@ -160,8 +160,8 @@ export default function BuyNowModal({
     const totalPrice = pricePerPackage * quantity;
     const totalPieces = piecesPerPackage * quantity;
     
-    // Stock at product level, MOQ at variant level (piece-based)
-    const stock = safeGetNumber(product.stock);
+    // Stock at variant level, MOQ at variant level (piece-based)
+    const stock = currentVariant?.stockQuantity || 0;
     const moq = currentVariant?.moq || null;
     
     // MOQ validation (always in pieces)
@@ -405,7 +405,7 @@ export default function BuyNowModal({
             {/* Stock Info */}
             <View style={styles.stockInfo}>
               <Text style={styles.stockLabel}>Available Stock:</Text>
-              <Text style={styles.stockValue}>{stock} {packageType}s</Text>
+              <Text style={styles.stockValue}>{stock} pieces</Text>
             </View>
           </View>
 

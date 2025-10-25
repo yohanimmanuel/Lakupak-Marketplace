@@ -41,6 +41,9 @@ export interface ProductVariant {
   sellingPrice: number;
   originalSellingPrice: number | null;
   moq?: number; // Minimum Order Quantity in pieces (variant-level)
+  stockQuantity?: number; // Stock quantity in pieces (variant-level)
+  lowStockThreshold?: number; // Low stock threshold in pieces (variant-level)
+  stockStatus?: 'In Stock' | 'Low Stock' | 'Out of Stock'; // Stock status (variant-level)
   attributes?: Record<string, unknown>;
   isDefault: boolean;
   isActive: boolean;
