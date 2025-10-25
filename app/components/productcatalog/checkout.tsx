@@ -34,6 +34,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { formatCurrency } from '../../../utils/currencyUtils';
+import { calculateProductPromotion } from '../../../utils/promotionUtils';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore, CartItem } from '../../../stores/cartStore';
 import { useAuthStore } from '../../../stores/authStore';
@@ -458,12 +459,13 @@ export default function CheckoutScreen() {
           // Find the selected variant
           const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
           unitPrice = selectedVariant.sellingPrice || 0;
-          piecesPerPackage = selectedVariant.piecesPerPackage || 1;
         } else {
           // Fallback to product-level pricing
           unitPrice = (item.product as { price?: number }).price || 0;
-          piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
         }
+        
+        // Get piecesPerPackage from product level (piece-based system)
+        piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
         
         return total + (unitPrice * item.quantity * piecesPerPackage);
       }, 0);
@@ -535,12 +537,13 @@ export default function CheckoutScreen() {
                         // Find the selected variant
                         const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
                         unitPrice = selectedVariant.sellingPrice || 0;
-                        piecesPerPackage = selectedVariant.piecesPerPackage || 1;
                       } else {
                         // Fallback to product-level pricing
                         unitPrice = (item.product as { price?: number }).price || 0;
-                        piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
                       }
+                      
+                      // Get piecesPerPackage from product level (piece-based system)
+                      piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
                       
                       return total + (unitPrice * item.quantity * piecesPerPackage);
                     }, 0);
@@ -557,22 +560,20 @@ export default function CheckoutScreen() {
                       orderItems: items.map(item => {
                         // Get variant-specific data
                         const marketplaceProduct = item.product as MarketplaceProduct;
-                        let packageType = 'Box';
-                        let piecesPerPackage = 1;
                         let unitPrice = 0;
                         
                         if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
                           // Find the selected variant
                           const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
-                          packageType = selectedVariant.packageType || 'Box';
-                          piecesPerPackage = selectedVariant.piecesPerPackage || 1;
                           unitPrice = selectedVariant.sellingPrice || 0;
                         } else {
-                          // Fallback to product-level data
-                          packageType = item.product.packageType || 'Box';
-                          piecesPerPackage = item.product.piecesPerPackage || 1;
+                          // Fallback to product-level pricing
                           unitPrice = (item.product as { price?: number }).price || 0;
                         }
+                        
+                        // Get package info from product level (piece-based system)
+                        const packageType = marketplaceProduct.packageType || 'Box';
+                        const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
                         
                         return {
                           productId: item.product.id,
@@ -593,18 +594,9 @@ export default function CheckoutScreen() {
                       shippingFee: distributorShippingCost,
                       totalAmount: distributorTotal,
                       totalOrders: items.reduce((sum, item) => {
-                        // Get variant-specific piecesPerPackage
+                        // Get piecesPerPackage from product level (piece-based system)
                         const marketplaceProduct = item.product as MarketplaceProduct;
-                        let piecesPerPackage = 1;
-                        
-                        if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
-                          // Find the selected variant
-                          const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
-                          piecesPerPackage = selectedVariant.piecesPerPackage || 1;
-                        } else {
-                          // Fallback to product-level data
-                          piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-                        }
+                        const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
                         
                         return sum + (item.quantity * piecesPerPackage);
                       }, 0),
@@ -837,21 +829,10 @@ export default function CheckoutScreen() {
                         <Text style={styles.productName} numberOfLines={2}>{item.product.name}</Text>
                         <Text style={styles.productSpecs}>
                           {(() => {
-                            // Get variant-specific piecesPerPackage
+                            // Get package info from product level (piece-based system)
                             const marketplaceProduct = item.product as MarketplaceProduct;
-                            let piecesPerPackage = 1;
-                            let packageType = 'Box';
-                            
-                            if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
-                              // Find the selected variant
-                              const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
-                              piecesPerPackage = selectedVariant.piecesPerPackage || 1;
-                              packageType = selectedVariant.packageType || 'Box';
-                            } else {
-                              // Fallback to product-level data
-                              piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-                              packageType = item.product.packageType || 'Box';
-                            }
+                            const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+                            const packageType = marketplaceProduct.packageType || 'Box';
                             
                             return `${piecesPerPackage} pieces per ${packageType}`;
                           })()}
@@ -898,22 +879,22 @@ export default function CheckoutScreen() {
                           </View>
                           <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                             {(() => {
-                              const promotionDetails = item.product?.promotionDetails;
-                              if (promotionDetails) {
-                                const minQty = promotionDetails.minQuantity || 1;
-                                const freeQty = promotionDetails.freeQuantity || 0;
-                                const qualifyingSets = Math.floor(item.quantity / minQty);
-                                const totalFreeItems = qualifyingSets * freeQty;
-                                if (totalFreeItems > 0) {
-                                  return (
-                                    <View style={styles.promotionGiftBadge}>
-                                      <Gift size={12} color="#9333EA" />
-                                      <Text style={styles.promotionGiftText}>
-                                        +{totalFreeItems} Free
-                                      </Text>
-                                    </View>
-                                  );
-                                }
+                              // Calculate promotion using standardized function
+                              const promotionGift = calculateProductPromotion(
+                                item.product,
+                                item.quantity,
+                                item.variant
+                              );
+                              
+                              if (promotionGift) {
+                                return (
+                                  <View style={styles.promotionGiftBadge}>
+                                    <Gift size={12} color="#9333EA" />
+                                    <Text style={styles.promotionGiftText}>
+                                      +{promotionGift.freeQty} Free
+                                    </Text>
+                                  </View>
+                                );
                               }
                               return null;
                             })()}
@@ -1068,25 +1049,23 @@ export default function CheckoutScreen() {
                     </View>
                     <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                       {(() => {
-                        // Get promotion details from route params or product
-                        const promotionDetails = (params as { promotionDetails?: string })?.promotionDetails 
-                          ? JSON.parse((params as { promotionDetails: string }).promotionDetails)
-                          : null;
-                        if (promotionDetails) {
-                          const minQty = promotionDetails.minQuantity || 1;
-                          const freeQty = promotionDetails.freeQuantity || 0;
-                          const qualifyingSets = Math.floor(quantity / minQty);
-                          const totalFreeItems = qualifyingSets * freeQty;
-                          if (totalFreeItems > 0) {
-                            return (
-                              <View style={styles.promotionGiftBadge}>
-                                <Gift size={12} color="#9333EA" />
-                                <Text style={styles.promotionGiftText}>
-                                  +{totalFreeItems} Free
-                                </Text>
-                              </View>
-                            );
-                          }
+                        // Calculate promotion using standardized function
+                        const variantName = params.variantName || null;
+                        const promotionGift = calculateProductPromotion(
+                          product,
+                          quantity,
+                          variantName
+                        );
+                        
+                        if (promotionGift) {
+                          return (
+                            <View style={styles.promotionGiftBadge}>
+                              <Gift size={12} color="#9333EA" />
+                              <Text style={styles.promotionGiftText}>
+                                +{promotionGift.freeQty} Free
+                              </Text>
+                            </View>
+                          );
                         }
                         return null;
                       })()}
@@ -1938,7 +1917,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   discountedPrice: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#0a61d7',
     fontWeight: '600',
   },

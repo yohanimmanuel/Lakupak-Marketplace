@@ -16,6 +16,7 @@ import { ArrowLeft, MessageSquareText, Minus, Plus, ShoppingBag, Package, Star, 
 import { Product } from '../data/sampleProducts';
 import { MarketplaceProduct, marketplaceService } from '../services/marketplace';
 import { formatCurrency } from '../utils/currencyUtils';
+import { calculateProductPromotion } from '../utils/promotionUtils';
 import ProductMarketplace from './components/productcatalog/ProductMarketplace';
 import BuyNowModal from './components/productcatalog/BuyNowModal';
 import { useCartStore, CartItem } from '../stores/cartStore';
@@ -267,19 +268,19 @@ export default function CartScreen() {
               <View style={{alignItems: 'center'}}>
                 <Text style={styles.quantityText}>{item.quantity}</Text>
                 {(() => {
-                  const promotionDetails = item.product?.promotionDetails;
-                  if (promotionDetails) {
-                    const minQty = promotionDetails.minQuantity || 1;
-                    const freeQty = promotionDetails.freeQuantity || 0;
-                    const qualifyingSets = Math.floor(item.quantity / minQty);
-                    const totalFreeItems = qualifyingSets * freeQty;
-                    if (totalFreeItems > 0) {
-                      return (
-                        <Text style={styles.promotionGiftText}>
-                          +{totalFreeItems} Free
-                        </Text>
-                      );
-                    }
+                  // Calculate promotion using standardized function
+                  const promotionGift = calculateProductPromotion(
+                    item.product,
+                    item.quantity,
+                    item.variant
+                  );
+                  
+                  if (promotionGift) {
+                    return (
+                      <Text style={styles.promotionGiftText}>
+                        +{promotionGift.freeQty} Free pieces
+                      </Text>
+                    );
                   }
                   return null;
                 })()}
@@ -304,12 +305,13 @@ export default function CartScreen() {
                     // Find the selected variant
                     const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
                     unitPrice = selectedVariant.sellingPrice || 0;
-                    piecesPerPackage = selectedVariant.piecesPerPackage || 1;
                   } else {
                     // Fallback to product-level pricing
                     unitPrice = (item.product as { price?: number }).price || 0;
-                    piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
                   }
+                  
+                  // Get piecesPerPackage from product level (piece-based system)
+                  piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
                   
                   // Calculate total price: unitPrice * quantity * piecesPerPackage
                   return formatCurrency(unitPrice * item.quantity * piecesPerPackage);

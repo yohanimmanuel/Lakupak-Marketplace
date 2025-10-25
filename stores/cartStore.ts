@@ -377,12 +377,13 @@ export const useCartStore = create<CartState>()(
             // Find the selected variant
             const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
             unitPrice = selectedVariant.sellingPrice || 0;
-            piecesPerPackage = selectedVariant.piecesPerPackage || 1;
           } else {
             // Fallback to product-level pricing
             unitPrice = item.product.sellingPrice || 0;
-            piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
           }
+          
+          // Get piecesPerPackage from product level (piece-based system)
+          piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
           
           return total + (unitPrice * item.quantity * piecesPerPackage);
         }, 0)
@@ -402,13 +403,14 @@ export const useCartStore = create<CartState>()(
             const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
             unitPrice = selectedVariant.sellingPrice || 0;
             originalPrice = selectedVariant.originalSellingPrice || selectedVariant.sellingPrice || 0;
-            piecesPerPackage = selectedVariant.piecesPerPackage || 1;
           } else {
             // Fallback to product-level pricing
             unitPrice = item.product.sellingPrice || 0;
             originalPrice = marketplaceProduct.originalSellingPrice || item.product.sellingPrice || 0;
-            piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
           }
+          
+          // Get piecesPerPackage from product level (piece-based system)
+          piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
           
           return total + ((originalPrice - unitPrice) * item.quantity * piecesPerPackage);
         }, 0)

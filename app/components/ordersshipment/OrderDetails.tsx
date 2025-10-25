@@ -33,11 +33,13 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
+import { calculateOrderItemPromotion } from '../../../utils/promotionUtils';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface OrderItem {
   id: string;
+  productId?: string;
   name: string;
   image: string;
   images?: string[];
@@ -51,6 +53,7 @@ interface OrderItem {
   pricePerPackage?: number;
   description?: string;
   productName?: string;
+  moq?: number;
   promotionDetails?: {
     minQuantity: number;
     freeQuantity: number;
@@ -102,6 +105,7 @@ export default function OrderDetailsModal() {
   const [isLoading, setIsLoading] = useState(true);
   const [isReceived, setIsReceived] = useState(false);
   const [showAllOrderInfo, setShowAllOrderInfo] = useState(false);
+  const [productMOQs, setProductMOQs] = useState<Record<string, number | null>>({});
 
   useEffect(() => {
     if (params.orderId) {
@@ -122,6 +126,11 @@ export default function OrderDetailsModal() {
         const orderData = await response.json();
         setOrder(orderData);
         setIsReceived(orderData?.orderStatus === 'Delivered' || orderData?.orderStatus === 'Received');
+        
+        // Fetch MOQ data for all products in the order
+        if (orderData?.orderItems) {
+          await fetchProductMOQs(orderData.orderItems);
+        }
       } else {
         setOrder(null);
       }
@@ -129,6 +138,35 @@ export default function OrderDetailsModal() {
       setOrder(null);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchProductMOQs = async (orderItems: OrderItem[]) => {
+    try {
+      // Extract MOQ from promotion details only - no fallback estimated values
+      const moqMap: Record<string, number | null> = {};
+      
+      orderItems.forEach((item) => {
+        if (item.productId) {
+          let actualMOQ: number | null = null;
+          
+          // Only get MOQ from promotion details - if no MOQ stated, everything is orderable
+          if (item.promotionDetailsSnapshot) {
+            try {
+              const promotionDetails = JSON.parse(item.promotionDetailsSnapshot);
+              actualMOQ = promotionDetails.moq || null;
+            } catch (e) {
+              // If parsing fails, no MOQ restriction
+              actualMOQ = null;
+            }
+          }
+          
+          moqMap[item.productId] = actualMOQ;
+        }
+      });
+      
+      setProductMOQs(moqMap);
+    } catch (error) {
     }
   };
 
@@ -355,37 +393,40 @@ export default function OrderDetailsModal() {
             </View>
             <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
               {(() => {
-                // Try both promotionDetails and promotionDetailsSnapshot
+                // Calculate promotion using standardized function for order items
                 const promotionDetails = item.promotionDetails || item.promotionDetailsSnapshot;
+                const piecesPerPackage = item.piecesPerPackage || 1;
+                const quantity = item.packageQuantity || item.quantity || 1;
                 
-                // Parse promotionDetailsSnapshot if it's a string
-                let parsedPromotionDetails: { minQuantity: number; freeQuantity: number } | null = null;
-                if (typeof promotionDetails === 'string') {
+                // Extract MOQ directly from this item's promotion details (variant-specific)
+                let moq: number | null = null;
+                if (promotionDetails) {
                   try {
-                    parsedPromotionDetails = JSON.parse(promotionDetails);
+                    const parsed = typeof promotionDetails === 'string' 
+                      ? JSON.parse(promotionDetails) 
+                      : promotionDetails;
+                    moq = parsed.moq || null;
                   } catch (e) {
-                    // Failed to parse, continue without promotion details
+                    moq = null;
                   }
-                } else if (promotionDetails && typeof promotionDetails === 'object') {
-                  parsedPromotionDetails = promotionDetails;
                 }
                 
-                if (parsedPromotionDetails) {
-                  const minQty = parsedPromotionDetails.minQuantity || 1;
-                  const freeQty = parsedPromotionDetails.freeQuantity || 0;
-                  const qualifyingSets = Math.floor((item.packageQuantity || item.quantity || 1) / minQty);
-                  const totalFreeItems = qualifyingSets * freeQty;
-                  
-                  if (totalFreeItems > 0) {
-                    return (
-                      <View style={styles.promotionGiftBadge}>
-                        <Gift size={12} color="#9333EA" />
-                        <Text style={styles.promotionGiftText}>
-                          +{totalFreeItems} Free
-                        </Text>
-                      </View>
-                    );
-                  }
+                const promotionGift = calculateOrderItemPromotion(
+                  promotionDetails,
+                  quantity,
+                  piecesPerPackage,
+                  moq
+                );
+                
+                if (promotionGift) {
+                  return (
+                    <View style={styles.promotionGiftBadge}>
+                      <Gift size={12} color="#9333EA" />
+                      <Text style={styles.promotionGiftText}>
+                        +{promotionGift.freeQty} Free pieces
+                      </Text>
+                    </View>
+                  );
                 }
                 return null;
               })()}
@@ -1246,7 +1287,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   discountedPrice: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#0a61d7',
     fontWeight: '600',
   },

@@ -21,6 +21,31 @@ interface RawProductData {
   };
 }
 
+// Package reference for display
+export interface PackageInfo {
+  id: number;
+  packageName?: string;
+  packageType: string;
+  piecesPerPackage: number;
+  displayOrder: number;
+  isDefault: boolean;
+}
+
+// Product variant for actual variations (color, size, flavor)
+export interface ProductVariant {
+  id: number;
+  variantName: string;
+  variantType?: string;
+  sku?: string;
+  purchasePrice: number;
+  sellingPrice: number;
+  originalSellingPrice: number | null;
+  moq?: number; // Minimum Order Quantity in pieces (variant-level)
+  attributes?: Record<string, unknown>;
+  isDefault: boolean;
+  isActive: boolean;
+}
+
 export interface MarketplaceProduct {
   id: string;
   name: string;
@@ -34,15 +59,16 @@ export interface MarketplaceProduct {
   offerId?: string;
   offerName?: string;
   discountType?: 'percentage' | 'fixed' | 'buy_x_get_y';
-  discountValue?: number; // The actual discount amount (for fixed) or percentage (for percentage)
+  discountValue?: number;
   promotionDetails?: {
-    minQuantity: number;
-    freeQuantity: number;
+    minQuantity: number; // in pieces
+    freeQuantity: number; // in pieces
     description: string;
   };
   rating: number;
   reviewCount: number;
   soldCount: string;
+  // Stock management at product level (piece-based)
   stock: number;
   stockStatus: 'In Stock' | 'Low Stock' | 'Out of Stock';
   images: string[];
@@ -50,6 +76,9 @@ export interface MarketplaceProduct {
   productCategory: string;
   brand: string;
   unit: string;
+  // Package reference (for display only)
+  packageInfo?: PackageInfo[];
+  // Default package for display
   packageType: string;
   piecesPerPackage: number;
   seller: {
@@ -104,22 +133,8 @@ export interface MarketplaceProduct {
     days: string;
     location: string;
   };
-  // Product variants for selection
-  variants?: {
-    id: number;
-    variantName: string;
-    packageType: string;
-    piecesPerPackage: number;
-    stockQuantity: number;
-    lowStockThreshold: number;
-    stockStatus: string;
-    purchasePrice: number;
-    sellingPrice: number;
-    originalSellingPrice: number | null;
-    moq?: number; // Minimum Order Quantity - for all variants
-    isDefault: boolean;
-    isActive: boolean;
-  }[];
+  // Product variants for actual variations (color, size, flavor)
+  variants?: ProductVariant[];
 }
 
 export interface MarketplaceResponse {

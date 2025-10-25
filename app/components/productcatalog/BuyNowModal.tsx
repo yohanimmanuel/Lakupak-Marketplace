@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
+import { calculateProductPromotion } from '../../../utils/promotionUtils';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -43,26 +44,30 @@ export default function BuyNowModal({
   const [selectedVariant, setSelectedVariant] = useState<number | null>(null);
   const [slideAnim] = useState(new Animated.Value(screenHeight));
   const [isClosing, setIsClosing] = useState(false);
+  
+  // Refs for long-press functionality
+  const longPressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Safe value getters
-  const safeGetString = (value: unknown, fallback: string = ''): string => {
+  // Safe value getters - memoized to prevent re-creation
+  const safeGetString = useCallback((value: unknown, fallback: string = ''): string => {
     if (value === null || value === undefined) return fallback;
     return String(value);
-  };
+  }, []);
 
-  const safeGetNumber = (value: unknown, fallback: number = 0): number => {
+  const safeGetNumber = useCallback((value: unknown, fallback: number = 0): number => {
     if (value === null || value === undefined) return fallback;
     const num = Number(value);
     return isNaN(num) ? fallback : num;
-  };
+  }, []);
 
-  const safeGetArray = (value: unknown, fallback: unknown[] = []): unknown[] => {
+  const safeGetArray = useCallback((value: unknown, fallback: unknown[] = []): unknown[] => {
     if (!Array.isArray(value)) return fallback;
     return value;
-  };
+  }, []);
 
-  // Close handler with animation
-  const handleClose = () => {
+  // Close handler with animation - memoized
+  const handleClose = useCallback(() => {
     if (isClosing) return; // Prevent multiple close calls
     
     setIsClosing(true);
@@ -74,7 +79,7 @@ export default function BuyNowModal({
       setIsClosing(false);
       onClose();
     });
-  };
+  }, [isClosing, slideAnim, onClose]);
 
   // Animation handlers
   React.useEffect(() => {
@@ -130,68 +135,136 @@ export default function BuyNowModal({
     },
   });
 
-  if (!product) return null;
+  // Memoized computed values to prevent unnecessary recalculations
+  const computedValues = useMemo(() => {
+    if (!product) return null;
 
-  const images = safeGetArray(product.images);
-  const productImage = images.length > 0 ? safeGetString(images[0]) : null;
-  
-  // Get selected variant or fallback to first variant
-  const currentVariant = selectedVariant && product && 'variants' in product && product.variants 
-    ? product.variants.find((v) => v.id === selectedVariant) || product.variants[0]
-    : product && 'variants' in product ? product.variants?.[0] : null;
-  
-  // Fallback to product-level data if no variants
-  const unitPrice = currentVariant?.sellingPrice || safeGetNumber((product as { price?: number }).price);
-  const piecesPerPackage = currentVariant?.piecesPerPackage || safeGetNumber(product.piecesPerPackage, 1);
-  const pricePerPackage = unitPrice * piecesPerPackage; // Price per box/package
-  const totalPrice = pricePerPackage * quantity; // Total price for all boxes
-  const totalPieces = piecesPerPackage * quantity;
-  const stock = currentVariant?.stockQuantity || safeGetNumber(product.stock);
-  const packageType = currentVariant?.packageType || safeGetString(product.packageType, 'Box');
-  const variantName = currentVariant?.variantName || 'Single Piece';
-  
-  // MOQ validation for ALL variants
-  const moq = currentVariant?.moq;
-  const isSinglePieceVariant = (currentVariant?.piecesPerPackage || 1) === 1;
-  
-  // For single piece variants, check against total pieces
-  // For package variants, check against package quantity (not total pieces)
-  const quantityToCheck = isSinglePieceVariant ? totalPieces : quantity;
-  const meetsMOQ = !moq || quantityToCheck >= moq;
-  
-  
-  const isFormValid = quantity > 0 && quantity <= stock && meetsMOQ;
+    const images = safeGetArray(product.images);
+    const productImage = images.length > 0 ? safeGetString(images[0]) : null;
+    
+    // Get selected variant for pricing (actual product variations like color, size, flavor)
+    const currentVariant = selectedVariant && product && 'variants' in product && product.variants 
+      ? product.variants.find((v) => v.id === selectedVariant) || product.variants[0]
+      : product && 'variants' in product ? product.variants?.[0] : null;
+    
+    // Pricing from variant or product level
+    const unitPrice = currentVariant?.sellingPrice || safeGetNumber((product as { price?: number }).price);
+    const variantName = currentVariant?.variantName || 'Default';
+    
+    // Package info for display (from product level)
+    const piecesPerPackage = safeGetNumber(product.piecesPerPackage, 1);
+    const packageType = safeGetString(product.packageType, 'Piece');
+    
+    // Calculate prices
+    const pricePerPackage = unitPrice * piecesPerPackage;
+    const totalPrice = pricePerPackage * quantity;
+    const totalPieces = piecesPerPackage * quantity;
+    
+    // Stock at product level, MOQ at variant level (piece-based)
+    const stock = safeGetNumber(product.stock);
+    const moq = currentVariant?.moq || null;
+    
+    // MOQ validation (always in pieces)
+    const meetsMOQ = !moq || totalPieces >= moq;
+    const isFormValid = quantity > 0 && totalPieces <= stock && meetsMOQ;
 
-  const handleQuantityChange = (change: number) => {
+    return {
+      productImage,
+      currentVariant,
+      unitPrice,
+      piecesPerPackage,
+      pricePerPackage,
+      totalPrice,
+      totalPieces,
+      stock,
+      packageType,
+      variantName,
+      moq,
+      meetsMOQ,
+      isFormValid
+    };
+  }, [product, selectedVariant, quantity, safeGetArray, safeGetString, safeGetNumber]);
+
+  if (!product || !computedValues) return null;
+
+  const {
+    productImage,
+    currentVariant,
+    unitPrice,
+    piecesPerPackage,
+    pricePerPackage,
+    totalPrice,
+    totalPieces,
+    stock,
+    packageType,
+    variantName,
+    moq,
+    meetsMOQ,
+    isFormValid
+  } = computedValues;
+
+  const handleQuantityChange = useCallback((change: number) => {
     const newQuantity = quantity + change;
-    if (newQuantity >= 1 && newQuantity <= stock) {
+    const newTotalPieces = newQuantity * piecesPerPackage;
+    if (newQuantity >= 1 && newTotalPieces <= stock) {
       setQuantity(newQuantity);
     }
-  };
+  }, [quantity, stock, piecesPerPackage]);
 
-  // Calculate promotion free items
-  const calculatePromotionGift = () => {
-    const promotionDetails = product?.promotionDetails;
-    if (!promotionDetails) return null;
-    
-    const minQty = promotionDetails.minQuantity || 1;
-    const freeQty = promotionDetails.freeQuantity || 0;
-    
-    // Calculate how many free items they get
-    const qualifyingSets = Math.floor(quantity / minQty);
-    const totalFreeItems = qualifyingSets * freeQty;
-    
-    if (totalFreeItems > 0) {
-      return {
-        freeQty: totalFreeItems,
-        totalReceived: quantity + totalFreeItems
-      };
+  // Cleanup long-press timers
+  const clearLongPressTimers = useCallback(() => {
+    if (longPressInterval.current) {
+      clearInterval(longPressInterval.current);
+      longPressInterval.current = null;
     }
-    
-    return null;
-  };
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+    }
+  }, []);
 
-  const handleConfirm = () => {
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      clearLongPressTimers();
+    };
+  }, [clearLongPressTimers]);
+
+  // Long-press handlers
+  const handleLongPressStart = useCallback((change: number) => {
+    // Clear any existing timers
+    clearLongPressTimers();
+    
+    // Initial delay before starting continuous increment
+    longPressTimeout.current = setTimeout(() => {
+      // Start continuous increment/decrement
+      longPressInterval.current = setInterval(() => {
+        setQuantity((prevQuantity) => {
+          const newQuantity = prevQuantity + change;
+          const newTotalPieces = newQuantity * piecesPerPackage;
+          
+          // Check bounds
+          if (newQuantity < 1 || newTotalPieces > stock) {
+            clearLongPressTimers();
+            return prevQuantity;
+          }
+          
+          return newQuantity;
+        });
+      }, 100); // Increment every 100ms
+    }, 500); // Start after 500ms hold
+  }, [clearLongPressTimers, piecesPerPackage, stock]);
+
+  const handleLongPressEnd = useCallback(() => {
+    clearLongPressTimers();
+  }, [clearLongPressTimers]);
+
+  // Calculate promotion free items - memoized (STANDARDIZED)
+  const promotionGift = useMemo(() => {
+    return calculateProductPromotion(product, quantity, variantName);
+  }, [product, quantity, variantName]);
+
+  const handleConfirm = useCallback(() => {
     if (isFormValid && product) {
       if (mode === 'cart') {
         // Add to cart logic - directly call cart store with variant information
@@ -210,6 +283,7 @@ export default function BuyNowModal({
           piecesPerPackage: piecesPerPackage.toString(),
           variantId: selectedVariant?.toString() || '',
           variantName: variantName,
+          moq: moq?.toString() || '',
         };
         
         // Add promotion details if available
@@ -226,7 +300,7 @@ export default function BuyNowModal({
         handleClose();
       }
     }
-  };
+  }, [isFormValid, product, mode, addItem, quantity, variantName, handleClose, totalPrice, safeGetString, unitPrice, packageType, piecesPerPackage, selectedVariant, router]);
 
   return (
     <Modal
@@ -257,11 +331,6 @@ export default function BuyNowModal({
           <View style={styles.handleBar} {...panResponder.panHandlers}>
             <View style={styles.handleBarIndicator} />
           </View>
-          
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>{mode === 'cart' ? 'Add to Cart' : 'Buy Now'}</Text>
-          </View>
 
           {/* Product Info */}
           <View style={styles.productInfo}>
@@ -291,7 +360,7 @@ export default function BuyNowModal({
           {/* Variant Selection */}
           {product && 'variants' in product && product.variants && product.variants.length > 1 && (
             <View style={styles.variantSection}>
-              <Text style={styles.variantLabel}>Variant:</Text>
+              <Text style={styles.variantLabel}>Variant</Text>
               <View style={styles.variantContainer}>
                 {product.variants.map((variant) => (
                   <TouchableOpacity
@@ -307,12 +376,6 @@ export default function BuyNowModal({
                       selectedVariant === variant.id && styles.variantTextSelected
                     ]}>
                       {variant.variantName}
-                    </Text>
-                    <Text style={[
-                      styles.variantDetails,
-                      selectedVariant === variant.id && styles.variantDetailsSelected
-                    ]}>
-                      {variant.piecesPerPackage} pieces per {variant.packageType}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -339,57 +402,67 @@ export default function BuyNowModal({
               <Text style={styles.priceValue}>{totalPieces} pieces</Text>
             </View>
             
-            {/* MOQ Warning for ALL variants */}
-            {moq && !meetsMOQ && (
-              <View style={styles.moqWarning}>
-                <Text style={styles.moqWarningText}>
-                  Minimum order quantity for {variantName} is {moq} {isSinglePieceVariant ? 'pieces' : variantName.toLowerCase() + 's'}. You need {moq - quantityToCheck} more {isSinglePieceVariant ? 'pieces' : variantName.toLowerCase() + 's'}.
-                </Text>
-              </View>
-            )}
+            {/* Stock Info */}
+            <View style={styles.stockInfo}>
+              <Text style={styles.stockLabel}>Available Stock:</Text>
+              <Text style={styles.stockValue}>{stock} {packageType}s</Text>
+            </View>
           </View>
 
           {/* Quantity Section */}
           <View style={styles.quantitySection}>
-            <Text style={styles.quantityLabel}>Quantity ({packageType}s):</Text>
-            <View style={styles.quantityControls}>
-              <TouchableOpacity
-                style={[
-                  styles.quantityButton,
-                  quantity <= 1 && styles.quantityButtonDisabled,
-                ]}
-                onPress={() => handleQuantityChange(-1)}
-                disabled={quantity <= 1}
-              >
-                <Minus size={20} color={quantity <= 1 ? '#9CA3AF' : '#111827'} />
-              </TouchableOpacity>
-              
-              <View style={styles.quantityDisplay}>
-                <Text style={styles.quantityText}>{quantity}</Text>
-                {calculatePromotionGift() && (
-                  <Text style={styles.promotionGiftText}>
-                    +{calculatePromotionGift()!.freeQty} Free
-                  </Text>
-                )}
-              </View>
-              
-              <TouchableOpacity
-                style={[
-                  styles.quantityButton,
-                  quantity >= stock && styles.quantityButtonDisabled,
-                ]}
-                onPress={() => handleQuantityChange(1)}
-                disabled={quantity >= stock}
-              >
-                <Plus size={20} color={quantity >= stock ? '#9CA3AF' : '#111827'} />
-              </TouchableOpacity>
-            </View>
-          </View>
 
-          {/* Stock Info */}
-          <View style={styles.stockInfo}>
-            <Text style={styles.stockLabel}>Available Stock:</Text>
-            <Text style={styles.stockValue}>{stock} {packageType}s</Text>
+            {/* MOQ Warning (piece-based) */}
+            {moq && !meetsMOQ && (
+              <View style={styles.moqWarning}>
+                <Text style={styles.moqWarningText}>
+                  Minimum order quantity is {moq} pieces. You need {moq - totalPieces} more pieces.
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.quantityRow}>
+              <Text style={styles.quantityLabel}>Quantity ({packageType}s):</Text>
+              <View style={styles.quantityControls}>
+                <TouchableOpacity
+                  style={[
+                    styles.quantityButton,
+                    quantity <= 1 && styles.quantityButtonDisabled,
+                  ]}
+                  onPress={() => handleQuantityChange(-1)}
+                  onPressIn={() => handleLongPressStart(-1)}
+                  onPressOut={handleLongPressEnd}
+                  disabled={quantity <= 1}
+                >
+                  <Minus size={15} color={quantity <= 1 ? '#9CA3AF' : '#111827'} />
+                </TouchableOpacity>
+                
+                <View style={styles.quantityDisplay}>
+                  <Text style={styles.quantityText}>{quantity}</Text>
+                </View>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.quantityButton,
+                    styles.quantityButtonLast,
+                    quantity >= stock && styles.quantityButtonDisabled,
+                  ]}
+                  onPress={() => handleQuantityChange(1)}
+                  onPressIn={() => handleLongPressStart(1)}
+                  onPressOut={handleLongPressEnd}
+                  disabled={quantity >= stock}
+                >
+                  <Plus size={15} color={quantity >= stock ? '#9CA3AF' : '#111827'} />
+                </TouchableOpacity>
+              </View>
+            </View>
+            {promotionGift && (
+              <View style={styles.promotionGiftContainer}>
+                <Text style={styles.promotionGiftText}>
+                  +{promotionGift.freeQty} Free pieces
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Total Price */}
@@ -554,52 +627,78 @@ const styles = StyleSheet.create({
   quantitySection: {
     paddingHorizontal: 15,
     marginBottom: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  quantityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  quantityRightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   quantityLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
     color: '#111827',
-    marginBottom: 12,
   },
   quantityControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    width: 90,
+    height: 32,
   },
   quantityButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    width: 30,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
   },
   quantityButtonDisabled: {
     backgroundColor: '#F9FAFB',
   },
+  quantityButtonLast: {
+    borderRightWidth: 0,
+  },
   quantityDisplay: {
-    minWidth: 60,
-    height: 40,
+    width: 30,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 15,
+    backgroundColor: '#FFFFFF',
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
   },
   quantityText: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
     color: '#111827',
+  },
+  promotionGiftContainer: {
+    alignItems: 'flex-end',
+    marginTop: 4,
   },
   promotionGiftText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#9333EA',
-    marginTop: 2,
   },
   stockInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
     marginBottom: 10,
   },
   stockLabel: {
@@ -660,6 +759,9 @@ const styles = StyleSheet.create({
   variantSection: {
     paddingHorizontal: 15,
     marginBottom: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   variantLabel: {
     fontSize: 16,
@@ -713,6 +815,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     marginTop: 8,
+    marginBottom: 8,
   },
   moqWarningText: {
     fontSize: 14,
