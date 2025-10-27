@@ -21,16 +21,6 @@ interface RawProductData {
   };
 }
 
-// Package reference for display
-export interface PackageInfo {
-  id: number;
-  packageName?: string;
-  packageType: string;
-  piecesPerPackage: number;
-  displayOrder: number;
-  isDefault: boolean;
-}
-
 // Product variant for actual variations (color, size, flavor)
 export interface ProductVariant {
   id: number;
@@ -79,8 +69,6 @@ export interface MarketplaceProduct {
   productCategory: string;
   brand: string;
   unit: string;
-  // Package reference (for display only)
-  packageInfo?: PackageInfo[];
   // Default package for display
   packageType: string;
   piecesPerPackage: number;
