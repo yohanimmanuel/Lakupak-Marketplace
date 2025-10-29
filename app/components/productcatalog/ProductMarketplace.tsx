@@ -98,8 +98,32 @@ export default function ProductMarketplace({
     return value;
   };
 
+  // Helper function to calculate price range from variant options
+  const getPriceRange = (): { min: number; max: number; hasRange: boolean } => {
+    if ('variantOptions' in product && product.variantOptions && Array.isArray(product.variantOptions)) {
+      const prices = product.variantOptions
+        .map((vo: { sellingPrice: string | number }) => {
+          const price = typeof vo.sellingPrice === 'string' ? parseFloat(vo.sellingPrice) : vo.sellingPrice;
+          return isNaN(price) ? 0 : price;
+        })
+        .filter(p => p > 0);
+      
+      if (prices.length > 0) {
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        return { min, max, hasRange: min !== max };
+      }
+    }
+    return { min: 0, max: 0, hasRange: false };
+  };
+
   // Helper functions for price fields with fallbacks
   const getSellingPrice = (): number => {
+    const priceRange = getPriceRange();
+    if (priceRange.min > 0) {
+      return priceRange.min; // Return minimum price for single value display
+    }
+    
     const sp = product.sellingPrice;
     const p = (product as EnrichedProduct).price;
     if (sp !== undefined && sp !== null) return safeGetNumber(sp);
@@ -113,6 +137,15 @@ export default function ProductMarketplace({
     if (osp !== undefined && osp !== null) return safeGetNumber(osp);
     if (op !== undefined && op !== null) return safeGetNumber(op);
     return 0;
+  };
+  
+  // Format price display (single price or range)
+  const formatPriceDisplay = (): string => {
+    const priceRange = getPriceRange();
+    if (priceRange.hasRange) {
+      return `${formatCurrency(priceRange.min)} – ${formatCurrency(priceRange.max)}`;
+    }
+    return formatCurrency(getSellingPrice());
   };
 
   const getOfferBadge = (): string | undefined => {
@@ -439,14 +472,14 @@ export default function ProductMarketplace({
 
             {/* Price */}
             <View style={styles.cardPriceContainer}>
-              {/* Only show strikethrough if there's a DISCOUNT (not just promotion) */}
-              {getHasActiveOffer() && getOriginalSellingPrice() > 0 && getOfferBadge() !== 'Promotion' && (
+              {/* Only show strikethrough if there's a DISCOUNT (not just promotion) and no price range */}
+              {getHasActiveOffer() && getOriginalSellingPrice() > 0 && getOfferBadge() !== 'Promotion' && !getPriceRange().hasRange && (
                 <Text style={styles.cardOriginalPrice}>
                   {formatCurrency(getOriginalSellingPrice())}
                 </Text>
               )}
               <Text style={[styles.cardPrice, { color: primaryColor }]}>
-                {formatCurrency(getSellingPrice())}
+                {formatPriceDisplay()}
               </Text>
             </View>
 
@@ -601,10 +634,10 @@ export default function ProductMarketplace({
       <View style={styles.pricingContainer}>
         <View style={styles.priceRow}>
           <Text style={[styles.currentPrice, { color: primaryColor }]}>
-            {formatCurrency(getSellingPrice())}
+            {formatPriceDisplay()}
           </Text>
-          {/* Only show strikethrough if there's a DISCOUNT (not just promotion) */}
-          {getHasActiveOffer() && getOriginalSellingPrice() > 0 && getOfferBadge() !== 'Promotion' && (
+          {/* Only show strikethrough if there's a DISCOUNT (not just promotion) and no price range */}
+          {getHasActiveOffer() && getOriginalSellingPrice() > 0 && getOfferBadge() !== 'Promotion' && !getPriceRange().hasRange && (
             <Text style={styles.originalPrice}>
               {formatCurrency(getOriginalSellingPrice())}
             </Text>
@@ -1230,7 +1263,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   cardPrice: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   cardOriginalPrice: {
