@@ -268,17 +268,66 @@ export default function CartScreen() {
               <View style={{alignItems: 'center'}}>
                 <Text style={styles.quantityText}>{item.quantity}</Text>
                 {(() => {
-                  // Calculate promotion using standardized function
-                  const promotionGift = calculateProductPromotion(
-                    item.product,
-                    item.quantity,
-                    item.variant
-                  );
+                  // Calculate promotion using MOQ-aware logic (matches BuyNowModal)
+                  const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
+                    id: number;
+                    moq?: number;
+                    attributes: Record<string, string>;
+                  }> };
                   
-                  if (promotionGift) {
+                  if (!marketplaceProduct.promotionDetails) return null;
+                  
+                  const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+                  const totalPieces = item.quantity * piecesPerPackage;
+                  
+                  // Get MOQ from selected variantOption
+                  let moq: number | null = null;
+                  if (marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)) {
+                    // Parse variantName string to match attributes
+                    const variantAttributes: Record<string, string> = {};
+                    if (item.variant && item.variant !== 'Default') {
+                      item.variant.split(', ').forEach(part => {
+                        const [key, ...valueParts] = part.split(': ');
+                        if (key && valueParts.length > 0) {
+                          variantAttributes[key.trim()] = valueParts.join(': ').trim();
+                        }
+                      });
+                    }
+                    
+                    const matchingOption = marketplaceProduct.variantOptions.find(option => {
+                      if (!option.attributes) return false;
+                      return Object.entries(variantAttributes).every(([key, value]) => {
+                        return option.attributes?.[key] === value;
+                      });
+                    });
+                    
+                    if (matchingOption?.moq) {
+                      moq = matchingOption.moq;
+                    } else if (marketplaceProduct.variantOptions.length > 0 && marketplaceProduct.variantOptions[0]?.moq) {
+                      moq = marketplaceProduct.variantOptions[0].moq;
+                    }
+                  }
+                  
+                  // Calculate promotion using BuyNowModal logic
+                  const minQty = marketplaceProduct.promotionDetails.minQuantity || 1;
+                  const freeQty = marketplaceProduct.promotionDetails.freeQuantity || 0;
+                  
+                  let totalFreeItems = 0;
+                  if (!moq) {
+                    // No MOQ: calculate from total quantity
+                    const completeSets = Math.floor(totalPieces / minQty);
+                    totalFreeItems = completeSets * freeQty;
+                  } else if (totalPieces >= moq) {
+                    // MOQ exists and met: calculate from quantity above MOQ
+                    const quantityAboveMOQ = totalPieces - moq;
+                    const completeSets = Math.floor(quantityAboveMOQ / minQty);
+                    totalFreeItems = completeSets * freeQty;
+                  }
+                  
+                  if (totalFreeItems > 0) {
                     return (
                       <Text style={styles.promotionGiftText}>
-                        +{promotionGift.freeQty} Free pieces
+                        +{totalFreeItems} Free pieces
                       </Text>
                     );
                   }
@@ -296,18 +345,55 @@ export default function CartScreen() {
             <View style={styles.priceContainer}>
               <Text style={styles.price}>
                 {(() => {
-                  // Get variant-specific pricing
-                  const marketplaceProduct = item.product as MarketplaceProduct;
+                  // Get variant-specific pricing - use new variantOptions structure first
+                  const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
+                    id: number;
+                    sellingPrice: number;
+                    originalSellingPrice?: number | string;
+                    attributes: Record<string, string>;
+                  }> };
                   let unitPrice = 0;
                   let piecesPerPackage = 1;
                   
-                  if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
-                    // Find the selected variant
+                  // Try new variantOptions structure first
+                  if (marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)) {
+                    // Parse variantName string (format: "Color: Red, Size: Large") to match attributes
+                    const variantAttributes: Record<string, string> = {};
+                    if (item.variant && item.variant !== 'Default') {
+                      item.variant.split(', ').forEach(part => {
+                        const [key, ...valueParts] = part.split(': ');
+                        if (key && valueParts.length > 0) {
+                          variantAttributes[key.trim()] = valueParts.join(': ').trim();
+                        }
+                      });
+                    }
+                    
+                    // Find matching variantOption by attributes
+                    const matchingOption = marketplaceProduct.variantOptions.find(option => {
+                      if (!option.attributes) return false;
+                      return Object.entries(variantAttributes).every(([key, value]) => {
+                        return option.attributes?.[key] === value;
+                      });
+                    });
+                    
+                    if (matchingOption) {
+                      unitPrice = typeof matchingOption.sellingPrice === 'string' 
+                        ? parseFloat(matchingOption.sellingPrice) 
+                        : matchingOption.sellingPrice || 0;
+                    } else if (marketplaceProduct.variantOptions.length > 0) {
+                      // Fallback to first variantOption
+                      const firstOption = marketplaceProduct.variantOptions[0];
+                      unitPrice = typeof firstOption.sellingPrice === 'string' 
+                        ? parseFloat(firstOption.sellingPrice) 
+                        : firstOption.sellingPrice || 0;
+                    }
+                  } else if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+                    // Legacy: Find the selected variant
                     const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
                     unitPrice = selectedVariant.sellingPrice || 0;
                   } else {
                     // Fallback to product-level pricing
-                    unitPrice = (item.product as { price?: number }).price || 0;
+                    unitPrice = (item.product as { price?: number }).price || item.product.sellingPrice || 0;
                   }
                   
                   // Get piecesPerPackage from product level (piece-based system)

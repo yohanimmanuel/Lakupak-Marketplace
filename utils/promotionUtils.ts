@@ -29,6 +29,11 @@ export interface ProductWithPromotion {
   piecesPerPackage?: number;
   packageType?: string;
   variants?: ProductVariant[];
+  variantOptions?: Array<{
+    id: number;
+    moq?: number | null;
+    attributes: Record<string, string>;
+  }>;
 }
 
 /**
@@ -143,9 +148,36 @@ export function calculateProductPromotion(
   const piecesPerPackage = product.piecesPerPackage || 1;
   const totalPieces = quantityInPackages * piecesPerPackage;
   
-  // Get MOQ from selected variant (variant-level MOQ)
+  // Get MOQ from selected variant - use new variantOptions structure first
   let moq: number | null = null;
-  if (variantName && product.variants && product.variants.length > 0) {
+  
+  // Try new variantOptions structure first
+  if (variantName && variantName !== 'Default' && product.variantOptions && Array.isArray(product.variantOptions)) {
+    // Parse variantName string (format: "Color: Red, Size: Large") to match attributes
+    const variantAttributes: Record<string, string> = {};
+    variantName.split(', ').forEach(part => {
+      const [key, ...valueParts] = part.split(': ');
+      if (key && valueParts.length > 0) {
+        variantAttributes[key.trim()] = valueParts.join(': ').trim();
+      }
+    });
+    
+    // Find matching variantOption by attributes
+    const matchingOption = product.variantOptions.find(option => {
+      if (!option.attributes) return false;
+      return Object.entries(variantAttributes).every(([key, value]) => {
+        return option.attributes?.[key] === value;
+      });
+    });
+    
+    if (matchingOption?.moq) {
+      moq = matchingOption.moq;
+    } else if (product.variantOptions.length > 0 && product.variantOptions[0]?.moq) {
+      // Fallback to first variantOption
+      moq = product.variantOptions[0].moq;
+    }
+  } else if (variantName && product.variants && product.variants.length > 0) {
+    // Legacy: Find the selected variant by variantName
     const selectedVariant = product.variants.find(v => v.variantName === variantName);
     moq = selectedVariant?.moq || null;
   }

@@ -12,12 +12,11 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Minus, Plus } from 'lucide-react-native';
+import { Minus, Plus, Gift } from 'lucide-react-native';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
-import { calculateProductPromotion } from '../../../utils/promotionUtils';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -328,9 +327,37 @@ export default function BuyNowModal({
     }
   }, []);
 
+  // Calculate promotion free items (works with MOQ - starts counting after MOQ)
   const promotionInfo = useMemo(() => {
-    return calculateProductPromotion(product, quantity, variantName);
-  }, [product, quantity, variantName]);
+    if (!product?.promotionDetails) return null;
+    
+    // Get total pieces from quantity
+    const totalPieces = quantity * piecesPerPackage;
+    
+    // Get MOQ from current variant option
+    const moqValue = moq;
+    
+    // Calculate promotion using the utility function logic
+    const minQty = product.promotionDetails.minQuantity || 1;
+    const freeQty = product.promotionDetails.freeQuantity || 0;
+    
+    // If no MOQ, calculate from total quantity (starts from 1)
+    if (!moqValue) {
+      const completeSets = Math.floor(totalPieces / minQty);
+      const totalFreeItems = completeSets * freeQty;
+      return totalFreeItems > 0 ? totalFreeItems : null;
+    }
+    
+    // If MOQ exists and not met, no free items
+    if (totalPieces < moqValue) return null;
+    
+    // Calculate free items from quantity above MOQ (starts counting after MOQ)
+    const quantityAboveMOQ = totalPieces - moqValue;
+    const completeSets = Math.floor(quantityAboveMOQ / minQty);
+    const totalFreeItems = completeSets * freeQty;
+    
+    return totalFreeItems > 0 ? totalFreeItems : null;
+  }, [product, quantity, piecesPerPackage, moq]);
 
   const handleConfirm = useCallback(() => {
     if (isFormValid && product) {
@@ -360,7 +387,7 @@ export default function BuyNowModal({
         }
         
         router.push({
-          pathname: '/product',
+          pathname: '/components/productcatalog/checkout',
           params: checkoutParams
         });
         handleClose();
@@ -421,9 +448,9 @@ export default function BuyNowModal({
     >
       <StatusBar backgroundColor="rgba(0, 0, 0, 0.5)" barStyle="light-content" />
       <View style={styles.overlay}>
-        <TouchableOpacity 
-          style={styles.backdrop} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
           onPress={handleClose}
         />
         
@@ -454,17 +481,17 @@ export default function BuyNowModal({
                 </View>
               )}
               <View style={styles.productInfo}>
-                <Text style={styles.productName} numberOfLines={2}>
+              <Text style={styles.productName} numberOfLines={2}>
                   {safeGetString(product.name)}
-                </Text>
+              </Text>
                 <Text style={styles.headerPrice}>
                   {formatHeaderPriceDisplay()}
-                </Text>
+              </Text>
                 <View style={styles.stockContainer}>
                   <Text style={styles.stock}>Stock: {stock}</Text>
                   <Text style={[styles.stockStatus, { color: stock === 0 ? '#EF4444' : stock <= (currentVariantOption?.lowStockThreshold || 0) ? '#F59E0B' : '#10B981' }]}>
                     {stock === 0 ? 'Out of Stock' : stock <= (currentVariantOption?.lowStockThreshold || 0) ? 'Low Stock' : 'In Stock'}
-                  </Text>
+              </Text>
                 </View>
               </View>
             </View>
@@ -479,16 +506,16 @@ export default function BuyNowModal({
                 return (
                   <View key={definition.id} style={styles.variantTypeContainer}>
                     <Text style={styles.variantLabel}>{definition.variantType}</Text>
-                    <View style={styles.variantContainer}>
+              <View style={styles.variantContainer}>
                       {options.map((option, index) => {
                         const optionStr = String(option);
                         const isSelected = selectedVariantOptions[definition.variantType] === optionStr;
                         
                         return (
-                          <TouchableOpacity
+                  <TouchableOpacity
                             key={`${definition.id}-${index}`}
-                            style={[
-                              styles.variantOption,
+                    style={[
+                      styles.variantOption,
                               isSelected && styles.variantOptionSelected
                             ]}
                             onPress={() => {
@@ -497,83 +524,99 @@ export default function BuyNowModal({
                                 [definition.variantType]: optionStr
                               }));
                             }}
-                          >
-                            <Text style={[
-                              styles.variantText,
+                  >
+                    <Text style={[
+                      styles.variantText,
                               isSelected && styles.variantTextSelected
-                            ]}>
+                    ]}>
                               {optionStr}
-                            </Text>
-                          </TouchableOpacity>
+                    </Text>
+                  </TouchableOpacity>
                         );
                       })}
-                    </View>
+              </View>
                   </View>
                 );
               })}
             </View>
           )}
 
-          {/* MOQ Warning */}
-          {moq && !meetsMOQ && (
-            <View style={styles.moqWarning}>
-              <Text style={styles.moqWarningText}>
-                Minimum order: {moq} pieces
-              </Text>
-            </View>
-          )}
-
           {/* Quantity Selector */}
           <View style={styles.quantitySection}>
-            <Text style={styles.quantityLabel}>Quantity</Text>
-            <View style={styles.quantityControls}>
-              <TouchableOpacity
-                style={[styles.quantityButton, quantity <= 1 && styles.quantityButtonDisabled]}
-                onPressIn={() => startLongPress(false)}
-                onPressOut={stopLongPress}
-                disabled={quantity <= 1}
-              >
-                <Minus size={20} color={quantity <= 1 ? '#D1D5DB' : '#111827'} />
-              </TouchableOpacity>
+            <View style={styles.quantityRow}>
+              <Text style={styles.quantityLabel}>Quantity</Text>
               
-              <Text style={styles.quantityValue}>{quantity}</Text>
-              
-              <TouchableOpacity
-                style={[
-                  styles.quantityButton,
-                  totalPieces >= stock && styles.quantityButtonDisabled
-                ]}
-                onPressIn={() => startLongPress(true)}
-                onPressOut={stopLongPress}
-                disabled={totalPieces >= stock}
-              >
-                <Plus size={20} color={totalPieces >= stock ? '#D1D5DB' : '#111827'} />
-              </TouchableOpacity>
+              <View style={styles.quantityControlsGroup}>
+                {/* Free items display - left side beside selector */}
+                {promotionInfo && promotionInfo > 0 && (
+                  <View style={styles.freeItemsContainer}>
+                    <Gift size={14} color="#9333EA" />
+                    <Text style={styles.freeItemsText}>+ {promotionInfo} free items</Text>
+                  </View>
+                )}
+                
+                {/* Segmented Quantity Selector */}
+                <View style={styles.quantitySelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.quantityButtonLeft,
+                      quantity <= 1 && styles.quantityButtonDisabled
+                    ]}
+                    onPressIn={() => startLongPress(false)}
+                    onPressOut={stopLongPress}
+                    disabled={quantity <= 1}
+                  >
+                    <Minus size={14} color={quantity <= 1 ? '#D1D5DB' : '#6B7280'} />
+                  </TouchableOpacity>
+                  
+                  <View style={styles.quantitySeparator} />
+                  
+                  <View style={styles.quantityDisplay}>
+                    <Text style={styles.quantityValue}>{quantity}</Text>
+                  </View>
+                  
+                  <View style={styles.quantitySeparator} />
+                  
+                  <TouchableOpacity
+                    style={[
+                      styles.quantityButtonRight,
+                      totalPieces >= stock && styles.quantityButtonDisabled
+                    ]}
+                    onPressIn={() => startLongPress(true)}
+                    onPressOut={stopLongPress}
+                    disabled={totalPieces >= stock}
+                  >
+                    <Plus size={14} color={totalPieces >= stock ? '#D1D5DB' : '#6B7280'} />
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
+            
+            {/* MOQ Warning - below the selector row */}
+            {moq && !meetsMOQ && (
+              <View style={styles.moqWarning}>
+                <Text style={styles.moqWarningText}>
+                  Minimum order: {moq} pieces
+                </Text>
+              </View>
+            )}
           </View>
-
-          {/* Promotion Info */}
-          {promotionInfo && (
-            <View style={styles.promotionBanner}>
-              <Text style={styles.promotionText}>{String(promotionInfo)}</Text>
-            </View>
-          )}
 
           {/* Footer */}
           <View style={styles.footer}>
-            <View style={styles.totalSection}>
+          <View style={styles.totalSection}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalPrice}>{formatCurrency(totalPrice)}</Text>
             </View>
-            <TouchableOpacity
+          <TouchableOpacity
               style={[styles.confirmButton, !isFormValid && styles.confirmButtonDisabled]}
-              onPress={handleConfirm}
-              disabled={!isFormValid}
-            >
+            onPress={handleConfirm}
+            disabled={!isFormValid}
+          >
               <Text style={styles.confirmButtonText}>
                 {mode === 'cart' ? 'Add to Cart' : 'Buy Now'}
-              </Text>
-            </TouchableOpacity>
+            </Text>
+          </TouchableOpacity>
           </View>
         </Animated.View>
       </View>
@@ -739,50 +782,75 @@ const styles = StyleSheet.create({
     color: '#0a61d7',
   },
   quantitySection: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginBottom: 10,
+  },
+  quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    gap: 12,
   },
-  quantityLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  quantityControls: {
+  quantityControlsGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
   },
-  quantityButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  quantityButtonDisabled: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#E5E7EB',
-  },
-  quantityValue: {
+  quantityLabel: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+  },
+  quantitySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  quantityButtonLeft: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonRight: {
+    width: 32,
+    height: 32,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonDisabled: {
+    backgroundColor: '#F9FAFB',
+  },
+  quantitySeparator: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#E5E7EB',
+  },
+  quantityDisplay: {
     minWidth: 40,
+    height: 32,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  quantityValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0a61d7',
     textAlign: 'center',
   },
   moqWarning: {
     backgroundColor: '#FEF3C7',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 8,
   },
@@ -791,18 +859,15 @@ const styles = StyleSheet.create({
     color: '#92400E',
     fontWeight: '500',
   },
-  promotionBanner: {
-    backgroundColor: '#DBEAFE',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 8,
+  freeItemsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  promotionText: {
-    fontSize: 13,
-    color: '#1E40AF',
-    fontWeight: '500',
+  freeItemsText: {
+    fontSize: 12,
+    color: '#9333EA',
+    fontWeight: '600',
   },
   footer: {
     paddingHorizontal: 16,

@@ -117,6 +117,26 @@ export default function ProductMarketplace({
     return { min: 0, max: 0, hasRange: false };
   };
 
+  // Helper function to calculate original price range from variant options
+  const getOriginalPriceRange = (): { min: number; max: number; hasRange: boolean } => {
+    if ('variantOptions' in product && product.variantOptions && Array.isArray(product.variantOptions)) {
+      const originalPrices = product.variantOptions
+        .map((vo: { originalSellingPrice?: string | number | null }) => {
+          if (!vo.originalSellingPrice || vo.originalSellingPrice === '') return 0;
+          const price = typeof vo.originalSellingPrice === 'string' ? parseFloat(vo.originalSellingPrice) : vo.originalSellingPrice;
+          return isNaN(price) ? 0 : price;
+        })
+        .filter(p => p > 0);
+      
+      if (originalPrices.length > 0) {
+        const min = Math.min(...originalPrices);
+        const max = Math.max(...originalPrices);
+        return { min, max, hasRange: min !== max };
+      }
+    }
+    return { min: 0, max: 0, hasRange: false };
+  };
+
   // Helper functions for price fields with fallbacks
   const getSellingPrice = (): number => {
     const priceRange = getPriceRange();
@@ -132,11 +152,33 @@ export default function ProductMarketplace({
   };
 
   const getOriginalSellingPrice = (): number => {
+    // First check variantOptions for original price range
+    const originalPriceRange = getOriginalPriceRange();
+    if (originalPriceRange.min > 0) {
+      return originalPriceRange.min; // Return minimum for single value display
+    }
+    
+    // Fallback to product-level fields
     const osp = product.originalSellingPrice;
     const op = (product as EnrichedProduct).originalPrice;
     if (osp !== undefined && osp !== null) return safeGetNumber(osp);
     if (op !== undefined && op !== null) return safeGetNumber(op);
     return 0;
+  };
+
+  // Format original price display (single price or range)
+  const formatOriginalPriceDisplay = (): string => {
+    const originalPriceRange = getOriginalPriceRange();
+    if (originalPriceRange.min > 0) {
+      if (originalPriceRange.hasRange) {
+        return `${formatCurrency(originalPriceRange.min)} – ${formatCurrency(originalPriceRange.max)}`;
+      }
+      return formatCurrency(originalPriceRange.min);
+    }
+    
+    // Fallback to single price
+    const originalPrice = getOriginalSellingPrice();
+    return originalPrice > 0 ? formatCurrency(originalPrice) : '';
   };
   
   // Format price display (single price or range)
@@ -472,10 +514,10 @@ export default function ProductMarketplace({
 
             {/* Price */}
             <View style={styles.cardPriceContainer}>
-              {/* Only show strikethrough if there's a DISCOUNT (not just promotion) and no price range */}
-              {getHasActiveOffer() && getOriginalSellingPrice() > 0 && getOfferBadge() !== 'Promotion' && !getPriceRange().hasRange && (
+              {/* Only show strikethrough if there's a DISCOUNT (not just promotion) */}
+              {getHasActiveOffer() && getOriginalSellingPrice() > 0 && getOfferBadge() !== 'Promotion' && (
                 <Text style={styles.cardOriginalPrice}>
-                  {formatCurrency(getOriginalSellingPrice())}
+                  {formatOriginalPriceDisplay()}
                 </Text>
               )}
               <Text style={[styles.cardPrice, { color: primaryColor }]}>
@@ -633,17 +675,19 @@ export default function ProductMarketplace({
       {/* Pricing */}
       <View style={styles.pricingContainer}>
         <View style={styles.priceRow}>
-          <Text style={[styles.currentPrice, { color: primaryColor }]}>
-            {formatPriceDisplay()}
-          </Text>
-          {/* Only show strikethrough if there's a DISCOUNT (not just promotion) and no price range */}
-          {getHasActiveOffer() && getOriginalSellingPrice() > 0 && getOfferBadge() !== 'Promotion' && !getPriceRange().hasRange && (
-            <Text style={styles.originalPrice}>
-              {formatCurrency(getOriginalSellingPrice())}
-            </Text>
-          )}
-          {/* Show offer badge */}
-          {getHasActiveOffer() && getOfferBadge() && (() => {
+          <View style={styles.priceColumn}>
+            {/* Only show strikethrough if there's a DISCOUNT (not just promotion) */}
+            {getHasActiveOffer() && getOriginalSellingPrice() > 0 && getOfferBadge() !== 'Promotion' && (
+              <Text style={styles.originalPrice}>
+                {formatOriginalPriceDisplay()}
+              </Text>
+            )}
+            <View style={styles.currentPriceRow}>
+              <Text style={[styles.currentPrice, { color: primaryColor }]}>
+                {formatPriceDisplay()}
+              </Text>
+              {/* Show offer badge - aligned with current price */}
+              {getHasActiveOffer() && getOfferBadge() && (() => {
             const originalPrice = getOriginalSellingPrice();
             const currentPrice = getSellingPrice();
             
@@ -706,6 +750,8 @@ export default function ProductMarketplace({
               </View>
             );
           })()}
+            </View>
+          </View>
         </View>
         <Text style={styles.shippingNote}>
           Free shipping for orders above {formatCurrency(500000)}
@@ -1529,16 +1575,26 @@ const styles = StyleSheet.create({
   },
   priceRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 12,
     marginBottom: 4,
   },
+  priceColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 4,
+  },
+  currentPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   currentPrice: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   originalPrice: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#6B7280',
     textDecorationLine: 'line-through',
   },

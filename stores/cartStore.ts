@@ -368,13 +368,49 @@ export const useCartStore = create<CartState>()(
       getTotalPrice: () => {
         const { getSelectedItems } = get()
         return getSelectedItems().reduce((total, item) => {
-          // Get variant-specific pricing
-          const marketplaceProduct = item.product as MarketplaceProduct;
+          // Get variant-specific pricing - use new variantOptions structure first
+          const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
+            id: number;
+            sellingPrice: number;
+            attributes: Record<string, string>;
+          }> };
           let unitPrice = 0;
           let piecesPerPackage = 1;
           
-          if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
-            // Find the selected variant
+          // Try new variantOptions structure first
+          if (marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)) {
+            // Parse variantName string (format: "Color: Red, Size: Large") to match attributes
+            const variantAttributes: Record<string, string> = {};
+            if (item.variant && item.variant !== 'Default') {
+              item.variant.split(', ').forEach(part => {
+                const [key, ...valueParts] = part.split(': ');
+                if (key && valueParts.length > 0) {
+                  variantAttributes[key.trim()] = valueParts.join(': ').trim();
+                }
+              });
+            }
+            
+            // Find matching variantOption by attributes
+            const matchingOption = marketplaceProduct.variantOptions.find(option => {
+              if (!option.attributes) return false;
+              return Object.entries(variantAttributes).every(([key, value]) => {
+                return option.attributes?.[key] === value;
+              });
+            });
+            
+            if (matchingOption) {
+              unitPrice = typeof matchingOption.sellingPrice === 'string' 
+                ? parseFloat(matchingOption.sellingPrice) 
+                : matchingOption.sellingPrice || 0;
+            } else if (marketplaceProduct.variantOptions.length > 0) {
+              // Fallback to first variantOption
+              const firstOption = marketplaceProduct.variantOptions[0];
+              unitPrice = typeof firstOption.sellingPrice === 'string' 
+                ? parseFloat(firstOption.sellingPrice) 
+                : firstOption.sellingPrice || 0;
+            }
+          } else if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+            // Legacy: Find the selected variant
             const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
             unitPrice = selectedVariant.sellingPrice || 0;
           } else {
@@ -392,14 +428,61 @@ export const useCartStore = create<CartState>()(
       getTotalSaved: () => {
         const { getSelectedItems } = get()
         return getSelectedItems().reduce((total, item) => {
-          // Get variant-specific pricing
-          const marketplaceProduct = item.product as MarketplaceProduct;
+          // Get variant-specific pricing - use new variantOptions structure first
+          const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
+            id: number;
+            sellingPrice: number;
+            originalSellingPrice?: number | string;
+            attributes: Record<string, string>;
+          }> };
           let unitPrice = 0;
           let originalPrice = 0;
           let piecesPerPackage = 1;
           
-          if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
-            // Find the selected variant
+          // Try new variantOptions structure first
+          if (marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)) {
+            // Parse variantName string (format: "Color: Red, Size: Large") to match attributes
+            const variantAttributes: Record<string, string> = {};
+            if (item.variant && item.variant !== 'Default') {
+              item.variant.split(', ').forEach(part => {
+                const [key, ...valueParts] = part.split(': ');
+                if (key && valueParts.length > 0) {
+                  variantAttributes[key.trim()] = valueParts.join(': ').trim();
+                }
+              });
+            }
+            
+            // Find matching variantOption by attributes
+            const matchingOption = marketplaceProduct.variantOptions.find(option => {
+              if (!option.attributes) return false;
+              return Object.entries(variantAttributes).every(([key, value]) => {
+                return option.attributes?.[key] === value;
+              });
+            });
+            
+            if (matchingOption) {
+              unitPrice = typeof matchingOption.sellingPrice === 'string' 
+                ? parseFloat(matchingOption.sellingPrice) 
+                : matchingOption.sellingPrice || 0;
+              
+              const origPrice = matchingOption.originalSellingPrice;
+              originalPrice = origPrice 
+                ? (typeof origPrice === 'string' ? parseFloat(origPrice) : origPrice)
+                : unitPrice;
+            } else if (marketplaceProduct.variantOptions.length > 0) {
+              // Fallback to first variantOption
+              const firstOption = marketplaceProduct.variantOptions[0];
+              unitPrice = typeof firstOption.sellingPrice === 'string' 
+                ? parseFloat(firstOption.sellingPrice) 
+                : firstOption.sellingPrice || 0;
+              
+              const origPrice = firstOption.originalSellingPrice;
+              originalPrice = origPrice 
+                ? (typeof origPrice === 'string' ? parseFloat(origPrice) : origPrice)
+                : unitPrice;
+            }
+          } else if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
+            // Legacy: Find the selected variant
             const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
             unitPrice = selectedVariant.sellingPrice || 0;
             originalPrice = selectedVariant.originalSellingPrice || selectedVariant.sellingPrice || 0;
