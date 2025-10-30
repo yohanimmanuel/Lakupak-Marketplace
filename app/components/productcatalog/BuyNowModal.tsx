@@ -372,6 +372,7 @@ export default function BuyNowModal({
           quantity: quantity.toString(),
           totalPrice: totalPrice.toString(),
           productName: safeGetString(product.name),
+          productImage: productImage || '',
           unitPrice: unitPrice.toString(),
           packageType: packageType,
           piecesPerPackage: piecesPerPackage.toString(),

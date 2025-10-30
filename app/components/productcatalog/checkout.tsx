@@ -112,6 +112,8 @@ export default function CheckoutScreen() {
   const [selectedAddress, setSelectedAddress] = useState('default');
   const [selectedPayment, setSelectedPayment] = useState('credit_card');
   const [selectedShipping, setSelectedShipping] = useState('standard');
+  // Per-distributor shipping selection for cart checkout
+  const [selectedShippingByDistributor, setSelectedShippingByDistributor] = useState<Record<string, string>>({});
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showPickupModal, setShowPickupModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -340,6 +342,11 @@ export default function CheckoutScreen() {
     }
   };
 
+  // Handle per-distributor shipping selection
+  const handleDistributorShippingSelection = (distributorId: string, optionId: string) => {
+    setSelectedShippingByDistributor(prev => ({ ...prev, [distributorId]: optionId }));
+  };
+
   // Handle date/time selection
   const handleDateChange = (event: unknown, selectedDate?: Date) => {
     setShowDatePicker(false);
@@ -513,11 +520,12 @@ export default function CheckoutScreen() {
     if (isCartCheckout) {
       // For cart checkout, we need to calculate shipping for each distributor group
       let totalShipping = 0;
-      Object.values(distributorGroups).forEach(group => {
+      Object.entries(distributorGroups).forEach(([distributorId, group]) => {
         if (group.length > 0) {
           const firstProduct = group[0].product as MarketplaceProduct;
           const shippingOptions = getAvailableShippingOptions(firstProduct);
-          const selectedOption = shippingOptions.find(s => s.id === selectedShipping) || shippingOptions[0];
+          const selectedId = selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id;
+          const selectedOption = shippingOptions.find(s => s.id === selectedId) || shippingOptions[0];
           if (selectedOption) {
             totalShipping += selectedOption.price;
           }
@@ -621,7 +629,8 @@ export default function CheckoutScreen() {
                     }, 0);
                     const firstProduct = items[0].product as MarketplaceProduct;
                     const shippingOptions = getAvailableShippingOptions(firstProduct);
-                    const selectedOption = shippingOptions.find(s => s.id === selectedShipping) || shippingOptions[0];
+                    const selectedId = selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id;
+                    const selectedOption = shippingOptions.find(s => s.id === selectedId) || shippingOptions[0];
                     const distributorShippingCost = selectedOption ? selectedOption.price : 0;
                     const distributorTotal = distributorSubtotal + distributorShippingCost;
                     
@@ -715,7 +724,7 @@ export default function CheckoutScreen() {
                       contactPhone: cachedUser?.phone || addresses[0].phone,
                       customerEmail: customerEmail,
                       deliveryAddress: addresses[0].address,
-                      deliveryMethod: selectedShipping === 'pickup' ? 'Pickup' : 'Distributor Fleet',
+                      deliveryMethod: (selectedId === 'pickup') ? 'Pickup' : 'Distributor Fleet',
                       orderStatus: 'Pending',
                       paymentStatus: 'Unpaid',
                       paymentTerms: 'Cash on Delivery',
@@ -1123,9 +1132,9 @@ export default function CheckoutScreen() {
                           key={option.id}
                           style={[
                             styles.shippingOption,
-                            selectedShipping === option.id && styles.shippingOptionSelected
+                            (selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id) === option.id && styles.shippingOptionSelected
                           ]}
-                          onPress={() => handleShippingSelection(option.id)}
+                          onPress={() => handleDistributorShippingSelection(distributorId, option.id)}
                         >
                           <View style={styles.shippingInfo}>
                             <Text style={styles.shippingName}>{option.name}</Text>
@@ -1134,7 +1143,7 @@ export default function CheckoutScreen() {
                               <Clock size={14} color="#6B7280" />
                               <Text style={styles.shippingTimeText}>
                                 {option.id === 'pickup' 
-                                  ? (selectedShipping === 'pickup' && pickupDateTime ? `Pickup scheduled: ${pickupDateTime.toLocaleString('en-US', {
+                                  ? ((selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id) === 'pickup' && pickupDateTime ? `Pickup scheduled: ${pickupDateTime.toLocaleString('en-US', {
                                       weekday: 'short',
                                       month: 'short',
                                       day: 'numeric',
@@ -1143,7 +1152,7 @@ export default function CheckoutScreen() {
                                       hour12: true
                                     })}` : 'Available for pickup')
                                   : option.id === 'scheduled'
-                                  ? (selectedShipping === 'scheduled' && scheduledDateTime ? `Delivery scheduled: ${scheduledDateTime.toLocaleString('en-US', {
+                                  ? ((selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id) === 'scheduled' && scheduledDateTime ? `Delivery scheduled: ${scheduledDateTime.toLocaleString('en-US', {
                                       weekday: 'short',
                                       month: 'short',
                                       day: 'numeric',
@@ -1163,7 +1172,7 @@ export default function CheckoutScreen() {
                             ]}>
                               {option.free ? 'FREE' : formatCurrency(option.price)}
                             </Text>
-                            {selectedShipping === option.id && (
+                            {(selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id) === option.id && (
                               <CheckCircle size={20} color="#0a61d7" />
                             )}
                           </View>

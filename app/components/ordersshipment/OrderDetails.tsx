@@ -394,26 +394,28 @@ export default function OrderDetailsModal() {
         </View>
         <View style={styles.productDetails}>
           <Text style={styles.productName} numberOfLines={2}>
-            {item.productName || item.name || 'Unknown Product'}{item.variantName ? ` - ${item.variantName}` : ''}
+            {item.productName || item.name}
           </Text>
-          <Text style={styles.productSpecs}>
-           1 {item.packageType || 'piece'} = {item.piecesPerPackage || 1} pieces
-          </Text>
+          {item.variantName ? (
+            <Text style={styles.variantName} numberOfLines={2}>
+              {item.variantName}
+            </Text>
+          ) : null}
           <View style={styles.priceRow}>
             <View style={styles.priceContainer}>
               {item.originalPriceSnapshot && 
                 parseFloat(item.originalPriceSnapshot) > (item.pricePerPackage || item.unitPrice) ? (
                 <>
                   <Text style={styles.originalPrice}>
-                    {formatCurrency(parseFloat(item.originalPriceSnapshot))} per {item.packageType}
+                    {formatCurrency(parseFloat(item.originalPriceSnapshot))}
                   </Text>
                   <Text style={styles.discountedPrice}>
-                    {formatCurrency(item.pricePerPackage || item.unitPrice)} per {item.packageType}
+                    {formatCurrency(item.pricePerPackage || item.unitPrice)}
                   </Text>
                 </>
               ) : (
                 <Text style={styles.productPrice}>
-                  {formatCurrency(item.pricePerPackage || item.unitPrice)} per {item.packageType}
+                  {formatCurrency(item.pricePerPackage || item.unitPrice)}
                 </Text>
               )}
             </View>
@@ -1256,6 +1258,11 @@ const styles = StyleSheet.create({
   productSpecs: {
     fontSize: 12,
     color: '#6B7280',
+    marginBottom: 4,
+  },
+  variantName: {
+    fontSize: 13,
+    color: '#111827',
     marginBottom: 4,
   },
   productPrice: {
