@@ -43,6 +43,8 @@ export interface MarketplaceProduct {
   id: string;
   name: string;
   description: string;
+  // Optional distributor owner id (when provided by API)
+  userId?: number;
   sellingPrice: number;
   originalSellingPrice: number;
   discount: number;

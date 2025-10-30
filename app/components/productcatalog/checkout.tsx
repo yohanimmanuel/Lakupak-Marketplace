@@ -63,8 +63,9 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<CheckoutParams>();
   
-  // Get user data from store
-  const { user: cachedUser, products } = useDataStore();
+  // Get product cache; read auth user directly from auth store (avoids stale user after logout/login)
+  const { products } = useDataStore();
+  const authUser = useAuthStore(s => s.user);
   
   // Get auth token
   const token = useAuthStore(s => s.token);
@@ -164,11 +165,11 @@ export default function CheckoutScreen() {
   const addresses = [
     {
       id: 'default',
-      name: cachedUser?.name || 'Your Name',
-      company: cachedUser?.storeName || 'Your Company',
-      address: cachedUser?.chosenAddress || 'Your Address',
-      city: cachedUser?.country || 'Your City',
-      phone: cachedUser?.phone || 'Your Phone',
+      name: authUser?.name || 'Your Name',
+      company: authUser?.storeName || 'Your Company',
+      address: authUser?.chosenAddress || 'Your Address',
+      city: authUser?.country || 'Your City',
+      phone: authUser?.phone || 'Your Phone',
       isDefault: true
     }
   ];
@@ -556,9 +557,9 @@ export default function CheckoutScreen() {
             onPress: async () => {
               try {
                 // Generate required fields using marketplace user data
-                const buyerId = `LKB-${cachedUser?.id?.toString().padStart(8, '0') || Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
+    const buyerId = `LKB-${authUser?.id?.toString().padStart(8, '0') || Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
                 const orderDate = new Date().toISOString();
-                const customerEmail = cachedUser?.email || `${addresses[0].phone.replace(/[^0-9]/g, '')}@lakulaku.com`;
+    const customerEmail = authUser?.email || `${addresses[0].phone.replace(/[^0-9]/g, '')}@lakulaku.com`;
                 
                 let createdOrders = [];
                 
@@ -638,6 +639,7 @@ export default function CheckoutScreen() {
                       orderId: orderId,
                       buyerId: buyerId,
                       orderDate: orderDate,
+                      distributorUserId: (firstProduct as MarketplaceProduct)?.userId,
                       orderItems: items.map(item => {
                         // Get variant-specific data - use new variantOptions structure first
                         const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
@@ -719,22 +721,23 @@ export default function CheckoutScreen() {
                         
                         return sum + (item.quantity * piecesPerPackage);
                       }, 0),
-                      contactPerson: cachedUser?.name || addresses[0].name,
-                      storeName: cachedUser?.storeName || addresses[0].company,
-                      contactPhone: cachedUser?.phone || addresses[0].phone,
+                      contactPerson: authUser?.name || addresses[0].name,
+                      storeName: authUser?.storeName || addresses[0].company,
+                      contactPhone: authUser?.phone || addresses[0].phone,
                       customerEmail: customerEmail,
                       deliveryAddress: addresses[0].address,
                       deliveryMethod: (selectedId === 'pickup') ? 'Pickup' : 'Distributor Fleet',
                       orderStatus: 'Pending',
                       paymentStatus: 'Unpaid',
                       paymentTerms: 'Cash on Delivery',
-                      userId: cachedUser?.id || null
+                      userId: authUser?.id || null
                     };
                     
                     const response = await fetch(`${API_BASE_URL}/api/mobile/orders`, {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
                       },
                       body: JSON.stringify(orderData)
                     });
@@ -758,6 +761,7 @@ export default function CheckoutScreen() {
                     orderId: orderId,
                     buyerId: buyerId,
                     orderDate: orderDate,
+                    distributorUserId: (product as MarketplaceProduct)?.userId,
                     orderItems: [{
                       productId: productId,
                       productName: product?.name || 'Product',
@@ -774,16 +778,16 @@ export default function CheckoutScreen() {
                     shippingFee: shippingCost,
                     totalAmount: total,
                     totalOrders: quantity * piecesPerPackage,
-                    contactPerson: cachedUser?.name || addresses[0].name,
-                    storeName: cachedUser?.storeName || addresses[0].company,
-                    contactPhone: cachedUser?.phone || addresses[0].phone,
+                    contactPerson: authUser?.name || addresses[0].name,
+                    storeName: authUser?.storeName || addresses[0].company,
+                    contactPhone: authUser?.phone || addresses[0].phone,
                     customerEmail: customerEmail,
                     deliveryAddress: addresses[0].address,
                     deliveryMethod: selectedShipping === 'pickup' ? 'Pickup' : 'Distributor Fleet',
                     orderStatus: 'Pending',
                     paymentStatus: 'Unpaid',
                     paymentTerms: 'Cash on Delivery',
-                    userId: cachedUser?.id || null
+                    userId: authUser?.id || null
                   };
                   
                   const response = await fetch(`${API_BASE_URL}/api/mobile/orders`, {
@@ -822,7 +826,7 @@ export default function CheckoutScreen() {
                     orderId, 
                     createdOrders.length, 
                     productImages, 
-                    cachedUser?.id || null,
+                    authUser?.id || null,
                     orderStatus,
                     undefined
                   );
