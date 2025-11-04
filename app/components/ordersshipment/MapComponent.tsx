@@ -4,7 +4,7 @@ import { MapCoordinates, getOrderStatusMarkerColor } from '../../../utils/mapbox
 
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
-// Import Mapbox native module
+// Try to import native Mapbox module
 let Mapbox: any = null;
 let MapView: any = null;
 let Camera: any = null;
@@ -23,8 +23,16 @@ try {
     isMapboxAvailable = true;
   }
 } catch (error) {
-  // Native module not available - requires rebuild
+  // Native module not available - will use WebView fallback
   isMapboxAvailable = false;
+}
+
+// Try to import WebView for fallback
+let WebView: any = null;
+try {
+  WebView = require('react-native-webview').WebView;
+} catch (error) {
+  // WebView not available
 }
 
 interface MapMarker {
@@ -116,17 +124,112 @@ export default function MapComponent({
     );
   }
 
-  // If native Mapbox is not available, show rebuild message
+  // If native Mapbox is not available, use WebView with Mapbox GL JS (works in Expo Go)
   if (!isMapboxAvailable) {
+    if (!WebView) {
+      return (
+        <View style={[styles.container, { height }, style]}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>Map unavailable</Text>
+            <Text style={styles.errorSubtext}>
+              Install react-native-webview for Expo Go support:{'\n'}
+              npx expo install react-native-webview
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    // Generate HTML with Mapbox GL JS for WebView
+    const marker = markers[0];
+    const markerColor = marker?.color?.replace('#', '') || '0a61d7';
+    const markerLabel = marker?.label || '';
+    const centerLng = mapCenter.longitude;
+    const centerLat = mapCenter.latitude;
+    
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mapbox Map</title>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html { width: 100%; height: 100%; overflow: hidden; }
+    #map { width: 100%; height: 100%; }
+    .mapboxgl-popup-content {
+      padding: 8px 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    mapboxgl.accessToken = '${MAPBOX_ACCESS_TOKEN}';
+    
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [${centerLng}, ${centerLat}],
+      zoom: ${zoom},
+      interactive: true,
+      scrollZoom: true,
+      boxZoom: true,
+      dragRotate: false,
+      dragPan: true,
+      keyboard: true,
+      doubleClickZoom: true,
+      touchZoomRotate: true,
+      touchPitch: false
+    });
+
+    map.on('load', () => {
+      ${markers.map((marker, index) => {
+        const color = marker.color?.replace('#', '') || '0a61d7';
+        return `
+      // Marker ${index + 1}
+      const el${index} = document.createElement('div');
+      el${index}.innerHTML = \`
+        <div style="display: flex; align-items: center; gap: 8px; background: white; border-radius: 30px; padding: 4px 8px 4px 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+          <div style="width: 32px; height: 32px; border-radius: 16px; background: #${color}; border: 3px solid white;"></div>
+          ${marker.label ? `<span style="font-size: 11px; font-weight: bold; color: #000; white-space: nowrap;">${marker.label}</span>` : ''}
+        </div>
+      \`;
+      
+      new mapboxgl.Marker(el${index})
+        .setLngLat([${marker.coordinates.longitude}, ${marker.coordinates.latitude}])
+        .addTo(map);
+        `;
+      }).join('')}
+    });
+  </script>
+</body>
+</html>
+    `;
+
     return (
       <View style={[styles.container, { height }, style]}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Map requires rebuild</Text>
-          <Text style={styles.errorSubtext}>
-            @rnmapbox/maps requires native code.{'\n'}
-            Run: npx expo prebuild --clean
-          </Text>
-        </View>
+        <WebView
+          source={{ html: htmlContent }}
+          style={styles.webview}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          startInLoadingState={true}
+          renderLoading={() => (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#0a61d7" />
+              <Text style={styles.loadingText}>Loading map...</Text>
+            </View>
+          )}
+        />
       </View>
     );
   }
@@ -285,6 +388,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
     color: '#000000',
+  },
+  webview: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
   },
 });
 
