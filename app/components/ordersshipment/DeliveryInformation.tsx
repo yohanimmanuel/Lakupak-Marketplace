@@ -8,6 +8,7 @@ import {
   StatusBar,
   Dimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import {
@@ -21,6 +22,8 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
+import MapComponent from './MapComponent';
+import { geocodeAddress, GeocodeResult, getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -30,12 +33,46 @@ export default function DeliveryInformation() {
   const { token } = useAuthStore();
   const [order, setOrder] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [geocodeResult, setGeocodeResult] = useState<GeocodeResult | null>(null);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   useEffect(() => {
     if (orderId) {
       fetchOrderDetails();
     }
   }, [orderId]);
+
+  useEffect(() => {
+    if (order) {
+      geocodeDistributorAddress();
+    }
+  }, [order]);
+
+  const geocodeDistributorAddress = async () => {
+    if (!order) return;
+
+    // For buyers, show the distributor's location (where the order is coming from)
+    // Priority: 1. pickupAddress, 2. businessAddress, 3. null
+    const distributorAddress = 
+      order.user?.company?.pickupAddress || 
+      order.user?.company?.businessAddress ||
+      null;
+    
+    if (!distributorAddress) {
+      setGeocodeResult(null);
+      return;
+    }
+
+    setIsGeocoding(true);
+    try {
+      const result = await geocodeAddress(distributorAddress);
+      setGeocodeResult(result);
+    } catch (error) {
+      setGeocodeResult(null);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
 
   const fetchOrderDetails = async () => {
     try {
@@ -342,13 +379,38 @@ export default function DeliveryInformation() {
         <View style={styles.mapSection}>
           <View style={styles.mapHeader}>
             <MapPin size={20} color="#0a61d7" />
-            <Text style={styles.mapTitle}>Delivery Location</Text>
+            <Text style={styles.mapTitle}>Distributor Location</Text>
           </View>
-          <View style={styles.mapPlaceholder}>
-            <MapPin size={48} color="#9CA3AF" />
-            <Text style={styles.mapPlaceholderText}>Map GPS</Text>
-            <Text style={styles.mapPlaceholderSubtext}>Interactive map will be displayed here</Text>
-          </View>
+          {isGeocoding ? (
+            <View style={styles.mapPlaceholder}>
+              <ActivityIndicator size="large" color="#0a61d7" />
+              <Text style={styles.mapPlaceholderText}>Loading map...</Text>
+              <Text style={styles.mapPlaceholderSubtext}>Geocoding distributor address</Text>
+            </View>
+          ) : geocodeResult?.coordinates ? (
+            <MapComponent
+              markers={[{
+                id: order.id?.toString() || order.orderId,
+                coordinates: geocodeResult.coordinates,
+                label: `${order.orderId} - ${order.orderStatus}`,
+                color: getOrderStatusMarkerColor(order.orderStatus),
+              }]}
+              center={geocodeResult.coordinates}
+              zoom={14}
+              height={300}
+              showControls={true}
+            />
+          ) : (
+            <View style={styles.mapPlaceholder}>
+              <MapPin size={48} color="#9CA3AF" />
+              <Text style={styles.mapPlaceholderText}>Map unavailable</Text>
+              <Text style={styles.mapPlaceholderSubtext}>
+                {(order.user?.company?.pickupAddress || order.user?.company?.businessAddress)
+                  ? 'Unable to locate distributor address'
+                  : 'Distributor address not available'}
+              </Text>
+            </View>
+          )}
           
           {/* Delivery Information Fields */}
           <View style={styles.deliveryInfoContainer}>
