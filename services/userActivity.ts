@@ -1,14 +1,5 @@
 import { MarketplaceProduct } from './marketplace';
-
-// For mobile development, use your computer's IP address instead of localhost
-// You can find your IP with: ipconfig (Windows) or ifconfig (Mac/Linux)
-const getApiBaseUrl = () => {
-  // For development, replace with your actual IP address
-  // Your IP address: 192.168.0.134
-  return 'http://192.168.0.134:3000';
-};
-
-const API_BASE_URL = getApiBaseUrl();
+import { API_BASE_URL } from './config';
 
 export interface UserActivity {
   id: number;
