@@ -3,7 +3,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 import { useColorScheme } from './components/useColorScheme';
 import { useAuthStore } from '../stores/authStore';
@@ -15,10 +15,7 @@ export {
   ErrorBoundary,
 } from 'expo-router';
 
-export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
-};
+// Removed unstable_settings - using index.tsx for routing
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -36,7 +33,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (loaded) {
-      SplashScreen.hideAsync();
+      // Keep native splash visible to cover initialization
+      setTimeout(() => {
+        SplashScreen.hideAsync();
+      }, 1000); // 1s splash like Shopee
     }
   }, [loaded]);
 
@@ -72,6 +72,7 @@ function RootLayoutNav() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen
           name="useraccounts/startdistributing"
           options={{

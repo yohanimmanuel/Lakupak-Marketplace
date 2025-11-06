@@ -9,9 +9,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/LakuLakuMobileLogo.png",
+      "image": "./assets/images/LakuMobileLogoWhite.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0a61d7"
     },
     "ios": {
       "bundleIdentifier": "com.lakulaku.marketplace",
