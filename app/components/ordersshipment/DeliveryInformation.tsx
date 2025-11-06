@@ -22,8 +22,8 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
-// import MapComponent from './MapComponent';
-// import { geocodeAddress, GeocodeResult, getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
+import MapComponent from './MapComponent';
+import { geocodeAddress, GeocodeResult, getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -33,8 +33,8 @@ export default function DeliveryInformation() {
   const { token } = useAuthStore();
   const [order, setOrder] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // const [geocodeResult, setGeocodeResult] = useState<GeocodeResult | null>(null);
-  // const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodeResult, setGeocodeResult] = useState<GeocodeResult | null>(null);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   useEffect(() => {
     if (orderId) {
@@ -42,38 +42,37 @@ export default function DeliveryInformation() {
     }
   }, [orderId]);
 
-  // GPS Map functionality commented out for now
-  // useEffect(() => {
-  //   if (order) {
-  //     geocodeDistributorAddress();
-  //   }
-  // }, [order]);
+  useEffect(() => {
+    if (order) {
+      geocodeDistributorAddress();
+    }
+  }, [order]);
 
-  // const geocodeDistributorAddress = async () => {
-  //   if (!order) return;
+  const geocodeDistributorAddress = async () => {
+    if (!order) return;
 
-  //   // For buyers, show the distributor's location (where the order is coming from)
-  //   // Priority: 1. pickupAddress, 2. businessAddress, 3. null
-  //   const distributorAddress = 
-  //     order.user?.company?.pickupAddress || 
-  //     order.user?.company?.businessAddress ||
-  //     null;
+    // For buyers, show the distributor's location (where the order is coming from)
+    // Priority: 1. pickupAddress, 2. businessAddress, 3. null
+    const distributorAddress = 
+      order.user?.company?.pickupAddress || 
+      order.user?.company?.businessAddress ||
+      null;
     
-  //   if (!distributorAddress) {
-  //     setGeocodeResult(null);
-  //     return;
-  //   }
+    if (!distributorAddress) {
+      setGeocodeResult(null);
+      return;
+    }
 
-  //   setIsGeocoding(true);
-  //   try {
-  //     const result = await geocodeAddress(distributorAddress);
-  //     setGeocodeResult(result);
-  //   } catch (error) {
-  //     setGeocodeResult(null);
-  //   } finally {
-  //     setIsGeocoding(false);
-  //       }
-  // };
+    setIsGeocoding(true);
+    try {
+      const result = await geocodeAddress(distributorAddress);
+      setGeocodeResult(result);
+    } catch (error) {
+      setGeocodeResult(null);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
 
   const fetchOrderDetails = async () => {
     try {
@@ -376,9 +375,9 @@ export default function DeliveryInformation() {
         {/* Progress Bar */}
         {renderProgressBar()}
 
-        {/* Map GPS Section - Commented out for now */}
-        {/* <View style={styles.mapSection}>
-          <View style={styles.mapHeader}>
+        {/* Map GPS Section - Map display commented out */}
+        <View style={styles.mapSection}>
+          {/* <View style={styles.mapHeader}>
             <MapPin size={20} color="#0a61d7" />
             <Text style={styles.mapTitle}>Distributor Location</Text>
           </View>
@@ -411,53 +410,8 @@ export default function DeliveryInformation() {
                   : 'Distributor address not available'}
               </Text>
             </View>
-          )}
+          )} */}
           
-          <View style={styles.deliveryInfoContainer}>
-            <View style={styles.deliveryInfoRow}>
-              <Clock size={16} color="#6B7280" />
-              <View style={styles.deliveryInfoContent}>
-                <Text style={styles.deliveryInfoLabel}>Preferred Delivery Time</Text>
-                <Text style={styles.deliveryInfoValue}>
-                  {order.preferredDeliveryTime || 'Not specified'}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.deliveryInfoRow}>
-              <Truck size={16} color="#6B7280" />
-              <View style={styles.deliveryInfoContent}>
-                <Text style={styles.deliveryInfoLabel}>Assigned Logistics</Text>
-                <Text style={styles.deliveryInfoValue}>
-                  {order.assignedLogistics || 'Not assigned'}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.deliveryInfoRow}>
-              <Package size={16} color="#6B7280" />
-              <View style={styles.deliveryInfoContent}>
-                <Text style={styles.deliveryInfoLabel}>Tracking Number</Text>
-                <Text style={styles.deliveryInfoValue}>
-                  {order.trackingNumber || 'Not available'}
-                </Text>
-              </View>
-            </View>
-            
-            <View style={styles.deliveryInfoRow}>
-              <MapPin size={16} color="#6B7280" />
-              <View style={styles.deliveryInfoContent}>
-                <Text style={styles.deliveryInfoLabel}>Delivery Note</Text>
-                <Text style={styles.deliveryInfoValue}>
-                  {order.deliveryNote || 'No special instructions'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View> */}
-
-        {/* Delivery Information Fields */}
-        <View style={styles.mapSection}>
           <View style={styles.deliveryInfoContainer}>
             <View style={styles.deliveryInfoRow}>
               <Clock size={16} color="#6B7280" />
