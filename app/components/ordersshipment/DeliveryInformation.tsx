@@ -71,7 +71,7 @@ export default function DeliveryInformation() {
       setGeocodeResult(null);
     } finally {
       setIsGeocoding(false);
-    }
+        }
   };
 
   const fetchOrderDetails = async () => {
