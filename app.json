@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/LakuLakuMobile.png",
+      "image": "./assets/images/LakuLakuMobileLogo.png",
       "resizeMode": "contain",
       "backgroundColor": "#0a61d7"
     },
@@ -20,7 +20,7 @@
     "android": {
       "package": "com.lakulaku.marketplace",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/LakuLakuMobile.png",
+        "foregroundImage": "./assets/images/LakuLakuMobileLogo.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
