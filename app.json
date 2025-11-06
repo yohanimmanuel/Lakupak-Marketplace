@@ -4,12 +4,12 @@
     "slug": "Laku-Laku",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/Laku-LakuMobile.png",
+    "icon": "./assets/images/LakuLakuMobile.png",
     "scheme": "lakulaku",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/Laku-LakuMobile.png",
+      "image": "./assets/images/LakuLakuMobile.png",
       "resizeMode": "contain",
       "backgroundColor": "#0a61d7"
     },
@@ -20,7 +20,7 @@
     "android": {
       "package": "com.lakulaku.marketplace",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/Laku-LakuMobile.png",
+        "foregroundImage": "./assets/images/LakuLakuMobile.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
@@ -28,7 +28,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/Laku-LakuMobile.png"
+      "favicon": "./assets/images/LakuLakuMobile.png"
     },
     "plugins": [
       "expo-router",
