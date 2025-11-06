@@ -20,7 +20,7 @@
     "android": {
       "package": "com.lakulaku.marketplace",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/LakuLakuMobileLogo.png",
+        "foregroundImage": "./assets/images/LakuLakuMobile.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
