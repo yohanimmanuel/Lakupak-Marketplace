@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/LakuLakuMobile.png",
+      "image": "./assets/images/LakuLakuMobileSplashImage.png",
       "resizeMode": "contain",
       "backgroundColor": "#0a61d7"
     },
