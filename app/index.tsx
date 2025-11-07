@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 export default function Index() {
   const router = useRouter();
@@ -11,6 +11,17 @@ export default function Index() {
   }, []);
 
   // White background matches splash screen for smooth transition
-  return <View style={{ flex: 1, backgroundColor: '#ffffff' }} />;
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: '#ffffff',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <ActivityIndicator size="large" color="#0a61d7" />
+    </View>
+  );
 }
 
