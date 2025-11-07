@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -59,6 +59,17 @@ type CheckoutParams = {
   variantName?: string;
 };
 
+interface DistributorInfo {
+  id: string;
+  companyName: string;
+  industryType: string;
+  pickupAddress: string | null;
+  businessAddress: string | null;
+  contactPerson: string;
+  phone: string;
+  email?: string;
+}
+
 export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<CheckoutParams>();
@@ -92,11 +103,41 @@ export default function CheckoutScreen() {
   const product = products.find(p => p.id === productId);
   
   // Group cart items by distributor
+const slugify = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-');
+
+const resolveDistributorId = (product?: MarketplaceProduct): string => {
+  if (!product) return 'unknown';
+
+  const company = product.seller?.company;
+
+  if (company?.name) {
+    const base = slugify(company.name);
+    if (product.userId !== undefined && product.userId !== null) {
+      return `company-${base}-${product.userId}`;
+    }
+    return `company-${base}-${slugify(product.id)}`;
+  }
+
+  if (product.userId !== undefined && product.userId !== null) {
+    return `user-${product.userId}`;
+  }
+
+  if (product.seller?.name) {
+    return `seller-${slugify(product.seller.name)}-${slugify(product.id)}`;
+  }
+
+  return `product-${slugify(product.id)}`;
+};
+
   const groupByDistributor = (items: typeof selectedCartItems) => {
     const grouped: { [key: string]: typeof selectedCartItems } = {};
     
     items.forEach(item => {
-      const distributorId = (item.product as MarketplaceProduct).seller?.name || 'unknown';
+      const distributorId = resolveDistributorId(item.product as MarketplaceProduct);
       if (!grouped[distributorId]) {
         grouped[distributorId] = [];
       }
@@ -106,7 +147,10 @@ export default function CheckoutScreen() {
     return grouped;
   };
   
-  const distributorGroups = isCartCheckout ? groupByDistributor(selectedCartItems) : {};
+const distributorGroups = useMemo(
+  () => (isCartCheckout ? groupByDistributor(selectedCartItems) : {}),
+  [isCartCheckout, selectedCartItems]
+);
   
 
   // State
@@ -115,6 +159,9 @@ export default function CheckoutScreen() {
   const [selectedShipping, setSelectedShipping] = useState('standard');
   // Per-distributor shipping selection for cart checkout
   const [selectedShippingByDistributor, setSelectedShippingByDistributor] = useState<Record<string, string>>({});
+  const [activeDistributorId, setActiveDistributorId] = useState<string | null>(null);
+  const [scheduledDateTimeByDistributor, setScheduledDateTimeByDistributor] = useState<Record<string, Date | null>>({});
+  const [pickupDateTimeByDistributor, setPickupDateTimeByDistributor] = useState<Record<string, Date | null>>({});
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showPickupModal, setShowPickupModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -131,24 +178,31 @@ export default function CheckoutScreen() {
   const [isPickupClosing, setIsPickupClosing] = useState(false);
   
   // Get distributor/company information
-  const getDistributorInfo = (product: MarketplaceProduct) => ({
-    companyName: product?.seller?.company?.name || product?.seller?.name || 'Distributor Company',
-    industryType: product?.seller?.company?.industryType || 'Not specified',
-    pickupAddress: product?.seller?.company?.pickupAddress || null,
-    contactPerson: product?.seller?.name || 'Not provided',
-    phone: product?.seller?.company?.businessPhone || 'Not provided'
-  });
+  const getDistributorInfo = (product: MarketplaceProduct): DistributorInfo => {
+    const distributorId = resolveDistributorId(product);
+    const company = product?.seller?.company;
+    return {
+      id: distributorId,
+      companyName: company?.name || product?.seller?.name || 'Distributor Company',
+      industryType: company?.industryType || 'Not specified',
+      pickupAddress: company?.pickupAddress || null,
+      businessAddress: company?.businessAddress || null,
+      contactPerson: product?.seller?.name || 'Not provided',
+      phone: company?.businessPhone || 'Not provided',
+      email: company?.businessEmail,
+    };
+  };
   
   // Get distributor information for display
   const getDistributorsInfo = () => {
     if (isCartCheckout && selectedCartItems.length > 0) {
       // Cart checkout - get all unique distributors
-      const distributors = new Map();
+      const distributors = new Map<string, DistributorInfo>();
       selectedCartItems.forEach((item: CartItem) => {
         const product = item.product as MarketplaceProduct;
-        const distributorId = product?.seller?.company?.name || product?.seller?.name || 'unknown';
-        if (!distributors.has(distributorId)) {
-          distributors.set(distributorId, getDistributorInfo(product));
+        const info = getDistributorInfo(product);
+        if (!distributors.has(info.id)) {
+          distributors.set(info.id, info);
         }
       });
       return Array.from(distributors.values());
@@ -159,7 +213,18 @@ export default function CheckoutScreen() {
     return [];
   };
 
-  const distributorsInfo = getDistributorsInfo();
+const distributorsInfo = useMemo(() => getDistributorsInfo(), [isCartCheckout, selectedCartItems, product]);
+
+const distributorsInfoMap = useMemo(() => {
+  return distributorsInfo.reduce<Record<string, DistributorInfo>>((acc, info) => {
+    acc[info.id] = info;
+    return acc;
+  }, {});
+}, [distributorsInfo]);
+
+const activeDistributorInfo = (isCartCheckout && activeDistributorId)
+  ? distributorsInfoMap[activeDistributorId] ?? null
+  : distributorsInfo[0] || null;
 
   // Use real user data for delivery address
   const addresses = [
@@ -332,11 +397,33 @@ export default function CheckoutScreen() {
     });
   };
 
+  const toTimeValue = (date: Date) => {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  const initializeModalDateTime = (existingDate?: Date | null) => {
+    if (existingDate) {
+      const dateInstance = new Date(existingDate);
+      setSelectedDate(dateInstance);
+      setSelectedTime(toTimeValue(dateInstance));
+    } else {
+      const defaultDate = new Date();
+      setSelectedDate(defaultDate);
+      setSelectedTime('09:00');
+    }
+  };
+
   // Handle shipping option selection
   const handleShippingSelection = (optionId: string) => {
     if (optionId === 'scheduled') {
+      initializeModalDateTime(scheduledDateTime);
+      setActiveDistributorId(distributorsInfo[0]?.id || null);
       setShowScheduleModal(true);
     } else if (optionId === 'pickup') {
+      initializeModalDateTime(pickupDateTime);
+      setActiveDistributorId(distributorsInfo[0]?.id || null);
       setShowPickupModal(true);
     } else {
       setSelectedShipping(optionId);
@@ -345,6 +432,20 @@ export default function CheckoutScreen() {
 
   // Handle per-distributor shipping selection
   const handleDistributorShippingSelection = (distributorId: string, optionId: string) => {
+    if (optionId === 'scheduled') {
+      initializeModalDateTime(scheduledDateTimeByDistributor[distributorId]);
+      setActiveDistributorId(distributorId);
+      setShowScheduleModal(true);
+      return;
+    }
+
+    if (optionId === 'pickup') {
+      initializeModalDateTime(pickupDateTimeByDistributor[distributorId]);
+      setActiveDistributorId(distributorId);
+      setShowPickupModal(true);
+      return;
+    }
+
     setSelectedShippingByDistributor(prev => ({ ...prev, [distributorId]: optionId }));
   };
 
@@ -371,10 +472,22 @@ export default function CheckoutScreen() {
     const [hours, minutes] = selectedTime.split(':');
     const combinedDateTime = new Date(selectedDate);
     combinedDateTime.setHours(parseInt(hours), parseInt(minutes));
-    setScheduledDateTime(combinedDateTime);
-    setSelectedShipping('scheduled');
+    if (isCartCheckout && activeDistributorId) {
+      setScheduledDateTimeByDistributor(prev => ({
+        ...prev,
+        [activeDistributorId]: combinedDateTime,
+      }));
+      setSelectedShippingByDistributor(prev => ({
+        ...prev,
+        [activeDistributorId]: 'scheduled',
+      }));
+    } else {
+      setScheduledDateTime(combinedDateTime);
+      setSelectedShipping('scheduled');
+    }
     setShowScheduleModal(false);
     setShowTimeDropdown(false);
+    setActiveDistributorId(null);
   };
 
   // Confirm pickup
@@ -382,10 +495,22 @@ export default function CheckoutScreen() {
     const [hours, minutes] = selectedTime.split(':');
     const combinedDateTime = new Date(selectedDate);
     combinedDateTime.setHours(parseInt(hours), parseInt(minutes));
-    setPickupDateTime(combinedDateTime);
-    setSelectedShipping('pickup');
+    if (isCartCheckout && activeDistributorId) {
+      setPickupDateTimeByDistributor(prev => ({
+        ...prev,
+        [activeDistributorId]: combinedDateTime,
+      }));
+      setSelectedShippingByDistributor(prev => ({
+        ...prev,
+        [activeDistributorId]: 'pickup',
+      }));
+    } else {
+      setPickupDateTime(combinedDateTime);
+      setSelectedShipping('pickup');
+    }
     setShowPickupModal(false);
     setShowTimeDropdown(false);
+    setActiveDistributorId(null);
   };
 
   // Handle delivery modal close with animation - match BuyNowModal system
@@ -401,6 +526,7 @@ export default function CheckoutScreen() {
       setIsDeliveryClosing(false);
       setShowScheduleModal(false);
       setShowTimeDropdown(false);
+      setActiveDistributorId(null);
     });
   };
 
@@ -417,6 +543,7 @@ export default function CheckoutScreen() {
       setIsPickupClosing(false);
       setShowPickupModal(false);
       setShowTimeDropdown(false);
+      setActiveDistributorId(null);
     });
   };
 
@@ -427,6 +554,30 @@ export default function CheckoutScreen() {
       setSelectedShipping('standard');
     }
   }, [shippingOptions, selectedShipping]);
+
+useEffect(() => {
+  if (!isCartCheckout) return;
+
+  setSelectedShippingByDistributor((prev) => {
+    const next = { ...prev };
+    let hasChange = false;
+
+    Object.entries(distributorGroups).forEach(([distributorId, items]) => {
+      if (next[distributorId] || items.length === 0) {
+        return;
+      }
+
+      const firstProduct = items[0].product as MarketplaceProduct;
+      const options = getAvailableShippingOptions(firstProduct);
+      if (options.length > 0) {
+        next[distributorId] = options[0].id;
+        hasChange = true;
+      }
+    });
+
+    return hasChange ? next : prev;
+  });
+}, [isCartCheckout, distributorGroups]);
 
   // Handle delivery modal slide animation - match BuyNowModal system
   useEffect(() => {
@@ -635,6 +786,14 @@ export default function CheckoutScreen() {
                     const distributorShippingCost = selectedOption ? selectedOption.price : 0;
                     const distributorTotal = distributorSubtotal + distributorShippingCost;
                     
+                    const toISODate = (dateValue: Date | null | undefined) => dateValue ? dateValue.toISOString() : null;
+                    const toTimeComponent = (dateValue: Date | null | undefined) => {
+                      if (!dateValue) return null;
+                      const hours = String(dateValue.getHours()).padStart(2, '0');
+                      const minutes = String(dateValue.getMinutes()).padStart(2, '0');
+                      return `${hours}:${minutes}`;
+                    };
+
                     const orderData = {
                       orderId: orderId,
                       buyerId: buyerId,
@@ -727,6 +886,21 @@ export default function CheckoutScreen() {
                       customerEmail: customerEmail,
                       deliveryAddress: addresses[0].address,
                       deliveryMethod: (selectedId === 'pickup') ? 'Pickup' : 'Distributor Fleet',
+                      deliveryOption: selectedId,
+                      preferredDeliveryDate: selectedId === 'scheduled' && scheduledDateTimeByDistributor[distributorId]
+                        ? toISODate(scheduledDateTimeByDistributor[distributorId])
+                        : null,
+                      preferredDeliveryTime: selectedId === 'scheduled' && scheduledDateTimeByDistributor[distributorId]
+                        ? toTimeComponent(scheduledDateTimeByDistributor[distributorId])
+                        : null,
+                      preferredPickupDate: selectedId === 'pickup' && pickupDateTimeByDistributor[distributorId]
+                        ? toISODate(pickupDateTimeByDistributor[distributorId])
+                        : null,
+                      preferredPickupTime: selectedId === 'pickup' && pickupDateTimeByDistributor[distributorId]
+                        ? toTimeComponent(pickupDateTimeByDistributor[distributorId])
+                        : null,
+                      shippingMethodLabel: selectedOption?.name,
+                      shippingMethod: selectedOption?.name,
                       orderStatus: 'Pending',
                       paymentStatus: 'Unpaid',
                       paymentTerms: 'Cash on Delivery',
@@ -757,6 +931,14 @@ export default function CheckoutScreen() {
                   // Single product checkout
                   const orderId = `LKO-${Date.now()}${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
                   
+                  const toISODate = (dateValue: Date | null | undefined) => dateValue ? dateValue.toISOString() : null;
+                  const toTimeComponent = (dateValue: Date | null | undefined) => {
+                    if (!dateValue) return null;
+                    const hours = String(dateValue.getHours()).padStart(2, '0');
+                    const minutes = String(dateValue.getMinutes()).padStart(2, '0');
+                    return `${hours}:${minutes}`;
+                  };
+
                   const orderData = {
                     orderId: orderId,
                     buyerId: buyerId,
@@ -784,6 +966,21 @@ export default function CheckoutScreen() {
                     customerEmail: customerEmail,
                     deliveryAddress: addresses[0].address,
                     deliveryMethod: selectedShipping === 'pickup' ? 'Pickup' : 'Distributor Fleet',
+                    deliveryOption: selectedShipping,
+                    preferredDeliveryDate: selectedShipping === 'scheduled' && scheduledDateTime
+                      ? toISODate(scheduledDateTime)
+                      : null,
+                    preferredDeliveryTime: selectedShipping === 'scheduled' && scheduledDateTime
+                      ? toTimeComponent(scheduledDateTime)
+                      : null,
+                    preferredPickupDate: selectedShipping === 'pickup' && pickupDateTime
+                      ? toISODate(pickupDateTime)
+                      : null,
+                    preferredPickupTime: selectedShipping === 'pickup' && pickupDateTime
+                      ? toTimeComponent(pickupDateTime)
+                      : null,
+                    shippingMethodLabel: shippingOptions.find(option => option.id === selectedShipping)?.name,
+                    shippingMethod: shippingOptions.find(option => option.id === selectedShipping)?.name,
                     orderStatus: 'Pending',
                     paymentStatus: 'Unpaid',
                     paymentTerms: 'Cash on Delivery',
@@ -882,8 +1079,6 @@ export default function CheckoutScreen() {
               
               <Text style={styles.businessType}>Industry: {distributorsInfo[0].industryType}</Text>
               <Text style={styles.businessDetails}>Contact: {distributorsInfo[0].contactPerson}</Text>
-              <Text style={styles.businessDetails}>Phone: {distributorsInfo[0].phone}</Text>
-              
               {/* Show additional distributors if more than one */}
               {distributorsInfo.length > 1 && (
                 <View style={styles.additionalDistributors}>
@@ -1131,57 +1326,67 @@ export default function CheckoutScreen() {
                       <Text style={styles.shippingTitle}>Shipping Method</Text>
                     </View>
                     {shippingOptions.length > 0 ? (
-                      shippingOptions.map((option) => (
-                        <TouchableOpacity
-                          key={option.id}
-                          style={[
-                            styles.shippingOption,
-                            (selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id) === option.id && styles.shippingOptionSelected
-                          ]}
-                          onPress={() => handleDistributorShippingSelection(distributorId, option.id)}
-                        >
-                          <View style={styles.shippingInfo}>
-                            <Text style={styles.shippingName}>{option.name}</Text>
-                            <Text style={styles.shippingDescription}>{option.description}</Text>
-                            <View style={styles.shippingTime}>
-                              <Clock size={14} color="#6B7280" />
-                              <Text style={styles.shippingTimeText}>
-                                {option.id === 'pickup' 
-                                  ? ((selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id) === 'pickup' && pickupDateTime ? `Pickup scheduled: ${pickupDateTime.toLocaleString('en-US', {
-                                      weekday: 'short',
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                      hour12: true
-                                    })}` : 'Available for pickup')
-                                  : option.id === 'scheduled'
-                                  ? ((selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id) === 'scheduled' && scheduledDateTime ? `Delivery scheduled: ${scheduledDateTime.toLocaleString('en-US', {
-                                      weekday: 'short',
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                      hour12: true
-                                    })}` : 'Schedule your preferred delivery time')
-                                  : `Estimated delivery: ${option.estimatedDays}`
-                                }
-                              </Text>
+                      shippingOptions.map((option) => {
+                        const selectedOptionForDistributor = selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id;
+                        const pickupDateForDistributor = pickupDateTimeByDistributor[distributorId] || null;
+                        const scheduledDateForDistributor = scheduledDateTimeByDistributor[distributorId] || null;
+
+                        return (
+                          <TouchableOpacity
+                            key={option.id}
+                            style={[
+                              styles.shippingOption,
+                              selectedOptionForDistributor === option.id && styles.shippingOptionSelected
+                            ]}
+                            onPress={() => handleDistributorShippingSelection(distributorId, option.id)}
+                          >
+                            <View style={styles.shippingInfo}>
+                              <Text style={styles.shippingName}>{option.name}</Text>
+                              <Text style={styles.shippingDescription}>{option.description}</Text>
+                              <View style={styles.shippingTime}>
+                                <Clock size={14} color="#6B7280" />
+                                <Text style={styles.shippingTimeText}>
+                                  {option.id === 'pickup' 
+                                    ? (selectedOptionForDistributor === 'pickup' && pickupDateForDistributor
+                                      ? `Pickup scheduled: ${pickupDateForDistributor.toLocaleString('en-US', {
+                                          weekday: 'short',
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                          hour12: true
+                                        })}`
+                                      : 'Available for pickup')
+                                    : option.id === 'scheduled'
+                                    ? (selectedOptionForDistributor === 'scheduled' && scheduledDateForDistributor
+                                      ? `Delivery scheduled: ${scheduledDateForDistributor.toLocaleString('en-US', {
+                                          weekday: 'short',
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                          hour12: true
+                                        })}`
+                                      : 'Schedule your preferred delivery time')
+                                    : `Estimated delivery: ${option.estimatedDays}`
+                                  }
+                                </Text>
+                              </View>
                             </View>
-                          </View>
-                          <View style={styles.shippingPrice}>
-                            <Text style={[
-                              styles.shippingPriceText,
-                              option.free && styles.freeText
-                            ]}>
-                              {option.free ? 'FREE' : formatCurrency(option.price)}
-                            </Text>
-                            {(selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id) === option.id && (
-                              <CheckCircle size={20} color="#0a61d7" />
-                            )}
-                          </View>
-                        </TouchableOpacity>
-                      ))
+                            <View style={styles.shippingPrice}>
+                              <Text style={[
+                                styles.shippingPriceText,
+                                option.free && styles.freeText
+                              ]}>
+                                {option.free ? 'FREE' : formatCurrency(option.price)}
+                              </Text>
+                              {selectedOptionForDistributor === option.id && (
+                                <CheckCircle size={20} color="#0a61d7" />
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })
                     ) : (
                       <View style={styles.noShippingCard}>
                         <Text style={styles.noShippingText}>
@@ -1450,7 +1655,7 @@ export default function CheckoutScreen() {
         visible={showScheduleModal}
         transparent={true}
         animationType="none"
-        onRequestClose={() => setShowScheduleModal(false)}
+        onRequestClose={handleDeliveryClose}
         statusBarTranslucent={true}
       >
         <StatusBar backgroundColor="rgba(0, 0, 0, 0.5)" barStyle="light-content" />
@@ -1567,7 +1772,7 @@ export default function CheckoutScreen() {
         visible={showPickupModal}
         transparent={true}
         animationType="none"
-        onRequestClose={() => setShowPickupModal(false)}
+        onRequestClose={handlePickupClose}
         statusBarTranslucent={true}
       >
         <StatusBar backgroundColor="rgba(0, 0, 0, 0.5)" barStyle="light-content" />
@@ -1601,17 +1806,12 @@ export default function CheckoutScreen() {
               
               <View style={styles.pickupInfo}>
                 <Text style={styles.pickupAddressLabel}>Pickup Location:</Text>
-                <Text style={styles.pickupAddress}>
-                  {distributorsInfo.length > 0 ? distributorsInfo[0].companyName : 'Distributor Company'}
+                <Text style={styles.pickupAddress} numberOfLines={1} ellipsizeMode="tail">
+                  {activeDistributorInfo?.companyName || 'Distributor Company'}
                 </Text>
-                <Text style={styles.pickupAddressDetail}>
-                  {distributorsInfo.length > 0 ? (distributorsInfo[0].pickupAddress || 'Address not available') : 'Address not available'}
+                <Text style={styles.pickupAddressDetail} numberOfLines={2} ellipsizeMode="tail">
+                  {activeDistributorInfo?.pickupAddress || activeDistributorInfo?.businessAddress || 'Address not available'}
                 </Text>
-                {distributorsInfo.length > 1 && (
-                  <Text style={styles.pickupAddressNote}>
-                    Note: Multiple pickup locations may apply for different items
-                  </Text>
-                )}
               </View>
               
               <View style={styles.dateTimeSection}>

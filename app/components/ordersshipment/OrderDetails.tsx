@@ -30,6 +30,7 @@ import {
   Phone,
   FileText,
   Gift,
+  Building2,
 } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
@@ -70,6 +71,9 @@ interface ShippingInfo {
   status: string;
   estimatedDelivery: string;
   actualDelivery?: string;
+  method?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
 }
 
 interface DeliveryInfo {
@@ -77,6 +81,23 @@ interface DeliveryInfo {
   phone: string;
   address: string;
   deliveryInstructions?: string;
+}
+
+interface OrderCompanyInfo {
+  name?: string;
+  companyName?: string;
+  industryType?: string;
+  businessAddress?: string;
+  pickupAddress?: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+}
+
+interface OrderUserInfo {
+  firstName?: string;
+  lastName?: string;
+  company?: OrderCompanyInfo;
 }
 
 interface Order {
@@ -102,6 +123,15 @@ interface Order {
   assignedLogistics?: string;
   trackingNumber?: string;
   updatedAt: string;
+  user?: OrderUserInfo;
+  deliveryMethod?: string;
+  preferredDeliveryDate?: string;
+  preferredDeliveryTime?: string;
+  preferredPickupDate?: string;
+  preferredPickupTime?: string;
+  shippingMethodLabel?: string;
+  shippingMethod?: string;
+  deliveryOption?: string;
 }
 
 interface OrderDetailsModalProps {
@@ -278,6 +308,98 @@ export default function OrderDetailsModal() {
       currency: 'IDR',
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const formatShippingOptionLabel = (value: string) => {
+    if (!value) return '';
+    return value
+      .split(/[-_\s]+/)
+      .filter(Boolean)
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(' ');
+  };
+
+  const formatScheduledDateTime = (dateInput?: string, timeInput?: string) => {
+    if (!dateInput && !timeInput) {
+      return null;
+    }
+
+    const dateStr = dateInput?.trim();
+    const timeStr = timeInput?.trim();
+
+    const tryFormat = (value: string) => {
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toLocaleString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
+      }
+      return null;
+    };
+
+    if (dateStr && timeStr) {
+      const combined = dateStr.includes('T') ? dateStr : `${dateStr}T${timeStr}`;
+      const formatted = tryFormat(combined);
+      if (formatted) {
+        return formatted;
+      }
+    }
+
+    if (dateStr) {
+      const formattedDate = tryFormat(dateStr);
+      if (formattedDate) {
+        return formattedDate;
+      }
+    }
+
+    const fallbackParts: string[] = [];
+    if (dateStr) {
+      fallbackParts.push(dateStr);
+    }
+    if (timeStr) {
+      fallbackParts.push(timeStr);
+    }
+
+    return fallbackParts.join(' ');
+  };
+
+  const getShippingDetails = () => {
+    const shippingInfo = orderData.shippingInfo;
+    const fallbackMethodRaw =
+      orderData.shippingMethodLabel ||
+      orderData.shippingMethod ||
+      orderData.deliveryOption ||
+      orderData.deliveryMethod ||
+      null;
+    const method = shippingInfo?.method || fallbackMethodRaw;
+
+    const lowerMethod = method?.toLowerCase() || '';
+    const preferredDate = shippingInfo?.scheduledDate
+      || (lowerMethod.includes('pickup') ? orderData.preferredPickupDate : orderData.preferredDeliveryDate)
+      || orderData.preferredDeliveryDate
+      || orderData.preferredPickupDate
+      || null;
+
+    const preferredTime = shippingInfo?.scheduledTime
+      || (lowerMethod.includes('pickup') ? orderData.preferredPickupTime : orderData.preferredDeliveryTime)
+      || orderData.preferredDeliveryTime
+      || orderData.preferredPickupTime
+      || null;
+
+    const scheduleText = formatScheduledDateTime(preferredDate || undefined, preferredTime || undefined);
+    const estimatedText = shippingInfo?.estimatedDelivery || null;
+    const shouldShowSchedule = Boolean(scheduleText) && (lowerMethod.includes('scheduled') || lowerMethod.includes('pickup'));
+
+    return {
+      methodLabel: method ? formatShippingOptionLabel(method) : null,
+      scheduleText: shouldShowSchedule ? scheduleText : null,
+      estimatedText: !shouldShowSchedule ? estimatedText : null,
+    };
   };
 
 
@@ -487,18 +609,113 @@ export default function OrderDetailsModal() {
             </>
           )}
           
-          {orderData.shippingFee !== undefined && (
-            <View style={styles.feeRow}>
-              <Text style={styles.feeLabel}>Shipping Fee:</Text>
-              <Text style={styles.feeValue}>
-                {formatCurrency(orderData.shippingFee)}
-              </Text>
-            </View>
-          )}
+          {orderData.shippingFee !== undefined && (() => {
+            const { methodLabel, scheduleText, estimatedText } = getShippingDetails();
+            return (
+              <View style={styles.feeRow}>
+                <View style={styles.feeLabelContainer}>
+                  <Text style={styles.feeLabel}>Shipping Fee:</Text>
+                  {methodLabel ? (
+                    <Text style={styles.feeLabelSubtitle}>{methodLabel}</Text>
+                  ) : null}
+                </View>
+                <View style={styles.feeDetailsContainer}>
+                  <Text style={styles.feeValue}>
+                    {formatCurrency(orderData.shippingFee)}
+                  </Text>
+                  {scheduleText ? (
+                    <Text style={styles.shippingMethodSchedule}>{scheduleText}</Text>
+                  ) : estimatedText ? (
+                    <Text style={styles.shippingMethodSchedule}>Estimated: {estimatedText}</Text>
+                  ) : null}
+                </View>
+              </View>
+            );
+          })()}
           
           <View style={styles.orderTotal}>
             <Text style={styles.orderTotalText}>Order Total: {formatCurrency(orderData.totalAmount || orderData.total || 0)}</Text>
           </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderDistributorInfo = () => {
+    const company = orderData.user?.company;
+
+    if (!company) {
+      return null;
+    }
+
+    const distributorCompanyName = company.name || company.companyName;
+    const distributorName = company.companyName;
+    const industryType = company.industryType;
+    const contactPerson = company.contactPerson;
+    const phoneNumber = company.phone;
+    const email = company.email;
+    const address = company.pickupAddress || company.businessAddress;
+
+    if (!distributorCompanyName && !distributorName && !industryType && !contactPerson && !phoneNumber && !email && !address) {
+      return null;
+    }
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.productCard}>
+          <View style={styles.sectionTitleContainer}>
+            <Building2 size={20} color="#0a61d7" />
+            <Text style={styles.sectionTitle}>Distributor Information</Text>
+          </View>
+
+          {distributorCompanyName && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Company:</Text>
+              <Text style={styles.infoValueLeft}>{distributorCompanyName}</Text>
+            </View>
+          )}
+
+          {distributorName && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Name:</Text>
+              <Text style={styles.infoValueLeft}>{distributorName}</Text>
+            </View>
+          )}
+
+          {industryType && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Industry:</Text>
+              <Text style={styles.infoValueLeft}>{industryType}</Text>
+            </View>
+          )}
+
+          {contactPerson && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Contact:</Text>
+              <Text style={styles.infoValueLeft}>{contactPerson}</Text>
+            </View>
+          )}
+
+          {phoneNumber && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Phone:</Text>
+              <Text style={styles.infoValueLeft}>{phoneNumber}</Text>
+            </View>
+          )}
+
+          {email && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Email:</Text>
+              <Text style={styles.infoValueLeft}>{email}</Text>
+            </View>
+          )}
+
+          {address && (
+            <View style={styles.infoRowTopAligned}>
+              <Text style={styles.infoLabel}>Address:</Text>
+              <Text style={styles.infoValueMultiline}>{address}</Text>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -751,6 +968,7 @@ export default function OrderDetailsModal() {
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {renderOrderShippingInfo()}
+        {renderDistributorInfo()}
         {renderProductInfo()}
         {renderSupportCenter()}
         {renderOrderIdInfo()}
@@ -891,6 +1109,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
     textAlign: 'right',
+  },
+  infoRowTopAligned: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingVertical: 4,
+    gap: 12,
+  },
+  infoValueLeft: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'left',
+  },
+  infoValueMultiline: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'left',
+    lineHeight: 20,
   },
   infoCard: {
     backgroundColor: '#FFFFFF',
@@ -1206,14 +1447,45 @@ const styles = StyleSheet.create({
     borderTopColor: '#E2E8F0',
     marginTop: 12,
   },
+  feeLabelContainer: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    flex: 1,
+  },
   feeLabel: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  feeLabelSubtitle: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
+    marginTop: 2,
+    textTransform: 'capitalize',
   },
   feeValue: {
     fontSize: 14,
     fontWeight: '500',
     color: '#111827',
+  },
+  feeDetailsContainer: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  shippingMethodDetails: {
+    alignItems: 'flex-end',
+    marginTop: 4,
+  },
+  shippingMethodLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'right',
+  },
+  shippingMethodSchedule: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'right',
   },
   orderTotal: {
     marginTop: 0,
