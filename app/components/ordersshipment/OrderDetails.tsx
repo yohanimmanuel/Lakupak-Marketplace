@@ -379,27 +379,54 @@ export default function OrderDetailsModal() {
     const method = shippingInfo?.method || fallbackMethodRaw;
 
     const lowerMethod = method?.toLowerCase() || '';
+    const isPickup = lowerMethod.includes('pickup');
+    const isScheduled = lowerMethod.includes('scheduled');
     const preferredDate = shippingInfo?.scheduledDate
-      || (lowerMethod.includes('pickup') ? orderData.preferredPickupDate : orderData.preferredDeliveryDate)
+      || (isPickup ? orderData.preferredPickupDate : orderData.preferredDeliveryDate)
       || orderData.preferredDeliveryDate
       || orderData.preferredPickupDate
       || null;
 
     const preferredTime = shippingInfo?.scheduledTime
-      || (lowerMethod.includes('pickup') ? orderData.preferredPickupTime : orderData.preferredDeliveryTime)
+      || (isPickup ? orderData.preferredPickupTime : orderData.preferredDeliveryTime)
       || orderData.preferredDeliveryTime
       || orderData.preferredPickupTime
       || null;
 
     const scheduleText = formatScheduledDateTime(preferredDate || undefined, preferredTime || undefined);
     const estimatedText = shippingInfo?.estimatedDelivery || null;
-    const shouldShowSchedule = Boolean(scheduleText) && (lowerMethod.includes('scheduled') || lowerMethod.includes('pickup'));
+    const shouldShowSchedule = Boolean(scheduleText) && (isScheduled || isPickup);
 
     return {
       methodLabel: method ? formatShippingOptionLabel(method) : null,
       scheduleText: shouldShowSchedule ? scheduleText : null,
       estimatedText: !shouldShowSchedule ? estimatedText : null,
     };
+  };
+
+  const calculateProductTotal = () => {
+    const items = Array.isArray(orderData.orderItems) ? orderData.orderItems : [];
+    return items.reduce((total, item) => {
+      let computedTotal: number | null = null;
+
+      if (typeof item.totalPrice === 'number') {
+        computedTotal = item.totalPrice;
+      } else if (typeof item.totalPrice === 'string') {
+        const parsed = parseFloat(item.totalPrice);
+        computedTotal = Number.isFinite(parsed) ? parsed : null;
+      }
+
+      if (computedTotal === null) {
+        const quantity = item.packageQuantity ?? item.quantity ?? 1;
+        const price =
+          (typeof item.pricePerPackage === 'number' ? item.pricePerPackage : Number(item.pricePerPackage)) ||
+          item.unitPrice ||
+          0;
+        computedTotal = Number.isFinite(price * quantity) ? price * quantity : 0;
+      }
+
+      return total + (computedTotal || 0);
+    }, 0);
   };
 
 
@@ -609,24 +636,35 @@ export default function OrderDetailsModal() {
             </>
           )}
           
+          {orderData.orderItems && orderData.orderItems.length > 0 ? (
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Product Total</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(calculateProductTotal())}</Text>
+            </View>
+          ) : null}
+
           {orderData.shippingFee !== undefined && (() => {
             const { methodLabel, scheduleText, estimatedText } = getShippingDetails();
             return (
               <View style={styles.feeRow}>
-                <View style={styles.feeLabelContainer}>
-                  <Text style={styles.feeLabel}>Shipping Fee:</Text>
-                  {methodLabel ? (
-                    <Text style={styles.feeLabelSubtitle}>{methodLabel}</Text>
-                  ) : null}
-                </View>
-                <View style={styles.feeDetailsContainer}>
-                  <Text style={styles.feeValue}>
-                    {formatCurrency(orderData.shippingFee)}
-                  </Text>
+                <Text style={styles.feeSectionTitle}>Shipping Fee</Text>
+                <View style={styles.feeDetailsWrapper}>
+                  <View style={styles.feeMethodRow}>
+                    <Text style={styles.shippingMethodLabel} numberOfLines={1}>
+                      {methodLabel || 'Method not specified'}
+                    </Text>
+                    <Text style={styles.feeValue}>
+                      {formatCurrency(orderData.shippingFee)}
+                    </Text>
+                  </View>
                   {scheduleText ? (
-                    <Text style={styles.shippingMethodSchedule}>{scheduleText}</Text>
+                    <Text style={styles.shippingMethodSchedule} numberOfLines={2}>
+                      {scheduleText}
+                    </Text>
                   ) : estimatedText ? (
-                    <Text style={styles.shippingMethodSchedule}>Estimated: {estimatedText}</Text>
+                    <Text style={styles.shippingMethodSchedule} numberOfLines={2}>
+                      Estimated: {estimatedText}
+                    </Text>
                   ) : null}
                 </View>
               </View>
@@ -1439,53 +1477,54 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   feeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     marginTop: 12,
   },
-  feeLabelContainer: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    flex: 1,
-  },
-  feeLabel: {
+  feeSectionTitle: {
     fontSize: 14,
-    color: '#6B7280',
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 6,
   },
-  feeLabelSubtitle: {
-    fontSize: 12,
-    color: '#374151',
-    fontWeight: '500',
-    marginTop: 2,
-    textTransform: 'capitalize',
+  feeDetailsWrapper: {
+    flexDirection: 'column',
+  },
+  feeMethodRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   feeValue: {
     fontSize: 14,
     fontWeight: '500',
     color: '#111827',
   },
-  feeDetailsContainer: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  shippingMethodDetails: {
-    alignItems: 'flex-end',
-    marginTop: 4,
-  },
   shippingMethodLabel: {
     fontSize: 13,
-    fontWeight: '600',
     color: '#111827',
-    textAlign: 'right',
+    flexShrink: 1,
+    marginRight: 12,
   },
   shippingMethodSchedule: {
     fontSize: 12,
     color: '#6B7280',
-    textAlign: 'right',
+    marginTop: 0,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
   },
   orderTotal: {
     marginTop: 0,
@@ -1496,7 +1535,7 @@ const styles = StyleSheet.create({
   },
   orderTotalText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#111827',
   },
   productImageContainer: {
