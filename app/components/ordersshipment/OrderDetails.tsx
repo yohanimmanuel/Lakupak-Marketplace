@@ -474,42 +474,56 @@ export default function OrderDetailsModal() {
         {orderData.assignedLogistics && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Carrier:</Text>
-            <Text style={styles.infoValue}>{orderData.assignedLogistics}</Text>
+            <Text style={[styles.infoValue, styles.infoValueMedium]}>
+              {orderData.assignedLogistics}
+            </Text>
           </View>
         )}
         
         {orderData.trackingNumber && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Tracking Number:</Text>
-            <Text style={styles.infoValue}>{orderData.trackingNumber}</Text>
+            <Text style={[styles.infoValue, styles.infoValueMedium]}>
+              {orderData.trackingNumber}
+            </Text>
           </View>
         )}
         
         {orderData.contactPerson && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Recipient:</Text>
-            <Text style={styles.infoValue}>{orderData.contactPerson}</Text>
+            <Text style={[styles.infoValue, styles.infoValueMedium]}>
+              {orderData.contactPerson}
+            </Text>
           </View>
         )}
         
         {orderData.contactPhone && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Phone:</Text>
-            <Text style={styles.infoValue}>{orderData.contactPhone}</Text>
+            <Text style={[styles.infoValue, styles.infoValueMedium]}>
+              {orderData.contactPhone}
+            </Text>
           </View>
         )}
         
         {orderData.deliveryAddress && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Address:</Text>
-            <Text style={styles.infoValue}>{orderData.deliveryAddress}</Text>
+            <Text style={[styles.infoValue, styles.infoValueWide]} numberOfLines={1} ellipsizeMode="tail">
+              {orderData.deliveryAddress}
+            </Text>
           </View>
         )}
         
         {orderData.deliveryNote && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Delivery Instruction:</Text>
-            <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">
+            <Text
+              style={[styles.infoValue, styles.infoValueWide]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {orderData.deliveryNote}
             </Text>
           </View>
@@ -709,49 +723,63 @@ export default function OrderDetailsModal() {
           {distributorCompanyName && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Company:</Text>
-              <Text style={styles.infoValueLeft}>{distributorCompanyName}</Text>
+              <Text style={[styles.infoValue, styles.distributorValue]}>
+                {distributorCompanyName}
+              </Text>
             </View>
           )}
 
           {distributorName && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Name:</Text>
-              <Text style={styles.infoValueLeft}>{distributorName}</Text>
+              <Text style={[styles.infoValue, styles.distributorValue]}>
+                {distributorName}
+              </Text>
             </View>
           )}
 
           {industryType && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Industry:</Text>
-              <Text style={styles.infoValueLeft}>{industryType}</Text>
+              <Text style={[styles.infoValue, styles.distributorValue]}>
+                {industryType}
+              </Text>
             </View>
           )}
 
           {contactPerson && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Contact:</Text>
-              <Text style={styles.infoValueLeft}>{contactPerson}</Text>
+              <Text style={[styles.infoValue, styles.distributorValue]}>
+                {contactPerson}
+              </Text>
             </View>
           )}
 
           {phoneNumber && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Phone:</Text>
-              <Text style={styles.infoValueLeft}>{phoneNumber}</Text>
+              <Text style={[styles.infoValue, styles.distributorValue]}>
+                {phoneNumber}
+              </Text>
             </View>
           )}
 
           {email && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Email:</Text>
-              <Text style={styles.infoValueLeft}>{email}</Text>
+              <Text style={[styles.infoValue, styles.distributorValue]}>
+                {email}
+              </Text>
             </View>
           )}
 
           {address && (
             <View style={styles.infoRowTopAligned}>
               <Text style={styles.infoLabel}>Address:</Text>
-              <Text style={styles.infoValueMultiline}>{address}</Text>
+              <Text style={[styles.infoValueMultiline, styles.distributorValueMultiline]}>
+                {address}
+              </Text>
             </View>
           )}
         </View>
@@ -810,7 +838,11 @@ export default function OrderDetailsModal() {
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Order ID:</Text>
             <View style={styles.orderIdContainer}>
-              <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="middle">
+              <Text
+                style={[styles.infoValue, styles.infoValueMedium]}
+                numberOfLines={1}
+                ellipsizeMode="middle"
+              >
                 {orderData.orderId}
               </Text>
               <TouchableOpacity onPress={copyOrderId} style={styles.copyButton}>
@@ -885,7 +917,7 @@ export default function OrderDetailsModal() {
             return (
               <View key={item.key} style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{item.label}</Text>
-                <Text style={styles.infoValue}>{item.value}</Text>
+              <Text style={[styles.infoValue, styles.infoValueMedium]}>{item.value}</Text>
               </View>
             );
           })}
@@ -1135,11 +1167,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
     paddingVertical: 4,
+    gap: 12,
   },
   infoLabel: {
     fontSize: 14,
     color: '#6B7280',
-    flex: 1,
+    flexShrink: 0,
+    marginRight: 20,
   },
   infoValue: {
     fontSize: 14,
@@ -1156,20 +1190,33 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     gap: 12,
   },
-  infoValueLeft: {
-    fontSize: 14,
-    color: '#111827',
-    fontWeight: '500',
-    flex: 1,
-    textAlign: 'left',
-  },
   infoValueMultiline: {
     fontSize: 14,
     color: '#111827',
     fontWeight: '500',
     flex: 1,
-    textAlign: 'left',
+    textAlign: 'right',
     lineHeight: 20,
+  },
+  infoValueSmall: {
+    minWidth: 140,
+    textAlign: 'right',
+  },
+  infoValueMedium: {
+    minWidth: 180,
+    textAlign: 'right',
+  },
+  infoValueWide: {
+    minWidth: 220,
+    textAlign: 'right',
+  },
+  distributorValue: {
+    minWidth: 220,
+    textAlign: 'right',
+  },
+  distributorValueMultiline: {
+    minWidth: 220,
+    textAlign: 'right',
   },
   infoCard: {
     backgroundColor: '#FFFFFF',
@@ -1330,8 +1377,9 @@ const styles = StyleSheet.create({
   orderIdContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 2,
+    flex: 1,
     justifyContent: 'flex-end',
+    gap: 12,
   },
   orderIdText: {
     fontSize: 14,
