@@ -24,7 +24,13 @@ export default function EditCountry() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff', padding: 16 }}>
-      <TextInput value={value} onChangeText={setValue} placeholder="Country" style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12 }} />
+      <TextInput
+        value={value}
+        onChangeText={setValue}
+        placeholder="Country"
+        placeholderTextColor="#9CA3AF"
+        style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, color: '#111827' }}
+      />
       <Pressable onPress={onSave} style={{ marginTop: 16, backgroundColor: '#0a61d7', paddingVertical: 12, borderRadius: 8 }}>
         <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '600' }}>Save</Text>
       </Pressable>

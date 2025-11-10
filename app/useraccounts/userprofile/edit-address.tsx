@@ -5,6 +5,33 @@ import { useAuthStore } from '../../../stores/authStore';
 import { updateMe } from '../../../services/user';
 import { API_BASE_URL } from '../../../services/config';
 
+type AddressLabel = 'work' | 'store' | 'home';
+
+interface AddressRecord {
+  id: number;
+  fullName?: string;
+  phone?: string;
+  address?: string;
+  isDefault?: boolean;
+  label?: AddressLabel;
+}
+
+const isAddressRecord = (value: unknown): value is AddressRecord => {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Partial<AddressRecord>;
+  const isValidLabel =
+    candidate.label === undefined ||
+    candidate.label === 'work' ||
+    candidate.label === 'store' ||
+    candidate.label === 'home';
+  return typeof candidate.id === 'number' && isValidLabel;
+};
+
+const parseAddressRecords = (value: unknown): AddressRecord[] => {
+  if (!Array.isArray(value)) return [];
+  return value.filter(isAddressRecord);
+};
+
 export default function EditAddress() {
   const router = useRouter();
   const user = useAuthStore(s => s.user);
@@ -16,7 +43,7 @@ export default function EditAddress() {
   const [phone, setPhone] = useState<string>('');
   const [address, setAddress] = useState<string>('');
   const [isDefault, setIsDefault] = useState<boolean>(true);
-  const [label, setLabel] = useState<'work' | 'store' | 'home'>('home');
+  const [label, setLabel] = useState<AddressLabel>('home');
 
   useEffect(() => {
     if (params.id) {
@@ -31,14 +58,14 @@ export default function EditAddress() {
       if (!token || !id) return
       try {
         const res = await fetch(`${API_BASE_URL}/api/mobile/addresses`, { headers: { Authorization: `Bearer ${token}` } })
-        const list: unknown[] = await res.json()
+        const list = parseAddressRecords(await res.json())
         const cur = list.find(a => a.id === id)
         if (cur) {
-          setFullName(cur.fullName || '')
-          setPhone(cur.phone || '')
-          setAddress(cur.address || '')
-          setIsDefault(!!cur.isDefault)
-          setLabel(cur.label || 'home')
+          setFullName(cur.fullName ?? '')
+          setPhone(cur.phone ?? '')
+          setAddress(cur.address ?? '')
+          setIsDefault(Boolean(cur.isDefault))
+          setLabel(cur.label ?? 'home')
         }
       } catch {}
     }
@@ -73,9 +100,30 @@ export default function EditAddress() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#ffffff' }} contentContainerStyle={{ padding: 16 }}>
       <Text style={{ color: '#6B7280', marginBottom: 8 }}>Address</Text>
-      <TextInput value={fullName} onChangeText={setFullName} placeholder="Full Name" style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12 }} />
-      <TextInput value={phone} onChangeText={setPhone} placeholder="Phone" keyboardType="phone-pad" style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12 }} />
-      <TextInput value={address} onChangeText={setAddress} placeholder="Address (street, unit, postal)" multiline numberOfLines={3} style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, minHeight: 90 }} />
+      <TextInput
+        value={fullName}
+        onChangeText={setFullName}
+        placeholder="Full Name"
+        placeholderTextColor="#9CA3AF"
+        style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, color: '#111827' }}
+      />
+      <TextInput
+        value={phone}
+        onChangeText={setPhone}
+        placeholder="Phone"
+        keyboardType="phone-pad"
+        placeholderTextColor="#9CA3AF"
+        style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, color: '#111827' }}
+      />
+      <TextInput
+        value={address}
+        onChangeText={setAddress}
+        placeholder="Address (street, unit, postal)"
+        multiline
+        numberOfLines={3}
+        placeholderTextColor="#9CA3AF"
+        style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, minHeight: 90, color: '#111827' }}
+      />
       <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, marginTop: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={{ color: '#111827' }}>Set as Default Address</Text>

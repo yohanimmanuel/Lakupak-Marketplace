@@ -24,7 +24,15 @@ export default function EditBio() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff', padding: 16 }}>
-      <TextInput value={value} onChangeText={setValue} placeholder="Bio" multiline numberOfLines={4} style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, textAlignVertical: 'top', minHeight: 120 }} />
+      <TextInput
+        value={value}
+        onChangeText={setValue}
+        placeholder="Bio"
+        multiline
+        numberOfLines={4}
+        placeholderTextColor="#9CA3AF"
+        style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, textAlignVertical: 'top', minHeight: 120, color: '#111827' }}
+      />
       <Pressable onPress={onSave} style={{ marginTop: 16, backgroundColor: '#0a61d7', paddingVertical: 12, borderRadius: 8 }}>
         <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '600' }}>Save</Text>
       </Pressable>
