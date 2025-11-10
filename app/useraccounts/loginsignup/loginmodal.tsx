@@ -208,10 +208,7 @@ export default function LoginModal() {
  
             {!showPhoneLogin && !showUsernameLogin && (
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 16 }}>
-                <Pressable onPress={() => setShowPhoneLogin(true)} style={{ flexDirection: 'row', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' }}>
-                  <Phone color='#0a61d7' size={14} style={{ marginRight: 8 }} />
-                  <Text style={{ color: '#0a61d7', fontSize: 14, fontWeight: '500' }}>Mobile Number</Text>
-                </Pressable>
+                {/* Phone login temporarily disabled */}
                 <Pressable onPress={() => setShowUsernameLogin(true)} style={{ flexDirection: 'row', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 20, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' }}>
                   <User color='#0a61d7' size={14} style={{ marginRight: 8 }} />
                   <Text style={{ color: '#0a61d7', fontSize: 14, fontWeight: '500' }}>Username</Text>
@@ -219,7 +216,7 @@ export default function LoginModal() {
               </View>
             )}
 
-            {showPhoneLogin && (
+            {false && (
               <View>
                 {/* WhatsApp only */}
                 <View style={{ flexDirection: 'row', marginBottom: 10, borderBottomWidth: 2, borderBottomColor: '#0a61d7' }}>

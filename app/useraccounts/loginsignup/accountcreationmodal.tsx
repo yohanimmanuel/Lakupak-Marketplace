@@ -315,7 +315,7 @@ export default function AccountCreationModal() {
                     autoCorrect={false}
                   />
                 </View>
-                <Pressable
+                {/* <Pressable
                   onPress={async () => {
                     if (!signupData.username.trim() || !signupData.password.trim() || !signupData.confirmPassword.trim()) {
                       Alert.alert('Missing Information', 'Please fill in all fields.');
@@ -342,7 +342,7 @@ export default function AccountCreationModal() {
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
                 >
                   <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Continue to Phone Verification</Text>
-                </Pressable>
+                </Pressable> */}
 
                 {/* Skip Phone Verification Option */}
                 <Pressable
@@ -393,17 +393,17 @@ export default function AccountCreationModal() {
                   }}
                   style={{ backgroundColor: '#10b981', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Skip Phone Verification</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Create Account</Text>
                 </Pressable>
                 
                 <Text style={{ color: '#6b7280', fontSize: 12, textAlign: 'center', marginBottom: 16 }}>
-                  Phone number is optional. You can add your phone number later in account settings
+                  Phone number signup will be added in the next version. 
                 </Text>
               </View>
             )}
 
-            {/* Step 4: Phone Verification */}
-            {signupStep === 4 && (
+            {/* Step 4: Phone Verification disabled */}
+            {false && (
               <View>
                 <View style={{ alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                   <Text style={{ color: '#6b7280', fontSize: 14, textAlign: 'center', marginBottom: 10 }}>
