@@ -154,7 +154,7 @@ export default function AccountCreationModal() {
                     width: 32,
                     height: 32,
                     borderRadius: 16,
-                    backgroundColor: signupStep > step ? '#10b981' : signupStep >= step ? '#0a61d7' : '#e5e7eb',
+                    backgroundColor: signupStep > step ? '#16a34a' : signupStep >= step ? '#0a61d7' : '#e5e7eb',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginHorizontal: 4
@@ -175,7 +175,7 @@ export default function AccountCreationModal() {
                     <View style={{
                       width: 20,
                       height: 2,
-                      backgroundColor: signupStep > step ? '#10b981' : signupStep >= step ? '#0a61d7' : '#e5e7eb',
+                      backgroundColor: signupStep > step ? '#16a34a' : signupStep >= step ? '#0a61d7' : '#e5e7eb',
                       marginHorizontal: 4
                     }} />
                   )}
@@ -339,10 +339,10 @@ export default function AccountCreationModal() {
                       Alert.alert('Signup Failed', (error instanceof Error ? error.message : 'Something went wrong'));
                     }
                   }}
-                  style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
+                  style={{ backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Continue to Phone Verification</Text>
-                </Pressable> */}
+                  <Text style={{ color: '#111827', fontSize: 16, fontWeight: '500' }}>Continue to Phone Verification</Text>
+                </Pressable> 
 
                 {/* Skip Phone Verification Option */}
                 <Pressable
@@ -391,7 +391,7 @@ export default function AccountCreationModal() {
                       Alert.alert('Signup Failed', (error instanceof Error ? error.message : 'Something went wrong'));
                     }
                   }}
-                  style={{ backgroundColor: '#10b981', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
+                  style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
                 >
                   <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Create Account</Text>
                 </Pressable>
@@ -501,7 +501,7 @@ export default function AccountCreationModal() {
                       }}
                       style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginBottom: 8 }}
                     >
-                      <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Complete Registration</Text>
+                      <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Create Account</Text>
                     </Pressable>
                   </View>
                 )}
