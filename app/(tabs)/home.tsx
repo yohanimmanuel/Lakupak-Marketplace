@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   StyleSheet,
   View as RNView,
@@ -61,6 +61,13 @@ export default function HomeScreen() {
   const token = useAuthStore(s => s.token);
   const user = useAuthStore(s => s.user);
   const isAuthenticated = !!token && !!user;
+
+  // Redirect to welcome if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/useraccounts/welcome');
+    }
+  }, [isAuthenticated, router]);
 
   // Data state from cache
   const { 

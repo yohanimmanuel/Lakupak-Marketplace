@@ -38,10 +38,20 @@ import { marketplaceService, MarketplaceProduct } from '../../services/marketpla
 
 export default function CategoriesScreen() {
   const router = useRouter();
+  const token = useAuthStore(s => s.token);
+  const user = useAuthStore(s => s.user);
+  const isAuthenticated = !!token && !!user;
+
+  // Redirect to welcome if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/useraccounts/welcome');
+    }
+  }, [isAuthenticated, router]);
+  
   const { addItem } = useCartStore();
   const { toggleLikedProduct } = useUserActivityStore();
   const likedProducts = useUserActivityStore(state => state.likedProducts);
-  const { user } = useAuthStore();
   
   // Using explicit colors instead of theme colors
   const backgroundColor = '#ffffff'; // Explicit white
@@ -52,11 +62,6 @@ export default function CategoriesScreen() {
   const [scrollPosition, setScrollPosition] = useState(0);
   const [scrollContentWidth, setScrollContentWidth] = useState(0);
   const [scrollViewWidth, setScrollViewWidth] = useState(0);
-
-  // Auth state
-  const token = useAuthStore(s => s.token);
-  const authUser = useAuthStore(s => s.user);
-  const isAuthenticated = !!token && !!authUser;
 
   // Data state from cache
   const { 
@@ -108,14 +113,14 @@ export default function CategoriesScreen() {
   }, []);
 
   const handleToggleFavorite = useCallback(async (productId: string) => {
-    if (!authUser?.id) {
+    if (!user?.id) {
       return;
     }
     const product = products.find(p => p.id === productId);
     if (product) {
       await toggleLikedProduct(productId, product);
     }
-  }, [authUser?.id, products, toggleLikedProduct]);
+  }, [user?.id, products, toggleLikedProduct]);
 
   // Handlers
   const handleRefresh = useCallback(async () => {

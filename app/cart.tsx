@@ -22,6 +22,7 @@ import BuyNowModal from './components/productcatalog/BuyNowModal';
 import { useCartStore, CartItem } from '../stores/cartStore';
 import { useDataStore } from '../stores/dataStore';
 import { useAuthStore } from '../stores/authStore';
+import { useUserActivityStore } from '../stores/userActivityStore';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -50,6 +51,10 @@ export default function CartScreen() {
   
   // Data store for products
   const { products } = useDataStore();
+  
+  // User activity store for favorites
+  const { toggleLikedProduct } = useUserActivityStore();
+  const likedProducts = useUserActivityStore(state => state.likedProducts);
   
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(null);
@@ -170,8 +175,14 @@ export default function CartScreen() {
     // TODO: Implement share functionality
   };
 
-  const handleToggleFavorite = (productId: string) => {
-    // TODO: Implement toggle favorite functionality
+  const handleToggleFavorite = async (productId: string) => {
+    if (!authUser?.id) {
+      return;
+    }
+    const product = relatedProducts.find(p => p.id === productId) || products.find(p => p.id === productId);
+    if (product) {
+      await toggleLikedProduct(productId, product);
+    }
   };
 
   const selectedItems = getSelectedItems();
@@ -442,7 +453,7 @@ export default function CartScreen() {
                   onChatSeller={handleChatSeller}
                   onShare={handleShare}
                   onToggleFavorite={handleToggleFavorite}
-                  isFavorite={false}
+                  isFavorite={likedProducts.includes(String(product.id))}
                   type="card"
                 />
               </View>
@@ -464,7 +475,7 @@ export default function CartScreen() {
                   onChatSeller={handleChatSeller}
                   onShare={handleShare}
                   onToggleFavorite={handleToggleFavorite}
-                  isFavorite={false}
+                  isFavorite={likedProducts.includes(String(product.id))}
                   type="card"
                 />
               </View>
@@ -598,14 +609,9 @@ const styles = StyleSheet.create({
   cartItem: {
     backgroundColor: '#ffffff',
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 4,
     borderRadius: 8,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   cartItemHeader: {
     flexDirection: 'row',

@@ -1,19 +1,140 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Image } from 'react-native';
-import { User as UserIcon, MapPin, WalletMinimal, Truck, PackageCheck, Star, ChevronRight, RotateCcw, Gift, Tag, DollarSign, Wallet, Heart, Clock, RotateCw, Ticket } from 'lucide-react-native';
-import { Link } from 'expo-router';
+import { User as UserIcon, MapPin, WalletMinimal, Truck, PackageCheck, Star, ChevronRight, RotateCcw, Gift, Tag, DollarSign, Wallet, Heart, Clock, RotateCw, Ticket, Users } from 'lucide-react-native';
+import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
+import { API_BASE_URL } from '../../services/config';
+
+interface Distributor {
+  id: number;
+  name: string;
+  logo?: string;
+  totalOrders: number;
+}
+
+interface Order {
+  orderId: string;
+  userId: number | null;
+  storeName: string;
+  orderStatus: string;
+  orderDate: string;
+  orderItems?: Array<{
+    product?: {
+      userId?: number;
+      name?: string;
+    } | null;
+  }>;
+}
 
 export default function AccountScreen() {
+  const router = useRouter();
   const primaryBlue = '#0a61d7';
   const iconGray = '#6B7280';
   const token = useAuthStore(s => s.token);
   const user = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
+  const [recentDistributors, setRecentDistributors] = useState<Distributor[]>([]);
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    if (token && user?.id) {
+      loadRecentDistributors();
+    }
+  }, [token, user?.id]);
+
+  const loadRecentDistributors = async () => {
+    if (!user?.id || !token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${user.id}&limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const orders: Order[] = data.orders || [];
+
+      // Filter successful orders and group by distributor
+      // The distributor ID is in order.userId and distributor name is in order.storeName
+      const successfulOrders = orders.filter(order => 
+        ['Delivered', 'Confirmed', 'Shipped', 'Packed'].includes(order.orderStatus) && order.userId !== null
+      );
+
+      // Get unique distributor IDs and their store names
+      const uniqueDistributors = new Map<number, { storeName: string; orderCount: number }>();
+      
+      successfulOrders.forEach(order => {
+        const distributorId = order.userId!;
+        if (!uniqueDistributors.has(distributorId)) {
+          uniqueDistributors.set(distributorId, {
+            storeName: order.storeName || `Distributor #${distributorId}`,
+            orderCount: 0
+          });
+        }
+        uniqueDistributors.get(distributorId)!.orderCount++;
+      });
+
+      // Fetch distributor profiles from database by getting products and matching by userId
+      // Fetch products to get seller/company information for distributors
+      let sellerInfoMap = new Map<number, { seller?: any }>();
+      
+      try {
+        // Fetch products to get seller info (we'll filter client-side by userId)
+        const productResponse = await fetch(`${API_BASE_URL}/api/marketplace?limit=100`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (productResponse.ok) {
+          const productData = await productResponse.json();
+          const products = productData.products || [];
+          
+          // Build a map of userId to seller/company info
+          products.forEach((product: any) => {
+            if (product.userId && !sellerInfoMap.has(product.userId)) {
+              sellerInfoMap.set(product.userId, {
+                seller: product.seller
+              });
+            }
+          });
+        }
+      } catch (error) {
+        // Continue with order data only
+      }
+
+      // Build distributor profiles using seller info from products if available
+      const distributorProfiles = Array.from(uniqueDistributors.keys()).map((distributorId) => {
+        const distributorData = uniqueDistributors.get(distributorId)!;
+        const sellerData = sellerInfoMap.get(distributorId);
+        const companyInfo = sellerData?.seller?.company;
+        
+        return {
+          id: distributorId,
+          name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
+          logo: companyInfo?.logo || sellerData?.seller?.avatar,
+          totalOrders: distributorData.orderCount
+        };
+      });
+
+      // Get top 2 most recent distributors
+      const distributorsList = distributorProfiles
+        .sort((a, b) => b.totalOrders - a.totalOrders)
+        .slice(0, 2);
+
+      setRecentDistributors(distributorsList);
+    } catch (error) {
+    }
+  };
+
   const isAuthenticated = !!token && !!user;
 
   const renderLoginPrompt = () => (
@@ -155,6 +276,79 @@ export default function AccountScreen() {
             <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>View Purchases History</Text>
             <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
           </View>
+        )}
+      </View>
+
+      {/* Section 2.5: My Networks */}
+      <View style={{ backgroundColor: '#ffffff', padding: 16, marginBottom: 10, opacity: isAuthenticated ? 1 : 0.6 }}>
+        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 16 }}>My Networks</Text>
+        {isAuthenticated ? (
+          <>
+            {recentDistributors.length > 0 ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+                {recentDistributors.map((distributor) => (
+                  <Pressable 
+                    key={distributor.id}
+                    onPress={() => router.push(`/useraccounts/buyernetworks/distributor-detail?id=${distributor.id}`)}
+                    style={{ width: '47%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb' }}
+                  >
+                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' }}>
+                      {distributor.logo ? (
+                        <Image source={{ uri: distributor.logo }} style={{ width: 48, height: 48 }} />
+                      ) : (
+                        <Users color={primaryBlue} size={24} />
+                      )}
+                    </View>
+                    <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>
+                      {distributor.name}
+                    </Text>
+                    <Text style={{ color: '#6b7280', fontSize: 12 }}>
+                      {distributor.totalOrders} {distributor.totalOrders === 1 ? 'order' : 'orders'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+                <View style={{ width: '47%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', opacity: 0.5 }}>
+                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                    <Users color={iconGray} size={24} />
+                  </View>
+                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>No networks yet</Text>
+                  <Text style={{ color: '#6b7280', fontSize: 12 }}>--</Text>
+                </View>
+              </View>
+            )}
+            <Link href="/useraccounts/buyernetworks/mynetworks" asChild>
+              <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
+                <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>View All Networks</Text>
+                <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
+              </Pressable>
+            </Link>
+          </>
+        ) : (
+          <>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
+              <View style={{ width: '47%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', opacity: 0.5 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                  <Users color={iconGray} size={24} />
+                </View>
+                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>Distributor</Text>
+                <Text style={{ color: '#6b7280', fontSize: 12 }}>--</Text>
+              </View>
+              <View style={{ width: '47%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', opacity: 0.5 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                  <Users color={iconGray} size={24} />
+                </View>
+                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>Distributor</Text>
+                <Text style={{ color: '#6b7280', fontSize: 12 }}>--</Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
+              <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>View All Networks</Text>
+              <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
+            </View>
+          </>
         )}
       </View>
 
