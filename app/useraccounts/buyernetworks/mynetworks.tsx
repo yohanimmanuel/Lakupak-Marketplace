@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Pressable, Image, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image, RefreshControl, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useRouter, Link, useFocusEffect } from 'expo-router';
+import { useRouter, Link, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Users, MapPin, Phone, Mail, Star, Package, ChevronRight } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
@@ -10,6 +10,7 @@ interface Distributor {
   id: number;
   name: string;
   logo?: string;
+  banner?: string;
   address?: string;
   phone?: string;
   email?: string;
@@ -183,7 +184,10 @@ export default function MyNetworksScreen() {
         return {
           id: distributorId,
           name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
+          // Prefer dashboard company logo; fallback to seller avatar (profile pic)
           logo: companyInfo?.logo || sellerData?.seller?.avatar,
+          // Prefer company banner; fallback to seller.company.bannerImage if present
+          banner: companyInfo?.bannerImage || sellerData?.seller?.company?.bannerImage,
           address: companyInfo?.businessAddress,
           phone: companyInfo?.businessPhone,
           email: companyInfo?.businessEmail,
@@ -218,104 +222,130 @@ export default function MyNetworksScreen() {
   };
 
   return (
-    <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }} edges={['top']}>
-        {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-          <Pressable onPress={() => router.back()} style={{ padding: 8, marginLeft: -8 }}>
-            <ArrowLeft color='#111827' size={24} />
-          </Pressable>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginLeft: 16 }}>My Networks</Text>
-        </View>
-
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primaryBlue} />}
-        >
-          {isLoading ? (
-            <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 60 }}>
-              <Text style={{ fontSize: 14, color: '#6b7280' }}>Loading...</Text>
-            </View>
-          ) : distributors.length === 0 ? (
-            <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 60 }}>
-              <Users color={iconGray} size={48} />
-              <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginTop: 16, marginBottom: 8 }}>No Networks Yet</Text>
-              <Text style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>
-                Start purchasing from distributors to build your network
-              </Text>
-            </View>
-          ) : (
-            distributors.map((distributor) => (
-              <Link
-                key={distributor.id}
-                href={`/useraccounts/buyernetworks/distributor-detail?id=${distributor.id}`}
-                asChild
-              >
-                <Pressable
-                  style={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: 12,
-                    padding: 16,
-                    marginBottom: 12,
-                    borderWidth: 1,
-                    borderColor: '#e5e7eb',
-                    flexDirection: 'row',
-                    alignItems: 'center'
-                  }}
-                >
-                  {/* Logo/Avatar */}
-                  <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.listContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primaryBlue} />}
+      >
+        {isLoading ? (
+          <View style={styles.loading}>
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        ) : distributors.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Users color={iconGray} size={48} />
+            <Text style={styles.emptyTitle}>No Networks Yet</Text>
+            <Text style={styles.emptyText}>
+              Start purchasing from distributors to build your network
+            </Text>
+          </View>
+        ) : (
+          distributors.map((distributor) => (
+            <Link
+              key={distributor.id}
+              href={`/useraccounts/buyernetworks/distributor-detail?id=${distributor.id}`}
+              asChild
+            >
+              <Pressable style={styles.card}>
+                {distributor.banner ? (
+                  <Image source={{ uri: distributor.banner }} style={styles.cardBanner} />
+                ) : (
+                  <View style={styles.bannerPlaceholder} />
+                )}
+                <View style={styles.cardRow}>
+                  <View style={styles.avatar}>
                     {distributor.logo ? (
-                      <Image source={{ uri: distributor.logo }} style={{ width: 56, height: 56, borderRadius: 28 }} />
+                      <Image source={{ uri: distributor.logo }} style={styles.avatarImg} />
                     ) : (
                       <Users color={primaryBlue} size={28} />
                     )}
                   </View>
-
-                  {/* Info */}
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                      <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', flex: 1 }} numberOfLines={1}>
+                  <View style={styles.info}>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.name} numberOfLines={1}>
                         {distributor.name}
                       </Text>
                       {distributor.rating && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 8 }}>
+                        <View style={styles.ratingRow}>
                           <Star color="#fbbf24" size={14} fill="#fbbf24" />
-                          <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 4 }}>{distributor.rating}</Text>
+                          <Text style={styles.ratingText}>{distributor.rating}</Text>
                         </View>
                       )}
                     </View>
                     {distributor.address && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                      <View style={styles.addressRow}>
                         <MapPin color={iconGray} size={14} />
-                        <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 4, flex: 1 }} numberOfLines={1}>
+                        <Text style={styles.addressText} numberOfLines={1}>
                           {distributor.address}
                         </Text>
                       </View>
                     )}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <View style={styles.ordersRow}>
                       <Package color={iconGray} size={14} />
-                      <Text style={{ fontSize: 12, color: '#6b7280', marginLeft: 4 }}>
+                      <Text style={styles.ordersText}>
                         {distributor.totalOrders} {distributor.totalOrders === 1 ? 'order' : 'orders'}
                       </Text>
                       {distributor.lastOrderDate && (
-                        <Text style={{ fontSize: 12, color: '#9ca3af', marginLeft: 8 }}>
+                        <Text style={styles.lastOrderText}>
                           • Last: {new Date(distributor.lastOrderDate).toLocaleDateString()}
                         </Text>
                       )}
                     </View>
                   </View>
-
-                  <ChevronRight color={iconGray} size={20} style={{ marginLeft: 8 }} />
-                </Pressable>
-              </Link>
-            ))
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </>
+                  <ChevronRight color={iconGray} size={20} style={styles.chevron} />
+                </View>
+              </Pressable>
+            </Link>
+          ))
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f9fafb' },
+  scroll: { flex: 1 },
+  listContent: { padding: 16 },
+  loading: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  loadingText: { fontSize: 14, color: '#6b7280' },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#111827', marginTop: 16, marginBottom: 8 },
+  emptyText: { fontSize: 14, color: '#6b7280', textAlign: 'center' },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  cardBanner: { width: '100%', height: 80 },
+  bannerPlaceholder: { width: '100%', height: 80, backgroundColor: '#f3f4f6' },
+  cardRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 12 },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    marginLeft: 4,
+    marginTop: -28,
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  avatarImg: { width: 56, height: 56, borderRadius: 28 },
+  info: { flex: 1 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  name: { fontSize: 16, fontWeight: '600', color: '#111827', flex: 1 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', marginLeft: 8 },
+  ratingText: { fontSize: 12, color: '#6b7280', marginLeft: 4 },
+  addressRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  addressText: { fontSize: 12, color: '#6b7280', marginLeft: 4, flex: 1 },
+  ordersRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+  ordersText: { fontSize: 12, color: '#6b7280', marginLeft: 4 },
+  lastOrderText: { fontSize: 12, color: '#9ca3af', marginLeft: 8 },
+  chevron: { marginLeft: 8 },
+});
