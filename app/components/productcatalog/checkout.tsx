@@ -13,7 +13,8 @@ import {
   StatusBar,
   Animated,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { InteractionManager } from 'react-native';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -164,7 +165,7 @@ const resolveDistributorId = (product?: MarketplaceProduct): string => {
   
 const distributorGroups = useMemo(
   () => (isCartCheckout ? groupByDistributor(selectedCartItems) : {}),
-  [isCartCheckout, selectedCartItems]
+  [isCartCheckout, selectedCartItems, products]
 );
   
 
@@ -228,7 +229,7 @@ const distributorGroups = useMemo(
     return [];
   };
 
-const distributorsInfo = useMemo(() => getDistributorsInfo(), [isCartCheckout, selectedCartItems, product]);
+const distributorsInfo = useMemo(() => getDistributorsInfo(), [isCartCheckout, selectedCartItems, product, products]);
 
 const distributorsInfoMap = useMemo(() => {
   return distributorsInfo.reduce<Record<string, DistributorInfo>>((acc, info) => {
@@ -417,6 +418,29 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
   };
+
+  // Refresh products/cart once when screen gains focus without blocking navigation.
+  useFocusEffect(
+    React.useCallback(() => {
+      const task = InteractionManager.runAfterInteractions(() => {
+        try {
+          // Use store accessors directly to avoid changing hook deps and re-render loops
+          if (typeof (useDataStore as any).getState === 'function') {
+            (useDataStore as any).getState().forceRefreshProducts?.();
+          }
+          if (typeof (useCartStore as any).getState === 'function') {
+            (useCartStore as any).getState().checkAuthStore
+              ? (useCartStore as any).getState().checkAuthStore()
+              : (useCartStore as any).getState().checkAuth();
+          }
+        } catch {}
+      });
+      return () => {
+        // @ts-ignore
+        if (task && typeof task.cancel === 'function') task.cancel();
+      };
+    }, [])
+  );
 
   const initializeModalDateTime = (existingDate?: Date | null) => {
     if (existingDate) {
