@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, Image, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useRouter, Link } from 'expo-router';
+import { Stack, useRouter, Link, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Users, MapPin, Phone, Mail, Star, Package, ChevronRight } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
@@ -34,6 +34,8 @@ interface Order {
   orderStatus: string;
   totalAmount: number;
   orderItems?: OrderItem[];
+  isDeleted?: boolean;
+  deletedAt?: string | null;
 }
 
 interface UserInfo {
@@ -71,6 +73,15 @@ export default function MyNetworksScreen() {
       setIsLoading(false);
     }
   }, [authUser?.id, token]);
+  
+  // Refresh data whenever the screen gains focus (handles deletions made elsewhere)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (authUser?.id && token) {
+        loadDistributors();
+      }
+    }, [authUser?.id, token])
+  );
 
   const loadDistributors = async () => {
     if (!authUser?.id || !token) {
@@ -97,10 +108,14 @@ export default function MyNetworksScreen() {
       const data = await response.json();
       const orders: Order[] = data.orders || [];
 
-      // Filter successful orders (Delivered, Confirmed, Shipped, Packed)
+      // Count all orders that have a distributor id (any status) and are not deleted/cancelled
       // The distributor ID is in order.userId and distributor name is in order.storeName (same as My Purchases)
       const successfulOrders = orders.filter(order => 
-        ['Delivered', 'Confirmed', 'Shipped', 'Packed'].includes(order.orderStatus) && order.userId !== null
+        order.userId !== null &&
+        order.isDeleted !== true &&
+        !order.deletedAt &&
+        order.orderStatus !== 'Deleted' &&
+        order.orderStatus !== 'Cancelled'
       );
 
       // Get unique distributor IDs and their store names
@@ -178,8 +193,11 @@ export default function MyNetworksScreen() {
         };
       });
 
+      // Final defensive filter: exclude distributors with zero active orders
+      const activeOnly = distributorProfiles.filter(p => p.totalOrders > 0);
+
       // Sort by last order date (most recent first)
-      const distributorsList = distributorProfiles.sort((a, b) => {
+      const distributorsList = activeOnly.sort((a, b) => {
         if (!a.lastOrderDate) return 1;
         if (!b.lastOrderDate) return -1;
         return new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime();

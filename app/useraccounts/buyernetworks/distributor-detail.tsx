@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Users, MapPin, Phone, Mail, Star, Package, MessageSquare, Store, Calendar } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
+import { formatCurrency } from '../../../utils/currencyUtils';
 import { API_BASE_URL } from '../../../services/config';
 
 interface Distributor {
@@ -36,6 +37,7 @@ interface OrderResponse {
   orderDate: string;
   orderStatus: string;
   totalAmount: number;
+  storeName?: string;
   userId?: number | null;
   orderItems: Array<{ 
     packageQuantity?: number;
@@ -109,20 +111,49 @@ export default function DistributorDetailScreen() {
       const data = await response.json();
       const allOrders: OrderResponse[] = data.orders || [];
 
-      // Filter orders for this specific distributor by userId or product userId
+      // Filter orders for this specific distributor by userId or product userId (count all statuses)
       const distributorOrders = allOrders.filter(order => {
         const orderDistributorId = order.userId || 
           (order.orderItems && order.orderItems.length > 0 
             ? order.orderItems[0]?.product?.userId 
             : null);
-        return orderDistributorId === distributorId &&
-          ['Delivered', 'Confirmed', 'Shipped', 'Packed'].includes(order.orderStatus);
+        return orderDistributorId === distributorId;
       });
 
       if (distributorOrders.length === 0) {
         setDistributor(null);
         setOrders([]);
         return;
+      }
+
+      // Attempt to fetch seller/company info from marketplace by scanning products and matching userId (preferred source)
+      let sellerCompany:
+        | {
+            name?: string;
+            logo?: string;
+            bannerImage?: string;
+            businessAddress?: string;
+            businessPhone?: string;
+            businessEmail?: string;
+            businessDescription?: string;
+            industryType?: string;
+          }
+        | undefined;
+      try {
+        const marketRes = await fetch(`${API_BASE_URL}/api/marketplace?limit=200`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (marketRes.ok) {
+          const marketJson = await marketRes.json();
+          const products = marketJson?.products || [];
+          const match = products.find((p: any) => p?.userId === distributorId);
+          sellerCompany = match?.seller?.company;
+        }
+      } catch (_err) {
+        // ignore and rely on order user data
       }
 
       // Get distributor info from order.user or create basic entry
@@ -143,19 +174,24 @@ export default function DistributorDetailScreen() {
       // Build distributor object
       const distributorData: Distributor = {
         id: distributorId,
-        name: distributorUser.company?.name || distributorUser.storeName || distributorUser.name || distributorUser.username || 'Unknown Distributor',
-        logo: distributorUser.company?.logo || distributorUser.image,
-        banner: distributorUser.company?.bannerImage,
-        address: distributorUser.company?.businessAddress || distributorUser.chosenAddress,
-        phone: distributorUser.company?.businessPhone || distributorUser.phone,
-        email: distributorUser.company?.businessEmail || distributorUser.email,
+        name:
+          sellerCompany?.name ||
+          distributorUser.company?.name ||
+          distributorUser.name ||
+          distributorUser.username ||
+          `Distributor #${distributorId}`,
+        logo: sellerCompany?.logo || distributorUser.company?.logo || distributorUser.image,
+        banner: sellerCompany?.bannerImage || distributorUser.company?.bannerImage,
+        address: sellerCompany?.businessAddress || distributorUser.company?.businessAddress || distributorUser.chosenAddress,
+        phone: sellerCompany?.businessPhone || distributorUser.company?.businessPhone || distributorUser.phone,
+        email: sellerCompany?.businessEmail || distributorUser.company?.businessEmail || distributorUser.email,
         rating: 4.5, // Default rating
         totalOrders: distributorOrders.length,
         totalSpent: totalSpent,
         lastOrderDate: distributorOrders[0].orderDate,
-        description: distributorUser.company?.businessDescription,
-        industryType: distributorUser.company?.industryType,
-        verified: distributorUser.company?.name ? true : false
+        description: sellerCompany?.businessDescription || distributorUser.company?.businessDescription,
+        industryType: sellerCompany?.industryType || distributorUser.company?.industryType,
+        verified: (sellerCompany?.name || distributorUser.company?.name) ? true : false
       };
 
       setDistributor(distributorData);
@@ -359,7 +395,7 @@ export default function DistributorDetailScreen() {
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                       <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>
-                        ${order.total.toFixed(2)}
+                        {formatCurrency(order.total)}
                       </Text>
                       <Text style={{ fontSize: 12, color: '#10b981', marginTop: 4 }}>{order.status}</Text>
                     </View>

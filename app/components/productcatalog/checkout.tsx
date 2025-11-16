@@ -80,10 +80,24 @@ export default function CheckoutScreen() {
   
   // Get auth token
   const token = useAuthStore(s => s.token);
+
+  // Helper: always resolve the freshest product data by id
+  const getFreshProductById = (id?: string) => {
+    if (!id) return null;
+    return products.find(p => p.id === id) || null;
+  };
+  const getItemProduct = (item: CartItem) => {
+    const fresh = getFreshProductById((item?.product as MarketplaceProduct)?.id);
+    return (fresh || (item.product as MarketplaceProduct)) as MarketplaceProduct;
+  };
   
   // Get cart data
   const cartStore = useCartStore();
-  const selectedCartItems = cartStore.getSelectedItems();
+  const cartItems = useCartStore(s => s.items as CartItem[]);
+  const selectedCartItems = useMemo(
+    () => cartItems.filter(item => item.selected),
+    [cartItems]
+  );
   
   // Parse parameters
   const productId = params.productId || '';
@@ -137,11 +151,12 @@ const resolveDistributorId = (product?: MarketplaceProduct): string => {
     const grouped: { [key: string]: typeof selectedCartItems } = {};
     
     items.forEach(item => {
-      const distributorId = resolveDistributorId(item.product as MarketplaceProduct);
+      const distributorId = resolveDistributorId(getItemProduct(item));
       if (!grouped[distributorId]) {
         grouped[distributorId] = [];
       }
-      grouped[distributorId].push(item);
+      // push a shallow copy with freshest product reference
+      grouped[distributorId].push({ ...item, product: getItemProduct(item) });
     });
     
     return grouped;
@@ -199,7 +214,7 @@ const distributorGroups = useMemo(
       // Cart checkout - get all unique distributors
       const distributors = new Map<string, DistributorInfo>();
       selectedCartItems.forEach((item: CartItem) => {
-        const product = item.product as MarketplaceProduct;
+        const product = getItemProduct(item);
         const info = getDistributorInfo(product);
         if (!distributors.has(info.id)) {
           distributors.set(info.id, info);
@@ -567,7 +582,7 @@ useEffect(() => {
         return;
       }
 
-      const firstProduct = items[0].product as MarketplaceProduct;
+      const firstProduct = getItemProduct(items[0]);
       const options = getAvailableShippingOptions(firstProduct);
       if (options.length > 0) {
         next[distributorId] = options[0].id;
@@ -610,7 +625,7 @@ useEffect(() => {
     if (isCartCheckout) {
       return selectedCartItems.reduce((total, item) => {
         // Get variant-specific pricing - use new variantOptions structure first
-        const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
+        const marketplaceProduct = getItemProduct(item) as MarketplaceProduct & { variantOptions?: Array<{
           id: number;
           sellingPrice: number;
           attributes: Record<string, string>;
@@ -674,7 +689,7 @@ useEffect(() => {
       let totalShipping = 0;
       Object.entries(distributorGroups).forEach(([distributorId, group]) => {
         if (group.length > 0) {
-          const firstProduct = group[0].product as MarketplaceProduct;
+          const firstProduct = getItemProduct(group[0]);
           const shippingOptions = getAvailableShippingOptions(firstProduct);
           const selectedId = selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id;
           const selectedOption = shippingOptions.find(s => s.id === selectedId) || shippingOptions[0];
@@ -725,7 +740,7 @@ useEffect(() => {
                     // Calculate totals for this distributor's items
                     const distributorSubtotal = items.reduce((total, item) => {
                       // Get variant-specific pricing - use new variantOptions structure first
-                      const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
+                      const marketplaceProduct = getItemProduct(item) as MarketplaceProduct & { variantOptions?: Array<{
                         id: number;
                         sellingPrice: number;
                         attributes: Record<string, string>;
@@ -779,7 +794,7 @@ useEffect(() => {
                       
                       return total + (unitPrice * item.quantity * piecesPerPackage);
                     }, 0);
-                    const firstProduct = items[0].product as MarketplaceProduct;
+                    const firstProduct = getItemProduct(items[0]);
                     const shippingOptions = getAvailableShippingOptions(firstProduct);
                     const selectedId = selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id;
                     const selectedOption = shippingOptions.find(s => s.id === selectedId) || shippingOptions[0];
@@ -801,7 +816,7 @@ useEffect(() => {
                       distributorUserId: (firstProduct as MarketplaceProduct)?.userId,
                       orderItems: items.map(item => {
                         // Get variant-specific data - use new variantOptions structure first
-                        const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
+                      const marketplaceProduct = getItemProduct(item) as MarketplaceProduct & { variantOptions?: Array<{
                           id: number;
                           sellingPrice: number;
                           attributes: Record<string, string>;
@@ -875,7 +890,7 @@ useEffect(() => {
                       totalAmount: distributorTotal,
                       totalOrders: items.reduce((sum, item) => {
                         // Get piecesPerPackage from product level (piece-based system)
-                        const marketplaceProduct = item.product as MarketplaceProduct;
+                        const marketplaceProduct = getItemProduct(item) as MarketplaceProduct;
                         const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
                         
                         return sum + (item.quantity * piecesPerPackage);
@@ -1006,8 +1021,8 @@ useEffect(() => {
                 }
 
                 // Collect product images from cart items or single product
-                const productImages = isCartCheckout 
-                  ? selectedCartItems.map((item: CartItem) => item.product.images?.[0]).filter(Boolean)
+                    const productImages = isCartCheckout 
+                  ? selectedCartItems.map((item: CartItem) => getItemProduct(item)?.images?.[0]).filter(Boolean)
                   : productImage ? [productImage] : [];
                 
                 // Create immediate notification for successful order

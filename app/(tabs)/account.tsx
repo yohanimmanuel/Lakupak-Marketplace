@@ -61,11 +61,9 @@ export default function AccountScreen() {
       const data = await response.json();
       const orders: Order[] = data.orders || [];
 
-      // Filter successful orders and group by distributor
+      // Group by distributor for any orders that have a distributor id (count all statuses)
       // The distributor ID is in order.userId and distributor name is in order.storeName
-      const successfulOrders = orders.filter(order => 
-        ['Delivered', 'Confirmed', 'Shipped', 'Packed'].includes(order.orderStatus) && order.userId !== null
-      );
+      const successfulOrders = orders.filter(order => order.userId !== null);
 
       // Get unique distributor IDs and their store names
       const uniqueDistributors = new Map<number, { storeName: string; orderCount: number }>();
