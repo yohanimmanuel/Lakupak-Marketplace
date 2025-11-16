@@ -7,6 +7,15 @@ import { useAuthStore } from '../../../stores/authStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { API_BASE_URL } from '../../../services/config';
 
+// Normalize relative image paths to absolute URLs
+const normalizeUrl = (url?: string | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = API_BASE_URL?.replace(/\/$/, '') || '';
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${path}`;
+};
+
 interface Distributor {
   id: number;
   name: string;
@@ -146,9 +155,7 @@ export default function DistributorDetailScreen() {
           const match = products.find((p: any) => p?.userId === distributorId);
           sellerCompany = match?.seller?.company;
         }
-      } catch (_err) {
-        // ignore and rely on order user data
-      }
+      } catch (_err) {}
 
       const distributorUser = distributorOrders[0].user;
       const nameFallback = distributorUser?.company?.name || distributorUser?.name || distributorUser?.username;
@@ -158,8 +165,8 @@ export default function DistributorDetailScreen() {
       const distributorData: Distributor = {
         id: distributorId,
         name: sellerCompany?.name || nameFallback || `Distributor #${distributorId}`,
-        logo: sellerCompany?.logo || distributorUser?.company?.logo || distributorUser?.image,
-        banner: sellerCompany?.bannerImage || distributorUser?.company?.bannerImage,
+        logo: normalizeUrl(sellerCompany?.logo) || normalizeUrl(distributorUser?.company?.logo) || normalizeUrl(distributorUser?.image),
+        banner: normalizeUrl(sellerCompany?.bannerImage) || normalizeUrl(distributorUser?.company?.bannerImage),
         address: sellerCompany?.businessAddress || distributorUser?.company?.businessAddress || distributorUser?.chosenAddress,
         phone: sellerCompany?.businessPhone || distributorUser?.company?.businessPhone || distributorUser?.phone,
         email: sellerCompany?.businessEmail || distributorUser?.company?.businessEmail || distributorUser?.email,

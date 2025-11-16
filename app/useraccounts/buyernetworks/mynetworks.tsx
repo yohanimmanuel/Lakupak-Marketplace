@@ -58,6 +58,16 @@ interface UserInfo {
   };
 }
 
+// Normalize relative image paths to absolute URLs based on API base
+const normalizeUrl = (url?: string | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  // ensure there is exactly one slash between base and path
+  const base = API_BASE_URL?.replace(/\/$/, '') || '';
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${path}`;
+};
+
 export default function MyNetworksScreen() {
   const router = useRouter();
   const { token, user: authUser } = useAuthStore();
@@ -146,11 +156,9 @@ export default function MyNetworksScreen() {
       });
 
       // Fetch distributor profiles from database by getting products and matching by userId
-      // Fetch products to get seller/company information for distributors
       let sellerInfoMap = new Map<number, { seller?: any }>();
       
       try {
-        // Fetch products to get seller info (we'll filter client-side by userId)
         const productResponse = await fetch(`${API_BASE_URL}/api/marketplace?limit=100`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -181,20 +189,21 @@ export default function MyNetworksScreen() {
         const sellerData = sellerInfoMap.get(distributorId);
         const companyInfo = sellerData?.seller?.company;
         
+        const logoUrl = normalizeUrl(companyInfo?.logo) || normalizeUrl(sellerData?.seller?.avatar);
+        const bannerUrl = normalizeUrl(companyInfo?.bannerImage) || normalizeUrl(sellerData?.seller?.company?.bannerImage);
+        
         return {
           id: distributorId,
           name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
-          // Prefer dashboard company logo; fallback to seller avatar (profile pic)
-          logo: companyInfo?.logo || sellerData?.seller?.avatar,
-          // Prefer company banner; fallback to seller.company.bannerImage if present
-          banner: companyInfo?.bannerImage || sellerData?.seller?.company?.bannerImage,
+          logo: logoUrl,
+          banner: bannerUrl,
           address: companyInfo?.businessAddress,
           phone: companyInfo?.businessPhone,
           email: companyInfo?.businessEmail,
           rating: 4.5, // Default rating
           totalOrders: distributorData.orders.length,
           lastOrderDate: distributorData.lastOrderDate
-        };
+        } as Distributor;
       });
 
       // Final defensive filter: exclude distributors with zero active orders
