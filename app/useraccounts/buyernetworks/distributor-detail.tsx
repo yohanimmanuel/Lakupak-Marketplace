@@ -6,6 +6,7 @@ import { Users, MapPin, Phone, Mail, Star, Package, MessageSquare, Store, Calend
 import { useAuthStore } from '../../../stores/authStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { API_BASE_URL } from '../../../services/config';
+import type { MarketplaceProduct } from '../../../services/marketplace';
 
 // Normalize relative image paths to absolute URLs
 const normalizeUrl = (url?: string | null): string | undefined => {
@@ -151,8 +152,8 @@ export default function DistributorDetailScreen() {
         });
         if (marketRes.ok) {
           const marketJson = await marketRes.json();
-          const products = marketJson?.products || [];
-          const match = products.find((p: any) => p?.userId === distributorId);
+          const products: MarketplaceProduct[] = marketJson?.products || [];
+          const match = products.find((product) => product?.userId === distributorId);
           sellerCompany = match?.seller?.company;
         }
       } catch (_err) {}

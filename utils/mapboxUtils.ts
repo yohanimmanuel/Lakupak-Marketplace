@@ -57,12 +57,22 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
       return { coordinates: null, address };
     }
 
-    const data = await response.json();
+    interface MapboxFeature {
+      center: [number, number];
+      place_name: string;
+      place_type?: string[];
+    }
+
+    interface MapboxGeocodingResponse {
+      features?: MapboxFeature[];
+    }
+
+    const data: MapboxGeocodingResponse = await response.json();
 
     if (data.features && data.features.length > 0) {
       // Find the best match (prefer address type, then highest relevance)
-      const addressMatch = data.features.find((f: any) => 
-        f.place_type?.includes('address') || f.place_type?.includes('poi')
+      const addressMatch = data.features.find((feature) => 
+        feature.place_type?.includes('address') || feature.place_type?.includes('poi')
       );
       
       const bestMatch = addressMatch || data.features[0];

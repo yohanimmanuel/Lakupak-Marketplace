@@ -90,6 +90,8 @@ export interface MarketplaceProduct {
     businessEmail?: string;
     industryType?: string;
     pickupAddress?: string;
+      logo?: string;
+      bannerImage?: string;
     };
   };
   shipping: {

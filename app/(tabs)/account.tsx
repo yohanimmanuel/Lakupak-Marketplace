@@ -4,6 +4,7 @@ import { User as UserIcon, MapPin, WalletMinimal, Truck, PackageCheck, Star, Che
 import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import { API_BASE_URL } from '../../services/config';
+import type { MarketplaceProduct } from '../../services/marketplace';
 
 interface Distributor {
   id: number;
@@ -81,7 +82,7 @@ export default function AccountScreen() {
 
       // Fetch distributor profiles from database by getting products and matching by userId
       // Fetch products to get seller/company information for distributors
-      let sellerInfoMap = new Map<number, { seller?: any }>();
+      const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
       
       try {
         // Fetch products to get seller info (we'll filter client-side by userId)
@@ -94,10 +95,10 @@ export default function AccountScreen() {
         
         if (productResponse.ok) {
           const productData = await productResponse.json();
-          const products = productData.products || [];
+          const products: MarketplaceProduct[] = productData.products || [];
           
           // Build a map of userId to seller/company info
-          products.forEach((product: any) => {
+          products.forEach((product) => {
             if (product.userId && !sellerInfoMap.has(product.userId)) {
               sellerInfoMap.set(product.userId, {
                 seller: product.seller

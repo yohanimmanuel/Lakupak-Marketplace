@@ -1,27 +1,96 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Text, type ViewStyle } from 'react-native';
 import { MapCoordinates, getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
 
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
+type MapboxStyleURL = {
+  Street: string;
+  [key: string]: string;
+};
+
+interface MapboxDefaultExport {
+  StyleURL: MapboxStyleURL;
+  setAccessToken?: (token: string) => void;
+}
+
+type GenericMapboxProps = Record<string, unknown>;
+
+interface CameraHandle {
+  setCamera: (config: {
+    centerCoordinate: [number, number];
+    zoomLevel: number;
+    animationDuration?: number;
+  }) => void;
+  fitBounds: (
+    coordinates: Array<[number, number]>,
+    options?: {
+      padding?: { top: number; bottom: number; left: number; right: number };
+      animationDuration?: number;
+    }
+  ) => void;
+}
+
+type MapboxMapViewProps = GenericMapboxProps & {
+  style?: object;
+  styleURL?: string;
+  onDidFinishLoadingMap?: () => void;
+  zoomEnabled?: boolean;
+  scrollEnabled?: boolean;
+  pitchEnabled?: boolean;
+  rotateEnabled?: boolean;
+  children?: React.ReactNode;
+};
+
+type MapboxCameraProps = GenericMapboxProps & {
+  defaultSettings?: {
+    centerCoordinate: [number, number];
+    zoomLevel: number;
+  };
+  children?: React.ReactNode;
+};
+
+type MapboxPointAnnotationProps = GenericMapboxProps & {
+  id: string;
+  coordinate: [number, number];
+  onSelected?: () => void;
+  children?: React.ReactNode;
+};
+
+type MapViewComponent = React.ComponentType<MapboxMapViewProps>;
+type CameraComponent = React.ComponentType<
+  MapboxCameraProps & React.RefAttributes<CameraHandle>
+>;
+type PointAnnotationComponent = React.ComponentType<MapboxPointAnnotationProps>;
+
+type MapboxRuntimeModule = MapboxDefaultExport & {
+  default?: MapboxDefaultExport;
+  MapView: MapViewComponent;
+  Camera: CameraComponent;
+  PointAnnotation: PointAnnotationComponent;
+};
+
 // Try to import native Mapbox module
-let Mapbox: any = null;
-let MapView: any = null;
-let Camera: any = null;
-let PointAnnotation: any = null;
+let Mapbox: MapboxDefaultExport | null = null;
+let MapView: MapViewComponent | null = null;
+let Camera: CameraComponent | null = null;
+let PointAnnotation: PointAnnotationComponent | null = null;
 let isMapboxAvailable = false;
 
 try {
-  const mapboxModule = require('@rnmapbox/maps');
+  const mapboxModule = require('@rnmapbox/maps') as MapboxRuntimeModule;
   Mapbox = mapboxModule.default || mapboxModule;
   MapView = mapboxModule.MapView;
   Camera = mapboxModule.Camera;
   PointAnnotation = mapboxModule.PointAnnotation;
   
-  if (MAPBOX_ACCESS_TOKEN && Mapbox && Mapbox.setAccessToken) {
+  if (MAPBOX_ACCESS_TOKEN && Mapbox?.setAccessToken) {
     Mapbox.setAccessToken(MAPBOX_ACCESS_TOKEN);
-    isMapboxAvailable = true;
   }
+
+  isMapboxAvailable = Boolean(
+    MAPBOX_ACCESS_TOKEN && Mapbox && MapView && Camera && PointAnnotation
+  );
 } catch (error) {
   // Native module not available - requires development build
   isMapboxAvailable = false;
@@ -40,7 +109,7 @@ interface MapComponentProps {
   center?: MapCoordinates;
   zoom?: number;
   height?: number;
-  style?: any;
+  style?: ViewStyle | ViewStyle[];
   showControls?: boolean;
   onMarkerClick?: (markerId: string) => void;
 }
@@ -55,7 +124,7 @@ export default function MapComponent({
   onMarkerClick,
 }: MapComponentProps) {
   const [mapLoaded, setMapLoaded] = useState(false);
-  const cameraRef = useRef<any>(null);
+  const cameraRef = useRef<CameraHandle | null>(null);
 
   // Determine map center and initial zoom
   const mapCenter = markers.length > 0 
@@ -135,10 +204,25 @@ export default function MapComponent({
     );
   }
 
+  const MapViewComponent = MapView;
+  const CameraComponent = Camera;
+  const PointAnnotationComponent = PointAnnotation;
+
+  if (!MapViewComponent || !CameraComponent || !PointAnnotationComponent || !Mapbox) {
+    return (
+      <View style={[styles.container, { height }, style]}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Map unavailable</Text>
+          <Text style={styles.errorSubtext}>Map components are not available.</Text>
+        </View>
+      </View>
+    );
+  }
+
   // Native Mapbox is available - render interactive map
   return (
     <View style={[styles.container, { height }, style]}>
-      <MapView
+      <MapViewComponent
         style={styles.map}
         styleURL={Mapbox.StyleURL.Street}
         onDidFinishLoadingMap={() => setMapLoaded(true)}
@@ -147,7 +231,7 @@ export default function MapComponent({
         pitchEnabled={false}
         rotateEnabled={false}
       >
-        <Camera
+        <CameraComponent
           ref={cameraRef}
           defaultSettings={{
             centerCoordinate: [mapCenter.longitude, mapCenter.latitude],
@@ -156,7 +240,7 @@ export default function MapComponent({
         />
 
         {markers.map((marker) => (
-          <PointAnnotation
+          <PointAnnotationComponent
             key={marker.id}
             id={marker.id}
             coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
@@ -179,9 +263,9 @@ export default function MapComponent({
                 </View>
               )}
             </View>
-          </PointAnnotation>
+          </PointAnnotationComponent>
         ))}
-      </MapView>
+      </MapViewComponent>
 
       {!mapLoaded && (
         <View style={styles.loadingContainer}>

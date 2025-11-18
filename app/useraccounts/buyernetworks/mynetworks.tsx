@@ -5,6 +5,7 @@ import { useRouter, Link, useFocusEffect } from 'expo-router';
 import { ArrowLeft, Users, MapPin, Phone, Mail, Star, Package, ChevronRight } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
+import type { MarketplaceProduct } from '../../../services/marketplace';
 
 interface Distributor {
   id: number;
@@ -156,7 +157,7 @@ export default function MyNetworksScreen() {
       });
 
       // Fetch distributor profiles from database by getting products and matching by userId
-      let sellerInfoMap = new Map<number, { seller?: any }>();
+      const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
       
       try {
         const productResponse = await fetch(`${API_BASE_URL}/api/marketplace?limit=100`, {
@@ -168,10 +169,10 @@ export default function MyNetworksScreen() {
         
         if (productResponse.ok) {
           const productData = await productResponse.json();
-          const products = productData.products || [];
+          const products: MarketplaceProduct[] = productData.products || [];
           
           // Build a map of userId to seller/company info
-          products.forEach((product: any) => {
+          products.forEach((product) => {
             if (product.userId && !sellerInfoMap.has(product.userId)) {
               sellerInfoMap.set(product.userId, {
                 seller: product.seller

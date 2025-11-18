@@ -425,19 +425,19 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
       const task = InteractionManager.runAfterInteractions(() => {
         try {
           // Use store accessors directly to avoid changing hook deps and re-render loops
-          if (typeof (useDataStore as any).getState === 'function') {
-            (useDataStore as any).getState().forceRefreshProducts?.();
-          }
-          if (typeof (useCartStore as any).getState === 'function') {
-            (useCartStore as any).getState().checkAuthStore
-              ? (useCartStore as any).getState().checkAuthStore()
-              : (useCartStore as any).getState().checkAuth();
+          const dataState = useDataStore.getState();
+          dataState.forceRefreshProducts?.();
+
+          const cartState = useCartStore.getState();
+          if (typeof cartState.checkAuthAndLoadCart === 'function') {
+            cartState.checkAuthAndLoadCart();
+          } else {
+            cartState.loadCartOnStart?.();
           }
         } catch {}
       });
       return () => {
-        // @ts-ignore
-        if (task && typeof task.cancel === 'function') task.cancel();
+        task?.cancel?.();
       };
     }, [])
   );
