@@ -64,18 +64,10 @@ function RootLayoutNav() {
       
       // Preload all data immediately
       await refreshAllData(token || undefined);
-      
-      // Start automatic refresh for offers
-      startAutoRefresh();
     };
     
     initializeApp();
-    
-    // Cleanup: stop auto-refresh when component unmounts
-    return () => {
-      stopAutoRefresh();
-    };
-  }, [hydrateFromStorage, refreshAllData, token, startAutoRefresh, stopAutoRefresh, initializeCart]);
+  }, [hydrateFromStorage, refreshAllData, token, initializeCart]);
 
   // Handle app state changes to pause/resume auto-refresh
   useEffect(() => {
@@ -91,7 +83,7 @@ function RootLayoutNav() {
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
 
-    // Start auto-refresh when app is active
+    // Start auto-refresh when app is active (initial state)
     if (AppState.currentState === 'active') {
       startAutoRefresh();
     }
