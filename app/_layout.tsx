@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 
 import { useColorScheme } from './components/useColorScheme';
 import { useAuthStore } from '../stores/authStore';
@@ -50,7 +51,7 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { hydrateFromStorage, token } = useAuthStore();
-  const { refreshAllData } = useDataStore();
+  const { refreshAllData, startAutoRefresh, stopAutoRefresh } = useDataStore();
   const { initializeCart } = useCartStore();
 
   useEffect(() => {
@@ -63,10 +64,43 @@ function RootLayoutNav() {
       
       // Preload all data immediately
       await refreshAllData(token || undefined);
+      
+      // Start automatic refresh for offers
+      startAutoRefresh();
     };
     
     initializeApp();
-  }, [hydrateFromStorage, refreshAllData, token]);
+    
+    // Cleanup: stop auto-refresh when component unmounts
+    return () => {
+      stopAutoRefresh();
+    };
+  }, [hydrateFromStorage, refreshAllData, token, startAutoRefresh, stopAutoRefresh, initializeCart]);
+
+  // Handle app state changes to pause/resume auto-refresh
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active') {
+        // App is in foreground - start auto-refresh
+        startAutoRefresh();
+      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
+        // App is in background - stop auto-refresh to save resources
+        stopAutoRefresh();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    // Start auto-refresh when app is active
+    if (AppState.currentState === 'active') {
+      startAutoRefresh();
+    }
+
+    return () => {
+      subscription.remove();
+      stopAutoRefresh();
+    };
+  }, [startAutoRefresh, stopAutoRefresh]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

@@ -18,6 +18,10 @@ interface DataState {
   isUserLoading: boolean
   isProductsLoading: boolean
   
+  // Polling state
+  pollingInterval: ReturnType<typeof setInterval> | null
+  isPolling: boolean
+  
   // Actions
   setUser: (user: MobileUser | null) => void
   setProducts: (products: MarketplaceProduct[]) => void
@@ -25,11 +29,14 @@ interface DataState {
   loadProductsData: (forceRefresh?: boolean) => Promise<void>
   refreshAllData: (token?: string) => Promise<void>
   forceRefreshProducts: () => Promise<void>
+  startAutoRefresh: () => void
+  stopAutoRefresh: () => void
   clearProductsCache: () => void
   clearCache: () => void
 }
 
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+const CACHE_DURATION = 3 * 60 * 1000 // 5 minutes
+const AUTO_REFRESH_INTERVAL = 3 * 1000 // 5 seconds - refresh offers automatically
 
 export const useDataStore = create<DataState>()(
   persist(
@@ -41,6 +48,8 @@ export const useDataStore = create<DataState>()(
       productsLastUpdated: null,
       isUserLoading: false,
       isProductsLoading: false,
+      pollingInterval: null,
+      isPolling: false,
 
       // Actions
       setUser: (user) => set({ user, userLastUpdated: Date.now() }),
@@ -124,20 +133,75 @@ export const useDataStore = create<DataState>()(
         }
       },
 
-      clearProductsCache: () => set({
-        products: [],
-        productsLastUpdated: null,
-        isProductsLoading: false,
-      }),
+      startAutoRefresh: () => {
+        const { pollingInterval, isPolling } = get()
+        
+        // Don't start if already polling
+        if (isPolling && pollingInterval) {
+          return
+        }
+        
+        // Clear any existing interval
+        if (pollingInterval) {
+          clearInterval(pollingInterval)
+        }
+        
+        // Start polling
+        const interval = setInterval(() => {
+          const state = get()
+          // Only refresh if not currently loading to avoid overlapping requests
+          if (!state.isProductsLoading) {
+            state.forceRefreshProducts()
+          }
+        }, AUTO_REFRESH_INTERVAL)
+        
+        set({ 
+          pollingInterval: interval, 
+          isPolling: true 
+        })
+      },
 
-      clearCache: () => set({
-        user: null,
-        userLastUpdated: null,
-        products: [],
-        productsLastUpdated: null,
-        isUserLoading: false,
-        isProductsLoading: false,
-      }),
+      stopAutoRefresh: () => {
+        const { pollingInterval } = get()
+        if (pollingInterval) {
+          clearInterval(pollingInterval)
+          set({ 
+            pollingInterval: null, 
+            isPolling: false 
+          })
+        }
+      },
+
+      clearProductsCache: () => {
+        const { pollingInterval } = get()
+        if (pollingInterval) {
+          clearInterval(pollingInterval)
+        }
+        set({
+          products: [],
+          productsLastUpdated: null,
+          isProductsLoading: false,
+          pollingInterval: null,
+          isPolling: false,
+        })
+      },
+
+      clearCache: () => {
+        const { pollingInterval } = get()
+        if (pollingInterval) {
+          clearInterval(pollingInterval)
+        }
+        set({
+          user: null,
+          userLastUpdated: null,
+          products: [],
+          productsLastUpdated: null,
+          isUserLoading: false,
+          isProductsLoading: false,
+          pollingInterval: null,
+          isPolling: false,
+        })
+      },
     }),
     {
       name: 'laku-marketplace-data',

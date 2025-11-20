@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ProductMarketplace from './components/productcatalog/ProductMarketplace';
@@ -16,11 +16,25 @@ type ProductType = MarketplaceProduct | { id: string; name: string; sellingPrice
 export default function ProductModal() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { products } = useDataStore();
+  const { products, forceRefreshProducts } = useDataStore();
   const { toggleLikedProduct } = useUserActivityStore();
   const likedProducts = useUserActivityStore(state => state.likedProducts);
   const { user } = useAuthStore();
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
+  
+  // Refresh products (and offers) when modal gains focus
+  useFocusEffect(
+    useCallback(() => {
+      forceRefreshProducts();
+    }, [forceRefreshProducts])
+  );
+  
+  // Also refresh when productId changes (when navigating between products)
+  useEffect(() => {
+    if (params.productId) {
+      forceRefreshProducts();
+    }
+  }, [params.productId, forceRefreshProducts]);
   
   // Find the product by ID from params
   const product = products.find(p => p.id === params.productId);
