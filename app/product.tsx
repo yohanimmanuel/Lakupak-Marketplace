@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
@@ -36,8 +36,10 @@ export default function ProductModal() {
     }
   }, [params.productId, forceRefreshProducts]);
   
-  // Find the product by ID from params
-  const product = products.find(p => p.id === params.productId);
+  // Find the product by ID from params - useMemo to ensure it updates when products array changes
+  const product = useMemo(() => {
+    return products.find(p => p.id === params.productId);
+  }, [products, params.productId]);
   
   if (!product) {
     return null;
