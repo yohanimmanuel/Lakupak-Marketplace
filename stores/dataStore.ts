@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Product } from '../data/sampleProducts'
 import { marketplaceService, MarketplaceProduct } from '../services/marketplace'
 import { getMe, MobileUser } from '../services/user'
+import { websocketService } from '../services/websocket'
 
 interface DataState {
   // User data
@@ -18,9 +19,13 @@ interface DataState {
   isUserLoading: boolean
   isProductsLoading: boolean
   
-  // Polling state
+  // Polling state (fallback when WebSocket unavailable)
   pollingInterval: ReturnType<typeof setInterval> | null
   isPolling: boolean
+  
+  // WebSocket state
+  isWebSocketConnected: boolean
+  websocketUnsubscribe: (() => void) | null
   
   // Actions
   setUser: (user: MobileUser | null) => void
@@ -29,14 +34,14 @@ interface DataState {
   loadProductsData: (forceRefresh?: boolean) => Promise<void>
   refreshAllData: (token?: string) => Promise<void>
   forceRefreshProducts: () => Promise<void>
-  startAutoRefresh: () => void
+  startAutoRefresh: (token?: string | null) => void
   stopAutoRefresh: () => void
   clearProductsCache: () => void
   clearCache: () => void
 }
 
-const CACHE_DURATION = 3 * 60 * 1000 // 3 minutes
-const AUTO_REFRESH_INTERVAL = 3 * 1000 // 3 seconds - refresh offers automatically
+const CACHE_DURATION = 1 * 60 * 1000 // 1 minute
+const AUTO_REFRESH_INTERVAL = 10 * 1000 // 10 seconds - refresh offers automatically
 
 export const useDataStore = create<DataState>()(
   persist(
@@ -50,6 +55,8 @@ export const useDataStore = create<DataState>()(
       isProductsLoading: false,
       pollingInterval: null,
       isPolling: false,
+      isWebSocketConnected: false,
+      websocketUnsubscribe: null,
 
       // Actions
       setUser: (user) => set({ user, userLastUpdated: Date.now() }),
@@ -133,64 +140,158 @@ export const useDataStore = create<DataState>()(
         }
       },
 
-      startAutoRefresh: () => {
-        const { pollingInterval, isPolling } = get()
+      startAutoRefresh: (token?: string | null) => {
+        const { pollingInterval, isPolling, websocketUnsubscribe } = get()
         
-        // Don't start if already polling
-        if (isPolling && pollingInterval) {
-          return
+        // Clean up existing connections
+        if (websocketUnsubscribe) {
+          websocketUnsubscribe()
         }
-        
-        // Clear any existing interval
         if (pollingInterval) {
           clearInterval(pollingInterval)
         }
         
-        // Start polling
-        const interval = setInterval(() => {
-          const state = get()
-          // Only refresh if not currently loading to avoid overlapping requests
-          if (!state.isProductsLoading) {
-            state.forceRefreshProducts()
+        // Try WebSocket first (real-time updates)
+        try {
+          websocketService.connect(token)
+          
+          // Subscribe to WebSocket messages
+          const unsubscribe = websocketService.subscribe((message) => {
+            const state = get()
+            
+            // Handle different message types
+            if (message.type === 'offer_updated' || message.type === 'product_updated' || message.type === 'prices_updated') {
+              // Refresh products when offers/products are updated
+              if (!state.isProductsLoading) {
+                state.forceRefreshProducts()
+              }
+            }
+          })
+          
+          // Check WebSocket connection status
+          const checkConnection = () => {
+            const isConnected = websocketService.isConnected()
+            const currentState = get()
+            
+            if (isConnected !== currentState.isWebSocketConnected) {
+              set({ isWebSocketConnected: isConnected })
+            }
+            
+            // If WebSocket is not connected, fallback to polling
+            if (!isConnected && !currentState.isPolling) {
+              // Start polling as fallback
+              const interval = setInterval(() => {
+                const state = get()
+                // Only refresh if not currently loading and WebSocket still disconnected
+                if (!state.isProductsLoading && !websocketService.isConnected()) {
+                  state.forceRefreshProducts()
+                } else if (websocketService.isConnected()) {
+                  // WebSocket reconnected, stop polling
+                  clearInterval(interval)
+                  set({ pollingInterval: null, isPolling: false })
+                }
+              }, AUTO_REFRESH_INTERVAL)
+              
+              set({ 
+                pollingInterval: interval, 
+                isPolling: true 
+              })
+            } else if (isConnected && currentState.isPolling) {
+              // WebSocket connected, stop polling
+              if (currentState.pollingInterval) {
+                clearInterval(currentState.pollingInterval)
+              }
+              set({ 
+                pollingInterval: null, 
+                isPolling: false 
+              })
+            }
           }
-        }, AUTO_REFRESH_INTERVAL)
-        
-        set({ 
-          pollingInterval: interval, 
-          isPolling: true 
-        })
-      },
-
-      stopAutoRefresh: () => {
-        const { pollingInterval } = get()
-        if (pollingInterval) {
-          clearInterval(pollingInterval)
+          
+          // Check connection status periodically
+          const connectionCheckInterval = setInterval(checkConnection, 2000)
+          
+          // Initial check
+          checkConnection()
+          
           set({ 
-            pollingInterval: null, 
-            isPolling: false 
+            websocketUnsubscribe: () => {
+              unsubscribe()
+              clearInterval(connectionCheckInterval)
+            },
+            isWebSocketConnected: websocketService.isConnected()
+          })
+        } catch (error) {
+          // WebSocket failed, use polling fallback
+          const interval = setInterval(() => {
+            const state = get()
+            if (!state.isProductsLoading) {
+              state.forceRefreshProducts()
+            }
+          }, AUTO_REFRESH_INTERVAL)
+          
+          set({ 
+            pollingInterval: interval, 
+            isPolling: true,
+            isWebSocketConnected: false,
+            websocketUnsubscribe: null
           })
         }
       },
 
-      clearProductsCache: () => {
-        const { pollingInterval } = get()
+      stopAutoRefresh: () => {
+        const { pollingInterval, websocketUnsubscribe } = get()
+        
+        // Disconnect WebSocket
+        websocketService.disconnect()
+        
+        // Unsubscribe from WebSocket messages
+        if (websocketUnsubscribe) {
+          websocketUnsubscribe()
+        }
+        
+        // Stop polling
         if (pollingInterval) {
           clearInterval(pollingInterval)
         }
+        
+        set({ 
+          pollingInterval: null, 
+          isPolling: false,
+          isWebSocketConnected: false,
+          websocketUnsubscribe: null
+        })
+      },
+
+      clearProductsCache: () => {
+        const { pollingInterval, websocketUnsubscribe } = get()
+        if (pollingInterval) {
+          clearInterval(pollingInterval)
+        }
+        if (websocketUnsubscribe) {
+          websocketUnsubscribe()
+        }
+        websocketService.disconnect()
         set({
           products: [],
           productsLastUpdated: null,
           isProductsLoading: false,
           pollingInterval: null,
           isPolling: false,
+          isWebSocketConnected: false,
+          websocketUnsubscribe: null,
         })
       },
 
       clearCache: () => {
-        const { pollingInterval } = get()
+        const { pollingInterval, websocketUnsubscribe } = get()
         if (pollingInterval) {
           clearInterval(pollingInterval)
         }
+        if (websocketUnsubscribe) {
+          websocketUnsubscribe()
+        }
+        websocketService.disconnect()
         set({
           user: null,
           userLastUpdated: null,
@@ -200,6 +301,8 @@ export const useDataStore = create<DataState>()(
           isProductsLoading: false,
           pollingInterval: null,
           isPolling: false,
+          isWebSocketConnected: false,
+          websocketUnsubscribe: null,
         })
       },
     }),

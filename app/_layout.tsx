@@ -59,22 +59,32 @@ function RootLayoutNav() {
       // Hydrate auth state first
       await hydrateFromStorage();
       
+      // Get token after hydration
+      const currentToken = useAuthStore.getState().token;
+      
       // Initialize cart immediately after auth
       initializeCart();
       
       // Preload all data immediately
-      await refreshAllData(token || undefined);
+      await refreshAllData(currentToken || undefined);
+      
+      // Start WebSocket with token after everything is loaded
+      if (AppState.currentState === 'active') {
+        startAutoRefresh(currentToken || undefined);
+      }
     };
     
     initializeApp();
-  }, [hydrateFromStorage, refreshAllData, token, initializeCart]);
+  }, [hydrateFromStorage, refreshAllData, initializeCart, startAutoRefresh]);
 
   // Handle app state changes to pause/resume auto-refresh
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
-        // App is in foreground - start auto-refresh
-        startAutoRefresh();
+        // App is in foreground - start auto-refresh with WebSocket + polling fallback
+        // Get fresh token from store
+        const currentToken = useAuthStore.getState().token;
+        startAutoRefresh(currentToken || undefined);
       } else if (nextAppState === 'background' || nextAppState === 'inactive') {
         // App is in background - stop auto-refresh to save resources
         stopAutoRefresh();
@@ -83,16 +93,18 @@ function RootLayoutNav() {
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
 
-    // Start auto-refresh when app is active (initial state)
-    if (AppState.currentState === 'active') {
-      startAutoRefresh();
-    }
-
     return () => {
       subscription.remove();
       stopAutoRefresh();
     };
   }, [startAutoRefresh, stopAutoRefresh]);
+
+  // Reconnect WebSocket when token becomes available
+  useEffect(() => {
+    if (token) {
+      startAutoRefresh(token);
+    }
+  }, [token, startAutoRefresh]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
