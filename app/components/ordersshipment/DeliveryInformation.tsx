@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -22,16 +22,73 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
+import { websocketService } from '../../../services/websocket';
+import { useDataStore, MarketplaceOrder } from '../../../stores/dataStore';
 import MapComponent from './MapComponent';
 import { geocodeAddress, GeocodeResult, getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
 
 const { width } = Dimensions.get('window');
 
+interface DeliveryOrderItem {
+  productId?: string | null;
+  productName?: string;
+  images?: string[];
+  packageQuantity?: number;
+  packageType?: string;
+  piecesPerPackage?: number;
+  pricePerPackage?: number;
+  subtotal?: number;
+}
+
+interface DeliveryOrderUser {
+  id?: number;
+  name?: string;
+  username?: string;
+  email?: string;
+  phone?: string;
+  chosenAddress?: string;
+  storeName?: string;
+  company?: {
+    name?: string;
+    logo?: string;
+    bannerImage?: string;
+    businessAddress?: string;
+    businessPhone?: string;
+    businessEmail?: string;
+    businessDescription?: string;
+    industryType?: string;
+    pickupAddress?: string;
+  };
+}
+
+interface DeliveryOrder {
+  id?: number;
+  orderId: string;
+  orderStatus: string;
+  paymentStatus?: string;
+  deliveryMethod?: string;
+  deliveryOption?: string | null;
+  contactPerson?: string;
+  contactPhone?: string;
+  deliveryAddress?: string;
+  preferredDeliveryTime?: string;
+  preferredDeliveryDate?: string;
+  assignedLogistics?: string;
+  trackingNumber?: string;
+  deliveryNote?: string;
+  orderDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  orderItems?: DeliveryOrderItem[];
+  user?: DeliveryOrderUser;
+}
+
 export default function DeliveryInformation() {
   const router = useRouter();
   const { orderId } = useLocalSearchParams();
   const { token } = useAuthStore();
-  const [order, setOrder] = useState<any>(null);
+  const orders = useDataStore(state => state.orders);
+  const [order, setOrder] = useState<DeliveryOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [geocodeResult, setGeocodeResult] = useState<GeocodeResult | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
@@ -74,7 +131,9 @@ export default function DeliveryInformation() {
         }
   };
 
-  const fetchOrderDetails = async () => {
+  const fetchOrderDetails = useCallback(async () => {
+    if (!orderId || typeof orderId !== 'string') return;
+
     try {
       setIsLoading(true);
       const response = await fetch(`${API_BASE_URL}/api/orders?id=${orderId}`, {
@@ -84,7 +143,7 @@ export default function DeliveryInformation() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data: DeliveryOrder = await response.json();
         setOrder(data);
       } else {
         setOrder(null);
@@ -94,7 +153,63 @@ export default function DeliveryInformation() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [orderId, token]);
+
+  // Silently fetch updated order details without showing loading state
+  const updateOrderSilently = useCallback(async () => {
+    if (!orderId || typeof orderId !== 'string' || !order) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/orders?id=${orderId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data: DeliveryOrder = await response.json();
+        // Update order state without showing loading
+        setOrder(data);
+      }
+    } catch (error) {
+      // Silently fail - keep existing order data
+    }
+  }, [orderId, token, order]);
+
+  // Subscribe to WebSocket for real-time order updates
+  useEffect(() => {
+    if (!orderId || typeof orderId !== 'string') return;
+
+    const unsubscribe = websocketService.subscribe((message) => {
+      // Check if this order was updated
+      if (message.type === 'order_updated' && message.orderIds?.includes(orderId)) {
+        // Find updated order in dataStore and update display immediately
+        const updatedOrder = orders.find(o => o.orderId === orderId);
+        if (updatedOrder && order) {
+          // Update order state immediately with available data from dataStore
+          setOrder(prevOrder => {
+            if (!prevOrder) return prevOrder;
+            return {
+              ...prevOrder,
+              orderStatus: updatedOrder.orderStatus,
+              paymentStatus: updatedOrder.paymentStatus,
+              updatedAt: updatedOrder.updatedAt || prevOrder.updatedAt,
+            };
+          });
+          
+          // Silently fetch full order details in background to get delivery fulfillment fields
+          updateOrderSilently();
+        } else if (order) {
+          // If order not in dataStore but we have local order, silently fetch updates
+          updateOrderSilently();
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [orderId, orders, order, updateOrderSilently]);
 
   if (isLoading) {
     return (

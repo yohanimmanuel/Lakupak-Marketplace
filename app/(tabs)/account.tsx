@@ -5,6 +5,7 @@ import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import { API_BASE_URL } from '../../services/config';
 import type { MarketplaceProduct } from '../../services/marketplace';
+import { useDataStore } from '../../stores/dataStore';
 
 interface Distributor {
   id: number;
@@ -34,6 +35,8 @@ export default function AccountScreen() {
   const token = useAuthStore(s => s.token);
   const user = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
+  const orders = useDataStore(state => state.orders);
+  const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const [recentDistributors, setRecentDistributors] = useState<Distributor[]>([]);
 
   useEffect(() => {
@@ -42,97 +45,85 @@ export default function AccountScreen() {
 
   useEffect(() => {
     if (token && user?.id) {
-      loadRecentDistributors();
+      // Load orders initially (WebSocket will handle updates)
+      loadOrdersData(false);
     }
-  }, [token, user?.id]);
+  }, [token, user?.id, loadOrdersData]);
 
-  const loadRecentDistributors = async () => {
-    if (!user?.id || !token) return;
+  useEffect(() => {
+    if (!token || !user?.id) {
+      setRecentDistributors([]);
+      return;
+    }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${user.id}&limit=100`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) return;
-
-      const data = await response.json();
-      const orders: Order[] = data.orders || [];
-
-      // Group by distributor for any orders that have a distributor id (count all statuses)
-      // The distributor ID is in order.userId and distributor name is in order.storeName
-      const successfulOrders = orders.filter(order => order.userId !== null);
-
-      // Get unique distributor IDs and their store names
-      const uniqueDistributors = new Map<number, { storeName: string; orderCount: number }>();
-      
-      successfulOrders.forEach(order => {
-        const distributorId = order.userId!;
-        if (!uniqueDistributors.has(distributorId)) {
-          uniqueDistributors.set(distributorId, {
-            storeName: order.storeName || `Distributor #${distributorId}`,
-            orderCount: 0
-          });
-        }
-        uniqueDistributors.get(distributorId)!.orderCount++;
-      });
-
-      // Fetch distributor profiles from database by getting products and matching by userId
-      // Fetch products to get seller/company information for distributors
-      const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
-      
+    const loadDistributors = async () => {
       try {
-        // Fetch products to get seller info (we'll filter client-side by userId)
-        const productResponse = await fetch(`${API_BASE_URL}/api/marketplace?limit=100`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const successfulOrders = orders.filter(order => order.userId !== null);
+
+        const uniqueDistributors = new Map<number, { storeName: string; orderCount: number }>();
         
-        if (productResponse.ok) {
-          const productData = await productResponse.json();
-          const products: MarketplaceProduct[] = productData.products || [];
-          
-          // Build a map of userId to seller/company info
-          products.forEach((product) => {
-            if (product.userId && !sellerInfoMap.has(product.userId)) {
-              sellerInfoMap.set(product.userId, {
-                seller: product.seller
-              });
+        successfulOrders.forEach(order => {
+          const distributorId = order.userId!;
+          if (!uniqueDistributors.has(distributorId)) {
+            uniqueDistributors.set(distributorId, {
+              storeName: order.storeName || `Distributor #${distributorId}`,
+              orderCount: 0
+            });
+          }
+          uniqueDistributors.get(distributorId)!.orderCount++;
+        });
+
+        const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
+        
+        try {
+          const productResponse = await fetch(`${API_BASE_URL}/api/marketplace?limit=100`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
             }
           });
+          
+          if (productResponse.ok) {
+            const productData = await productResponse.json();
+            const products: MarketplaceProduct[] = productData.products || [];
+            
+            products.forEach((product) => {
+              if (product.userId && !sellerInfoMap.has(product.userId)) {
+                sellerInfoMap.set(product.userId, {
+                  seller: product.seller
+                });
+              }
+            });
+          }
+        } catch (error) {
+          // Continue with order data only
         }
+
+        const distributorProfiles = Array.from(uniqueDistributors.keys()).map((distributorId) => {
+          const distributorData = uniqueDistributors.get(distributorId)!;
+          const sellerData = sellerInfoMap.get(distributorId);
+          const companyInfo = sellerData?.seller?.company;
+          
+          return {
+            id: distributorId,
+            name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
+            logo: companyInfo?.logo || sellerData?.seller?.avatar,
+            totalOrders: distributorData.orderCount
+          };
+        });
+
+        const distributorsList = distributorProfiles
+          .sort((a, b) => b.totalOrders - a.totalOrders)
+          .slice(0, 2);
+
+        setRecentDistributors(distributorsList);
       } catch (error) {
-        // Continue with order data only
+        setRecentDistributors([]);
       }
+    };
 
-      // Build distributor profiles using seller info from products if available
-      const distributorProfiles = Array.from(uniqueDistributors.keys()).map((distributorId) => {
-        const distributorData = uniqueDistributors.get(distributorId)!;
-        const sellerData = sellerInfoMap.get(distributorId);
-        const companyInfo = sellerData?.seller?.company;
-        
-        return {
-          id: distributorId,
-          name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
-          logo: companyInfo?.logo || sellerData?.seller?.avatar,
-          totalOrders: distributorData.orderCount
-        };
-      });
-
-      // Get top 2 most recent distributors
-      const distributorsList = distributorProfiles
-        .sort((a, b) => b.totalOrders - a.totalOrders)
-        .slice(0, 2);
-
-      setRecentDistributors(distributorsList);
-    } catch (error) {
-    }
-  };
+    loadDistributors();
+  }, [orders, token, user?.id]);
 
   const isAuthenticated = !!token && !!user;
 

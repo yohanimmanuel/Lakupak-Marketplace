@@ -6,6 +6,7 @@ import { ArrowLeft, Users, MapPin, Phone, Mail, Star, Package, ChevronRight } fr
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import type { MarketplaceProduct } from '../../../services/marketplace';
+import { useDataStore } from '../../../stores/dataStore';
 
 interface Distributor {
   id: number;
@@ -72,6 +73,9 @@ const normalizeUrl = (url?: string | null): string | undefined => {
 export default function MyNetworksScreen() {
   const router = useRouter();
   const { token, user: authUser } = useAuthStore();
+  const orders = useDataStore(state => state.orders);
+  const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
+  const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,155 +83,125 @@ export default function MyNetworksScreen() {
   const iconGray = '#6B7280';
 
   useEffect(() => {
-    if (authUser?.id && token) {
-      loadDistributors();
-    } else {
-      setIsLoading(false);
-    }
-  }, [authUser?.id, token]);
-  
-  // Refresh data whenever the screen gains focus (handles deletions made elsewhere)
-  useFocusEffect(
-    React.useCallback(() => {
-      if (authUser?.id && token) {
-        loadDistributors();
-      }
-    }, [authUser?.id, token])
-  );
-
-  const loadDistributors = async () => {
     if (!authUser?.id || !token) {
       setDistributors([]);
       setIsLoading(false);
       return;
     }
 
-    try {
-      setIsLoading(true);
-      // Fetch all orders for the current user
-      const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${authUser.id}&limit=100`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        setDistributors([]);
-        return;
-      }
-
-      const data = await response.json();
-      const orders: Order[] = data.orders || [];
-
-      // Count all orders that have a distributor id (any status) and are not deleted/cancelled
-      // The distributor ID is in order.userId and distributor name is in order.storeName (same as My Purchases)
-      const successfulOrders = orders.filter(order => 
-        order.userId !== null &&
-        order.isDeleted !== true &&
-        !order.deletedAt &&
-        order.orderStatus !== 'Deleted' &&
-        order.orderStatus !== 'Cancelled'
-      );
-
-      // Get unique distributor IDs and their store names
-      const uniqueDistributors = new Map<number, { 
-        storeName: string; 
-        orders: Order[];
-        lastOrderDate?: string;
-      }>();
-      
-      successfulOrders.forEach(order => {
-        const distributorId = order.userId!;
-        if (!uniqueDistributors.has(distributorId)) {
-          uniqueDistributors.set(distributorId, {
-            storeName: order.storeName || `Distributor #${distributorId}`,
-            orders: [],
-            lastOrderDate: undefined
-          });
-        }
-        const entry = uniqueDistributors.get(distributorId)!;
-        entry.orders.push(order);
-        
-        // Update last order date
-        const orderDate = new Date(order.orderDate);
-        if (!entry.lastOrderDate || orderDate > new Date(entry.lastOrderDate)) {
-          entry.lastOrderDate = order.orderDate;
-        }
-      });
-
-      // Fetch distributor profiles from database by getting products and matching by userId
-      const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
-      
+    const loadDistributors = async () => {
       try {
-        const productResponse = await fetch(`${API_BASE_URL}/api/marketplace?limit=100`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        setIsLoading(true);
+        const successfulOrders = orders.filter(order => 
+          order.userId !== null &&
+          order.isDeleted !== true &&
+          !order.deletedAt &&
+          order.orderStatus !== 'Deleted' &&
+          order.orderStatus !== 'Cancelled'
+        );
+
+        const uniqueDistributors = new Map<number, { 
+          storeName: string; 
+          orders: Order[];
+          lastOrderDate?: string;
+        }>();
+        
+        successfulOrders.forEach(order => {
+          const distributorId = order.userId!;
+          if (!uniqueDistributors.has(distributorId)) {
+            uniqueDistributors.set(distributorId, {
+              storeName: order.storeName || `Distributor #${distributorId}`,
+              orders: [],
+              lastOrderDate: undefined
+            });
+          }
+          const entry = uniqueDistributors.get(distributorId)!;
+          entry.orders.push(order);
+          
+          const orderDate = order.orderDate ? new Date(order.orderDate) : (order.createdAt ? new Date(order.createdAt) : new Date());
+          if (!entry.lastOrderDate || orderDate > new Date(entry.lastOrderDate)) {
+            entry.lastOrderDate = order.orderDate || order.createdAt || orderDate.toISOString();
           }
         });
+
+        const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
         
-        if (productResponse.ok) {
-          const productData = await productResponse.json();
-          const products: MarketplaceProduct[] = productData.products || [];
-          
-          // Build a map of userId to seller/company info
-          products.forEach((product) => {
-            if (product.userId && !sellerInfoMap.has(product.userId)) {
-              sellerInfoMap.set(product.userId, {
-                seller: product.seller
-              });
+        try {
+          const productResponse = await fetch(`${API_BASE_URL}/api/marketplace?limit=100`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
             }
           });
+          
+          if (productResponse.ok) {
+            const productData = await productResponse.json();
+            const products: MarketplaceProduct[] = productData.products || [];
+            
+            products.forEach((product) => {
+              if (product.userId && !sellerInfoMap.has(product.userId)) {
+                sellerInfoMap.set(product.userId, {
+                  seller: product.seller
+                });
+              }
+            });
+          }
+        } catch (error) {
+          // Continue with order data only
         }
+
+        const distributorProfiles = Array.from(uniqueDistributors.keys()).map((distributorId) => {
+          const distributorData = uniqueDistributors.get(distributorId)!;
+          const sellerData = sellerInfoMap.get(distributorId);
+          const companyInfo = sellerData?.seller?.company;
+          
+          const logoUrl = normalizeUrl(companyInfo?.logo) || normalizeUrl(sellerData?.seller?.avatar);
+          const bannerUrl = normalizeUrl(companyInfo?.bannerImage) || normalizeUrl(sellerData?.seller?.company?.bannerImage);
+          
+          return {
+            id: distributorId,
+            name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
+            logo: logoUrl,
+            banner: bannerUrl,
+            address: companyInfo?.businessAddress,
+            phone: companyInfo?.businessPhone,
+            email: companyInfo?.businessEmail,
+            rating: 4.5,
+            totalOrders: distributorData.orders.length,
+            lastOrderDate: distributorData.lastOrderDate
+          } as Distributor;
+        });
+
+        const activeOnly = distributorProfiles.filter(p => p.totalOrders > 0);
+
+        const distributorsList = activeOnly.sort((a, b) => {
+          if (!a.lastOrderDate) return 1;
+          if (!b.lastOrderDate) return -1;
+          return new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime();
+        });
+
+        setDistributors(distributorsList);
       } catch (error) {
-        // Continue with order data only
+        setDistributors([]);
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      // Build distributor profiles using seller info from products if available
-      const distributorProfiles = Array.from(uniqueDistributors.keys()).map((distributorId) => {
-        const distributorData = uniqueDistributors.get(distributorId)!;
-        const sellerData = sellerInfoMap.get(distributorId);
-        const companyInfo = sellerData?.seller?.company;
-        
-        const logoUrl = normalizeUrl(companyInfo?.logo) || normalizeUrl(sellerData?.seller?.avatar);
-        const bannerUrl = normalizeUrl(companyInfo?.bannerImage) || normalizeUrl(sellerData?.seller?.company?.bannerImage);
-        
-        return {
-          id: distributorId,
-          name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
-          logo: logoUrl,
-          banner: bannerUrl,
-          address: companyInfo?.businessAddress,
-          phone: companyInfo?.businessPhone,
-          email: companyInfo?.businessEmail,
-          rating: 4.5, // Default rating
-          totalOrders: distributorData.orders.length,
-          lastOrderDate: distributorData.lastOrderDate
-        } as Distributor;
-      });
+    loadDistributors();
+  }, [authUser?.id, token, orders]);
 
-      // Final defensive filter: exclude distributors with zero active orders
-      const activeOnly = distributorProfiles.filter(p => p.totalOrders > 0);
-
-      // Sort by last order date (most recent first)
-      const distributorsList = activeOnly.sort((a, b) => {
-        if (!a.lastOrderDate) return 1;
-        if (!b.lastOrderDate) return -1;
-        return new Date(b.lastOrderDate).getTime() - new Date(a.lastOrderDate).getTime();
-      });
-
-      setDistributors(distributorsList);
-    } catch (error) {
-      setDistributors([]);
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (authUser?.id && token) {
+      // Load orders initially (WebSocket will handle updates)
+      loadOrdersData(false);
     }
-  };
+  }, [authUser?.id, token, loadOrdersData]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadDistributors();
+    // Manual refresh - force reload
+    await loadOrdersData(true);
     setRefreshing(false);
   };
 
@@ -238,7 +212,7 @@ export default function MyNetworksScreen() {
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primaryBlue} />}
       >
-        {isLoading ? (
+        {isLoading || isOrdersLoading ? (
           <View style={styles.loading}>
             <Text style={styles.loadingText}>Loading...</Text>
           </View>

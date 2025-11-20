@@ -7,6 +7,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { API_BASE_URL } from '../../../services/config';
 import type { MarketplaceProduct } from '../../../services/marketplace';
+import { useDataStore, type MarketplaceOrder } from '../../../stores/dataStore';
 
 // Normalize relative image paths to absolute URLs
 const normalizeUrl = (url?: string | null): string | undefined => {
@@ -82,6 +83,8 @@ export default function DistributorDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token, user: authUser } = useAuthStore();
+  const storeOrders = useDataStore(state => state.orders);
+  const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const [distributor, setDistributor] = useState<Distributor | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,14 +92,21 @@ export default function DistributorDetailScreen() {
   const iconGray = '#6B7280';
 
   useEffect(() => {
+    if (authUser?.id && token) {
+      // Load orders initially (WebSocket will handle updates)
+      loadOrdersData(false);
+    }
+  }, [authUser?.id, token, loadOrdersData]);
+
+  useEffect(() => {
     if (id && authUser?.id && token) {
-      loadDistributorData(parseInt(id));
+      loadDistributorData(parseInt(id), storeOrders);
     } else {
       setIsLoading(false);
     }
-  }, [id, authUser?.id, token]);
+  }, [id, authUser?.id, token, storeOrders]);
 
-  const loadDistributorData = async (distributorId: number) => {
+  const loadDistributorData = async (distributorId: number, sourceOrders: MarketplaceOrder[]) => {
     if (!authUser?.id || !token) {
       setIsLoading(false);
       return;
@@ -104,26 +114,10 @@ export default function DistributorDetailScreen() {
 
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${authUser.id}&limit=100`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        setDistributor(null);
-        setOrders([]);
-        return;
-      }
-
-      const data = await response.json();
-      const allOrders: OrderResponse[] = data.orders || [];
-
-      const distributorOrders = allOrders.filter(order => {
-        const orderDistributorId = order.userId || (order.orderItems && order.orderItems.length > 0 ? order.orderItems[0]?.product?.userId : null);
+      const distributorOrders = sourceOrders.filter((order) => {
+        const orderDistributorId = order.userId ?? (order.orderItems && order.orderItems.length > 0 ? order.orderItems[0]?.product?.userId ?? null : null);
         return orderDistributorId === distributorId;
-      });
+      }) as OrderResponse[];
 
       if (distributorOrders.length === 0) {
         setDistributor(null);

@@ -6,6 +6,83 @@ import { marketplaceService, MarketplaceProduct } from '../services/marketplace'
 import { getMe, MobileUser } from '../services/user'
 import { websocketService } from '../services/websocket'
 
+export interface MarketplaceOrderItem {
+  productId?: string | null
+  productName?: string
+  productType?: string
+  brand?: string
+  description?: string
+  images?: string[]
+  subtotal?: number
+  packageType?: string
+  piecesPerPackage?: number
+  packageQuantity?: number
+  pricePerPackage?: number
+  offerApplied?: boolean
+  offerBadgeSnapshot?: string | null
+  offerNameSnapshot?: string | null
+  originalPriceSnapshot?: string | null
+  discountPercentage?: number | null
+  discountAmount?: number | null
+  promotionDetailsSnapshot?: string | null
+  variantNameSnapshot?: string | null
+  productDeleted?: boolean
+  product?: {
+    userId?: number | null
+    name?: string
+  } | null
+}
+
+export interface MarketplaceOrder {
+  id?: number
+  orderId: string
+  buyerId?: string | null
+  userId?: number | null
+  storeName?: string
+  orderStatus: string
+  paymentStatus?: string
+  deliveryMethod?: string
+  deliveryOption?: string | null
+  subtotal?: number
+  shippingFee?: number
+  discounts?: number
+  totalAmount?: number
+  totalOrders?: number
+  contactPerson?: string
+  contactPhone?: string
+  deliveryAddress?: string
+  orderDate?: string
+  createdAt?: string
+  updatedAt?: string
+  cancelledAt?: string | null
+  cancelledBy?: string | null
+  cancellationReason?: string | null
+  isDeleted?: boolean
+  deletedAt?: string | null
+  orderItems?: MarketplaceOrderItem[]
+  user?: {
+    id?: number
+    name?: string
+    username?: string
+    email?: string
+    phone?: string
+    chosenAddress?: string
+    storeName?: string
+    company?: {
+      name?: string
+      logo?: string
+      bannerImage?: string
+      businessAddress?: string
+      businessPhone?: string
+      businessEmail?: string
+      businessDescription?: string
+      industryType?: string
+    }
+  }
+}
+import { API_BASE_URL } from '../services/config'
+import { useAuthStore } from './authStore'
+
 interface DataState {
   // User data
   user: MobileUser | null
@@ -14,10 +91,15 @@ interface DataState {
   // Products data
   products: MarketplaceProduct[]
   productsLastUpdated: number | null
+
+  // Orders data
+  orders: MarketplaceOrder[]
+  ordersLastUpdated: number | null
   
   // Loading states
   isUserLoading: boolean
   isProductsLoading: boolean
+  isOrdersLoading: boolean
   
   // Polling state (fallback when WebSocket unavailable)
   pollingInterval: ReturnType<typeof setInterval> | null
@@ -30,10 +112,14 @@ interface DataState {
   // Actions
   setUser: (user: MobileUser | null) => void
   setProducts: (products: MarketplaceProduct[]) => void
+  setOrders: (orders: MarketplaceOrder[]) => void
   loadUserData: (token: string) => Promise<void>
   loadProductsData: (forceRefresh?: boolean) => Promise<void>
+  loadOrdersData: (forceRefresh?: boolean) => Promise<void>
   refreshAllData: (token?: string) => Promise<void>
   forceRefreshProducts: () => Promise<void>
+  forceRefreshOrders: () => Promise<void>
+  updateOrdersFromWebSocket: (orderIds: string[]) => Promise<void>
   startAutoRefresh: (token?: string | null) => void
   stopAutoRefresh: () => void
   clearProductsCache: () => void
@@ -51,8 +137,11 @@ export const useDataStore = create<DataState>()(
       userLastUpdated: null,
       products: [],
       productsLastUpdated: null,
+      orders: [],
+      ordersLastUpdated: null,
       isUserLoading: false,
       isProductsLoading: false,
+      isOrdersLoading: false,
       pollingInterval: null,
       isPolling: false,
       isWebSocketConnected: false,
@@ -62,6 +151,8 @@ export const useDataStore = create<DataState>()(
       setUser: (user) => set({ user, userLastUpdated: Date.now() }),
       
       setProducts: (products) => set({ products, productsLastUpdated: Date.now() }),
+
+      setOrders: (orders) => set({ orders, ordersLastUpdated: Date.now() }),
 
       loadUserData: async (token) => {
         const { userLastUpdated } = get()
@@ -109,6 +200,48 @@ export const useDataStore = create<DataState>()(
         }
       },
 
+      loadOrdersData: async (forceRefresh = false) => {
+        const { ordersLastUpdated } = get()
+        const now = Date.now()
+
+        const authState = useAuthStore.getState()
+        const token = authState.token
+        const userId = authState.user?.id || get().user?.id
+
+        if (!token || !userId) {
+          set({ orders: [], ordersLastUpdated: null })
+          return
+        }
+
+        if (!forceRefresh && ordersLastUpdated && (now - ordersLastUpdated) < CACHE_DURATION) {
+          return
+        }
+
+        set({ isOrdersLoading: true })
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${userId}&limit=100`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+
+          if (!response.ok) {
+            throw new Error('Failed to load orders')
+          }
+
+          const data = await response.json()
+          const orders: MarketplaceOrder[] = data.orders || []
+          set({
+            orders,
+            ordersLastUpdated: now,
+            isOrdersLoading: false
+          })
+        } catch (error) {
+          set({ isOrdersLoading: false })
+        }
+      },
+
       refreshAllData: async (token) => {
         const promises = []
         
@@ -119,6 +252,8 @@ export const useDataStore = create<DataState>()(
         promises.push(get().forceRefreshProducts())
         
         await Promise.all(promises)
+
+        await get().forceRefreshOrders()
       },
 
       forceRefreshProducts: async () => {
@@ -137,6 +272,57 @@ export const useDataStore = create<DataState>()(
             productsLastUpdated: Date.now(), 
             isProductsLoading: false 
           })
+        }
+      },
+
+      forceRefreshOrders: async () => {
+        await get().loadOrdersData(true)
+      },
+
+      updateOrdersFromWebSocket: async (orderIds: string[]) => {
+        if (orderIds.length === 0) return
+
+        const authState = useAuthStore.getState()
+        const token = authState.token
+        const userId = authState.user?.id || get().user?.id
+
+        if (!token || !userId) return
+
+        try {
+          // Fetch all orders to get the updated ones
+          const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${userId}&limit=100`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+
+          if (!response.ok) return
+
+          const data = await response.json()
+          const updatedOrders: MarketplaceOrder[] = data.orders || []
+          
+          // Filter to only the orders that were updated
+          const relevantOrders = updatedOrders.filter(order => orderIds.includes(order.orderId))
+          
+          if (relevantOrders.length === 0) return
+
+          // Merge with existing orders - update existing or add new
+          const state = get()
+          const existingOrdersMap = new Map(state.orders.map(order => [order.orderId, order]))
+          
+          relevantOrders.forEach(updatedOrder => {
+            existingOrdersMap.set(updatedOrder.orderId, updatedOrder)
+          })
+
+          const mergedOrders = Array.from(existingOrdersMap.values())
+          
+          set({
+            orders: mergedOrders,
+            ordersLastUpdated: Date.now()
+          })
+        } catch (error) {
+          // Silently fail - WebSocket updates are best effort
         }
       },
 
@@ -166,6 +352,11 @@ export const useDataStore = create<DataState>()(
                 state.forceRefreshProducts()
               }
             }
+
+            if (message.type === 'order_updated' && message.orderIds && message.orderIds.length > 0) {
+              // Update only the specific orders that changed via WebSocket
+              state.updateOrdersFromWebSocket(message.orderIds)
+            }
           })
           
           // Check WebSocket connection status
@@ -183,8 +374,14 @@ export const useDataStore = create<DataState>()(
               const interval = setInterval(() => {
                 const state = get()
                 // Only refresh if not currently loading and WebSocket still disconnected
-                if (!state.isProductsLoading && !websocketService.isConnected()) {
-                  state.forceRefreshProducts()
+                if (!websocketService.isConnected()) {
+                  if (!state.isProductsLoading) {
+                    state.forceRefreshProducts()
+                  }
+                  // Polling fallback - only refresh if WebSocket is disconnected
+                  if (!state.isOrdersLoading) {
+                    state.loadOrdersData(false) // Use cached if available
+                  }
                 } else if (websocketService.isConnected()) {
                   // WebSocket reconnected, stop polling
                   clearInterval(interval)
@@ -227,6 +424,10 @@ export const useDataStore = create<DataState>()(
             const state = get()
             if (!state.isProductsLoading) {
               state.forceRefreshProducts()
+            }
+            // Polling fallback - only refresh if WebSocket is disconnected
+            if (!state.isOrdersLoading) {
+              state.loadOrdersData(false) // Use cached if available
             }
           }, AUTO_REFRESH_INTERVAL)
           
@@ -276,6 +477,9 @@ export const useDataStore = create<DataState>()(
           products: [],
           productsLastUpdated: null,
           isProductsLoading: false,
+          orders: [],
+          ordersLastUpdated: null,
+          isOrdersLoading: false,
           pollingInterval: null,
           isPolling: false,
           isWebSocketConnected: false,
@@ -297,8 +501,11 @@ export const useDataStore = create<DataState>()(
           userLastUpdated: null,
           products: [],
           productsLastUpdated: null,
+           orders: [],
+           ordersLastUpdated: null,
           isUserLoading: false,
           isProductsLoading: false,
+           isOrdersLoading: false,
           pollingInterval: null,
           isPolling: false,
           isWebSocketConnected: false,
@@ -314,6 +521,8 @@ export const useDataStore = create<DataState>()(
         userLastUpdated: state.userLastUpdated,
         products: state.products,
         productsLastUpdated: state.productsLastUpdated,
+        orders: state.orders,
+        ordersLastUpdated: state.ordersLastUpdated,
       }),
     }
   )

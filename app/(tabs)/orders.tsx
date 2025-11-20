@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -34,6 +34,7 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import { API_BASE_URL } from '../../services/config';
 import { Notification } from '../../services/notificationService';
+import { useDataStore } from '../../stores/dataStore';
 import { useRouter } from 'expo-router';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -43,9 +44,11 @@ export default function OrdersScreen() {
   const token = useAuthStore(s => s.token);
   const authUser = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
+  const orders = useDataStore(state => state.orders);
+  const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
+  const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(false);
   
   const isAuthenticated = !!token && !!authUser;
 
@@ -54,182 +57,79 @@ export default function OrdersScreen() {
     hydrate();
   }, [hydrate]);
 
-  // SIMPLE: Load orders immediately when authenticated
+  // Load orders initially when authenticated (WebSocket will handle updates)
   useEffect(() => {
     if (!isAuthenticated || !authUser?.id) {
       setNotifications([]);
       return;
     }
+    // Only load if we don't have orders yet (initial load)
+    loadOrdersData(false);
+  }, [isAuthenticated, authUser?.id, loadOrdersData]);
 
-    const loadOrders = async () => {
-      setIsLoading(true);
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${authUser.id}&limit=50`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          const orders = data.orders || [];
-          
-          // Convert orders to notifications
-          const orderNotifications = orders.map((order: {
-            orderId: string;
-            paymentStatus: string;
-            orderStatus: string;
-            createdAt: string;
-            orderItems?: Array<{ images?: string[] }>;
-          }) => {
-            let title = 'Payment Required';
-            let message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
-            
-            if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
-              title = 'Payment Required';
-              message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
-            } else if (order.orderStatus === 'Confirmed') {
-              title = 'Order Confirmed';
-              message = `Excellent! Your order ${order.orderId} has been confirmed by our distributor and is now being processed.`;
-            } else if (order.orderStatus === 'Packed') {
-              title = 'Order Packed';
-              message = `Fantastic! Your order ${order.orderId} has been carefully packed and is ready for shipment.`;
-            } else if (order.orderStatus === 'Shipped') {
-              title = 'Order Shipped';
-              message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you.`;
-            } else if (order.orderStatus === 'Delivered') {
-              title = 'Order Delivered';
-              message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered!`;
-            } else if (order.orderStatus === 'Cancelled') {
-              title = 'Order Cancelled';
-              message = `We regret to inform you that your order ${order.orderId} has been cancelled.`;
-            } else if (order.orderStatus === 'Returned') {
-              title = 'Order Returned';
-              message = `Your order ${order.orderId} has been returned to us.`;
-            }
-            
-            return {
-              id: `order_${order.orderId}`,
-              type: 'order',
-              title: title,
-              message: message,
-              timestamp: new Date(order.createdAt).toLocaleString('en-US', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-              }).replace(',', ''),
-              isRead: false,
-              orderId: order.orderId,
-              status: order.orderStatus?.toLowerCase(),
-              productImage: order.orderItems?.[0]?.images?.[0]
-            };
-          });
-          
-          setNotifications(orderNotifications);
-        } else {
-          setNotifications([]);
+  // Keep notifications in sync with store orders while preserving read state
+  useEffect(() => {
+    setNotifications((prev) => {
+      const previousMap = new Map(prev.map(notification => [notification.id, notification]));
+      const derived = orders.map((order) => {
+        let title = 'Payment Required';
+        let message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
+
+        if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
+          title = 'Payment Required';
+          message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
+        } else if (order.orderStatus === 'Confirmed') {
+          title = 'Order Confirmed';
+          message = `Excellent! Your order ${order.orderId} has been confirmed by our distributor and is now being processed.`;
+        } else if (order.orderStatus === 'Packed') {
+          title = 'Order Packed';
+          message = `Fantastic! Your order ${order.orderId} has been carefully packed and is ready for shipment.`;
+        } else if (order.orderStatus === 'Shipped') {
+          title = 'Order Shipped';
+          message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you.`;
+        } else if (order.orderStatus === 'Delivered') {
+          title = 'Order Delivered';
+          message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered!`;
+        } else if (order.orderStatus === 'Cancelled') {
+          title = 'Order Cancelled';
+          message = `We regret to inform you that your order ${order.orderId} has been cancelled.`;
+        } else if (order.orderStatus === 'Returned') {
+          title = 'Order Returned';
+          message = `Your order ${order.orderId} has been returned to us.`;
         }
-      } catch (error) {
-        setNotifications([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    loadOrders();
-  }, [isAuthenticated, authUser?.id, token]);
+        const timestampSource = order.createdAt || order.orderDate || new Date().toISOString();
 
-  // SIMPLE: Refresh when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      if (!isAuthenticated || !authUser?.id) {
-        setNotifications([]);
-        return;
-      }
+        const normalizedStatus = (order.orderStatus || '').toLowerCase() as Notification['status'];
 
-      // Just reload the orders - simple and direct
-      const refreshOrders = async () => {
-        try {
-          const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${authUser.id}&limit=50`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            const data = await response.json();
-            const orders = data.orders || [];
-            
-            const orderNotifications = orders.map((order: {
-              orderId: string;
-              paymentStatus: string;
-              orderStatus: string;
-              createdAt: string;
-              orderItems?: Array<{ images?: string[] }>;
-            }) => {
-              let title = 'Payment Required';
-              let message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation.`;
-              
-              if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
-                title = 'Payment Required';
-                message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation.`;
-              } else if (order.orderStatus === 'Confirmed') {
-                title = 'Order Confirmed';
-                message = `Excellent! Your order ${order.orderId} has been confirmed by our distributor and is now being processed.`;
-              } else if (order.orderStatus === 'Packed') {
-                title = 'Order Packed';
-                message = `Fantastic! Your order ${order.orderId} has been carefully packed and is ready for shipment.`;
-              } else if (order.orderStatus === 'Shipped') {
-                title = 'Order Shipped';
-                message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you.`;
-              } else if (order.orderStatus === 'Delivered') {
-                title = 'Order Delivered';
-                message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered!`;
-              } else if (order.orderStatus === 'Cancelled') {
-                title = 'Order Cancelled';
-                message = `We regret to inform you that your order ${order.orderId} has been cancelled.`;
-              } else if (order.orderStatus === 'Returned') {
-                title = 'Order Returned';
-                message = `Your order ${order.orderId} has been returned to us.`;
-              }
-              
-              return {
-                id: `order_${order.orderId}`,
-                type: 'order',
-                title: title,
-                message: message,
-                timestamp: new Date(order.createdAt).toLocaleString('en-US', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false
-                }).replace(',', ''),
-                isRead: false,
-                orderId: order.orderId,
-                status: order.orderStatus?.toLowerCase(),
-                productImage: order.orderItems?.[0]?.images?.[0]
-              };
-            });
-            
-            setNotifications(orderNotifications);
-          } else {
-            setNotifications([]);
-          }
-        } catch (error) {
-          setNotifications([]);
-        }
-      };
+        return {
+          id: `order_${order.orderId}`,
+          type: 'order' as const,
+          title,
+          message,
+          timestamp: new Date(timestampSource).toLocaleString('en-US', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }).replace(',', ''),
+          isRead: false,
+          orderId: order.orderId,
+          status: normalizedStatus,
+          productImage: order.orderItems?.[0]?.images?.[0]
+        };
+      });
 
-      refreshOrders();
-    }, [isAuthenticated, authUser?.id, token])
-  );
+      return derived.map((notification) => {
+        const existing = previousMap.get(notification.id);
+        return existing ? { ...notification, isRead: existing.isRead } : notification;
+      });
+    });
+  }, [orders]);
+
+  // WebSocket handles updates automatically - no need to refresh on focus
 
   const getNotificationIcon = (notification: Notification) => {
     // For order notifications, use product image if available, otherwise fallback to status icon
@@ -285,7 +185,10 @@ export default function OrdersScreen() {
   };
 
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = useMemo(
+    () => notifications.filter(n => !n.isRead).length,
+    [notifications]
+  );
 
   const markAsRead = async (notificationId: string) => {
     // SIMPLE: Just update local state
@@ -399,7 +302,7 @@ export default function OrdersScreen() {
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {isAuthenticated ? (
-          isLoading ? (
+          isOrdersLoading ? (
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Loading your orders...</Text>
             </View>

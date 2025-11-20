@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -34,6 +34,7 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
+import { websocketService } from '../../../services/websocket';
 import { calculateOrderItemPromotion } from '../../../utils/promotionUtils';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -152,13 +153,7 @@ export default function OrderDetailsModal() {
   const [showAllOrderInfo, setShowAllOrderInfo] = useState(false);
   const [productMOQs, setProductMOQs] = useState<Record<string, number | null>>({});
 
-  useEffect(() => {
-    if (params.orderId) {
-      fetchOrderDetails(params.orderId as string);
-    }
-  }, [params.orderId]);
-
-  const fetchOrderDetails = async (orderId: string) => {
+  const fetchOrderDetails = useCallback(async (orderId: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/orders?id=${orderId}`, {
         headers: {
@@ -168,7 +163,7 @@ export default function OrderDetailsModal() {
       });
       
       if (response.ok) {
-        const orderData = await response.json();
+        const orderData: Order = await response.json();
         
         // Map variantNameSnapshot to variantName for each order item
         if (orderData?.orderItems) {
@@ -193,7 +188,31 @@ export default function OrderDetailsModal() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (params.orderId && typeof params.orderId === 'string') {
+      fetchOrderDetails(params.orderId);
+    }
+  }, [params.orderId, fetchOrderDetails]);
+
+  // Subscribe to WebSocket for real-time order updates
+  useEffect(() => {
+    const orderId = params.orderId;
+    if (!orderId || typeof orderId !== 'string') return;
+
+    const unsubscribe = websocketService.subscribe((message) => {
+      // Check if this order was updated
+      if (message.type === 'order_updated' && message.orderIds?.includes(orderId)) {
+        // Fetch updated order details
+        fetchOrderDetails(orderId);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [params.orderId, fetchOrderDetails]);
 
   const fetchProductMOQs = async (orderItems: OrderItem[]) => {
     try {

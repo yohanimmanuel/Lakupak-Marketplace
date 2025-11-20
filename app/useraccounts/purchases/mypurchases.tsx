@@ -9,6 +9,7 @@ import ProductMarketplace from '../../components/productcatalog/ProductMarketpla
 import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { Product } from '@/data/sampleProducts';
+import { useDataStore } from '../../../stores/dataStore';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -79,12 +80,15 @@ export default function MyPurchasesModal() {
   const [activeTab, setActiveTab] = useState<'to-pay' | 'to-ship' | 'to-receive' | 'completed' | 'returns' | 'cancelled' | 'to-rate'>(initialTab);
   const [query, setQuery] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
 
   const isAuthenticated = !!token && !!authUser;
+  const storeOrders = useDataStore(state => state.orders);
+  const loadOrdersData = useDataStore(state => state.loadOrdersData);
+  const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
+  const isLoading = isOrdersLoading;
 
   useEffect(() => {
     hydrate();
@@ -96,8 +100,37 @@ export default function MyPurchasesModal() {
       return;
     }
 
-    loadOrders();
-  }, [isAuthenticated, authUser?.id, token]);
+    // Load orders initially (WebSocket will handle updates)
+    loadOrdersData(false);
+  }, [isAuthenticated, authUser?.id, loadOrdersData]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !authUser?.id) {
+      setOrders([]);
+      return;
+    }
+
+    const transformedOrders = storeOrders.map((order) => {
+      const fallbackStoreName = order.storeName || order.user?.company?.name || 'Laku-Laku Store';
+      return {
+        ...(order as unknown as Order),
+        orderItems: (order.orderItems || []) as unknown as OrderItem[],
+        storeName: fallbackStoreName,
+        seller: {
+          name: fallbackStoreName,
+          avatar: order.user?.company?.logo,
+          rating: 4.5,
+          isOfficial: true,
+          isPreferred: true
+        },
+        expectedDelivery: order.orderStatus === 'Shipped'
+          ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })
+          : undefined
+      } as Order;
+    });
+
+    setOrders(transformedOrders);
+  }, [storeOrders, isAuthenticated, authUser?.id]);
 
   // Load related products based on order categories
   useEffect(() => {
@@ -147,46 +180,6 @@ export default function MyPurchasesModal() {
 
     loadRelatedProducts();
   }, [orders]);
-
-  const loadOrders = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${authUser?.id}&limit=100`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const ordersData = data.orders || [];
-        
-        // Transform orders to include seller information
-        const transformedOrders = ordersData.map((order: Order) => ({
-          ...order,
-          seller: {
-            name: order.storeName || 'Laku-Laku Store',
-            avatar: '',
-            rating: 4.5,
-            isOfficial: true,
-            isPreferred: Math.random() > 0.5 // Random for demo
-          },
-          expectedDelivery: order.orderStatus === 'Shipped' ? 
-            new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }) : 
-            undefined
-        }));
-        
-        setOrders(transformedOrders);
-      } else {
-        setOrders([]);
-      }
-    } catch (error) {
-      setOrders([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const getFilteredOrders = () => {
     let filtered = orders;
@@ -326,7 +319,9 @@ export default function MyPurchasesModal() {
       });
       
       if (response.ok) {
-        loadOrders(); // Reload orders
+        // WebSocket will handle the update automatically
+        // Optionally trigger a refresh if needed
+        loadOrdersData(false);
       }
     } catch (error) {
       // Handle error
