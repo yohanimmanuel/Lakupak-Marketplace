@@ -22,7 +22,6 @@ export default function BuyAgainModal() {
   const { user } = useAuthStore();
   
   const [orderedProducts, setOrderedProducts] = useState<MarketplaceProduct[]>([]);
-  const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
 
   // Load user activities when component mounts
   useEffect(() => {
@@ -44,15 +43,15 @@ export default function BuyAgainModal() {
   useEffect(() => {
     const ordered = getOrderedProducts(products);
     setOrderedProducts(ordered);
-    
-    // Load all products for "You may also like" section
-    const orderedProductIds = ordered.map((p: MarketplaceProduct) => p.id);
-    const related = products
+  }, [products, getOrderedProducts, storeOrderedProducts]);
+
+  // Get related products from websocket-enabled products store
+  const relatedProducts = React.useMemo(() => {
+    const orderedProductIds = orderedProducts.map((p: MarketplaceProduct) => p.id);
+    return products
       .filter(p => !orderedProductIds.includes(p.id))
       .slice(0, 4);
-    
-    setRelatedProducts(related);
-  }, [products, getOrderedProducts, storeOrderedProducts]);
+  }, [products, orderedProducts]);
 
   const handleAddToCart = (product: Product | MarketplaceProduct, quantity: number = 1) => {
     addItem(product, quantity);

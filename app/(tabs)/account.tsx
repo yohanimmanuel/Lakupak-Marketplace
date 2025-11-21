@@ -7,6 +7,15 @@ import { API_BASE_URL } from '../../services/config';
 import type { MarketplaceProduct } from '../../services/marketplace';
 import { useDataStore } from '../../stores/dataStore';
 
+// Normalize relative image paths to absolute URLs
+const normalizeUrl = (url?: string | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = API_BASE_URL?.replace(/\/$/, '') || '';
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${path}`;
+};
+
 interface Distributor {
   id: number;
   name: string;
@@ -37,6 +46,7 @@ export default function AccountScreen() {
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
   const orders = useDataStore(state => state.orders);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
+  const products = useDataStore(state => state.products);
   const [recentDistributors, setRecentDistributors] = useState<Distributor[]>([]);
 
   useEffect(() => {
@@ -56,9 +66,15 @@ export default function AccountScreen() {
       return;
     }
 
-    const loadDistributors = async () => {
+    const loadDistributors = () => {
       try {
-        const successfulOrders = orders.filter(order => order.userId !== null);
+        const successfulOrders = orders.filter(order => 
+          order.userId !== null &&
+          order.isDeleted !== true &&
+          !order.deletedAt &&
+          order.orderStatus !== 'Deleted' &&
+          order.orderStatus !== 'Cancelled'
+        );
 
         const uniqueDistributors = new Map<number, { storeName: string; orderCount: number }>();
         
@@ -73,41 +89,27 @@ export default function AccountScreen() {
           uniqueDistributors.get(distributorId)!.orderCount++;
         });
 
+        // Use products from websocket-enabled dataStore instead of fetching
         const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
-        
-        try {
-          const productResponse = await fetch(`${API_BASE_URL}/api/marketplace?limit=100`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (productResponse.ok) {
-            const productData = await productResponse.json();
-            const products: MarketplaceProduct[] = productData.products || [];
-            
-            products.forEach((product) => {
-              if (product.userId && !sellerInfoMap.has(product.userId)) {
-                sellerInfoMap.set(product.userId, {
-                  seller: product.seller
-                });
-              }
+        products.forEach((product) => {
+          if (product.userId && !sellerInfoMap.has(product.userId)) {
+            sellerInfoMap.set(product.userId, {
+              seller: product.seller
             });
           }
-        } catch (error) {
-          // Continue with order data only
-        }
+        });
 
         const distributorProfiles = Array.from(uniqueDistributors.keys()).map((distributorId) => {
           const distributorData = uniqueDistributors.get(distributorId)!;
           const sellerData = sellerInfoMap.get(distributorId);
           const companyInfo = sellerData?.seller?.company;
           
+          const logoUrl = normalizeUrl(companyInfo?.logo) || normalizeUrl(sellerData?.seller?.avatar);
+          
           return {
             id: distributorId,
             name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
-            logo: companyInfo?.logo || sellerData?.seller?.avatar,
+            logo: logoUrl,
             totalOrders: distributorData.orderCount
           };
         });
@@ -123,7 +125,7 @@ export default function AccountScreen() {
     };
 
     loadDistributors();
-  }, [orders, token, user?.id]);
+  }, [orders, products, token, user?.id]);
 
   const isAuthenticated = !!token && !!user;
 

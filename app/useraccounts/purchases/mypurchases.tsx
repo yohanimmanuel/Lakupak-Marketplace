@@ -81,13 +81,12 @@ export default function MyPurchasesModal() {
   const [query, setQuery] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
-  const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
-  const [loadingRelated, setLoadingRelated] = useState(false);
 
   const isAuthenticated = !!token && !!authUser;
   const storeOrders = useDataStore(state => state.orders);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
+  const products = useDataStore(state => state.products);
   const isLoading = isOrdersLoading;
 
   useEffect(() => {
@@ -132,54 +131,46 @@ export default function MyPurchasesModal() {
     setOrders(transformedOrders);
   }, [storeOrders, isAuthenticated, authUser?.id]);
 
-  // Load related products based on order categories
-  useEffect(() => {
-    const loadRelatedProducts = async () => {
-      if (orders.length === 0) return;
-      
-      try {
-        setLoadingRelated(true);
-        
-        // Get categories from order items
-        const categories = [...new Set(
-          orders.flatMap(order => 
-            order.orderItems.map(item => item.productName.split(' ')[0]) // Use first word as category
-          )
-        )].filter(Boolean);
-        
-        // Get order product IDs to exclude
-        const orderProductIds = orders.flatMap(order => 
+  // Get related products from websocket-enabled products store
+  const relatedProducts = React.useMemo(() => {
+    if (products.length === 0) return [];
+    
+    // Get order product IDs to exclude (if there are orders)
+    const orderProductIds = orders.length > 0
+      ? orders.flatMap(order => 
           order.orderItems.map(item => item.productId)
-        );
-        
-        // Fetch products from the first category found
-        const category = categories[0] || 'Fashion';
-        const response = await marketplaceService.getProducts({
-          category: category,
-          limit: 8
-        });
-        
-        // Filter out products that are already in orders
-        const filtered = response.products
-          .filter(product => !orderProductIds.includes(product.id))
-          .slice(0, 4);
-        
-        setRelatedProducts(filtered);
-      } catch (error) {
-        // Fallback to general products if category-based fetch fails
-        try {
-          const response = await marketplaceService.getProducts({ limit: 4 });
-          setRelatedProducts(response.products);
-        } catch (fallbackError) {
-          setRelatedProducts([]);
-        }
-      } finally {
-        setLoadingRelated(false);
+        )
+      : [];
+    
+    // Get categories from order items (if there are orders)
+    let category: string | undefined;
+    if (orders.length > 0) {
+      const categories = [...new Set(
+        orders.flatMap(order => 
+          order.orderItems
+            .map(item => {
+              // Try to get category from product if available, otherwise use first word
+              const orderProduct = products.find(p => p.id === item.productId);
+              return orderProduct?.category || item.productName.split(' ')[0];
+            })
+            .filter(Boolean)
+        )
+      )].filter(Boolean);
+      category = categories[0];
+    }
+    
+    // Filter products by category (if available) and exclude order products
+    let filtered = products.filter(product => !orderProductIds.includes(product.id));
+    
+    if (category) {
+      const categoryFiltered = filtered.filter(product => product.category === category);
+      if (categoryFiltered.length > 0) {
+        filtered = categoryFiltered;
       }
-    };
-
-    loadRelatedProducts();
-  }, [orders]);
+    }
+    
+    return filtered.slice(0, 4);
+  }, [products, orders]);
 
   const getFilteredOrders = () => {
     let filtered = orders;

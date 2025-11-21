@@ -77,6 +77,7 @@ export interface MarketplaceOrder {
       businessEmail?: string
       businessDescription?: string
       industryType?: string
+      yearsInOperation?: string
     }
   }
 }

@@ -76,6 +76,7 @@ export default function MyNetworksScreen() {
   const orders = useDataStore(state => state.orders);
   const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
+  const products = useDataStore(state => state.products);
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -126,29 +127,15 @@ export default function MyNetworksScreen() {
 
         const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
         
-        try {
-          const productResponse = await fetch(`${API_BASE_URL}/api/marketplace?limit=100`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (productResponse.ok) {
-            const productData = await productResponse.json();
-            const products: MarketplaceProduct[] = productData.products || [];
-            
-            products.forEach((product) => {
-              if (product.userId && !sellerInfoMap.has(product.userId)) {
-                sellerInfoMap.set(product.userId, {
-                  seller: product.seller
-                });
-              }
+        // Use products from websocket-enabled dataStore instead of fetching
+        const storeProducts = useDataStore.getState().products;
+        storeProducts.forEach((product) => {
+          if (product.userId && !sellerInfoMap.has(product.userId)) {
+            sellerInfoMap.set(product.userId, {
+              seller: product.seller
             });
           }
-        } catch (error) {
-          // Continue with order data only
-        }
+        });
 
         const distributorProfiles = Array.from(uniqueDistributors.keys()).map((distributorId) => {
           const distributorData = uniqueDistributors.get(distributorId)!;
@@ -189,7 +176,7 @@ export default function MyNetworksScreen() {
     };
 
     loadDistributors();
-  }, [authUser?.id, token, orders]);
+  }, [authUser?.id, token, orders, products]);
 
   useEffect(() => {
     if (authUser?.id && token) {

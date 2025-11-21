@@ -22,7 +22,6 @@ export default function RecentlyViewedModal() {
   const { user } = useAuthStore();
   
   const [viewedProducts, setViewedProducts] = useState<MarketplaceProduct[]>([]);
-  const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
 
   // Load user activities when component mounts
   useEffect(() => {
@@ -44,15 +43,15 @@ export default function RecentlyViewedModal() {
   useEffect(() => {
     const viewed = getViewedProducts(products);
     setViewedProducts(viewed);
-    
-    // Load all products for "You may also like" section
-    const viewedProductIds = viewed.map((p: MarketplaceProduct) => p.id);
-    const related = products
+  }, [products, getViewedProducts, storeViewedProducts]);
+
+  // Get related products from websocket-enabled products store
+  const relatedProducts = React.useMemo(() => {
+    const viewedProductIds = viewedProducts.map((p: MarketplaceProduct) => p.id);
+    return products
       .filter(p => !viewedProductIds.includes(p.id))
       .slice(0, 4);
-    
-    setRelatedProducts(related);
-  }, [products, getViewedProducts, storeViewedProducts]);
+  }, [products, viewedProducts]);
 
   const handleAddToCart = (product: Product | MarketplaceProduct, quantity: number = 1) => {
     addItem(product, quantity);

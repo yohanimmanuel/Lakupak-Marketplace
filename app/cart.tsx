@@ -58,7 +58,6 @@ export default function CartScreen() {
   
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(null);
-  const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -97,49 +96,30 @@ export default function CartScreen() {
     testItems.forEach(item => removeItem(item.id));
   }, []);
 
-  // Load related products based on cart items or general recommendations
-  useEffect(() => {
-    const loadRelatedProducts = async () => {
-      try {
-        // If no products loaded yet, try to get some general products
-        if (products.length === 0) {
-          try {
-            const response = await marketplaceService.getProducts({ limit: 8 });
-            const generalProducts = response.products.slice(0, 4);
-            setRelatedProducts(generalProducts);
-            return;
-          } catch (error) {
-            setRelatedProducts([]);
-            return;
-          }
-        }
+  // Get related products from websocket-enabled products store
+  const relatedProducts = React.useMemo(() => {
+    if (products.length === 0) return [];
 
-        // Get categories from cart items, or use a default category
-        const categories = cartItems.length > 0 
-          ? [...new Set(cartItems.map(item => item.product.category).filter(Boolean))]
-          : ['Fashion']; // Default category if no cart items
-        
-        // Filter products by category and exclude cart items
-        const cartProductIds = cartItems.map(item => item.product.id);
-        const filtered = products
-          .filter(p => p.category === (categories[0] || 'Fashion'))
-          .filter(p => !cartProductIds.includes(p.id))
-          .slice(0, 4);
-        
-        // If no products in the same category, show any available products
-        if (filtered.length === 0) {
-          const anyProducts = products
-            .filter(p => !cartProductIds.includes(p.id))
-            .slice(0, 4);
-          setRelatedProducts(anyProducts);
-        } else {
-          setRelatedProducts(filtered);
-        }
-      } catch (error) {
-        setRelatedProducts([]);
-      }
-    };
-    loadRelatedProducts();
+    // Get categories from cart items, or use a default category
+    const categories = cartItems.length > 0 
+      ? [...new Set(cartItems.map(item => item.product.category).filter(Boolean))]
+      : ['Fashion']; // Default category if no cart items
+    
+    // Filter products by category and exclude cart items
+    const cartProductIds = cartItems.map(item => item.product.id);
+    const filtered = products
+      .filter(p => p.category === (categories[0] || 'Fashion'))
+      .filter(p => !cartProductIds.includes(p.id))
+      .slice(0, 4);
+    
+    // If no products in the same category, show any available products
+    if (filtered.length === 0) {
+      const anyProducts = products
+        .filter(p => !cartProductIds.includes(p.id))
+        .slice(0, 4);
+      return anyProducts;
+    }
+    return filtered;
   }, [cartItems, products]);
 
   const handleQuantityChange = (itemId: string, change: number) => {

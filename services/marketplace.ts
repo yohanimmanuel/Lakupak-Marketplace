@@ -89,6 +89,8 @@ export interface MarketplaceProduct {
     businessPhone?: string;
     businessEmail?: string;
     industryType?: string;
+    businessDescription?: string;
+    yearsInOperation?: string;
     pickupAddress?: string;
       logo?: string;
       bannerImage?: string;

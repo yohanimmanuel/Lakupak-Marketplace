@@ -21,7 +21,6 @@ export default function FavouritesModal() {
   const { user } = useAuthStore();
   
   const [likedProducts, setLikedProducts] = useState<MarketplaceProduct[]>([]);
-  const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
 
   // Load user activities when component mounts
   useEffect(() => {
@@ -43,15 +42,15 @@ export default function FavouritesModal() {
   useEffect(() => {
     const liked = getLikedProducts(products);
     setLikedProducts(liked);
-    
-    // Load all products for "You may also like" section
-    const likedProductIds = liked.map((p: MarketplaceProduct) => p.id);
-    const related = products
+  }, [products, getLikedProducts, storeLikedProducts]);
+
+  // Get related products from websocket-enabled products store
+  const relatedProducts = React.useMemo(() => {
+    const likedProductIds = likedProducts.map((p: MarketplaceProduct) => p.id);
+    return products
       .filter(p => !likedProductIds.includes(p.id))
       .slice(0, 4);
-    
-    setRelatedProducts(related);
-  }, [products, getLikedProducts, storeLikedProducts]);
+  }, [products, likedProducts]);
 
   const handleAddToCart = (product: Product | MarketplaceProduct, quantity: number = 1) => {
     addItem(product, quantity);

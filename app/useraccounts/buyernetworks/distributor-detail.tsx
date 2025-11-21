@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Users, MapPin, Phone, Mail, Star, Package, MessageSquare, Store, Calendar } from 'lucide-react-native';
+import { Users, MapPin, Phone, Mail, Star, Package, MessageSquare, Store, Calendar, Building2, FileText, Clock } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { API_BASE_URL } from '../../../services/config';
@@ -32,6 +32,7 @@ interface Distributor {
   lastOrderDate?: string;
   description?: string;
   industryType?: string;
+  yearsInOperation?: string;
   verified?: boolean;
 }
 
@@ -75,6 +76,7 @@ interface OrderResponse {
       businessEmail?: string;
       businessDescription?: string;
       industryType?: string;
+      yearsInOperation?: string;
     };
   };
 }
@@ -85,6 +87,7 @@ export default function DistributorDetailScreen() {
   const { token, user: authUser } = useAuthStore();
   const storeOrders = useDataStore(state => state.orders);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
+  const products = useDataStore(state => state.products);
   const [distributor, setDistributor] = useState<Distributor | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -104,7 +107,7 @@ export default function DistributorDetailScreen() {
     } else {
       setIsLoading(false);
     }
-  }, [id, authUser?.id, token, storeOrders]);
+  }, [id, authUser?.id, token, storeOrders, products]);
 
   const loadDistributorData = async (distributorId: number, sourceOrders: MarketplaceOrder[]) => {
     if (!authUser?.id || !token) {
@@ -125,35 +128,28 @@ export default function DistributorDetailScreen() {
         return;
       }
 
-      let sellerCompany:
-        | {
-            name?: string;
-            logo?: string;
-            bannerImage?: string;
-            businessAddress?: string;
-            businessPhone?: string;
-            businessEmail?: string;
-            businessDescription?: string;
-            industryType?: string;
-          }
-        | undefined;
-      try {
-        const marketRes = await fetch(`${API_BASE_URL}/api/marketplace?limit=200`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (marketRes.ok) {
-          const marketJson = await marketRes.json();
-          const products: MarketplaceProduct[] = marketJson?.products || [];
-          const match = products.find((product) => product?.userId === distributorId);
-          sellerCompany = match?.seller?.company;
-        }
-      } catch (_err) {}
+      // Use products from websocket-enabled dataStore instead of fetching
+      const storeProducts = useDataStore.getState().products;
+      const match = storeProducts.find((product) => product?.userId === distributorId);
+      let sellerCompany = match?.seller?.company;
 
       const distributorUser = distributorOrders[0].user;
       const nameFallback = distributorUser?.company?.name || distributorUser?.name || distributorUser?.username;
+      
+      // If company data not found in products, try to get from order user
+      if (!sellerCompany && distributorUser?.company && distributorUser.company.name) {
+        sellerCompany = {
+          name: distributorUser.company.name,
+          businessAddress: distributorUser.company.businessAddress,
+          businessPhone: distributorUser.company.businessPhone,
+          businessEmail: distributorUser.company.businessEmail,
+          businessDescription: distributorUser.company.businessDescription,
+          industryType: distributorUser.company.industryType,
+          yearsInOperation: distributorUser.company.yearsInOperation,
+          logo: distributorUser.company.logo,
+          bannerImage: distributorUser.company.bannerImage,
+        };
+      }
 
       const totalSpent = distributorOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
@@ -171,6 +167,7 @@ export default function DistributorDetailScreen() {
         lastOrderDate: distributorOrders[0].orderDate,
         description: sellerCompany?.businessDescription || distributorUser?.company?.businessDescription,
         industryType: sellerCompany?.industryType || distributorUser?.company?.industryType,
+        yearsInOperation: sellerCompany?.yearsInOperation || distributorUser?.company?.yearsInOperation,
         verified: !!(sellerCompany?.name || distributorUser?.company?.name)
       };
 
@@ -182,7 +179,8 @@ export default function DistributorDetailScreen() {
         total: order.totalAmount || 0,
         status: order.orderStatus,
         items: order.orderItems?.reduce((sum, item) => sum + (item.packageQuantity || 1), 0) || 0
-      })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 5); // Limit to most recent 5 orders
 
       setOrders(transformedOrders);
     } catch (error) {
@@ -260,9 +258,25 @@ export default function DistributorDetailScreen() {
             </View>
           </View>
 
-          {distributor.description ? <Text style={styles.description}>{distributor.description}</Text> : null}
-
           <View style={styles.contactSection}>
+            {distributor.description ? (
+              <View style={styles.contactRow}>
+                <FileText color={iconGray} size={18} />
+                <Text style={styles.contactText}>{distributor.description}</Text>
+              </View>
+            ) : null}
+            {distributor.yearsInOperation ? (
+              <View style={styles.contactRow}>
+                <Clock color={iconGray} size={18} />
+                <Text style={styles.contactText}>{distributor.yearsInOperation}</Text>
+              </View>
+            ) : null}
+            {distributor.industryType ? (
+              <View style={styles.contactRow}>
+                <Building2 color={iconGray} size={18} />
+                <Text style={styles.contactText}>{distributor.industryType}</Text>
+              </View>
+            ) : null}
             {distributor.address ? (
               <View style={styles.contactRow}>
                 <MapPin color={iconGray} size={18} style={styles.contactIcon} />
@@ -336,12 +350,11 @@ const styles = StyleSheet.create({
   titleText: { fontSize: 20, fontWeight: '700', color: '#111827', marginRight: 8 },
   verifiedBadge: { backgroundColor: '#10b981', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   verifiedText: { color: '#ffffff', fontWeight: '600', fontSize: 10 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center' },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   ratingVal: { fontSize: 14, color: '#6b7280', marginLeft: 4 },
   ratingCount: { fontSize: 14, color: '#9ca3af', marginLeft: 4 },
-  description: { fontSize: 14, color: '#6b7280', lineHeight: 20, marginBottom: 16 },
   contactSection: { borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 16 },
-  contactRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  contactRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 15 },
   contactIcon: { marginTop: 2 },
   contactText: { fontSize: 14, color: '#6b7280', marginLeft: 12, flex: 1 },
   historySection: { padding: 20, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#f3f4f6' },

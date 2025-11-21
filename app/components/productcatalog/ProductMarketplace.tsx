@@ -22,10 +22,21 @@ import { marketplaceService } from '../../../services/marketplace';
 import ProductImageModal from './ProductImageModal';
 import { useUserActivityStore } from '../../../stores/userActivityStore';
 import { useAuthStore } from '../../../stores/authStore';
+import { useDataStore } from '../../../stores/dataStore';
+import { API_BASE_URL } from '../../../services/config';
 // Removed theme color imports - using explicit colors
 
 const { width: screenWidth } = Dimensions.get('window');
 const cardWidth = (screenWidth - 48) / 2; // 2 columns with padding
+
+// Normalize relative image paths to absolute URLs
+const normalizeUrl = (url?: string | null): string | undefined => {
+  if (!url) return undefined;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = API_BASE_URL?.replace(/\/$/, '') || '';
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${path}`;
+};
 
 type ProductType = Product | MarketplaceProduct;
 
@@ -68,6 +79,7 @@ export default function ProductMarketplace({
   const addViewedProduct = useUserActivityStore(state => state.addViewedProduct);
   const likedProducts = useUserActivityStore(state => state.likedProducts);
   const { user } = useAuthStore();
+  const products = useDataStore(state => state.products);
   
   // Using explicit colors instead of theme colors
   const primaryColor = '#0a61d7'; // Blue
@@ -75,8 +87,6 @@ export default function ProductMarketplace({
   const textColor = '#111827'; // Black
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [relatedProducts, setRelatedProducts] = useState<MarketplaceProduct[]>([]);
-  const [loadingRelated, setLoadingRelated] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [showAddToCartModal, setShowAddToCartModal] = useState(false);
 
@@ -219,32 +229,18 @@ export default function ProductMarketplace({
     }
   }, [product.id, type, addViewedProduct, product, user?.id]);
 
-  // Fetch related products from the same category
-  useEffect(() => {
-    const fetchRelatedProducts = async () => {
-      const category = safeGetString(product.category);
-      if (!category) return;
-      
-      try {
-        setLoadingRelated(true);
-        const response = await marketplaceService.getProducts({
-          category: category,
-          limit: 4
-        });
-        
-        // Filter out the current product
-        const productId = safeGetString(product.id);
-        const filtered = response.products.filter(p => p.id !== productId);
-        setRelatedProducts(filtered.slice(0, 4));
-      } catch (error) {
-        setRelatedProducts([]);
-      } finally {
-        setLoadingRelated(false);
-      }
-    };
-
-    fetchRelatedProducts();
-  }, [product.category, product.id]);
+  // Get related products from the same category using websocket-enabled products from dataStore
+  const relatedProducts = React.useMemo(() => {
+    const category = safeGetString(product.category);
+    if (!category) return [];
+    
+    const productId = safeGetString(product.id);
+    const filtered = products
+      .filter(p => p.category === category && p.id !== productId)
+      .slice(0, 4);
+    
+    return filtered;
+  }, [products, product.category, product.id]);
 
   // Handle scroll for image carousel
   const handleImageScroll = (event: { nativeEvent: { contentOffset: { x: number }; layoutMeasurement: { width: number } } }) => {
@@ -774,59 +770,50 @@ export default function ProductMarketplace({
     </View>
   );
 
-  const renderSellerInfo = () => (
-    <View style={[styles.section, styles.sellerSection]}>
-      <Text style={[styles.sectionTitle, { color: textColor }]}>
-        Seller Information
-      </Text>
-      
-      <View style={styles.sellerHeader}>
-        <View style={styles.sellerAvatar}>
-          <Text style={styles.avatarText}>
-            {safeGetString(product.seller?.name, 'U').charAt(0).toUpperCase()}
-          </Text>
-        </View>
-        <View style={styles.sellerInfo}>
-          <View style={styles.sellerNameRow}>
-            <Text style={[styles.sellerName, { color: textColor }]}>
-              {safeGetString(product.seller?.name, 'Unknown Company')}
-            </Text>
-            {Boolean(product.seller?.isOfficial) && (
-              <View style={styles.officialBadge}>
-                <Text style={styles.officialText}>OFFICIAL STORE</Text>
-              </View>
+  const renderSellerInfo = () => {
+    const sellerCompany = 'company' in (product.seller || {}) ? (product.seller as { company?: { logo?: string } })?.company : undefined;
+    const companyLogo = normalizeUrl(sellerCompany?.logo);
+    
+    return (
+      <View style={[styles.section, styles.sellerSection]}>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>
+          Seller Information
+        </Text>
+        
+        <View style={styles.sellerHeader}>
+          <View style={styles.sellerAvatar}>
+            {companyLogo ? (
+              <Image source={{ uri: companyLogo }} style={styles.sellerAvatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>
+                {safeGetString(product.seller?.name, 'U').charAt(0).toUpperCase()}
+              </Text>
             )}
           </View>
-          <View style={styles.sellerRating}>
-            {renderStars(safeGetNumber(product.seller?.rating), 12)}
-            <Text style={styles.sellerRatingText}>
-              {safeGetNumber(product.seller?.rating)} ({safeGetNumber(product.seller?.reviewCount)}+ ratings)
-            </Text>
+          <View style={styles.sellerInfo}>
+            <View style={styles.sellerNameRow}>
+              <Text style={[styles.sellerName, { color: textColor }]}>
+                {safeGetString(product.seller?.name, 'Unknown Company')}
+              </Text>
+              {Boolean(product.seller?.isOfficial) && (
+                <View style={styles.officialBadge}>
+                  <Text style={styles.officialText}>OFFICIAL STORE</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.sellerRating}>
+              {renderStars(safeGetNumber(product.seller?.rating), 12)}
+              <Text style={styles.sellerRatingText}>
+                {safeGetNumber(product.seller?.rating)} ({safeGetNumber(product.seller?.reviewCount)}+ ratings)
+              </Text>
+            </View>
           </View>
         </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderYouMayAlsoLike = () => {
-    if (loadingRelated) {
-      return (
-        <View style={[styles.section, styles.youMayAlsoLikeSection]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
-              You may also like
-            </Text>
-          </View>
-          <Text style={[styles.sectionSubtitle, { color: '#6B7280' }]}>
-            More products in {safeGetString(product.category, 'General')}
-          </Text>
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading related products...</Text>
-          </View>
-        </View>
-      );
-    }
-
     if (relatedProducts.length === 0) {
       return null; // Don't show section if no related products
     }
@@ -1639,6 +1626,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  sellerAvatarImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   avatarText: {
     color: '#3B82F6',
