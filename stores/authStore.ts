@@ -14,6 +14,29 @@ type AuthState = {
   logout: () => Promise<void>
 }
 
+async function clearUserScopedStores() {
+  await Promise.all([
+    (async () => {
+      try {
+        const { useUserActivityStore } = await import('./userActivityStore')
+        useUserActivityStore.getState().clearUserData()
+      } catch {
+        // Ignore errors if userActivityStore is unavailable
+      }
+    })(),
+    (async () => {
+      try {
+        const { useDataStore } = await import('./dataStore')
+        const dataState = useDataStore.getState()
+        dataState.stopAutoRefresh?.()
+        dataState.clearCache()
+      } catch {
+        // Ignore errors if dataStore is unavailable
+      }
+    })(),
+  ])
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   user: null,
@@ -29,13 +52,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setUser: async (u) => {
     // If setting a new user (different from current), clear previous user's data
     const currentUser = get().user;
-    if (currentUser && u && currentUser.id !== u.id) {
-      try {
-        const { useUserActivityStore } = await import('./userActivityStore');
-        useUserActivityStore.getState().clearUserData();
-      } catch (error) {
-        // Ignore errors if userActivityStore is not available
-      }
+    if ((currentUser && u && currentUser.id !== u.id) || (!u && currentUser)) {
+      await clearUserScopedStores();
     }
     
     set({ user: u });
@@ -56,13 +74,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Clear state immediately for instant UI response
     set({ token: null, user: null })
     
-    // Clear user activity data when logging out
-    try {
-      const { useUserActivityStore } = await import('./userActivityStore');
-      useUserActivityStore.getState().clearUserData();
-    } catch (error) {
-      // Ignore errors if userActivityStore is not available
-    }
+    await clearUserScopedStores();
     
     // Clean up storage in background
     SecureStore.deleteItemAsync('auth_token').catch(() => {})

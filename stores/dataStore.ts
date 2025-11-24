@@ -5,6 +5,8 @@ import { Product } from '../data/sampleProducts'
 import { marketplaceService, MarketplaceProduct } from '../services/marketplace'
 import { getMe, MobileUser } from '../services/user'
 import { websocketService } from '../services/websocket'
+import { API_BASE_URL } from '../services/config'
+import { useAuthStore } from './authStore'
 
 export interface MarketplaceOrderItem {
   productId?: string | null
@@ -81,8 +83,7 @@ export interface MarketplaceOrder {
     }
   }
 }
-import { API_BASE_URL } from '../services/config'
-import { useAuthStore } from './authStore'
+
 
 interface DataState {
   // User data
