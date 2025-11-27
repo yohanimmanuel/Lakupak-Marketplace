@@ -1,4 +1,5 @@
 import { graphqlRequest } from './graphql';
+import { API_BASE_URL } from './config';
 
 export interface OrderItem {
   productId?: string | null;
@@ -254,209 +255,26 @@ class OrdersService {
     token?: string
   ): Promise<Order> {
     try {
-      const query = `
-        mutation CreateMobileOrder(
-          $userId: Int!
-          $orderId: String!
-          $orderDate: String
-          $distributorUserId: Int
-          $orderItems: [JSONObject!]!
-          $subtotal: Float!
-          $discounts: Float
-          $shippingFee: Float!
-          $totalAmount: Float!
-          $totalOrders: Int
-          $contactPerson: String
-          $storeName: String
-          $contactPhone: String
-          $customerEmail: String
-          $deliveryAddress: String
-          $deliveryMethod: String
-          $deliveryOption: String
-          $orderStatus: String
-          $paymentStatus: String
-          $paymentTerms: String
-          $preferredDeliveryDate: String
-          $preferredDeliveryTime: String
-          $preferredPickupDate: String
-          $preferredPickupTime: String
-          $shippingMethodLabel: String
-          $shippingMethod: String
-        ) {
-          createMobileOrder(
-            userId: $userId
-            orderId: $orderId
-            orderDate: $orderDate
-            distributorUserId: $distributorUserId
-            orderItems: $orderItems
-            subtotal: $subtotal
-            discounts: $discounts
-            shippingFee: $shippingFee
-            totalAmount: $totalAmount
-            totalOrders: $totalOrders
-            contactPerson: $contactPerson
-            storeName: $storeName
-            contactPhone: $contactPhone
-            customerEmail: $customerEmail
-            deliveryAddress: $deliveryAddress
-            deliveryMethod: $deliveryMethod
-            deliveryOption: $deliveryOption
-            orderStatus: $orderStatus
-            paymentStatus: $paymentStatus
-            paymentTerms: $paymentTerms
-            preferredDeliveryDate: $preferredDeliveryDate
-            preferredDeliveryTime: $preferredDeliveryTime
-            preferredPickupDate: $preferredPickupDate
-            preferredPickupTime: $preferredPickupTime
-            shippingMethodLabel: $shippingMethodLabel
-            shippingMethod: $shippingMethod
-          ) {
-            id
-            orderId
-            buyerId
-            orderStatus
-            paymentStatus
-            deliveryMethod
-            deliveryOption
-            shippingMethodLabel
-            shippingMethod
-            subtotal
-            discounts
-            shippingFee
-            totalAmount
-            paymentTerms
-            totalOrders
-            contactPerson
-            storeName
-            contactPhone
-            customerEmail
-            deliveryAddress
-            preferredDeliveryDate
-            preferredDeliveryTime
-            preferredPickupDate
-            preferredPickupTime
-            assignedLogistics
-            trackingNumber
-            deliveryNote
-            deliveryConfirmation
-            pod
-            orderDate
-            createdAt
-            updatedAt
-            acceptedBy
-            acceptedAt
-            buyer {
-              buyerId
-              storeName
-              owner
-              email
-              phone
-            }
-            seller {
-              name
-              companyName
-              companyAddress
-              companyPhone
-              companyEmail
-              shippingPreferences
-              logo
-              bannerImage
-            }
-            orderItems {
-              id
-              orderId
-              buyerId
-              orderStatus
-              paymentStatus
-              deliveryMethod
-              deliveryOption
-              shippingMethodLabel
-              shippingMethod
-              subtotal
-              discounts
-              shippingFee
-              totalAmount
-              paymentTerms
-              totalOrders
-              contactPerson
-              storeName
-              contactPhone
-              customerEmail
-              deliveryAddress
-              preferredDeliveryDate
-              preferredDeliveryTime
-              preferredPickupDate
-              preferredPickupTime
-              assignedLogistics
-              trackingNumber
-              deliveryNote
-              deliveryConfirmation
-              pod
-              orderDate
-              createdAt
-              updatedAt
-              acceptedBy
-              acceptedAt
-              buyer {
-                buyerId
-                storeName
-                owner
-                email
-                phone
-              }
-              seller {
-                name
-                companyName
-                companyAddress
-                companyPhone
-                companyEmail
-                shippingPreferences
-                logo
-                bannerImage
-              }
-              orderItems {
-                productId
-                productName
-                category
-                brand
-                description
-                images
-                productDeleted
-                packageQuantity
-                packageType
-                piecesPerPackage
-                pricePerPackage
-                subtotal
-                variantId
-                variantOptionId
-                offerApplied
-                offerBadgeSnapshot
-                offerNameSnapshot
-                promotionDetailsSnapshot
-                variantNameSnapshot
-                productNameSnapshot
-                productSkuSnapshot
-                productTypeSnapshot
-                originalPriceSnapshot
-                discountPercentage
-                discountAmount
-                moqSnapshot
-              }
-            }
-          }
-        }
-      `;
-      
-      const result = await graphqlRequest<CreateMobileOrderResponse>(
-        query,
-        {
-          userId,
-          ...orderData,
+      // Use REST endpoint for order creation (aligned with architecture: REST for mutations)
+      const response = await fetch(`${API_BASE_URL}/api/mobile/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        token
-      );
-      
-      return result.createMobileOrder;
+        body: JSON.stringify({
+          ...orderData,
+          userId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to create order' }));
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to create order`);
+      }
+
+      const result = await response.json();
+      return result.order || result; // Handle both single order and array response
     } catch (error) {
       throw error;
     }
