@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link, Tabs, usePathname } from 'expo-router';
-import { Pressable, View, TextInput, Animated, Text } from 'react-native';
+import { Pressable, View, TextInput, Animated, Text, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useClientOnlyValue } from '../components/useClientOnlyValue';
 import { Home as HomeIcon, Boxes, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquare, MessageSquareText } from 'lucide-react-native';
@@ -74,7 +74,7 @@ export default function TabLayout() {
   function renderHeaderContent() {
     if (pathname?.endsWith('/categories') || pathname === '/categories') {
       return (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingLeft: 0, paddingRight: 20 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingLeft: 0, paddingRight: 20, paddingVertical: 16 }}>
           {SearchPill}
           {rightIconsBlue}
         </View>
@@ -82,8 +82,15 @@ export default function TabLayout() {
     }
     if (!pathname || pathname === '/' || pathname?.endsWith('/home') || pathname === '/home') {
       return (
-        <View style={{ flex: 1, alignSelf: 'stretch', paddingVertical: 11, marginRight: -48 }}>
-          <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 16}}>
+        <View style={{ flex: 1, alignSelf: 'stretch', paddingVertical: 16, marginRight: -48, position: 'relative', overflow: 'visible' }}>
+          {/* Decorative background lines */}
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
+            <View style={{ position: 'absolute', top: -20, left: -30, width: 150, height: 150, borderRadius: 75, borderWidth: 40, borderColor: 'rgba(255,255,255,0.08)', opacity: 0.5 }} />
+            <View style={{ position: 'absolute', top: 30, right: -50, width: 120, height: 120, borderRadius: 60, borderWidth: 35, borderColor: 'rgba(255,255,255,0.08)', opacity: 0.5 }} />
+            <View style={{ position: 'absolute', bottom: -40, left: '30%', width: 100, height: 100, borderRadius: 50, borderWidth: 30, borderColor: 'rgba(255,255,255,0.08)', opacity: 0.5 }} />
+          </View>
+          
+          <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 16, zIndex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, flex: 1, marginRight: 8 }}>
               <Store color="#ffffff" size={24} />
               <View style={{ marginLeft: 10, flex: 1, minWidth: 0 }}>
@@ -111,7 +118,7 @@ export default function TabLayout() {
               </Link>
             </View>
           </View>
-          <View style={{ width: '100%', marginTop: 12, paddingLeft: 16 }}>
+          <View style={{ width: '100%', marginTop: 18, paddingLeft: 16, zIndex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 10, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: '#e5e7eb' }}>
               <Search color="#6B7280" size={20} />
               <TextInput placeholder="Search for products..." style={{ flex: 1, marginLeft: 8, color: '#111827', paddingVertical: 0 }} placeholderTextColor="#6B7280" />
@@ -122,14 +129,14 @@ export default function TabLayout() {
     }
     if (pathname?.endsWith('/orders') || pathname === '/orders') {
       return (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingHorizontal: 20 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingHorizontal: 20, paddingVertical: 16 }}>
           <Text style={{ color: '#111827', fontSize: 18, fontWeight: '600' }}>Orders</Text>
         </View>
       );
     }
     if (pathname?.endsWith('/notifications') || pathname === '/notifications') {
       return (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingHorizontal: 20 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingHorizontal: 20, paddingVertical: 16 }}>
           <Text style={{ color: '#111827', fontSize: 18, fontWeight: '600' }}>Notifications</Text>
         </View>
       );
@@ -149,12 +156,19 @@ export default function TabLayout() {
   const useWhiteHeader = isOrders || isCategories || isMessages;
 
   return (
-    <Tabs
-      initialRouteName="home"
-      screenOptions={{
+    <>
+      <StatusBar 
+        barStyle={isHome || isAccount ? "light-content" : "dark-content"} 
+        backgroundColor={isHome || isAccount ? primaryBlue : "#f9fafb"} 
+        translucent={false}
+      />
+      <Tabs
+        initialRouteName="home"
+        screenOptions={{
         tabBarActiveTintColor: primaryBlue,
         tabBarInactiveTintColor: inactiveGrey,
         headerShown: true,
+        sceneStyle: { backgroundColor: '#f9fafb' },
         headerTitleAlign: 'left',
         headerLeft: () => (
           isAccount ? (
@@ -170,8 +184,8 @@ export default function TabLayout() {
             </Link>
           ) : null
         ),
-        headerLeftContainerStyle: { width: isHome ? 0 : undefined },
-        headerRightContainerStyle: { width: isHome ? 0 : undefined },
+        headerLeftContainerStyle: { width: isHome ? 0 : undefined, paddingVertical: isAccount ? 16 : undefined },
+        headerRightContainerStyle: { width: isHome ? 0 : undefined, paddingVertical: isAccount ? 16 : undefined },
         headerTitle: () => (isAccount ? <View style={{ flex: 1 }} /> : renderHeaderContent()),
           headerRight: () => (
           isAccount ? (
@@ -200,9 +214,23 @@ export default function TabLayout() {
         headerBackground: () => (
           useWhiteHeader
             ? <View style={{ flex: 1, backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }} />
-            : <LinearGradient colors={[primaryBlue, lightBlue]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1 }} />
+            : <LinearGradient 
+                colors={[primaryBlue, lightBlue]} 
+                start={{ x: 0, y: 0 }} 
+                end={{ x: 1, y: 0 }} 
+                style={{ 
+                  flex: 1,
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  borderBottomLeftRadius: isHome ? 24 : 0, 
+                  borderBottomRightRadius: isHome ? 24 : 0,
+                }} 
+              />
         ),
-        headerStyle: { backgroundColor: useWhiteHeader ? '#ffffff' : primaryBlue, height: isHome ? 155 : undefined },
+        headerStyle: { backgroundColor: useWhiteHeader ? '#ffffff' : 'transparent', height: isHome ? 170 : undefined },
         headerTitleContainerStyle: isHome ? { position: 'absolute', top: 0, left: -16, right: -16, bottom: 0, margin: 0, padding: 0 } : { flex: 1, width: '100%', maxWidth: '100%', alignItems: 'stretch', paddingBottom: 0, marginHorizontal: 0, left: 0, right: 0 },
         tabBarStyle: { backgroundColor: '#ffffff', borderTopWidth: 0, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 10 },
         tabBarLabelStyle: { fontSize: 11 },
@@ -215,5 +243,6 @@ export default function TabLayout() {
       <Tabs.Screen name="notifications" options={{ title: 'Notifications', tabBarIcon: ({ color }) => <Bell color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Notifications</Text> }} />
       <Tabs.Screen name="account" options={{ title: 'Account', tabBarIcon: ({ color }) => <User color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Account</Text> }} />
     </Tabs>
+    </>
   );
 }

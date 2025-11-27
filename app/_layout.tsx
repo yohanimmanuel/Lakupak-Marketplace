@@ -107,9 +107,9 @@ function RootLayoutNav() {
   }, [token, startAutoRefresh]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={DefaultTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: '#f9fafb' } }} />
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="useraccounts/welcome" options={{ headerShown: false }} />
         <Stack.Screen
