@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Product } from '../data/sampleProducts'
 import { MarketplaceProduct } from '../services/marketplace'
 import { useAuthStore } from './authStore'
-import { API_BASE_URL } from '../services/config'
+import { cartService } from '../services/cart'
 
 // Database user activity interface (matches Prisma schema)
 interface DatabaseUserActivity {
@@ -79,26 +79,16 @@ const convertDatabaseToCartItem = (dbItem: DatabaseUserActivity): CartItem => {
 };
 
 // Helper function to sync cart item to database
-const syncItemToDatabase = async (item: CartItem, userId: number): Promise<void> => {
+const syncItemToDatabase = async (item: CartItem, userId: number, token?: string): Promise<void> => {
   try {
-    // Check if server is available first
-    const response = await fetch(`${API_BASE_URL}/api/mobile/cart`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId,
-        productId: item.product.id,
-        productData: item.product, // Send complete product data
-        quantity: item.quantity,
-        variant: item.variant || 'Default'
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Server responded with ${response.status}`);
-    }
+    await cartService.addToCart(
+      userId,
+      item.product.id,
+      item.product as MarketplaceProduct,
+      item.quantity,
+      item.variant || 'Default',
+      token
+    );
   } catch (error) {
     // Silently handle network errors
     if (error instanceof TypeError && error.message.includes('Network request failed')) {
@@ -152,7 +142,8 @@ export const useCartStore = create<CartState>()(
 
         // Sync to database in background if user is logged in and online
         if (currentUserId && state.isOnline) {
-          syncItemToDatabase(updatedItem, currentUserId);
+          const token = authState.token;
+          syncItemToDatabase(updatedItem, currentUserId, token || undefined);
         }
       },
 
@@ -169,13 +160,13 @@ export const useCartStore = create<CartState>()(
         // Remove from database if user is logged in
         if (currentUserId && state.isOnline) {
           // Extract database ID from item ID (format: db-{id} or {productId}-{variant}-{timestamp})
-          const dbId = itemId.startsWith('db-') ? itemId.replace('db-', '') : null;
+          const dbId = itemId.startsWith('db-') ? parseInt(itemId.replace('db-', ''), 10) : null;
+          const token = authState.token;
           
-          if (dbId) {
+          if (dbId && !isNaN(dbId)) {
             // Delete from database
-            fetch(`${API_BASE_URL}/api/mobile/cart?cartItemId=${dbId}`, {
-              method: 'DELETE'
-            }).catch(error => {
+            cartService.removeCartItem(dbId, token || undefined).catch(() => {
+              // Silently handle errors
             });
           }
         }
@@ -200,14 +191,12 @@ export const useCartStore = create<CartState>()(
 
         // Update database if user is logged in
         if (currentUserId && state.isOnline) {
-          const dbId = itemId.startsWith('db-') ? itemId.replace('db-', '') : null;
+          const dbId = itemId.startsWith('db-') ? parseInt(itemId.replace('db-', ''), 10) : null;
+          const token = authState.token;
           
-          if (dbId) {
-            fetch(`${API_BASE_URL}/api/mobile/cart`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ cartItemId: dbId, quantity })
-            }).catch(error => {
+          if (dbId && !isNaN(dbId)) {
+            cartService.updateCartItem(dbId, quantity, undefined, token || undefined).catch(() => {
+              // Silently handle errors
             });
           }
         }
@@ -247,11 +236,10 @@ export const useCartStore = create<CartState>()(
         // Clear from database if user is logged in and online
         if (currentUserId && isOnline) {
           try {
-            // Clear all cart items from database
-            await fetch(`${API_BASE_URL}/api/mobile/cart?userId=${currentUserId}`, {
-              method: 'DELETE'
-            })
+            const token = useAuthStore.getState().token;
+            await cartService.clearCart(currentUserId, token || undefined);
           } catch (error) {
+            // Silently handle errors
           }
         }
       },
@@ -280,6 +268,7 @@ export const useCartStore = create<CartState>()(
         const { items, isOnline } = get()
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
+        const token = authState.token
         
         if (!currentUserId || !isOnline) return
 
@@ -287,7 +276,7 @@ export const useCartStore = create<CartState>()(
         try {
           // Sync all local items to database
           for (const item of items) {
-            await syncItemToDatabase(item, currentUserId)
+            await syncItemToDatabase(item, currentUserId, token || undefined)
           }
         } catch (error) {
         } finally {
@@ -299,18 +288,17 @@ export const useCartStore = create<CartState>()(
         const { isOnline } = get()
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
+        const token = authState.token
         
         if (!currentUserId || !isOnline) return
 
         set({ isLoading: true })
         try {
-          const response = await fetch(`${API_BASE_URL}/api/mobile/cart?userId=${currentUserId}`)
-          if (response.ok) {
-            const data = await response.json()
-            const cartItems = data.cartItems.map(convertDatabaseToCartItem)
-            set({ items: cartItems })
-          }
+          const cartItems = await cartService.getCart(currentUserId, token || undefined)
+          const convertedItems = cartItems.map(convertDatabaseToCartItem)
+          set({ items: convertedItems })
         } catch (error) {
+          // Silently handle errors
         } finally {
           set({ isLoading: false })
         }

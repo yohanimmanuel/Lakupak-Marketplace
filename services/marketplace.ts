@@ -1,7 +1,5 @@
 // Marketplace API service
-import { API_BASE_URL } from './config';
-
-const MARKETPLACE_API_URL = `${API_BASE_URL}/api/marketplace`;
+import { graphqlRequest } from './graphql';
 
 // Interface for raw product data from API
 interface RawProductData {
@@ -132,6 +130,21 @@ export interface MarketplaceProduct {
   };
   // Product variants for actual variations (color, size, flavor)
   variants?: ProductVariant[];
+  // Variant definitions and options (for component compatibility)
+  variantOptions?: Array<{
+    id: number;
+    sku: string;
+    purchasePrice: number;
+    sellingPrice: number;
+    originalSellingPrice?: number;
+    moq: number;
+    stockQuantity: number;
+    lowStockThreshold: number;
+    stockStatus: string;
+    attributes: Record<string, string>;
+    isDefault: boolean;
+    isActive: boolean;
+  }>;
 }
 
 export interface MarketplaceResponse {
@@ -144,6 +157,60 @@ export interface MarketplaceResponse {
   };
 }
 
+interface GraphQLMarketplaceProduct {
+  id: string;
+  name: string;
+  description: string;
+  userId?: number;
+  sellingPrice: number;
+  originalSellingPrice?: number;
+  price: number;
+  originalPrice: number;
+  offerBadge?: string;
+  hasActiveOffer: boolean;
+  offerId?: string;
+  offerName?: string;
+  discountType?: string;
+  discountValue?: number;
+  promotionDetails?: Record<string, unknown>;
+  rating: number;
+  reviewCount: number;
+  soldCount: string;
+  stock: number;
+  stockStatus: string;
+  images: string[];
+  category: string;
+  productCategory: string;
+  brand?: string;
+  unit: string;
+  sku: string;
+  supplier?: string;
+  publishedAt?: string;
+  lastSyncAt?: string;
+  piecesPerPackage: number;
+  packageType: string;
+  seller: Record<string, unknown>;
+  shipping: Record<string, unknown>;
+  shippingInfo?: { location: string };
+  assurance: Record<string, unknown>;
+  reviews: Record<string, unknown>;
+  variants: Array<Record<string, unknown>>;
+  variantOptions: Array<Record<string, unknown>>;
+  variantOptionsFormatted: Array<Record<string, unknown>>;
+}
+
+interface MobileMarketplaceProductsResponse {
+  mobileMarketplaceProducts: {
+    nodes: GraphQLMarketplaceProduct[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalCount: number;
+      totalPages: number;
+    };
+  };
+}
+
 export const marketplaceService = {
   async getProducts(params?: {
     page?: number;
@@ -151,69 +218,411 @@ export const marketplaceService = {
     category?: string;
     search?: string;
     marketplaceUserId?: number;
+    token?: string;
   }): Promise<MarketplaceResponse> {
-    const searchParams = new URLSearchParams();
-    
-    if (params?.page) searchParams.append('page', params.page.toString());
-    if (params?.limit) searchParams.append('limit', params.limit.toString());
-    if (params?.category) searchParams.append('productType', params.category);
-    if (params?.search) searchParams.append('search', params.search);
-    if (params?.marketplaceUserId) searchParams.append('marketplaceUserId', params.marketplaceUserId.toString());
-
-    const url = `${MARKETPLACE_API_URL}?${searchParams.toString()}`;
-    
     try {
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const query = `
+        query GetMobileMarketplaceProducts(
+          $page: Int
+          $limit: Int
+          $category: String
+          $search: String
+          $marketplaceUserId: Int
+        ) {
+          mobileMarketplaceProducts(
+            page: $page
+            limit: $limit
+            category: $category
+            search: $search
+            marketplaceUserId: $marketplaceUserId
+          ) {
+      nodes {
+        id
+        name
+        description
+              userId
+        sellingPrice
+        originalSellingPrice
+              price
+              originalPrice
+              offerBadge
+        hasActiveOffer
+        offerId
+        offerName
+        discountType
+        discountValue
+        promotionDetails
+        rating
+        reviewCount
+              soldCount
+              stock
+              stockStatus
+              images
+              category
+              productCategory
+              brand
+              unit
+              sku
+              supplier
+              publishedAt
+              lastSyncAt
+              piecesPerPackage
+              packageType
+        seller {
+          name
+          avatar
+          rating
+          reviewCount
+          isOfficial
+          responseTime
+          deliverySpeed
+          returnPolicy
+          company {
+            name
+                  businessAddress
+                  businessPhone
+                  businessEmail
+                  industryType
+                  pickupAddress
+            logo
+                  bannerImage
+          }
+        }
+              shipping {
+                preferences
+                standard {
+                  price
+                  free
+                  available
+                }
+                express {
+                  price
+                  free
+                  available
+                }
+                sameDay {
+                  price
+                  free
+                  available
+                }
+                nextDay {
+                  price
+                  free
+                  available
+                }
+                scheduled {
+                  price
+                  free
+                  available
+                }
+                pickup {
+                  price
+                  free
+                  available
+                }
+              }
+              shippingInfo {
+                location
+              }
+              assurance {
+                halalCertified
+                bpomApproved
+                returnPolicyDays
+                originalProduct
+              }
+              reviews {
+                overallRating
+                totalReviews
+                breakdown
+                sampleReview
+                hasReviews
+              }
+              variants
+              variantOptions
+              variantOptionsFormatted
       }
+      pagination {
+        page
+        limit
+        totalCount
+        totalPages
+      }
+    }
+  }
+`;
+
+      const result = await graphqlRequest<MobileMarketplaceProductsResponse>(
+        query,
+        {
+          page: params?.page || 1,
+          limit: params?.limit || 20,
+          category: params?.category,
+          search: params?.search,
+          marketplaceUserId: params?.marketplaceUserId,
+        },
+        params?.token
+      );
       
-      const data = await response.json();
-      
-      // Format currency values for display and map offer fields
-      if (data.products) {
-        data.products = data.products.map((product: MarketplaceProduct) => ({
-          ...product,
-          // Map price fields (support both old and new field names)
-          sellingPrice: parseFloat(String(product.sellingPrice)) || 0,
-          originalSellingPrice: parseFloat(String(product.originalSellingPrice)) || 0,
-          // Keep offer integration fields
-          offerBadge: product.offerBadge,
-          hasActiveOffer: product.hasActiveOffer,
-          offerId: product.offerId,
-          offerName: product.offerName,
-          promotionDetails: product.promotionDetails,
+      // Transform products to calculate discount and format variants
+      const transformedProducts = result.mobileMarketplaceProducts.nodes.map((product: GraphQLMarketplaceProduct) => {
+        const sellingPrice = Number(product.sellingPrice) || 0;
+        const originalSellingPrice = Number(product.originalSellingPrice) || Number(product.originalPrice) || 0;
+        const discount = originalSellingPrice > 0 
+          ? ((originalSellingPrice - sellingPrice) / originalSellingPrice) * 100 
+          : 0;
+        
+        // Transform variantOptionsFormatted to ProductVariant array for the variants property
+        const variantOptionsFormatted = (product.variantOptionsFormatted || []) as Array<Record<string, unknown>>;
+        const transformedVariants: ProductVariant[] = variantOptionsFormatted.map((v, idx) => ({
+          id: Number(v.id) || idx,
+          variantName: String(v.variantName || ''),
+          variantType: v.variantType ? String(v.variantType) : undefined,
+          sku: v.sku ? String(v.sku) : undefined,
+          purchasePrice: Number(v.purchasePrice) || 0,
+          sellingPrice: Number(v.sellingPrice) || 0,
+          originalSellingPrice: v.originalSellingPrice ? Number(v.originalSellingPrice) : null,
+          moq: v.moq ? Number(v.moq) : undefined,
+          stockQuantity: v.stockQuantity ? Number(v.stockQuantity) : undefined,
+          lowStockThreshold: v.lowStockThreshold ? Number(v.lowStockThreshold) : undefined,
+          stockStatus: v.stockStatus ? String(v.stockStatus) as 'In Stock' | 'Low Stock' | 'Out of Stock' : undefined,
+          attributes: v.attributes as Record<string, unknown> | undefined,
+          isDefault: Boolean(v.isDefault),
+          isActive: Boolean(v.isActive),
         }));
-      }
+
+        // Keep original variants (definitions) and variantOptions (options) for component compatibility
+        // Transform variantOptions to proper structure
+        const variantOptions = (product.variantOptions || []) as Array<Record<string, unknown>>;
+        const transformedVariantOptions = variantOptions.map((vo) => ({
+          id: Number(vo.id) || 0,
+          sku: String(vo.sku || ''),
+          purchasePrice: Number(vo.purchasePrice) || 0,
+          sellingPrice: Number(vo.sellingPrice) || 0,
+          originalSellingPrice: vo.originalSellingPrice ? Number(vo.originalSellingPrice) : undefined,
+          moq: Number(vo.moq) || 0,
+          stockQuantity: Number(vo.stockQuantity) || 0,
+          lowStockThreshold: Number(vo.lowStockThreshold) || 0,
+          stockStatus: String(vo.stockStatus || 'In Stock'),
+          attributes: vo.attributes as Record<string, string> || {},
+          isDefault: Boolean(vo.isDefault),
+          isActive: Boolean(vo.isActive),
+        }));
+
+        // Keep original variants (definitions) from GraphQL for component compatibility
+        const originalVariants = (product.variants || []) as Array<Record<string, unknown>>;
+        
+        return {
+          ...product,
+          discount,
+          variants: originalVariants as unknown as ProductVariant[], // Keep definitions structure for component, cast for interface
+          variantOptions: transformedVariantOptions, // Keep for component
+          seller: product.seller as MarketplaceProduct['seller'],
+          shipping: product.shipping as MarketplaceProduct['shipping'],
+          assurance: product.assurance as MarketplaceProduct['assurance'],
+          reviews: product.reviews as MarketplaceProduct['reviews'],
+          // Map shippingInfo location to days if needed
+          shippingInfo: product.shippingInfo ? {
+            location: product.shippingInfo.location || '',
+            days: '', // Not available in GraphQL schema
+          } : undefined,
+        } as MarketplaceProduct;
+      });
       
-      return data;
+      return {
+        products: transformedProducts,
+        pagination: result.mobileMarketplaceProducts.pagination,
+      };
     } catch (error) {
       throw error;
     }
   },
 
-  async getProductById(productId: string): Promise<MarketplaceProduct> {
+  async getProductById(productId: string, token?: string): Promise<MarketplaceProduct> {
     try {
-      const response = await fetch(`${MARKETPLACE_API_URL}/${productId}`);
+      const query = `
+        query GetMobileMarketplaceProduct($productId: String!) {
+          mobileMarketplaceProducts(search: $productId, limit: 1) {
+            nodes {
+              id
+              name
+              description
+              userId
+              sellingPrice
+              originalSellingPrice
+              price
+              originalPrice
+              offerBadge
+              hasActiveOffer
+              offerId
+              offerName
+              discountType
+              discountValue
+              promotionDetails
+              rating
+              reviewCount
+              soldCount
+              stock
+              stockStatus
+              images
+              category
+              productCategory
+              brand
+              unit
+              sku
+              supplier
+              publishedAt
+              lastSyncAt
+              piecesPerPackage
+              packageType
+              seller {
+                name
+                avatar
+                rating
+                reviewCount
+                isOfficial
+                responseTime
+                deliverySpeed
+                returnPolicy
+                company {
+                  name
+                  businessAddress
+                  businessPhone
+                  businessEmail
+                  industryType
+                  pickupAddress
+                  logo
+                  bannerImage
+                }
+              }
+              shipping {
+                preferences
+                standard {
+                  price
+                  free
+                  available
+                }
+                express {
+                  price
+                  free
+                  available
+                }
+                sameDay {
+                  price
+                  free
+                  available
+                }
+                nextDay {
+                  price
+                  free
+                  available
+                }
+                scheduled {
+                  price
+                  free
+                  available
+                }
+                pickup {
+                  price
+                  free
+                  available
+                }
+              }
+              shippingInfo {
+                location
+              }
+              assurance {
+                halalCertified
+                bpomApproved
+                returnPolicyDays
+                originalProduct
+              }
+              reviews {
+                overallRating
+                totalReviews
+                breakdown
+                sampleReview
+                hasReviews
+              }
+              variants
+              variantOptions
+              variantOptionsFormatted
+            }
+          }
+        }
+      `;
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await graphqlRequest<MobileMarketplaceProductsResponse>(
+        query,
+        { productId },
+        token
+      );
+      
+      const rawProduct = result.mobileMarketplaceProducts.nodes.find(p => p.id === productId) as GraphQLMarketplaceProduct | undefined;
+      if (!rawProduct) {
+        throw new Error(`Product with id ${productId} not found`);
       }
       
-      const data = await response.json();
+      // Transform product to calculate discount and format variants
+      const sellingPrice = Number(rawProduct.sellingPrice) || 0;
+      const originalSellingPrice = Number(rawProduct.originalSellingPrice) || Number(rawProduct.originalPrice) || 0;
+      const discount = originalSellingPrice > 0 
+        ? ((originalSellingPrice - sellingPrice) / originalSellingPrice) * 100 
+        : 0;
       
-      // Map price fields and offer integration
+      // Transform variantOptionsFormatted to ProductVariant array for the variants property
+      const variantOptionsFormatted = (rawProduct.variantOptionsFormatted || []) as Array<Record<string, unknown>>;
+      const transformedVariants: ProductVariant[] = variantOptionsFormatted.map((v, idx) => ({
+        id: Number(v.id) || idx,
+        variantName: String(v.variantName || ''),
+        variantType: v.variantType ? String(v.variantType) : undefined,
+        sku: v.sku ? String(v.sku) : undefined,
+        purchasePrice: Number(v.purchasePrice) || 0,
+        sellingPrice: Number(v.sellingPrice) || 0,
+        originalSellingPrice: v.originalSellingPrice ? Number(v.originalSellingPrice) : null,
+        moq: v.moq ? Number(v.moq) : undefined,
+        stockQuantity: v.stockQuantity ? Number(v.stockQuantity) : undefined,
+        lowStockThreshold: v.lowStockThreshold ? Number(v.lowStockThreshold) : undefined,
+        stockStatus: v.stockStatus ? String(v.stockStatus) as 'In Stock' | 'Low Stock' | 'Out of Stock' : undefined,
+        attributes: v.attributes as Record<string, unknown> | undefined,
+        isDefault: Boolean(v.isDefault),
+        isActive: Boolean(v.isActive),
+      }));
+
+      // Keep original variants (definitions) and variantOptions (options) for component compatibility
+      // Transform variantOptions to proper structure
+      const variantOptions = (rawProduct.variantOptions || []) as Array<Record<string, unknown>>;
+      const transformedVariantOptions = variantOptions.map((vo) => ({
+        id: Number(vo.id) || 0,
+        sku: String(vo.sku || ''),
+        purchasePrice: Number(vo.purchasePrice) || 0,
+        sellingPrice: Number(vo.sellingPrice) || 0,
+        originalSellingPrice: vo.originalSellingPrice ? Number(vo.originalSellingPrice) : undefined,
+        moq: Number(vo.moq) || 0,
+        stockQuantity: Number(vo.stockQuantity) || 0,
+        lowStockThreshold: Number(vo.lowStockThreshold) || 0,
+        stockStatus: String(vo.stockStatus || 'In Stock'),
+        attributes: vo.attributes as Record<string, string> || {},
+        isDefault: Boolean(vo.isDefault),
+        isActive: Boolean(vo.isActive),
+      }));
+      
+      // Keep original variants (definitions) from GraphQL for component compatibility
+      const originalVariants = (rawProduct.variants || []) as Array<Record<string, unknown>>;
+      
       return {
-        ...data,
-        sellingPrice: parseFloat(data.sellingPrice || data.price) || 0,
-        originalSellingPrice: parseFloat(data.originalSellingPrice || data.originalPrice) || 0,
-        offerBadge: data.offerBadge,
-        hasActiveOffer: data.hasActiveOffer,
-        offerId: data.offerId,
-        offerName: data.offerName,
-        promotionDetails: data.promotionDetails,
-      };
+        ...rawProduct,
+        discount,
+        variants: originalVariants as unknown as ProductVariant[], // Keep definitions structure for component, cast for interface
+        variantOptions: transformedVariantOptions, // Keep for component
+        seller: rawProduct.seller as MarketplaceProduct['seller'],
+        shipping: rawProduct.shipping as MarketplaceProduct['shipping'],
+        assurance: rawProduct.assurance as MarketplaceProduct['assurance'],
+        reviews: rawProduct.reviews as MarketplaceProduct['reviews'],
+        shippingInfo: rawProduct.shippingInfo ? {
+          location: rawProduct.shippingInfo.location || '',
+          days: '', // Not available in GraphQL schema
+        } : undefined,
+      } as MarketplaceProduct;
     } catch (error) {
       throw error;
     }

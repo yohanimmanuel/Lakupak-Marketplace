@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { MarketplaceProduct } from '../services/marketplace'
 import { userActivityService, UserActivity } from '../services/userActivity'
+import { useAuthStore } from './authStore'
 
 interface UserActivityState {
   // User activity data
@@ -55,7 +56,8 @@ export const useUserActivityStore = create<UserActivityState>()(
 
         // API call in background
         try {
-          await userActivityService.addActivity(currentUserId, productId, productData, 'favorite')
+          const token = useAuthStore.getState().token
+          await userActivityService.addActivity(currentUserId, productId, productData, 'favorite', undefined, token || undefined)
         } catch (error) {
           // Revert on error
           set({ likedProducts: likedProducts.filter(id => id !== productId) })
@@ -72,7 +74,8 @@ export const useUserActivityStore = create<UserActivityState>()(
 
         // API call in background
         try {
-          await userActivityService.removeActivity(currentUserId, productId, 'favorite')
+          const token = useAuthStore.getState().token
+          await userActivityService.removeActivity(currentUserId, productId, 'favorite', token || undefined)
         } catch (error) {
           // Revert on error
           set({ likedProducts: [...newLikedProducts, productId] })
@@ -96,7 +99,8 @@ export const useUserActivityStore = create<UserActivityState>()(
 
         // API call in background
         try {
-          const result = await userActivityService.toggleFavorite(currentUserId, productId, productData)
+          const token = useAuthStore.getState().token
+          const result = await userActivityService.toggleFavorite(currentUserId, productId, productData, token || undefined)
           // No need to update UI again since we already did optimistic update
         } catch (error) {
           // Revert on error
@@ -131,7 +135,8 @@ export const useUserActivityStore = create<UserActivityState>()(
 
         // API call in background
         try {
-          await userActivityService.addViewed(currentUserId, productId, productData)
+          const token = useAuthStore.getState().token
+          await userActivityService.addViewed(currentUserId, productId, productData, token || undefined)
         } catch (error) {
           // Revert on error
           set({ viewedProducts: newViewedProducts })
@@ -149,7 +154,8 @@ export const useUserActivityStore = create<UserActivityState>()(
 
         // API call in background
         try {
-          await userActivityService.addPurchased(currentUserId, productId, productData)
+          const token = useAuthStore.getState().token
+          await userActivityService.addPurchased(currentUserId, productId, productData, undefined, token || undefined)
         } catch (error) {
           // Revert on error
           set({ orderedProducts: orderedProducts.filter(id => id !== productId) })
@@ -188,10 +194,11 @@ export const useUserActivityStore = create<UserActivityState>()(
         
         // Load activities in background without blocking UI
         try {
+          const token = useAuthStore.getState().token
           const [favorites, viewed, purchased] = await Promise.all([
-            userActivityService.getActivities(userId, 'favorite'),
-            userActivityService.getActivities(userId, 'viewed'),
-            userActivityService.getActivities(userId, 'purchased')
+            userActivityService.getActivities(userId, 'favorite', token || undefined),
+            userActivityService.getActivities(userId, 'viewed', token || undefined),
+            userActivityService.getActivities(userId, 'purchased', token || undefined)
           ])
 
           // Reset viewed products if it's a new day
@@ -218,10 +225,11 @@ export const useUserActivityStore = create<UserActivityState>()(
 
         // Load activities in background without blocking UI
         try {
+          const token = useAuthStore.getState().token
           const [favorites, viewed, purchased] = await Promise.all([
-            userActivityService.getActivities(currentUserId, 'favorite'),
-            userActivityService.getActivities(currentUserId, 'viewed'),
-            userActivityService.getActivities(currentUserId, 'purchased')
+            userActivityService.getActivities(currentUserId, 'favorite', token || undefined),
+            userActivityService.getActivities(currentUserId, 'viewed', token || undefined),
+            userActivityService.getActivities(currentUserId, 'purchased', token || undefined)
           ])
 
           // Reset viewed products if it's a new day

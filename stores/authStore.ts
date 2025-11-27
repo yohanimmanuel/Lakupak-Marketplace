@@ -66,7 +66,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         const me = await getMe(t)
         set({ user: me })
-      } catch {}
+      } catch {
+        // If we can't get user, clear token
+        await SecureStore.deleteItemAsync('auth_token')
+        set({ token: null })
+      }
     }
     set({ isLoading: false })
   },

@@ -1,5 +1,5 @@
 import { MarketplaceProduct } from './marketplace';
-import { API_BASE_URL } from './config';
+import { graphqlRequest } from './graphql';
 
 export interface UserActivity {
   id: number;
@@ -12,51 +12,64 @@ export interface UserActivity {
   updatedAt: string;
 }
 
-export interface UserActivityResponse {
+interface MobileUserActivityResponse {
+  mobileUserActivity: {
+    success: boolean;
+    activities: UserActivity[];
+  };
+}
+
+interface AddUserActivityResponse {
+  addUserActivity: {
+    success: boolean;
+    activity: UserActivity;
+    action: string;
+  };
+}
+
+interface DeleteUserActivityResponse {
+  deleteUserActivity: {
   success: boolean;
-  activities?: UserActivity[];
-  activity?: UserActivity;
-  action?: 'created' | 'updated';
-  deletedCount?: number;
-  error?: string;
+    deletedCount: number;
+  };
 }
 
 class UserActivityService {
-  private async makeRequest(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<UserActivityResponse> {
-    try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-        ...options,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Request failed');
-      }
-
-      return await response.json();
-    } catch (error) {
-      // Return empty response instead of throwing to prevent app crashes
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Network request failed',
-        activities: []
-      };
-    }
-  }
-
   // Get user activities by type
-  async getActivities(userId: number, type: 'favorite' | 'viewed' | 'purchased'): Promise<UserActivity[]> {
-    const response = await this.makeRequest(
-      `/api/mobile/user-activity?userId=${userId}&type=${type}`
-    );
-    return response.activities || [];
+  async getActivities(
+    userId: number,
+    type: 'favorite' | 'viewed' | 'purchased',
+    token?: string
+  ): Promise<UserActivity[]> {
+    try {
+      const query = `
+        query GetMobileUserActivity($userId: Int!, $type: ActivityType!) {
+          mobileUserActivity(userId: $userId, type: $type) {
+            success
+            activities {
+              id
+              userId
+              productId
+              productData
+              activityType
+              metadata
+              createdAt
+              updatedAt
+            }
+          }
+        }
+      `;
+      
+      const result = await graphqlRequest<MobileUserActivityResponse>(
+        query,
+        { userId, type },
+        token
+      );
+      
+      return result.mobileUserActivity.activities || [];
+    } catch (error) {
+      return [];
+    }
   }
 
   // Add or update user activity
@@ -65,54 +78,123 @@ class UserActivityService {
     productId: string,
     productData: MarketplaceProduct,
     activityType: 'favorite' | 'viewed' | 'purchased',
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
+    token?: string
   ): Promise<UserActivity> {
-    const response = await this.makeRequest('/api/mobile/user-activity', {
-      method: 'POST',
-      body: JSON.stringify({
+    try {
+      const query = `
+        mutation AddUserActivity(
+          $userId: Int!
+          $productId: String!
+          $productData: JSONObject!
+          $activityType: ActivityType!
+          $metadata: JSONObject
+        ) {
+          addUserActivity(
+            input: {
+              userId: $userId
+              productId: $productId
+              productData: $productData
+              activityType: $activityType
+              metadata: $metadata
+            }
+          ) {
+            success
+            activity {
+              id
+              userId
+              productId
+              productData
+              activityType
+              metadata
+              createdAt
+              updatedAt
+            }
+            action
+          }
+        }
+      `;
+      
+      const result = await graphqlRequest<AddUserActivityResponse>(
+        query,
+        {
         userId,
         productId,
         productData,
         activityType,
-        metadata
-      }),
-    });
-    return response.activity!;
+          metadata,
+        },
+        token
+      );
+      
+      if (!result.addUserActivity.success || !result.addUserActivity.activity) {
+        throw new Error('Failed to add user activity');
+      }
+      
+      return result.addUserActivity.activity;
+    } catch (error) {
+      throw error;
+    }
   }
 
   // Remove user activity
   async removeActivity(
     userId: number,
     productId: string,
-    activityType: 'favorite' | 'viewed' | 'purchased'
+    activityType: 'favorite' | 'viewed' | 'purchased',
+    token?: string
   ): Promise<boolean> {
-    const response = await this.makeRequest(
-      `/api/mobile/user-activity?userId=${userId}&productId=${productId}&type=${activityType}`,
-      { method: 'DELETE' }
+    try {
+      const query = `
+        mutation DeleteUserActivity(
+          $userId: Int!
+          $productId: String!
+          $type: ActivityType!
+        ) {
+          deleteUserActivity(
+            userId: $userId
+            productId: $productId
+            type: $type
+          ) {
+            success
+            deletedCount
+          }
+        }
+      `;
+      
+      const result = await graphqlRequest<DeleteUserActivityResponse>(
+        query,
+        { userId, productId, type: activityType },
+        token
     );
-    return response.success;
+      
+      return result.deleteUserActivity.success;
+    } catch (error) {
+      return false;
+    }
   }
 
   // Toggle favorite (add if not exists, remove if exists)
   async toggleFavorite(
     userId: number,
     productId: string,
-    productData: MarketplaceProduct
+    productData: MarketplaceProduct,
+    token?: string
   ): Promise<{ isFavorite: boolean; activity?: UserActivity }> {
     try {
       // Check if already favorited
-      const existingFavorites = await this.getActivities(userId, 'favorite');
+      const existingFavorites = await this.getActivities(userId, 'favorite', token);
       const isCurrentlyFavorite = existingFavorites.some(
         activity => activity.productId === productId
       );
 
       if (isCurrentlyFavorite) {
         // Remove from favorites
-        await this.removeActivity(userId, productId, 'favorite');
+        await this.removeActivity(userId, productId, 'favorite', token);
         return { isFavorite: false };
       } else {
         // Add to favorites
-        const activity = await this.addActivity(userId, productId, productData, 'favorite');
+        const activity = await this.addActivity(userId, productId, productData, 'favorite', undefined, token);
         return { isFavorite: true, activity };
       }
     } catch (error) {
@@ -124,9 +206,10 @@ class UserActivityService {
   async addViewed(
     userId: number,
     productId: string,
-    productData: MarketplaceProduct
+    productData: MarketplaceProduct,
+    token?: string
   ): Promise<UserActivity> {
-    return this.addActivity(userId, productId, productData, 'viewed');
+    return this.addActivity(userId, productId, productData, 'viewed', undefined, token);
   }
 
   // Add purchased product
@@ -134,9 +217,10 @@ class UserActivityService {
     userId: number,
     productId: string,
     productData: MarketplaceProduct,
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
+    token?: string
   ): Promise<UserActivity> {
-    return this.addActivity(userId, productId, productData, 'purchased', metadata);
+    return this.addActivity(userId, productId, productData, 'purchased', metadata, token);
   }
 }
 

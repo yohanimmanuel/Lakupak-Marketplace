@@ -5,7 +5,7 @@ import { Product } from '../data/sampleProducts'
 import { marketplaceService, MarketplaceProduct } from '../services/marketplace'
 import { getMe, MobileUser } from '../services/user'
 import { websocketService } from '../services/websocket'
-import { API_BASE_URL } from '../services/config'
+import { ordersService } from '../services/orders'
 import { useAuthStore } from './authStore'
 
 export interface MarketplaceOrderItem {
@@ -167,7 +167,10 @@ export const useDataStore = create<DataState>()(
 
         set({ isUserLoading: true })
         try {
-          const user = await getMe(token)
+          // Try to get userId from authStore first, fallback to token decoding
+          const authState = useAuthStore.getState()
+          const userId = authState.user?.id
+          const user = await getMe(token, userId)
           set({ user, userLastUpdated: now, isUserLoading: false })
         } catch (error) {
           set({ isUserLoading: false })
@@ -221,19 +224,8 @@ export const useDataStore = create<DataState>()(
 
         set({ isOrdersLoading: true })
         try {
-          const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${userId}&limit=100`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          })
-
-          if (!response.ok) {
-            throw new Error('Failed to load orders')
-          }
-
-          const data = await response.json()
-          const orders: MarketplaceOrder[] = data.orders || []
+          const result = await ordersService.getOrders(userId, 1, 100, token || undefined)
+          const orders: MarketplaceOrder[] = result.orders as MarketplaceOrder[]
           set({
             orders,
             ordersLastUpdated: now,
@@ -292,17 +284,8 @@ export const useDataStore = create<DataState>()(
 
         try {
           // Fetch all orders to get the updated ones
-          const response = await fetch(`${API_BASE_URL}/api/mobile/orders?userId=${userId}&limit=100`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          })
-
-          if (!response.ok) return
-
-          const data = await response.json()
-          const updatedOrders: MarketplaceOrder[] = data.orders || []
+          const result = await ordersService.getOrders(userId, 1, 100, token || undefined)
+          const updatedOrders: MarketplaceOrder[] = result.orders as MarketplaceOrder[]
           
           // Filter to only the orders that were updated
           const relevantOrders = updatedOrders.filter(order => orderIds.includes(order.orderId))

@@ -24,21 +24,22 @@ interface Distributor {
 interface OrderItem {
   productId?: string | null;
   product?: {
-    userId?: number;
-    name?: string;
+    userId?: number | null;
+    name?: string | null;
   } | null;
 }
 
 interface Order {
   orderId: string;
-  userId: number | null;
-  storeName: string;
+  userId?: number | null;
+  storeName?: string;
   orderDate: string;
   orderStatus: string;
   totalAmount: number;
   orderItems?: OrderItem[];
   isDeleted?: boolean;
   deletedAt?: string | null;
+  createdAt?: string;
 }
 
 interface UserInfo {
@@ -94,12 +95,12 @@ export default function MyNetworksScreen() {
       try {
         setIsLoading(true);
         const successfulOrders = orders.filter(order => 
-          order.userId !== null &&
+          order.userId != null &&
           order.isDeleted !== true &&
           !order.deletedAt &&
           order.orderStatus !== 'Deleted' &&
           order.orderStatus !== 'Cancelled'
-        );
+        ) as Order[];
 
         const uniqueDistributors = new Map<number, { 
           storeName: string; 
@@ -108,7 +109,26 @@ export default function MyNetworksScreen() {
         }>();
         
         successfulOrders.forEach(order => {
-          const distributorId = order.userId!;
+          // Get distributor ID from order.userId (distributor/seller ID)
+          // In mobile orders, order.userId represents the distributor/seller who owns the products
+          // Fallback to getting it from order items' products if order.userId is not available
+          let distributorId: number | null = null;
+          
+          if (order.userId) {
+            distributorId = order.userId;
+          } else if (order.orderItems && order.orderItems.length > 0) {
+            // Fallback: get distributor ID from first order item's product
+            const firstItem = order.orderItems[0];
+            if (firstItem.product?.userId) {
+              distributorId = firstItem.product.userId;
+            }
+          }
+          
+          // Skip if we don't have a distributor ID
+          if (!distributorId) {
+            return;
+          }
+          
           if (!uniqueDistributors.has(distributorId)) {
             uniqueDistributors.set(distributorId, {
               storeName: order.storeName || `Distributor #${distributorId}`,
@@ -119,9 +139,34 @@ export default function MyNetworksScreen() {
           const entry = uniqueDistributors.get(distributorId)!;
           entry.orders.push(order);
           
-          const orderDate = order.orderDate ? new Date(order.orderDate) : (order.createdAt ? new Date(order.createdAt) : new Date());
-          if (!entry.lastOrderDate || orderDate > new Date(entry.lastOrderDate)) {
-            entry.lastOrderDate = order.orderDate || order.createdAt || orderDate.toISOString();
+          // Parse and validate order date
+          let orderDateValue: string | undefined = undefined;
+          if (order.orderDate) {
+            const parsedDate = new Date(order.orderDate);
+            if (!isNaN(parsedDate.getTime())) {
+              orderDateValue = order.orderDate;
+            }
+          }
+          if (!orderDateValue && order.createdAt) {
+            const parsedDate = new Date(order.createdAt);
+            if (!isNaN(parsedDate.getTime())) {
+              orderDateValue = order.createdAt;
+            }
+          }
+          
+          // Update last order date if this order is more recent
+          if (orderDateValue) {
+            if (!entry.lastOrderDate) {
+              entry.lastOrderDate = orderDateValue;
+            } else {
+              const currentDate = new Date(entry.lastOrderDate);
+              const newDate = new Date(orderDateValue);
+              if (!isNaN(currentDate.getTime()) && !isNaN(newDate.getTime()) && newDate > currentDate) {
+                entry.lastOrderDate = orderDateValue;
+              } else if (isNaN(currentDate.getTime())) {
+                entry.lastOrderDate = orderDateValue;
+              }
+            }
           }
         });
 
@@ -257,11 +302,17 @@ export default function MyNetworksScreen() {
                       <Text style={styles.ordersText}>
                         {distributor.totalOrders} {distributor.totalOrders === 1 ? 'order' : 'orders'}
                       </Text>
-                      {distributor.lastOrderDate && (
-                        <Text style={styles.lastOrderText}>
-                          • Last: {new Date(distributor.lastOrderDate).toLocaleDateString()}
-                        </Text>
-                      )}
+                      {distributor.lastOrderDate && (() => {
+                        const date = new Date(distributor.lastOrderDate);
+                        if (!isNaN(date.getTime())) {
+                          return (
+                            <Text style={styles.lastOrderText}>
+                              • Last: {date.toLocaleDateString()}
+                            </Text>
+                          );
+                        }
+                        return null;
+                      })()}
                     </View>
                   </View>
                   <ChevronRight color={iconGray} size={20} style={styles.chevron} />

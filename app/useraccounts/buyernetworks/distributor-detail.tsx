@@ -153,6 +153,15 @@ export default function DistributorDetailScreen() {
 
       const totalSpent = distributorOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
+      // Get last order date, validating it's a valid date
+      let lastOrderDate: string | undefined = undefined;
+      if (distributorOrders.length > 0 && distributorOrders[0].orderDate) {
+        const parsedDate = new Date(distributorOrders[0].orderDate);
+        if (!isNaN(parsedDate.getTime())) {
+          lastOrderDate = distributorOrders[0].orderDate;
+        }
+      }
+
       const distributorData: Distributor = {
         id: distributorId,
         name: sellerCompany?.name || nameFallback || `Distributor #${distributorId}`,
@@ -164,7 +173,7 @@ export default function DistributorDetailScreen() {
         rating: 4.5,
         totalOrders: distributorOrders.length,
         totalSpent: totalSpent,
-        lastOrderDate: distributorOrders[0].orderDate,
+        lastOrderDate: lastOrderDate,
         description: sellerCompany?.businessDescription || distributorUser?.company?.businessDescription,
         industryType: sellerCompany?.industryType || distributorUser?.company?.industryType,
         yearsInOperation: sellerCompany?.yearsInOperation || distributorUser?.company?.yearsInOperation,
@@ -173,13 +182,35 @@ export default function DistributorDetailScreen() {
 
       setDistributor(distributorData);
 
-      const transformedOrders: Order[] = distributorOrders.map(order => ({
-        orderId: order.orderId,
-        date: order.orderDate,
-        total: order.totalAmount || 0,
-        status: order.orderStatus,
-        items: order.orderItems?.reduce((sum, item) => sum + (item.packageQuantity || 1), 0) || 0
-      })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      const transformedOrders: Order[] = distributorOrders
+        .map(order => {
+          // Validate order date
+          let orderDate = order.orderDate;
+          if (orderDate) {
+            const parsedDate = new Date(orderDate);
+            if (isNaN(parsedDate.getTime())) {
+              // If orderDate is invalid, try createdAt
+              orderDate = order.createdAt || new Date().toISOString();
+            }
+          } else {
+            orderDate = order.createdAt || new Date().toISOString();
+          }
+          
+          return {
+            orderId: order.orderId,
+            date: orderDate,
+            total: order.totalAmount || 0,
+            status: order.orderStatus,
+            items: order.orderItems?.reduce((sum, item) => sum + (item.packageQuantity || 1), 0) || 0
+          };
+        })
+        .sort((a, b) => {
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          if (isNaN(dateA.getTime())) return 1;
+          if (isNaN(dateB.getTime())) return -1;
+          return dateB.getTime() - dateA.getTime();
+        })
         .slice(0, 5); // Limit to most recent 5 orders
 
       setOrders(transformedOrders);
@@ -313,7 +344,15 @@ export default function DistributorDetailScreen() {
                     <Text style={styles.orderId}>{order.orderId}</Text>
                     <View style={styles.orderDateRow}>
                       <Calendar color={iconGray} size={14} />
-                      <Text style={styles.orderDateText}>{new Date(order.date).toLocaleDateString()}</Text>
+                      <Text style={styles.orderDateText}>
+                        {(() => {
+                          const date = new Date(order.date);
+                          if (!isNaN(date.getTime())) {
+                            return date.toLocaleDateString();
+                          }
+                          return 'Invalid Date';
+                        })()}
+                      </Text>
                     </View>
                   </View>
                   <View style={styles.orderRight}>
