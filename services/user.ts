@@ -69,7 +69,6 @@ export async function getMe(token: string, userId?: number) {
 
 export async function updateMe(
   token: string,
-  userId: number,
   data: {
     username?: string
     name?: string
@@ -81,37 +80,19 @@ export async function updateMe(
     bannerImage?: string
     chosenAddress?: string
     country?: string
-  }
+  },
+  userId?: number
 ) {
   return trackAsync('updateMe', async () => {
     try {
+      const resolvedUserId = userId || decodeToken(token).userId;
+      if (!resolvedUserId) {
+        throw new Error('Unable to extract userId from token');
+      }
+
       const query = `
-        mutation UpdateMarketplaceUser(
-          $userId: Int!
-          $username: String
-          $name: String
-          $storeName: String
-          $email: String
-          $bio: String
-          $phone: String
-          $image: String
-          $bannerImage: String
-          $chosenAddress: String
-          $country: String
-        ) {
-          updateMarketplaceUser(
-            userId: $userId
-            username: $username
-            name: $name
-            storeName: $storeName
-            email: $email
-            bio: $bio
-            phone: $phone
-            image: $image
-            bannerImage: $bannerImage
-            chosenAddress: $chosenAddress
-            country: $country
-          ) {
+        mutation UpdateMarketplaceUser($userId: Int!, $input: UpdateMarketplaceUserInput!) {
+          updateMarketplaceUser(userId: $userId, input: $input) {
             id
             username
             name
@@ -128,11 +109,11 @@ export async function updateMe(
           }
         }
       `;
-      
+
       const result = await graphqlRequest<UpdateMarketplaceUserResponse>(
         query,
-        { userId, ...data },
-        token
+        { userId: resolvedUserId, input: data },
+        token,
       );
       
       return result.updateMarketplaceUser;
