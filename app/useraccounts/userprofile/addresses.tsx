@@ -3,10 +3,10 @@ import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { Plus, Trash2, Circle, CheckCircle2 } from 'lucide-react-native';
 import { Link } from 'expo-router';
 import { useAuthStore } from '../../../stores/authStore';
-import { API_BASE_URL } from '../../../services/config';
+import { getMarketplaceAddresses, deleteMarketplaceAddress, MobileAddress } from '../../../services/user';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
-type Address = { id: number; fullName: string; phone: string; address: string; isDefault: boolean; label: string }
+type Address = MobileAddress
 
 export default function AddressesList() {
   const token = useAuthStore(s => s.token) as string | null;
@@ -18,9 +18,8 @@ export default function AddressesList() {
   const load = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/mobile/addresses`, { headers: { Authorization: `Bearer ${token}` } })
-      const data = await res.json()
-      setList(Array.isArray(data) ? data : [])
+      const data = await getMarketplaceAddresses(token)
+      setList(data ?? [])
     } catch (error) {
       setList([])
     }
@@ -66,11 +65,7 @@ export default function AddressesList() {
       { text: 'Delete', style: 'destructive', onPress: async () => {
         const ids = Array.from(selectedIds)
         for (const id of ids) {
-          await fetch(`${API_BASE_URL}/api/mobile/addresses`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ id }),
-          })
+          await deleteMarketplaceAddress(token, id)
         }
         setSelectedIds(new Set())
         setDeleteMode(false)
@@ -92,14 +87,14 @@ export default function AddressesList() {
             )}
             {deleteMode ? (
               <Pressable onPress={() => toggleSelect(a.id)}>
-                <Text style={{ fontWeight: '700', color: '#111827' }}>{a.fullName}  <Text style={{ color: '#6B7280' }}>|  {a.phone}</Text></Text>
-                <Text style={{ color: '#111827', marginTop: 6 }}>{a.address}</Text>
+                <Text style={{ fontWeight: '700', color: '#111827' }}>{a.fullName ?? ''}  <Text style={{ color: '#6B7280' }}>|  {a.phone ?? ''}</Text></Text>
+                <Text style={{ color: '#111827', marginTop: 6 }}>{a.address ?? ''}</Text>
               </Pressable>
             ) : (
               <Link href={{ pathname: '/useraccounts/userprofile/edit-address', params: { id: String(a.id) } }} asChild>
                 <Pressable>
-                  <Text style={{ fontWeight: '700', color: '#111827' }}>{a.fullName}  <Text style={{ color: '#6B7280' }}>|  {a.phone}</Text></Text>
-                  <Text style={{ color: '#111827', marginTop: 6 }}>{a.address}</Text>
+                  <Text style={{ fontWeight: '700', color: '#111827' }}>{a.fullName ?? ''}  <Text style={{ color: '#6B7280' }}>|  {a.phone ?? ''}</Text></Text>
+                  <Text style={{ color: '#111827', marginTop: 6 }}>{a.address ?? ''}</Text>
                 </Pressable>
               </Link>
             )}

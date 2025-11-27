@@ -2,35 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { View, TextInput, Pressable, Text, Alert, ScrollView, Switch } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../../../stores/authStore';
-import { updateMe } from '../../../services/user';
-import { API_BASE_URL } from '../../../services/config';
+import {
+  updateMe,
+  getMarketplaceAddresses,
+  createMarketplaceAddress as createAddress,
+  updateMarketplaceAddress as updateAddress,
+} from '../../../services/user';
 
 type AddressLabel = 'work' | 'store' | 'home';
 
-interface AddressRecord {
-  id: number;
-  fullName?: string;
-  phone?: string;
-  address?: string;
-  isDefault?: boolean;
-  label?: AddressLabel;
+const normalizeLabel = (value?: string | null): AddressLabel => {
+  if (value === 'work' || value === 'store' || value === 'home') {
+    return value
+  }
+  return 'home'
 }
-
-const isAddressRecord = (value: unknown): value is AddressRecord => {
-  if (typeof value !== 'object' || value === null) return false;
-  const candidate = value as Partial<AddressRecord>;
-  const isValidLabel =
-    candidate.label === undefined ||
-    candidate.label === 'work' ||
-    candidate.label === 'store' ||
-    candidate.label === 'home';
-  return typeof candidate.id === 'number' && isValidLabel;
-};
-
-const parseAddressRecords = (value: unknown): AddressRecord[] => {
-  if (!Array.isArray(value)) return [];
-  return value.filter(isAddressRecord);
-};
 
 export default function EditAddress() {
   const router = useRouter();
@@ -57,15 +43,14 @@ export default function EditAddress() {
     const load = async () => {
       if (!token || !id) return
       try {
-        const res = await fetch(`${API_BASE_URL}/api/mobile/addresses`, { headers: { Authorization: `Bearer ${token}` } })
-        const list = parseAddressRecords(await res.json())
+        const list = await getMarketplaceAddresses(token)
         const cur = list.find(a => a.id === id)
         if (cur) {
           setFullName(cur.fullName ?? '')
           setPhone(cur.phone ?? '')
           setAddress(cur.address ?? '')
           setIsDefault(Boolean(cur.isDefault))
-          setLabel(cur.label ?? 'home')
+          setLabel(normalizeLabel(cur.label))
         }
       } catch {}
     }
@@ -76,17 +61,9 @@ export default function EditAddress() {
     try {
       if (!token) return Alert.alert('Unauthorized');
       if (id) {
-        await fetch(`${API_BASE_URL}/api/mobile/addresses`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ id, fullName, phone, address, isDefault, label }),
-        })
+        await updateAddress(token, id, { fullName, phone, address, isDefault, label })
       } else {
-        await fetch(`${API_BASE_URL}/api/mobile/addresses`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ fullName, phone, address, isDefault, label }),
-        })
+        await createAddress(token, { fullName, phone, address, isDefault, label })
       }
       const updated = await updateMe(token, { name: fullName, phone, chosenAddress: isDefault ? address : undefined });
       setUser(updated);
