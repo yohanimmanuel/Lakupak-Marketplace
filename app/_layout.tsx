@@ -10,6 +10,7 @@ import { useColorScheme } from './components/useColorScheme';
 import { useAuthStore } from '../stores/authStore';
 import { useDataStore } from '../stores/dataStore';
 import { useCartStore } from '../stores/cartStore';
+import { useUserActivityStore } from '../stores/userActivityStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -53,17 +54,24 @@ function RootLayoutNav() {
   const { hydrateFromStorage, token } = useAuthStore();
   const { refreshAllData, startAutoRefresh, stopAutoRefresh } = useDataStore();
   const { initializeCart } = useCartStore();
+  const { loadUserActivities } = useUserActivityStore();
 
   useEffect(() => {
     const initializeApp = async () => {
       // Hydrate auth state first
       await hydrateFromStorage();
       
-      // Get token after hydration
+      // Get token and user after hydration
       const currentToken = useAuthStore.getState().token;
+      const currentUser = useAuthStore.getState().user;
       
       // Initialize cart immediately after auth
       initializeCart();
+      
+      // Load user activities (liked products, viewed products, etc.) if user is logged in
+      if (currentUser?.id) {
+        await loadUserActivities(currentUser.id);
+      }
       
       // Preload all data immediately
       await refreshAllData(currentToken || undefined);
@@ -75,7 +83,7 @@ function RootLayoutNav() {
     };
     
     initializeApp();
-  }, [hydrateFromStorage, refreshAllData, initializeCart, startAutoRefresh]);
+  }, [hydrateFromStorage, refreshAllData, initializeCart, startAutoRefresh, loadUserActivities]);
 
   // Handle app state changes to pause/resume auto-refresh
   useEffect(() => {
@@ -105,6 +113,14 @@ function RootLayoutNav() {
       startAutoRefresh(token);
     }
   }, [token, startAutoRefresh]);
+
+  // Load user activities when user logs in or changes
+  useEffect(() => {
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser?.id && token) {
+      loadUserActivities(currentUser.id);
+    }
+  }, [token, loadUserActivities]);
 
   return (
     <ThemeProvider value={DefaultTheme}>

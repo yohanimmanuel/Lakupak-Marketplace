@@ -345,19 +345,6 @@ export default function ProductMarketplace({
           source={{ uri: currentImage }} 
           style={styles.cardProductImage} 
         />
-        
-        {/* Dots indicator only - no navigation arrows */}
-        <View style={styles.cardDotsContainer}>
-          {images.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.cardDot,
-                { backgroundColor: index === currentImageIndex ? 'white' : 'rgba(255,255,255,0.5)' }
-              ]}
-            />
-          ))}
-        </View>
       </View>
     );
   };

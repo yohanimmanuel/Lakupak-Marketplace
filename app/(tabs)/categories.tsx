@@ -8,10 +8,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '../components/Themed';
-import { Ionicons } from '@expo/vector-icons';
 
 // Components
 import ProductMarketplace from '../components/productcatalog/ProductMarketplace';
+import CategoryBadge from '../components/CategoryBadge';
 // import { SkeletonLoader, ProductSkeleton } from '../components/SkeletonLoader';
 
 // Temporary skeleton component
@@ -185,14 +185,12 @@ export default function CategoriesScreen() {
           scrollEventThrottle={16}
         >
           {dynamicCategories.map((category, index) => (
-            <TouchableOpacity key={index} style={styles.categoryItem}>
-              <View style={[styles.categoryIcon, { backgroundColor: category.color + '20' }]}>
-                <Ionicons name={category.icon as keyof typeof import('@expo/vector-icons').Ionicons.glyphMap} size={24} color={category.color} />
-              </View>
-              <Text style={[styles.categoryName, { color: '#111827' }]}>
-                {category.name}
-              </Text>
-            </TouchableOpacity>
+            <CategoryBadge
+              key={index}
+              name={category.name}
+              icon={category.icon}
+              onPress={() => {}}
+            />
           ))}
         </ScrollView>
         

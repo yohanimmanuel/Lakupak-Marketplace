@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '../components/Themed';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -17,6 +16,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import MyWallet from '../components/paymentcheckout/MyWallet';
 import SaleBanner from '../components/paymentcheckout/SaleBanner';
 import ProductMarketplace from '../components/productcatalog/ProductMarketplace';
+import CategoryBadge from '../components/CategoryBadge';
 
 // Hooks
 import { useAuthStore } from '../../stores/authStore';
@@ -220,14 +220,12 @@ export default function HomeScreen() {
             scrollEventThrottle={16}
           >
             {dynamicCategories.map((category, index) => (
-              <TouchableOpacity key={index} style={styles.categoryItem}>
-                <View style={[styles.categoryIcon, { backgroundColor: category.color + '20' }]}>
-                  <Ionicons name={category.icon as keyof typeof import('@expo/vector-icons').Ionicons.glyphMap} size={24} color={category.color} />
-                </View>
-                <Text style={[styles.categoryName, { color: '#111827' }]}>
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
+              <CategoryBadge
+                key={index}
+                name={category.name}
+                icon={category.icon}
+                onPress={() => {}}
+              />
             ))}
           </ScrollView>
           
