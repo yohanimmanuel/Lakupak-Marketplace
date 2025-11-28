@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   StyleSheet,
   View as RNView,
@@ -6,6 +6,7 @@ import {
   RefreshControl,
   Text as RNText,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '../components/Themed';
@@ -23,6 +24,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
 import { useUserActivityStore } from '../../stores/userActivityStore';
 import { useCartStore } from '../../stores/cartStore';
+import { useHeaderScrollStore } from '../../stores/headerScrollStore';
 import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
 // import { SkeletonLoader, ProductSkeleton, UserInfoSkeleton } from '../components/SkeletonLoader';
@@ -85,6 +87,16 @@ export default function HomeScreen() {
   const likedProducts = useUserActivityStore(state => state.likedProducts);
   const { addItem } = useCartStore();
   
+  // Header scroll animation
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const { setScrollY } = useHeaderScrollStore();
+  const scrollViewRef = useRef<any>(null);
+
+  // Set scrollY in store synchronously before first render to prevent flickering
+  useLayoutEffect(() => {
+    setScrollY(scrollY);
+    scrollY.setValue(0);
+  }, [setScrollY, scrollY]);
 
   // Scroll tracking for progress bar
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -172,7 +184,13 @@ export default function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       forceRefreshProducts();
-    }, [forceRefreshProducts])
+      // Reset scroll position when screen gains focus (returning to home)
+      scrollY.setValue(0);
+      // Reset ScrollView content position to top
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 0, animated: false });
+      }
+    }, [forceRefreshProducts, scrollY])
   );
 
   // Light background refresh while this screen is visible
@@ -184,19 +202,25 @@ export default function HomeScreen() {
   }, [forceRefreshProducts]);
 
   return (
-    <ScrollView 
-      style={{ flex: 1, backgroundColor: '#f9fafb' }}
-      contentContainerStyle={{ paddingBottom: 20 }}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor={primaryColor}
-          colors={[primaryColor]}
-        />
-      }
-    >
+      <Animated.ScrollView 
+        ref={scrollViewRef}
+        style={{ flex: 1, backgroundColor: '#f9fafb' }}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={primaryColor}
+            colors={[primaryColor]}
+          />
+        }
+      >
 
         <View style={{ backgroundColor: '#f9fafb' }}>
           {/* My Wallet Section */}
@@ -328,7 +352,7 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
-    </ScrollView>
+      </Animated.ScrollView>
   );
 }
 

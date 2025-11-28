@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link, Tabs, usePathname } from 'expo-router';
 import { Pressable, View, TextInput, Animated, Text, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,6 +6,7 @@ import { useClientOnlyValue } from '../components/useClientOnlyValue';
 import { Home as HomeIcon, Boxes, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquare, MessageSquareText } from 'lucide-react-native';
 import { Settings } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
+import { useHeaderScrollStore } from '../../stores/headerScrollStore';
 import CartBadge from '../components/CartBadge';
 
 export default function TabLayout() {
@@ -14,9 +15,85 @@ export default function TabLayout() {
   const lightBlue = '#4293fc';
   const inactiveGrey = '#6B7280';
   const { user, isLoading } = useAuthStore();
+  const { scrollY, setScrollY } = useHeaderScrollStore();
 
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const prevPathnameRef = useRef(pathname);
+
+  // Reset scroll position when navigating away from or back to home
+  useEffect(() => {
+    const wasHome = prevPathnameRef.current === '/' || prevPathnameRef.current?.endsWith('/home') || prevPathnameRef.current === '/home';
+    const isNowHome = (!pathname || pathname === '/' || pathname?.endsWith('/home') || pathname === '/home');
+    
+    // If navigating away from home or coming back to home, reset scroll
+    if ((wasHome && !isNowHome) || (!wasHome && isNowHome)) {
+      // Reset scroll position immediately
+      scrollY.setValue(0);
+      // Reset header height to initial state immediately
+      setHeaderHeight(170);
+      lastHeightRef.current = 170;
+    }
+    
+    prevPathnameRef.current = pathname;
+  }, [pathname, scrollY]);
+
+  // Interpolate header translation based on scroll position
+  const headerContentTranslateY = scrollY.interpolate({
+    inputRange: [0, 55],
+    outputRange: [0, -55],
+    extrapolate: 'clamp',
+  });
+
+  // Interpolate address row opacity based on scroll position
+  const addressOpacity = scrollY.interpolate({
+    inputRange: [0, 55],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  // Convert animated height to state for headerStyle (smooth interpolation)
+  const [headerHeight, setHeaderHeight] = useState(170);
+  const heightUpdateRef = useRef<number | null>(null);
+  const lastHeightRef = useRef(170);
+  
+  useEffect(() => {
+    // Update function
+    const updateHeight = (value: number) => {
+      // Cancel any pending update
+      if (heightUpdateRef.current !== null) {
+        cancelAnimationFrame(heightUpdateRef.current);
+      }
+      
+      // Use requestAnimationFrame for smooth updates
+      heightUpdateRef.current = requestAnimationFrame(() => {
+        // Smooth interpolation: 170 at scroll 0, 115 at scroll 55
+        const clampedValue = Math.min(55, Math.max(0, value));
+        const newHeight = 170 - clampedValue;
+        
+        // Update height more frequently for smoother animation
+        if (Math.abs(newHeight - lastHeightRef.current) >= 0.5) {
+          lastHeightRef.current = newHeight;
+          setHeaderHeight(newHeight);
+        }
+      });
+    };
+    
+    // Listen for scroll changes
+    const listenerId = scrollY.addListener(({ value }) => {
+      updateHeight(value);
+    });
+    
+    // Initialize height immediately
+    updateHeight(0);
+    
+    return () => {
+      if (heightUpdateRef.current !== null) {
+        cancelAnimationFrame(heightUpdateRef.current);
+      }
+      scrollY.removeListener(listenerId);
+    };
+  }, [scrollY, setHeaderHeight]);
 
   const ShrinkIcon = ({ children, style, ...pressableProps }: { children: React.ReactNode; style?: object } & Omit<React.ComponentProps<typeof Pressable>, 'style'>) => {
     const s = useRef(new Animated.Value(1)).current;
@@ -82,15 +159,21 @@ export default function TabLayout() {
     }
     if (!pathname || pathname === '/' || pathname?.endsWith('/home') || pathname === '/home') {
       return (
-        <View style={{ flex: 1, alignSelf: 'stretch', paddingVertical: 16, marginRight: -48, position: 'relative', overflow: 'visible' }}>
-          {/* Decorative background lines */}
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
-            <View style={{ position: 'absolute', top: -20, left: -30, width: 150, height: 150, borderRadius: 75, borderWidth: 40, borderColor: 'rgba(255,255,255,0.08)', opacity: 0.5 }} />
-            <View style={{ position: 'absolute', top: 30, right: -50, width: 120, height: 120, borderRadius: 60, borderWidth: 35, borderColor: 'rgba(255,255,255,0.08)', opacity: 0.5 }} />
-            <View style={{ position: 'absolute', bottom: -40, left: '30%', width: 100, height: 100, borderRadius: 50, borderWidth: 30, borderColor: 'rgba(255,255,255,0.08)', opacity: 0.5 }} />
-          </View>
-          
-          <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 16, zIndex: 1 }}>
+        <Animated.View style={{ 
+          flex: 1, 
+          alignSelf: 'stretch', 
+          paddingVertical: 16, 
+          marginRight: -48,
+          transform: [{ translateY: headerContentTranslateY }]
+        }}>
+          <Animated.View style={{ 
+            width: '100%', 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            paddingLeft: 16,
+            opacity: addressOpacity
+          }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, flex: 1, marginRight: 8 }}>
               <Store color="#ffffff" size={24} />
               <View style={{ marginLeft: 10, flex: 1, minWidth: 0 }}>
@@ -117,14 +200,18 @@ export default function TabLayout() {
                 </ShrinkIcon>
               </Link>
             </View>
-          </View>
-          <View style={{ width: '100%', marginTop: 18, paddingLeft: 16, zIndex: 1 }}>
+          </Animated.View>
+          <View style={{ 
+            width: '100%', 
+            marginTop: 18, 
+            paddingLeft: 16,
+          }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 10, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: '#e5e7eb' }}>
               <Search color="#6B7280" size={20} />
               <TextInput placeholder="Search for products..." style={{ flex: 1, marginLeft: 8, color: '#111827', paddingVertical: 0 }} placeholderTextColor="#6B7280" />
             </View>
           </View>
-        </View>
+        </Animated.View>
       );
     }
     if (pathname?.endsWith('/orders') || pathname === '/orders') {
@@ -168,7 +255,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: primaryBlue,
         tabBarInactiveTintColor: inactiveGrey,
         headerShown: true,
-        sceneStyle: { backgroundColor: '#f9fafb' },
+        sceneStyle: { backgroundColor: '#ffffff' },
         headerTitleAlign: 'left',
         headerLeft: () => (
           isAccount ? (
@@ -211,26 +298,38 @@ export default function TabLayout() {
             </View>
           ) : null
         ),
-        headerBackground: () => (
-          useWhiteHeader
-            ? <View style={{ flex: 1, backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }} />
-            : <LinearGradient 
+        headerBackground: () => {
+          if (useWhiteHeader) {
+            return <View style={{ flex: 1, backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }} />;
+          }
+          
+          // Animate background gradient with scroll
+          const backgroundTranslateY = scrollY.interpolate({
+            inputRange: [0, 55],
+            outputRange: [0, -55],
+            extrapolate: 'clamp',
+          });
+          
+          return (
+            <Animated.View style={{ 
+              flex: 1,
+              transform: [{ translateY: backgroundTranslateY }],
+              overflow: 'hidden',
+            }}>
+              <LinearGradient 
                 colors={[primaryBlue, lightBlue]} 
                 start={{ x: 0, y: 0 }} 
                 end={{ x: 1, y: 0 }} 
                 style={{ 
                   flex: 1,
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
                   borderBottomLeftRadius: isHome ? 24 : 0, 
                   borderBottomRightRadius: isHome ? 24 : 0,
                 }} 
               />
-        ),
-        headerStyle: { backgroundColor: useWhiteHeader ? '#ffffff' : 'transparent', height: isHome ? 170 : undefined },
+            </Animated.View>
+          );
+        },
+        headerStyle: { backgroundColor: useWhiteHeader ? '#ffffff' : primaryBlue, height: isHome ? headerHeight : undefined },
         headerTitleContainerStyle: isHome ? { position: 'absolute', top: 0, left: -16, right: -16, bottom: 0, margin: 0, padding: 0 } : { flex: 1, width: '100%', maxWidth: '100%', alignItems: 'stretch', paddingBottom: 0, marginHorizontal: 0, left: 0, right: 0 },
         tabBarStyle: { backgroundColor: '#ffffff', borderTopWidth: 0, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 10 },
         tabBarLabelStyle: { fontSize: 11 },
