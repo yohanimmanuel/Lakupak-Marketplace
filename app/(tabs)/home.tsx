@@ -210,7 +210,7 @@ export default function HomeScreen() {
       <Animated.ScrollView 
         ref={scrollViewRef}
         // Use explicit white so nothing gray shows behind the rounded blue header
-        style={{ flex: 1, backgroundColor: '#ffffff' }}
+        style={{ flex: 1, backgroundColor: '#f9fafb' }}
         contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
@@ -229,7 +229,7 @@ export default function HomeScreen() {
       >
 
         {/* Top wallet block directly under the header */}
-        <View style={{ backgroundColor: '#ffffff' }}>
+        <View style={{ backgroundColor: '#f9fafb' }}>
           {/* My Wallet Section */}
           <MyWallet
             isAuthenticated={isAuthenticated}
