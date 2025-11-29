@@ -59,7 +59,7 @@ import { generateDynamicCategories } from '../../utils/categoryUtils';
 
 // Header constants
 const HEADER_VISUAL_HEIGHT = 220; // Visual height of the blue header (taller for rounded corners)
-const MAX_HEADER_HEIGHT = 160; // Content area initial position
+const MAX_HEADER_HEIGHT = 165; // Content area initial position
 const MIN_HEADER_HEIGHT = 110; // Search bar area with proper top padding
 const SCROLL_DISTANCE = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT; // 50
 
