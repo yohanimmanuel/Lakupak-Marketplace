@@ -1,7 +1,6 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, Tabs, usePathname } from 'expo-router';
 import { Pressable, View, TextInput, Animated, Text, StatusBar } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Home as HomeIcon, Boxes, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquare, MessageSquareText } from 'lucide-react-native';
 import { Settings } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
@@ -16,54 +15,12 @@ const SCROLL_DISTANCE = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT; // 55
 export default function TabLayout() {
   const pathname = usePathname();
   const primaryBlue = '#0a61d7';
-  const lightBlue = '#4293fc';
   const inactiveGrey = '#6B7280';
   const { user, isLoading } = useAuthStore();
   const { scrollY } = useHeaderScrollStore();
 
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-  
-  // Header height state for smooth animation
-  const [headerHeight, setHeaderHeight] = useState(MAX_HEADER_HEIGHT);
-  const lastScrollRef = useRef(0);
-  const wasHomeRef = useRef(false);
-  
-  // Determine if we're on home tab
-  const isHomeTab = !pathname || pathname === '/' || pathname?.endsWith('/home') || pathname === '/home';
-  
-  // Reset when entering home tab from another tab
-  useEffect(() => {
-    if (isHomeTab && !wasHomeRef.current) {
-      // Just entered home from another tab - reset everything
-      setHeaderHeight(MAX_HEADER_HEIGHT);
-      lastScrollRef.current = 0;
-      scrollY.setValue(0);
-    }
-    wasHomeRef.current = isHomeTab;
-  }, [isHomeTab, scrollY]);
-  
-  // Track scroll value and update header height
-  useEffect(() => {
-    if (!isHomeTab) {
-      return;
-    }
-    
-    const listenerId = scrollY.addListener(({ value }) => {
-      const clampedScroll = Math.min(SCROLL_DISTANCE, Math.max(0, value));
-      const newHeight = MAX_HEADER_HEIGHT - clampedScroll;
-      
-      // Update on any significant change
-      if (Math.abs(value - lastScrollRef.current) >= 0.5) {
-        lastScrollRef.current = value;
-        setHeaderHeight(newHeight);
-      }
-    });
-    
-    return () => {
-      scrollY.removeListener(listenerId);
-    };
-  }, [scrollY, isHomeTab]);
 
   // Interpolate header translation based on scroll position
   const headerContentTranslateY = scrollY.interpolate({
@@ -76,6 +33,13 @@ export default function TabLayout() {
   const addressOpacity = scrollY.interpolate({
     inputRange: [0, SCROLL_DISTANCE],
     outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  // Cover slides UP from bottom to create shrinking effect
+  const coverTranslateY = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: [SCROLL_DISTANCE, 0],
     extrapolate: 'clamp',
   });
 
@@ -288,36 +252,14 @@ export default function TabLayout() {
             return <View style={{ flex: 1, backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }} />;
           }
           
-          // For account - static gradient (no animation)
-          if (!isHome) {
-            return (
-              <LinearGradient 
-                colors={[primaryBlue, lightBlue]} 
-                start={{ x: 0, y: 0 }} 
-                end={{ x: 1, y: 0 }} 
-                style={{ flex: 1 }} 
-              />
-            );
-          }
-          
-          // For home - single gradient background with rounded corners
-          // The gradient fills the header container which height is controlled by headerStyle.height
+          // For account and home - solid primary blue
           return (
-            <LinearGradient 
-              colors={[primaryBlue, lightBlue]} 
-              start={{ x: 0, y: 0 }} 
-              end={{ x: 1, y: 0 }} 
-              style={{ 
-                flex: 1,
-                borderBottomLeftRadius: 24, 
-                borderBottomRightRadius: 24,
-              }} 
-            />
+            <View style={{ flex: 1, backgroundColor: primaryBlue }} />
           );
         },
         headerStyle: { 
           backgroundColor: 'transparent', 
-          height: isHome ? headerHeight : undefined,
+          height: isHome ? MAX_HEADER_HEIGHT : undefined,
           elevation: 0,
           shadowOpacity: 0,
           borderBottomWidth: 0,
@@ -328,7 +270,7 @@ export default function TabLayout() {
         tabBarButton: (props) => <TabButton {...props} />,
       }}
     >
-      <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({ color }) => <HomeIcon color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Home</Text> }} />
+      <Tabs.Screen name="home" options={{ title: 'Home', headerShown: false, tabBarIcon: ({ color }) => <HomeIcon color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Home</Text> }} />
       <Tabs.Screen name="categories" options={{ title: 'Categories', tabBarIcon: ({ color }) => <Boxes color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Categories</Text> }} />
       <Tabs.Screen name="orders" options={{ title: 'Orders', tabBarIcon: ({ color }) => <FileText color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Orders</Text> }} />
       <Tabs.Screen name="notifications" options={{ title: 'Notifications', tabBarIcon: ({ color }) => <Bell color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Notifications</Text> }} />

@@ -7,11 +7,16 @@ import {
   Text as RNText,
   TouchableOpacity,
   Animated,
+  TextInput,
+  Pressable,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '../components/Themed';
-import { useRouter } from 'expo-router';
+import { useRouter, Link } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { Store, ShoppingCart, MessageSquareText, Search } from 'lucide-react-native';
+import CartBadge from '../components/CartBadge';
 
 // Components
 import MyWallet from '../components/paymentcheckout/MyWallet';
@@ -51,6 +56,12 @@ const UserInfoSkeleton = () => (
 );
 import { generateDynamicCategories } from '../../utils/categoryUtils';
 // Removed theme color imports - using explicit colors
+
+// Header constants
+const HEADER_VISUAL_HEIGHT = 220; // Visual height of the blue header (taller for rounded corners)
+const MAX_HEADER_HEIGHT = 160; // Content area initial position
+const MIN_HEADER_HEIGHT = 110; // Search bar area with proper top padding
+const SCROLL_DISTANCE = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT; // 50
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -97,6 +108,33 @@ export default function HomeScreen() {
     setScrollY(scrollY);
     scrollY.setValue(0);
   }, [setScrollY, scrollY]);
+
+  // Header scroll interpolations
+  const headerContentTranslateY = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: [0, -SCROLL_DISTANCE],
+    extrapolate: 'clamp',
+  });
+
+  const addressOpacity = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE * 0.5],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  // Search bar moves up from top:105 to top:50 (translateY: 0 to -55)
+  const searchBarTranslateY = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: [0, -55],
+    extrapolate: 'clamp',
+  });
+
+  // Content area starts lower (full header visible), moves up as you scroll
+  const contentTranslateY = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: [SCROLL_DISTANCE, 0],
+    extrapolate: 'clamp',
+  });
 
   // Scroll tracking for progress bar
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -207,11 +245,101 @@ export default function HomeScreen() {
   }, [forceRefreshProducts]);
 
   return (
+    <RNView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+      <StatusBar barStyle="light-content" backgroundColor={primaryColor} translucent={false} />
+      
+      {/* Header - rendered BEHIND content (zIndex: 0) */}
+      <RNView 
+        style={{ 
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: HEADER_VISUAL_HEIGHT,
+          zIndex: 0,
+          backgroundColor: primaryColor,
+        }}
+      >
+        {/* Address row - fades and translates up */}
+        <Animated.View style={{ 
+          position: 'absolute',
+          top: 50,
+          left: 16,
+          right: 16,
+          flexDirection: 'row', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          opacity: addressOpacity,
+          transform: [{ translateY: headerContentTranslateY }]
+        }}>
+          <RNView style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+            <Store color="#ffffff" size={24} />
+            <RNView style={{ marginLeft: 10, flex: 1 }}>
+              <RNText style={{ color: '#ffffff', fontSize: 18, fontWeight: '700' }} numberOfLines={1}>
+                {user?.storeName || 'My Store'}
+              </RNText>
+              <RNText style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }} numberOfLines={1}>
+                {user?.chosenAddress || 'Set your address'}
+              </RNText>
+            </RNView>
+          </RNView>
+          <RNView style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Link href="/messages" asChild>
+              <Pressable style={{ paddingHorizontal: 10 }}>
+                <MessageSquareText color="#ffffff" size={22} />
+              </Pressable>
+            </Link>
+            <Link href="/cart" asChild>
+              <Pressable style={{ paddingHorizontal: 10 }}>
+                <RNView style={{ position: 'relative' }}>
+                  <ShoppingCart color="#ffffff" size={22} />
+                  <CartBadge size={16} color="#ffffff" backgroundColor="#EF4444" />
+                </RNView>
+              </Pressable>
+            </Link>
+          </RNView>
+        </Animated.View>
+        {/* Search bar - stays fixed, moves up slightly to stick at top */}
+        <Animated.View style={{ 
+          position: 'absolute',
+          top: 105,
+          left: 16,
+          right: 16,
+          transform: [{ translateY: searchBarTranslateY }]
+        }}>
+          <RNView style={{ 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            backgroundColor: '#ffffff', 
+            borderRadius: 10, 
+            paddingHorizontal: 12, 
+            height: 44,
+            borderWidth: 1,
+            borderColor: '#e5e7eb',
+          }}>
+            <Search color="#6B7280" size={20} />
+            <TextInput 
+              placeholder="Search for products..." 
+              style={{ flex: 1, marginLeft: 8, color: '#111827', paddingVertical: 0 }} 
+              placeholderTextColor="#6B7280" 
+            />
+          </RNView>
+        </Animated.View>
+      </RNView>
+
+      {/* Scroll content - IN FRONT of header (zIndex: 1) */}
       <Animated.ScrollView 
         ref={scrollViewRef}
-        // Use explicit white so nothing gray shows behind the rounded blue header
-        style={{ flex: 1, backgroundColor: '#f9fafb' }}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        style={{ 
+          flex: 1, 
+          zIndex: 1, 
+          marginTop: MIN_HEADER_HEIGHT, 
+          backgroundColor: '#f9fafb', 
+          borderTopLeftRadius: 24, 
+          borderTopRightRadius: 24,
+          transform: [{ translateY: contentTranslateY }]
+        }}
+        contentContainerStyle={{ paddingTop: 10, paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -224,11 +352,11 @@ export default function HomeScreen() {
             onRefresh={handleRefresh}
             tintColor={primaryColor}
             colors={[primaryColor]}
+            progressViewOffset={10}
           />
         }
       >
-
-        {/* Top wallet block directly under the header */}
+        {/* Content area */}
         <View style={{ backgroundColor: '#f9fafb' }}>
           {/* My Wallet Section */}
           <MyWallet
@@ -238,149 +366,148 @@ export default function HomeScreen() {
             discountsAmount={12.50}
             onPressManage={() => handleWalletItemPress('manage')}
           />
-        </View>
+        
+          {/* Categories Section */}
+          <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: 10 }]}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesContainer}
+              onScroll={handleCategoryScroll}
+              scrollEventThrottle={16}
+            >
+              {dynamicCategories.map((category, index) => (
+                <CategoryBadge
+                  key={index}
+                  name={category.name}
+                  icon={category.icon}
+                  onPress={() => {}}
+                />
+              ))}
+            </ScrollView>
+          </View>
 
-        {/* Categories Section */}
-        <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: 20 }]}>
-          
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesContainer}
-            onScroll={handleCategoryScroll}
-            scrollEventThrottle={16}
-          >
-            {dynamicCategories.map((category, index) => (
-              <CategoryBadge
-                key={index}
-                name={category.name}
-                icon={category.icon}
-                onPress={() => {}}
-              />
-            ))}
-          </ScrollView>
-          
-        </View>
+          {/* Sale Banner */}
+          <SaleBanner
+            title="🎉 MEGA SALE 2025"
+            subtitle="Up to 90% OFF Everything!"
+            discountText="Flash Sale"
+            endDate="Ends in 2 days"
+            onPress={handleSaleBannerPress}
+            backgroundColor="#0a61d7"
+          />
 
-        {/* Sale Banner */}
-        <SaleBanner
-          title="🎉 MEGA SALE 2025"
-          subtitle="Up to 90% OFF Everything!"
-          discountText="Flash Sale"
-          endDate="Ends in 2 days"
-          onPress={handleSaleBannerPress}
-          backgroundColor="#0a61d7"
-        />
-
-        {/* Featured Products Section */}
-        <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: -10 }]}>
-          
-          {/* Loading State with Skeleton */}
-          {loading && (
-            <View style={styles.productsContainer}>
-              <View style={styles.leftColumn}>
-                {[1, 2, 3].map((i) => (
-                  <View key={i} style={styles.productItem}>
-                    <ProductSkeleton />
-                  </View>
-                ))}
+          {/* Featured Products Section */}
+          <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: -10 }]}>
+            
+            {/* Loading State with Skeleton */}
+            {loading && (
+              <View style={styles.productsContainer}>
+                <View style={styles.leftColumn}>
+                  {[1, 2, 3].map((i) => (
+                    <View key={i} style={styles.productItem}>
+                      <ProductSkeleton />
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.rightColumn}>
+                  {[1, 2, 3].map((i) => (
+                    <View key={i} style={styles.productItem}>
+                      <ProductSkeleton />
+                    </View>
+                  ))}
+                </View>
               </View>
-              <View style={styles.rightColumn}>
-                {[1, 2, 3].map((i) => (
-                  <View key={i} style={styles.productItem}>
-                    <ProductSkeleton />
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+            )}
 
-          {/* Error State */}
-          {error && !loading && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity onPress={handleRefresh} style={styles.retryButton}>
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Product List - Fixed to avoid VirtualizedLists nesting */}
-          {!loading && !error && (
-            <View style={styles.productsContainer}>
-              <View style={styles.leftColumn}>
-                {products.filter((_, index) => index % 2 === 0).map((product) => (
-                  <View key={product.id} style={styles.productItem}>
-                    <ProductMarketplace
-                      product={product}
-                      onPress={handleProductPress}
-                      onAddToCart={handleAddToCart}
-                      onBuyNow={handleBuyNow}
-                      onChatSeller={() => {}}
-                      onShare={() => {}}
-                      onToggleFavorite={handleToggleFavorite}
-                      isFavorite={likedProducts.includes(product.id)}
-                      type="card"
-                    />
-                  </View>
-                ))}
+            {/* Error State */}
+            {error && !loading && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity onPress={handleRefresh} style={styles.retryButton}>
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
               </View>
-              <View style={styles.rightColumn}>
-                {products.filter((_, index) => index % 2 === 1).map((product) => (
-                  <View key={product.id} style={styles.productItem}>
-                    <ProductMarketplace
-                      product={product}
-                      onPress={handleProductPress}
-                      onAddToCart={handleAddToCart}
-                      onBuyNow={handleBuyNow}
-                      onChatSeller={() => {}}
-                      onShare={() => {}}
-                      onToggleFavorite={handleToggleFavorite}
-                      isFavorite={likedProducts.includes(product.id)}
-                      type="card"
-                    />
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-          
-          {/* End of Products Message */}
-          {!loading && !error && products.length > 0 && (
-            <View style={{...styles.endMessageContainer}}>
-              <Text style={styles.endMessage}>Products displays reached the end.</Text>
-            </View>
-          )}
+            )}
 
-          {/* No Products Message */}
-          {!loading && !error && products.length === 0 && (
-            <View style={styles.noProductsContainer}>
-              <Text style={styles.noProductsText}>No products available</Text>
-            </View>
-          )}
+            {/* Product List */}
+            {!loading && !error && (
+              <View style={styles.productsContainer}>
+                <View style={styles.leftColumn}>
+                  {products.filter((_, index) => index % 2 === 0).map((product) => (
+                    <View key={product.id} style={styles.productItem}>
+                      <ProductMarketplace
+                        product={product}
+                        onPress={handleProductPress}
+                        onAddToCart={handleAddToCart}
+                        onBuyNow={handleBuyNow}
+                        onChatSeller={() => {}}
+                        onShare={() => {}}
+                        onToggleFavorite={handleToggleFavorite}
+                        isFavorite={likedProducts.includes(product.id)}
+                        type="card"
+                      />
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.rightColumn}>
+                  {products.filter((_, index) => index % 2 === 1).map((product) => (
+                    <View key={product.id} style={styles.productItem}>
+                      <ProductMarketplace
+                        product={product}
+                        onPress={handleProductPress}
+                        onAddToCart={handleAddToCart}
+                        onBuyNow={handleBuyNow}
+                        onChatSeller={() => {}}
+                        onShare={() => {}}
+                        onToggleFavorite={handleToggleFavorite}
+                        isFavorite={likedProducts.includes(product.id)}
+                        type="card"
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+            
+            {/* End of Products Message */}
+            {!loading && !error && products.length > 0 && (
+              <View style={{...styles.endMessageContainer}}>
+                <Text style={styles.endMessage}>Products displays reached the end.</Text>
+              </View>
+            )}
+
+            {/* No Products Message */}
+            {!loading && !error && products.length === 0 && (
+              <View style={styles.noProductsContainer}>
+                <Text style={styles.noProductsText}>No products available</Text>
+              </View>
+            )}
+          </View>
         </View>
       </Animated.ScrollView>
+    </RNView>
   );
 }
 
 const styles = StyleSheet.create({
   gradientBg: {
     flex: 1,
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#ffffff',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#ffffff',
     paddingBottom: 20,
   },
   scrollContent: {
     paddingBottom: 40,
-    backgroundColor: '#ffffff', // Explicit white background
+    backgroundColor: '#ffffff',
     flexGrow: 1,
   },
   section: {
     marginBottom: 20,
-    backgroundColor: '#f9fafb', // Gray background
+    backgroundColor: '#f9fafb',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -392,12 +519,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827', // Explicit black
+    color: '#111827',
   },
   seeAllText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0a61d7', // Explicit blue
+    color: '#0a61d7',
   },
   categoriesContainer: {
     paddingHorizontal: 16,
@@ -419,7 +546,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     textAlign: 'center',
-    color: '#111827', // Explicit black
+    color: '#111827',
   },
   categoryCount: {
     fontSize: 10,
@@ -431,28 +558,28 @@ const styles = StyleSheet.create({
   productsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    backgroundColor: '#f9fafb', // Gray background
-    gap: 8, // Space between columns - narrower gap
+    backgroundColor: '#f9fafb',
+    gap: 8,
   },
   leftColumn: {
     flex: 1,
-    backgroundColor: '#f9fafb', // Gray background
+    backgroundColor: '#f9fafb',
   },
   rightColumn: {
     flex: 1,
-    backgroundColor: '#f9fafb', // Gray background
+    backgroundColor: '#f9fafb',
   },
   productItem: {
-    marginBottom: 4, // Space between items in each column - narrower gap
-    backgroundColor: '#f9fafb', // Gray background
+    marginBottom: 4,
+    backgroundColor: '#f9fafb',
   },
   endMessageContainer: {
     paddingHorizontal: 16,
     paddingTop: 10,
     alignItems: 'center',
-    backgroundColor: '#f9fafb', // Gray background
-    marginBottom: 0, // Explicitly remove bottom margin
-    paddingBottom: 0, // Explicitly remove bottom padding
+    backgroundColor: '#f9fafb',
+    marginBottom: 0,
+    paddingBottom: 0,
   },
   endMessage: {
     fontSize: 14,
