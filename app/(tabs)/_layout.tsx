@@ -1,13 +1,17 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Link, Tabs, usePathname } from 'expo-router';
 import { Pressable, View, TextInput, Animated, Text, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useClientOnlyValue } from '../components/useClientOnlyValue';
 import { Home as HomeIcon, Boxes, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquare, MessageSquareText } from 'lucide-react-native';
 import { Settings } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { useHeaderScrollStore } from '../../stores/headerScrollStore';
 import CartBadge from '../components/CartBadge';
+
+// Constants for header animation
+const MAX_HEADER_HEIGHT = 170;
+const MIN_HEADER_HEIGHT = 115;
+const SCROLL_DISTANCE = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT; // 55
 
 export default function TabLayout() {
   const pathname = usePathname();
@@ -15,85 +19,65 @@ export default function TabLayout() {
   const lightBlue = '#4293fc';
   const inactiveGrey = '#6B7280';
   const { user, isLoading } = useAuthStore();
-  const { scrollY, setScrollY } = useHeaderScrollStore();
+  const { scrollY } = useHeaderScrollStore();
 
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-  const prevPathnameRef = useRef(pathname);
-
-  // Reset scroll position when navigating away from or back to home
+  
+  // Header height state for smooth animation
+  const [headerHeight, setHeaderHeight] = useState(MAX_HEADER_HEIGHT);
+  const lastScrollRef = useRef(0);
+  const wasHomeRef = useRef(false);
+  
+  // Determine if we're on home tab
+  const isHomeTab = !pathname || pathname === '/' || pathname?.endsWith('/home') || pathname === '/home';
+  
+  // Reset when entering home tab from another tab
   useEffect(() => {
-    const wasHome = prevPathnameRef.current === '/' || prevPathnameRef.current?.endsWith('/home') || prevPathnameRef.current === '/home';
-    const isNowHome = (!pathname || pathname === '/' || pathname?.endsWith('/home') || pathname === '/home');
-    
-    // If navigating away from home or coming back to home, reset scroll
-    if ((wasHome && !isNowHome) || (!wasHome && isNowHome)) {
-      // Reset scroll position immediately
+    if (isHomeTab && !wasHomeRef.current) {
+      // Just entered home from another tab - reset everything
+      setHeaderHeight(MAX_HEADER_HEIGHT);
+      lastScrollRef.current = 0;
       scrollY.setValue(0);
-      // Reset header height to initial state immediately
-      setHeaderHeight(170);
-      lastHeightRef.current = 170;
+    }
+    wasHomeRef.current = isHomeTab;
+  }, [isHomeTab, scrollY]);
+  
+  // Track scroll value and update header height
+  useEffect(() => {
+    if (!isHomeTab) {
+      return;
     }
     
-    prevPathnameRef.current = pathname;
-  }, [pathname, scrollY]);
+    const listenerId = scrollY.addListener(({ value }) => {
+      const clampedScroll = Math.min(SCROLL_DISTANCE, Math.max(0, value));
+      const newHeight = MAX_HEADER_HEIGHT - clampedScroll;
+      
+      // Update on any significant change
+      if (Math.abs(value - lastScrollRef.current) >= 0.5) {
+        lastScrollRef.current = value;
+        setHeaderHeight(newHeight);
+      }
+    });
+    
+    return () => {
+      scrollY.removeListener(listenerId);
+    };
+  }, [scrollY, isHomeTab]);
 
   // Interpolate header translation based on scroll position
   const headerContentTranslateY = scrollY.interpolate({
-    inputRange: [0, 55],
-    outputRange: [0, -55],
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: [0, -SCROLL_DISTANCE],
     extrapolate: 'clamp',
   });
 
   // Interpolate address row opacity based on scroll position
   const addressOpacity = scrollY.interpolate({
-    inputRange: [0, 55],
+    inputRange: [0, SCROLL_DISTANCE],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
-
-  // Convert animated height to state for headerStyle (smooth interpolation)
-  const [headerHeight, setHeaderHeight] = useState(170);
-  const heightUpdateRef = useRef<number | null>(null);
-  const lastHeightRef = useRef(170);
-  
-  useEffect(() => {
-    // Update function
-    const updateHeight = (value: number) => {
-      // Cancel any pending update
-      if (heightUpdateRef.current !== null) {
-        cancelAnimationFrame(heightUpdateRef.current);
-      }
-      
-      // Use requestAnimationFrame for smooth updates
-      heightUpdateRef.current = requestAnimationFrame(() => {
-        // Smooth interpolation: 170 at scroll 0, 115 at scroll 55
-        const clampedValue = Math.min(55, Math.max(0, value));
-        const newHeight = 170 - clampedValue;
-        
-        // Update height more frequently for smoother animation
-        if (Math.abs(newHeight - lastHeightRef.current) >= 0.5) {
-          lastHeightRef.current = newHeight;
-          setHeaderHeight(newHeight);
-        }
-      });
-    };
-    
-    // Listen for scroll changes
-    const listenerId = scrollY.addListener(({ value }) => {
-      updateHeight(value);
-    });
-    
-    // Initialize height immediately
-    updateHeight(0);
-    
-    return () => {
-      if (heightUpdateRef.current !== null) {
-        cancelAnimationFrame(heightUpdateRef.current);
-      }
-      scrollY.removeListener(listenerId);
-    };
-  }, [scrollY, setHeaderHeight]);
 
   const ShrinkIcon = ({ children, style, ...pressableProps }: { children: React.ReactNode; style?: object } & Omit<React.ComponentProps<typeof Pressable>, 'style'>) => {
     const s = useRef(new Animated.Value(1)).current;
@@ -255,6 +239,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: primaryBlue,
         tabBarInactiveTintColor: inactiveGrey,
         headerShown: true,
+        // Use white so nothing gray shows behind the rounded blue header background
         sceneStyle: { backgroundColor: '#ffffff' },
         headerTitleAlign: 'left',
         headerLeft: () => (
@@ -303,33 +288,40 @@ export default function TabLayout() {
             return <View style={{ flex: 1, backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }} />;
           }
           
-          // Animate background gradient with scroll
-          const backgroundTranslateY = scrollY.interpolate({
-            inputRange: [0, 55],
-            outputRange: [0, -55],
-            extrapolate: 'clamp',
-          });
-          
-          return (
-            <Animated.View style={{ 
-              flex: 1,
-              transform: [{ translateY: backgroundTranslateY }],
-              overflow: 'hidden',
-            }}>
+          // For account - static gradient (no animation)
+          if (!isHome) {
+            return (
               <LinearGradient 
                 colors={[primaryBlue, lightBlue]} 
                 start={{ x: 0, y: 0 }} 
                 end={{ x: 1, y: 0 }} 
-                style={{ 
-                  flex: 1,
-                  borderBottomLeftRadius: isHome ? 24 : 0, 
-                  borderBottomRightRadius: isHome ? 24 : 0,
-                }} 
+                style={{ flex: 1 }} 
               />
-            </Animated.View>
+            );
+          }
+          
+          // For home - single gradient background with rounded corners
+          // The gradient fills the header container which height is controlled by headerStyle.height
+          return (
+            <LinearGradient 
+              colors={[primaryBlue, lightBlue]} 
+              start={{ x: 0, y: 0 }} 
+              end={{ x: 1, y: 0 }} 
+              style={{ 
+                flex: 1,
+                borderBottomLeftRadius: 24, 
+                borderBottomRightRadius: 24,
+              }} 
+            />
           );
         },
-        headerStyle: { backgroundColor: useWhiteHeader ? '#ffffff' : primaryBlue, height: isHome ? headerHeight : undefined },
+        headerStyle: { 
+          backgroundColor: 'transparent', 
+          height: isHome ? headerHeight : undefined,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 0,
+        },
         headerTitleContainerStyle: isHome ? { position: 'absolute', top: 0, left: -16, right: -16, bottom: 0, margin: 0, padding: 0 } : { flex: 1, width: '100%', maxWidth: '100%', alignItems: 'stretch', paddingBottom: 0, marginHorizontal: 0, left: 0, right: 0 },
         tabBarStyle: { backgroundColor: '#ffffff', borderTopWidth: 0, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 10 },
         tabBarLabelStyle: { fontSize: 11 },

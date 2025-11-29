@@ -185,12 +185,17 @@ export default function HomeScreen() {
     React.useCallback(() => {
       forceRefreshProducts();
       // Reset scroll position when screen gains focus (returning to home)
-      scrollY.setValue(0);
-      // Reset ScrollView content position to top
+      // First scroll to top, then reset the animated value
       if (scrollViewRef.current) {
         scrollViewRef.current.scrollTo({ y: 0, animated: false });
       }
-    }, [forceRefreshProducts, scrollY])
+      // Delay the animated value reset slightly to ensure ScrollView has scrolled
+      requestAnimationFrame(() => {
+        scrollY.setValue(0);
+        // Re-sync the scrollY in store to trigger listener re-attachment
+        setScrollY(scrollY);
+      });
+    }, [forceRefreshProducts, scrollY, setScrollY])
   );
 
   // Light background refresh while this screen is visible
@@ -204,7 +209,8 @@ export default function HomeScreen() {
   return (
       <Animated.ScrollView 
         ref={scrollViewRef}
-        style={{ flex: 1, backgroundColor: '#f9fafb' }}
+        // Use explicit white so nothing gray shows behind the rounded blue header
+        style={{ flex: 1, backgroundColor: '#ffffff' }}
         contentContainerStyle={{ paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
@@ -222,7 +228,8 @@ export default function HomeScreen() {
         }
       >
 
-        <View style={{ backgroundColor: '#f9fafb' }}>
+        {/* Top wallet block directly under the header */}
+        <View style={{ backgroundColor: '#ffffff' }}>
           {/* My Wallet Section */}
           <MyWallet
             isAuthenticated={isAuthenticated}
