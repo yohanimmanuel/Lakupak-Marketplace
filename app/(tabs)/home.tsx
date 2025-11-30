@@ -288,12 +288,12 @@ export default function HomeScreen() {
           </RNView>
           <RNView style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Link href="/messages" asChild>
-              <Pressable style={{ paddingHorizontal: 10 }}>
+              <Pressable style={{ paddingHorizontal: 10, marginBottom: 6 }}>
                 <MessageSquareText color="#ffffff" size={22} />
               </Pressable>
             </Link>
             <Link href="/cart" asChild>
-              <Pressable style={{ paddingHorizontal: 10 }}>
+              <Pressable style={{ paddingHorizontal: 10, marginLeft: 6, marginRight: -4, marginBottom: 6 }}>
                 <RNView style={{ position: 'relative' }}>
                   <ShoppingCart color="#ffffff" size={22} />
                   <CartBadge size={16} color="#ffffff" backgroundColor="#EF4444" />
