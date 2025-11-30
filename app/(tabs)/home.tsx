@@ -19,7 +19,6 @@ import { Store, ShoppingCart, MessageSquareText, Search } from 'lucide-react-nat
 import CartBadge from '../components/CartBadge';
 
 // Components
-import MyWallet from '../components/paymentcheckout/MyWallet';
 import SaleBanner from '../components/paymentcheckout/SaleBanner';
 import ProductMarketplace from '../components/productcatalog/ProductMarketplace';
 import CategoryBadge from '../components/CategoryBadge';
@@ -129,10 +128,18 @@ export default function HomeScreen() {
     extrapolate: 'clamp',
   });
 
-  // Content area starts lower (full header visible), moves up as you scroll
+  // Content area background starts lower (full header visible), moves up as you scroll
   const contentTranslateY = scrollY.interpolate({
     inputRange: [0, SCROLL_DISTANCE],
     outputRange: [SCROLL_DISTANCE, 0],
+    extrapolate: 'clamp',
+  });
+
+  // Content elements stay in place until header is collapsed, then scroll normally
+  // This counters the internal scroll for the first SCROLL_DISTANCE pixels
+  const contentElementsTranslateY = scrollY.interpolate({
+    inputRange: [0, SCROLL_DISTANCE],
+    outputRange: [0, SCROLL_DISTANCE],
     extrapolate: 'clamp',
   });
 
@@ -212,10 +219,6 @@ export default function HomeScreen() {
 
   const handleSaleBannerPress = useCallback(() => {
     // Handle sale banner press
-  }, []);
-
-  const handleWalletItemPress = useCallback((type: string) => {
-    // Handle wallet item press
   }, []);
 
   // Revalidate products when screen gains focus
@@ -356,19 +359,36 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Content area */}
+        {/* Content area - background scrolls immediately */}
         <View style={{ backgroundColor: '#f9fafb' }}>
-          {/* My Wallet Section */}
-          <MyWallet
-            isAuthenticated={isAuthenticated}
-            lakupayBalance={230.75}
-            bonusesAmount={45.00}
-            discountsAmount={12.50}
-            onPressManage={() => handleWalletItemPress('manage')}
-          />
+          {/* Content elements - stay in place until header is collapsed */}
+          <Animated.View style={{ transform: [{ translateY: contentElementsTranslateY }] }}>
+          {/* Special Offers Section */}
+          <View style={{ backgroundColor: '#f9fafb', paddingTop: 5 }}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Special Offers</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
+            <SaleBanner
+              title="🎉 MEGA SALE 2025"
+              subtitle="Up to 90% OFF Everything!"
+              discountText="Flash Sale"
+              endDate="Ends in 2 days"
+              onPress={handleSaleBannerPress}
+              backgroundColor="#0a61d7"
+            />
+          </View>
         
           {/* Categories Section */}
           <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: 10 }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Categories</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
@@ -387,18 +407,14 @@ export default function HomeScreen() {
             </ScrollView>
           </View>
 
-          {/* Sale Banner */}
-          <SaleBanner
-            title="🎉 MEGA SALE 2025"
-            subtitle="Up to 90% OFF Everything!"
-            discountText="Flash Sale"
-            endDate="Ends in 2 days"
-            onPress={handleSaleBannerPress}
-            backgroundColor="#0a61d7"
-          />
-
           {/* Featured Products Section */}
           <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: -10 }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Featured Products</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
             
             {/* Loading State with Skeleton */}
             {loading && (
@@ -484,6 +500,7 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
+          </Animated.View>
         </View>
       </Animated.ScrollView>
     </RNView>
@@ -510,6 +527,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb',
   },
   sectionHeader: {
+    backgroundColor: '#f9fafb',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
