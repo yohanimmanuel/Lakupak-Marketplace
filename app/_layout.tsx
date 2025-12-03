@@ -51,7 +51,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { hydrateFromStorage, token } = useAuthStore();
+  const { hydrateFromStorage, token, user } = useAuthStore();
   const { refreshAllData, startAutoRefresh, stopAutoRefresh } = useDataStore();
   const { initializeCart } = useCartStore();
   const { loadUserActivities } = useUserActivityStore();
@@ -114,13 +114,37 @@ function RootLayoutNav() {
     }
   }, [token, startAutoRefresh]);
 
-  // Load user activities when user logs in or changes
+  // Reload all data when user logs in or changes (after logout/login)
   useEffect(() => {
-    const currentUser = useAuthStore.getState().user;
-    if (currentUser?.id && token) {
-      loadUserActivities(currentUser.id);
-    }
-  }, [token, loadUserActivities]);
+    const reloadUserData = async () => {
+      if (!token || !user?.id) {
+        // User logged out - stop auto-refresh
+        stopAutoRefresh();
+        return;
+      }
+
+      // User logged in or changed - reload everything immediately
+      try {
+        // Initialize cart for new user
+        initializeCart();
+        
+        // Load user activities (liked products, etc.)
+        await loadUserActivities(user.id);
+        
+        // Refresh all data (products, orders, user profile, address)
+        await refreshAllData(token);
+        
+        // Start WebSocket/auto-refresh
+        if (AppState.currentState === 'active') {
+          startAutoRefresh(token);
+        }
+      } catch (error) {
+        // Silently handle errors
+      }
+    };
+
+    reloadUserData();
+  }, [user?.id, token, initializeCart, loadUserActivities, refreshAllData, startAutoRefresh, stopAutoRefresh]);
 
   return (
     <ThemeProvider value={DefaultTheme}>

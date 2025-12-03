@@ -171,7 +171,13 @@ export const useDataStore = create<DataState>()(
           const authState = useAuthStore.getState()
           const userId = authState.user?.id
           const user = await getMe(token, userId)
+          
+          // Update both dataStore and authStore to keep them in sync
           set({ user, userLastUpdated: now, isUserLoading: false })
+          
+          // Also update authStore so home page and other components see the updated user immediately
+          const { setUser: setAuthUser } = useAuthStore.getState()
+          await setAuthUser(user)
         } catch (error) {
           set({ isUserLoading: false })
           // Keep existing user data on error

@@ -34,6 +34,16 @@ async function clearUserScopedStores() {
         // Ignore errors if dataStore is unavailable
       }
     })(),
+    (async () => {
+      try {
+        const { useCartStore } = await import('./cartStore')
+        const cartState = useCartStore.getState()
+        // Clear cart items immediately (local only, no database call)
+        cartState.clearCartLocal()
+      } catch {
+        // Ignore errors if cartStore is unavailable
+      }
+    })(),
   ])
 }
 

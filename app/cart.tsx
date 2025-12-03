@@ -23,6 +23,7 @@ import { useCartStore, CartItem } from '../stores/cartStore';
 import { useDataStore } from '../stores/dataStore';
 import { useAuthStore } from '../stores/authStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
+import { websocketService } from '../services/websocket';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -46,7 +47,7 @@ export default function CartScreen() {
   // Cart store - use single subscription to ensure re-renders
   const cartStore = useCartStore();
   const cartItems = cartStore.items;
-  const { removeItem, updateQuantity, toggleSelect, selectAll, getSelectedItems, getTotalPrice, getTotalSaved, getSelectedItemCount, clearCart, initializeCart } = cartStore;
+  const { removeItem, updateQuantity, toggleSelect, selectAll, getSelectedItems, getTotalPrice, getTotalSaved, getSelectedItemCount, clearCart, initializeCart, loadFromDatabase } = cartStore;
 
   
   // Data store for products
@@ -95,6 +96,26 @@ export default function CartScreen() {
     );
     testItems.forEach(item => removeItem(item.id));
   }, []);
+
+  // Subscribe to WebSocket for real-time cart updates
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+
+    // Ensure WebSocket is connected
+    websocketService.connect(token);
+
+    const unsubscribe = websocketService.subscribe((message) => {
+      // Refresh cart when products are updated (published/unpublished)
+      if (message.type === 'product_updated' || message.type === 'prices_updated') {
+        // Reload cart from database to get filtered items (unpublished products removed)
+        loadFromDatabase();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isAuthenticated, token, loadFromDatabase]);
 
   // Get related products from websocket-enabled products store
   const relatedProducts = React.useMemo(() => {

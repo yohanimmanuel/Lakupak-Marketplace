@@ -47,6 +47,7 @@ interface CartState {
   selectAll: () => void
   deselectAll: () => void
   clearCart: () => void
+  clearCartLocal: () => void
   setCartOpen: (isOpen: boolean) => void
   setUserId: (userId: number | null) => void
   setOnlineStatus: (isOnline: boolean) => void
@@ -234,7 +235,7 @@ export const useCartStore = create<CartState>()(
         const currentUserId = authState.user?.id || null
         
         // Clear local state immediately
-        set({ items: [] })
+        set({ items: [], userId: null })
         
         // Clear from database if user is logged in and online
         if (currentUserId && isOnline) {
@@ -245,6 +246,11 @@ export const useCartStore = create<CartState>()(
             // Silently handle errors
           }
         }
+      },
+
+      clearCartLocal: () => {
+        // Clear local state only (for logout/user switch)
+        set({ items: [], userId: null })
       },
 
       setCartOpen: (isOpen) => {
@@ -343,10 +349,16 @@ export const useCartStore = create<CartState>()(
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
         
+        // Update userId in store
+        set({ userId: currentUserId })
+        
         if (currentUserId) {
           // Load immediately and set loading state
           set({ isLoading: true })
           get().loadFromDatabase()
+        } else {
+          // No user - clear cart
+          set({ items: [], isLoading: false })
         }
       },
 
