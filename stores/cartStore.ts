@@ -66,15 +66,18 @@ interface CartState {
 }
 
 // Helper function to convert database activity to cart item
-const convertDatabaseToCartItem = (dbItem: DatabaseUserActivity): CartItem => {
-  // Use the stored product data directly
+const convertDatabaseToCartItem = (dbItem: DatabaseUserActivity | { id: number; userId: number; productId: string; productData: unknown; activityType: string; metadata?: Record<string, unknown>; createdAt: string; updatedAt: string }): CartItem => {
+  // Handle both DatabaseUserActivity and service CartItem types
+  const metadata = (dbItem.metadata as { quantity?: number; variant?: string; selected?: boolean; addedAt?: number }) || {};
+  const productData = dbItem.productData as Product | MarketplaceProduct;
+  
   return {
     id: `db-${dbItem.id}`,
-    product: dbItem.productData as MarketplaceProduct,
-    quantity: dbItem.metadata?.quantity || 1,
-    selected: dbItem.metadata?.selected || true,
-    variant: dbItem.metadata?.variant || 'Default',
-    addedAt: new Date(dbItem.createdAt).getTime()
+    product: productData,
+    quantity: metadata.quantity || 1,
+    selected: metadata.selected !== undefined ? metadata.selected : true,
+    variant: metadata.variant || 'Default',
+    addedAt: metadata.addedAt || new Date(dbItem.createdAt).getTime()
   };
 };
 
