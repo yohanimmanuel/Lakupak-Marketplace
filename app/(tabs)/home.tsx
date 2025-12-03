@@ -342,7 +342,7 @@ export default function HomeScreen() {
           borderTopRightRadius: 24,
           transform: [{ translateY: contentTranslateY }]
         }}
-        contentContainerStyle={{ paddingTop: 10, paddingBottom: 20 }}
+        contentContainerStyle={{ paddingTop: 10, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -355,7 +355,7 @@ export default function HomeScreen() {
             onRefresh={handleRefresh}
             tintColor={primaryColor}
             colors={[primaryColor]}
-            progressViewOffset={10}
+            progressViewOffset={HEADER_VISUAL_HEIGHT - MIN_HEADER_HEIGHT - 50}
           />
         }
       >
@@ -594,10 +594,10 @@ const styles = StyleSheet.create({
   endMessageContainer: {
     paddingHorizontal: 16,
     paddingTop: 10,
+    paddingBottom: 20,
     alignItems: 'center',
     backgroundColor: '#f9fafb',
-    marginBottom: 0,
-    paddingBottom: 0,
+    marginBottom: 15,
   },
   endMessage: {
     fontSize: 14,
