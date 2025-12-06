@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Dimensions,
   Pressable,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
@@ -143,6 +144,75 @@ export default function CartScreen() {
     return filtered;
   }, [cartItems, products]);
 
+  // Helper function to get MOQ for a cart item
+  const getItemMOQ = (item: CartItem): number | null => {
+    const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
+      id: number;
+      moq?: number;
+      attributes: Record<string, string>;
+    }> };
+    
+    if (marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)) {
+      // Parse variantName string to match attributes
+      const variantAttributes: Record<string, string> = {};
+      if (item.variant && item.variant !== 'Default') {
+        item.variant.split(', ').forEach(part => {
+          const [key, ...valueParts] = part.split(': ');
+          if (key && valueParts.length > 0) {
+            variantAttributes[key.trim()] = valueParts.join(': ').trim();
+          }
+        });
+      }
+      
+      const matchingOption = marketplaceProduct.variantOptions.find(option => {
+        if (!option.attributes) return false;
+        
+        // Check if all variant attributes match, handling key spacing issues (e.g., 'Color ' vs 'Color')
+        return Object.entries(variantAttributes).every(([selectedKey, selectedValue]) => {
+          // Try exact match first
+          if (option.attributes?.[selectedKey] === selectedValue) return true;
+          
+          // Try trimmed key match (handles 'Color' vs 'Color ' issues from database)
+          const trimmedSelectedKey = selectedKey.trim();
+          const matchingKey = Object.keys(option.attributes).find(k => k.trim() === trimmedSelectedKey);
+          if (matchingKey && option.attributes[matchingKey] === selectedValue) return true;
+          
+          return false;
+        });
+      });
+      
+      if (matchingOption?.moq) {
+        return matchingOption.moq;
+      } else if (marketplaceProduct.variantOptions.length > 0 && marketplaceProduct.variantOptions[0]?.moq) {
+        return marketplaceProduct.variantOptions[0].moq;
+      }
+    }
+    
+    return null;
+  };
+
+  // Check if all selected items meet MOQ requirements
+  const validateMOQ = (): { isValid: boolean; invalidItems: Array<{ item: CartItem; moq: number; currentPieces: number }> } => {
+    const invalidItems: Array<{ item: CartItem; moq: number; currentPieces: number }> = [];
+    
+    selectedItems.forEach(item => {
+      const moq = getItemMOQ(item);
+      if (moq !== null) {
+        const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
+        const totalPieces = item.quantity * piecesPerPackage;
+        
+        if (totalPieces < moq) {
+          invalidItems.push({ item, moq, currentPieces: totalPieces });
+        }
+      }
+    });
+    
+    return {
+      isValid: invalidItems.length === 0,
+      invalidItems
+    };
+  };
+
   const handleQuantityChange = (itemId: string, change: number) => {
     const item = cartItems.find(item => item.id === itemId);
     if (item) {
@@ -190,6 +260,10 @@ export default function CartScreen() {
   const totalPrice = getTotalPrice();
   const totalSaved = getTotalSaved();
   const selectedItemCount = getSelectedItemCount();
+  
+  // Validate MOQ for selected items
+  const moqValidation = validateMOQ();
+  const canCheckout = selectedItemCount > 0 && moqValidation.isValid;
 
   const renderLoginPrompt = () => (
     <View style={styles.loginPromptContainer}>
@@ -268,6 +342,24 @@ export default function CartScreen() {
             <ChevronDown size={16} color="#6B7280" />
           </View>
           
+          {/* MOQ Warning for selected items */}
+          {item.selected && (() => {
+            const moq = getItemMOQ(item);
+            if (moq !== null) {
+              const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
+              const totalPieces = item.quantity * piecesPerPackage;
+              if (totalPieces < moq) {
+                return (
+                  <View style={styles.moqWarningContainer}>
+                    <Text style={styles.moqWarningText}>
+                      Minimum order: {moq} pieces (you have {totalPieces})
+                    </Text>
+                  </View>
+                );
+              }
+            }
+            return null;
+          })()}
           
           <View style={styles.priceQuantityRow}>
             <View style={styles.quantityControls}>
@@ -538,14 +630,35 @@ export default function CartScreen() {
           </View>
 
           <TouchableOpacity 
-            style={styles.checkoutButton}
+            style={[styles.checkoutButton, !canCheckout && styles.checkoutButtonDisabled]}
             onPress={() => {
-              if (selectedItemCount > 0) {
+              if (canCheckout) {
                 router.push('/components/productcatalog/checkout');
+              } else if (moqValidation.invalidItems.length > 0) {
+                // Show alert with MOQ requirements
+                const itemNames = moqValidation.invalidItems
+                  .map(({ item, moq, currentPieces }) => 
+                    `• ${item.product.name}: Need ${moq} pieces (you have ${currentPieces})`
+                  )
+                  .join('\n');
+                
+                Alert.alert(
+                  'Minimum Order Quantity Required',
+                  `Some items in your cart don't meet the minimum order quantity:\n\n${itemNames}\n\nPlease increase the quantity to proceed.`,
+                  [{ text: 'OK' }]
+                );
               }
             }}
+            disabled={!canCheckout}
           >
-            <Text style={styles.checkoutButtonText}>Check Out ({selectedItemCount})</Text>
+            <Text style={[styles.checkoutButtonText, !canCheckout && styles.checkoutButtonTextDisabled]}>
+              {canCheckout 
+                ? `Check Out (${selectedItemCount})` 
+                : moqValidation.invalidItems.length > 0
+                  ? 'MOQ Not Met'
+                  : 'Check Out (0)'
+              }
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -861,10 +974,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
   },
+  checkoutButtonDisabled: {
+    backgroundColor: '#D1D5DB',
+  },
   checkoutButtonText: {
     fontSize: 16,
     color: '#ffffff',
     fontWeight: '600',
+  },
+  checkoutButtonTextDisabled: {
+    color: '#9CA3AF',
   },
   loginPromptContainer: {
     backgroundColor: '#f9fafb',
@@ -917,5 +1036,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  moqWarningContainer: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  moqWarningText: {
+    fontSize: 12,
+    color: '#92400E',
+    fontWeight: '500',
   },
 });

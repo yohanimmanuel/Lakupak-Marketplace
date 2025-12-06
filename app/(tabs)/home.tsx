@@ -155,6 +155,7 @@ export default function HomeScreen() {
 
   // Use cached products only (no mock data fallback)
   const products = cachedProducts;
+  // Show loading only if products are loading AND we have no cached products yet
   const loading = isProductsLoading && cachedProducts.length === 0;
 
   // Generate dynamic categories from product data

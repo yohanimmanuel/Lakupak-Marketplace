@@ -63,10 +63,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // If setting a new user (different from current), clear previous user's data
     const currentUser = get().user;
     if ((currentUser && u && currentUser.id !== u.id) || (!u && currentUser)) {
+      // Clear all user-specific data BEFORE setting new user
       await clearUserScopedStores();
     }
     
     set({ user: u });
+    
+    // If setting a new user, load their cart
+    if (u?.id) {
+      try {
+        const { useCartStore } = await import('./cartStore');
+        const cartStore = useCartStore.getState();
+        cartStore.setUserId(u.id);
+      } catch {
+        // Ignore errors if cartStore is unavailable
+      }
+    }
   },
   hydrateFromStorage: async () => {
     set({ isLoading: true })

@@ -47,6 +47,10 @@ export default function BuyNowModal({
   // Refs for long-press functionality
   const longPressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Track previous product ID to prevent unnecessary resets
+  const previousProductId = useRef<string | null>(null);
+  const previousVisible = useRef<boolean>(false);
 
   // Safe value getters - memoized to prevent re-creation
   const safeGetString = useCallback((value: unknown, fallback: string = ''): string => {
@@ -80,39 +84,52 @@ export default function BuyNowModal({
     });
   }, [isClosing, slideAnim, onClose]);
 
-  // Animation handlers
+  // Animation handlers - only reset when product changes or modal first opens
   React.useEffect(() => {
+    const currentProductId = product?.id || null;
+    const productChanged = previousProductId.current !== currentProductId;
+    const modalJustOpened = !previousVisible.current && visible;
+    
     if (visible) {
-      // Reset quantity and animation value
-      setQuantity(1);
-      setIsClosing(false);
-      slideAnim.setValue(screenHeight);
-      
-      // Set default variant options for new structure
-      if (product && 'variants' in product && 'variantOptions' in product) {
-        const definitions = (product.variants || []) as unknown as Array<{
-          id: number;
-          variantType: string;
-          options: string[] | Record<string, unknown>;
-        }>;
+      // Only reset if product changed or modal just opened
+      if (productChanged || modalJustOpened) {
+        // Reset quantity and animation value
+        setQuantity(1);
+        setIsClosing(false);
+        slideAnim.setValue(screenHeight);
         
-        const initialSelection: Record<string, string> = {};
-        definitions.forEach(def => {
-          const options = Array.isArray(def.options) ? def.options : [];
-          if (options.length > 0) {
-            initialSelection[def.variantType] = String(options[0]);
-          }
-        });
-        setSelectedVariantOptions(initialSelection);
+        // Set default variant options for new structure
+        if (product && 'variants' in product && 'variantOptions' in product) {
+          const definitions = (product.variants || []) as unknown as Array<{
+            id: number;
+            variantType: string;
+            options: string[] | Record<string, unknown>;
+          }>;
+          
+          const initialSelection: Record<string, string> = {};
+          definitions.forEach(def => {
+            const options = Array.isArray(def.options) ? def.options : [];
+            if (options.length > 0) {
+              initialSelection[def.variantType] = String(options[0]);
+            }
+          });
+          setSelectedVariantOptions(initialSelection);
+        }
       }
       
-      // Then animate to 0 with smooth timing
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      // Animate to 0 with smooth timing (only if modal just opened or product changed)
+      if (productChanged || modalJustOpened) {
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      }
     }
+    
+    // Update refs
+    previousProductId.current = currentProductId;
+    previousVisible.current = visible;
   }, [visible, slideAnim, product]);
 
   // Pan responder for swipe down to close
@@ -230,12 +247,30 @@ export default function BuyNowModal({
       const matchingOption = options.find(option => {
         if (!option.attributes) return false;
         
-        return Object.entries(selectedVariantOptions).every(([key, value]) => {
-          return option.attributes[key] === value;
+        // Check if all selected variant options match this option's attributes
+        // Handle key matching with trimmed keys to account for spacing issues in database (e.g., 'Color ' vs 'Color')
+        const allMatch = Object.entries(selectedVariantOptions).every(([selectedKey, selectedValue]) => {
+          // Try exact match first
+          if (option.attributes[selectedKey] === selectedValue) return true;
+          
+          // Try trimmed key match (handles 'Color' vs 'Color ' issues from database)
+          const trimmedSelectedKey = selectedKey.trim();
+          const matchingKey = Object.keys(option.attributes).find(k => k.trim() === trimmedSelectedKey);
+          if (matchingKey && option.attributes[matchingKey] === selectedValue) return true;
+          
+          return false;
         });
+        
+        // Also verify this option has the same number of attribute keys as selected
+        // This ensures we're matching the exact variant combination
+        const attributeKeys = Object.keys(option.attributes).map(k => k.trim());
+        const selectedKeys = Object.keys(selectedVariantOptions).map(k => k.trim());
+        const sameKeyCount = attributeKeys.length === selectedKeys.length;
+        
+        return allMatch && sameKeyCount;
       });
       
-      currentVariantOption = matchingOption || options[0];
+      currentVariantOption = matchingOption || options.find(o => o.isDefault) || options[0];
       
       if (currentVariantOption) {
         unitPrice = currentVariantOption.sellingPrice;
@@ -257,10 +292,19 @@ export default function BuyNowModal({
     const meetsMOQ = !moq || totalPieces >= moq;
     const isFormValid = quantity > 0 && totalPieces <= stock && meetsMOQ;
 
-    // Build variant display name
-    const variantName = Object.entries(selectedVariantOptions)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join(', ') || 'Default';
+    // Build variant display name from the actual matched variant option's attributes
+    // This ensures consistency with what's stored in the database (handles spacing issues like 'Color ')
+    let variantName = 'Default';
+    if (currentVariantOption && currentVariantOption.attributes) {
+      variantName = Object.entries(currentVariantOption.attributes)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ');
+    } else if (Object.keys(selectedVariantOptions).length > 0) {
+      // Fallback to selected options if no variant option found
+      variantName = Object.entries(selectedVariantOptions)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ');
+    }
 
     return {
       productImage,
@@ -440,7 +484,6 @@ export default function BuyNowModal({
 
   return (
     <Modal
-      key={product.id} // Force re-render when product changes
       visible={visible}
       transparent
       animationType="none"

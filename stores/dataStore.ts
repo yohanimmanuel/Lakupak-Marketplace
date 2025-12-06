@@ -217,32 +217,65 @@ export const useDataStore = create<DataState>()(
 
         const authState = useAuthStore.getState()
         const token = authState.token
-        const userId = authState.user?.id || get().user?.id
+        // CRITICAL: Only use userId from authStore, never from cached user data
+        // This prevents loading orders for wrong user
+        const userId = authState.user?.id
 
         if (!token || !userId) {
-          set({ orders: [], ordersLastUpdated: null })
+          // Clear orders if no valid user/token
+          set({ orders: [], ordersLastUpdated: null, isOrdersLoading: false })
           return
         }
 
+        // Validate that cached orders belong to current user
+        const currentOrders = get().orders
+        const cachedUserId = get().user?.id
+        if (currentOrders.length > 0 && cachedUserId !== userId) {
+          // User changed - clear old orders immediately
+          set({ orders: [], ordersLastUpdated: null })
+        }
+
         if (!forceRefresh && ordersLastUpdated && (now - ordersLastUpdated) < CACHE_DURATION) {
-          return
+          // Double-check cached orders belong to current user
+          if (cachedUserId === userId) {
+            return
+          }
+          // If user mismatch, force refresh
         }
 
         set({ isOrdersLoading: true })
         try {
           const result = await ordersService.getOrders(userId, 1, 100, token || undefined)
           const orders: MarketplaceOrder[] = result.orders as MarketplaceOrder[]
-          set({
-            orders,
-            ordersLastUpdated: now,
-            isOrdersLoading: false
-          })
+          
+          // Final validation: ensure orders belong to current user
+          const currentAuthState = useAuthStore.getState()
+          const currentUserId = currentAuthState.user?.id
+          
+          if (currentUserId === userId) {
+            set({
+              orders,
+              ordersLastUpdated: now,
+              isOrdersLoading: false
+            })
+          } else {
+            // User changed during load - don't set orders
+            set({ orders: [], ordersLastUpdated: null, isOrdersLoading: false })
+          }
         } catch (error) {
           set({ isOrdersLoading: false })
         }
       },
 
       refreshAllData: async (token) => {
+        const authState = useAuthStore.getState()
+        const userId = authState.user?.id
+        
+        // Only refresh if we have a valid user
+        if (!userId || !token) {
+          return
+        }
+        
         const promises = []
         
         if (token) {
@@ -253,6 +286,7 @@ export const useDataStore = create<DataState>()(
         
         await Promise.all(promises)
 
+        // Force refresh orders with current user validation
         await get().forceRefreshOrders()
       },
 
@@ -487,16 +521,17 @@ export const useDataStore = create<DataState>()(
           websocketUnsubscribe()
         }
         websocketService.disconnect()
+        // Clear all user-specific data immediately
         set({
           user: null,
           userLastUpdated: null,
           products: [],
           productsLastUpdated: null,
-           orders: [],
-           ordersLastUpdated: null,
+          orders: [], // CRITICAL: Clear orders immediately on logout
+          ordersLastUpdated: null,
           isUserLoading: false,
           isProductsLoading: false,
-           isOrdersLoading: false,
+          isOrdersLoading: false,
           pollingInterval: null,
           isPolling: false,
           isWebSocketConnected: false,
@@ -515,6 +550,26 @@ export const useDataStore = create<DataState>()(
         orders: state.orders,
         ordersLastUpdated: state.ordersLastUpdated,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Validate that rehydrated orders belong to current user
+        if (state) {
+          const authState = useAuthStore.getState()
+          const currentUserId = authState.user?.id
+          const cachedUserId = state.user?.id
+          
+          // If user mismatch, clear orders immediately
+          if (currentUserId && cachedUserId && currentUserId !== cachedUserId) {
+            state.orders = []
+            state.ordersLastUpdated = null
+          }
+          
+          // If no current user, clear orders
+          if (!currentUserId) {
+            state.orders = []
+            state.ordersLastUpdated = null
+          }
+        }
+      },
     }
   )
 )

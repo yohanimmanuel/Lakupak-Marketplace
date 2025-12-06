@@ -18,6 +18,7 @@ export default function LoginModal() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
 
   // Keyboard visibility listeners to collapse non-essential sections
@@ -153,12 +154,50 @@ export default function LoginModal() {
                   return;
                 }
                 
+                setIsLoggingIn(true);
                 try {
                   const result = await loginWithCredentials(username.trim(), password);
+                  
+                  // CRITICAL: Set token and user FIRST to ensure proper user isolation
                   await setToken(result.token);
-                  setUser(result.user);
+                  await setUser(result.user);
+                  
+                  // Import stores
+                  const { useDataStore } = await import('../../../stores/dataStore');
+                  const { useCartStore } = await import('../../../stores/cartStore');
+                  const dataStore = useDataStore.getState();
+                  const cartStore = useCartStore.getState();
+                  
+                  // Clear any stale data first
+                  dataStore.clearCache();
+                  
+                  // Start loading products (non-blocking)
+                  dataStore.forceRefreshProducts();
+                  
+                  // Navigate immediately while data loads
                   router.replace('/(tabs)/home');
+                  
+                  // Load all user-specific data in correct order
+                  // Wait a bit to ensure navigation completes
+                  setTimeout(async () => {
+                    try {
+                      // Load user profile
+                      await dataStore.loadUserData(result.token);
+                      
+                      // Load cart for this user
+                      cartStore.setUserId(result.user.id);
+                      
+                      // Load orders with force refresh (ensures correct user)
+                      await dataStore.loadOrdersData(true);
+                      
+                      // Start auto-refresh
+                      dataStore.startAutoRefresh(result.token);
+                    } catch (err) {
+                      // Silently handle background loading errors
+                    }
+                  }, 200);
                 } catch (error: unknown) {
+                  setIsLoggingIn(false);
                   if (error instanceof Error && (error.message.includes('User not found') || error.message.includes('Please sign up first'))) {
                     Alert.alert(
                       'Account Not Found', 
@@ -176,9 +215,19 @@ export default function LoginModal() {
                   }
                 }
               }}
-              style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 24 }}
+              disabled={isLoggingIn}
+              style={{ 
+                backgroundColor: isLoggingIn ? '#93c5fd' : '#0a61d7', 
+                borderRadius: 12, 
+                paddingVertical: 16, 
+                alignItems: 'center', 
+                marginBottom: 24,
+                opacity: isLoggingIn ? 0.7 : 1
+              }}
             >
-              <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Login</Text>
+              <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>
+                {isLoggingIn ? 'Logging in...' : 'Login'}
+              </Text>
             </Pressable>
 
             {/* Social Login Options */}

@@ -864,9 +864,26 @@ useEffect(() => {
                           // Find matching variantOption by attributes
                           const matchingOption = marketplaceProduct.variantOptions.find(option => {
                             if (!option.attributes) return false;
-                            return Object.entries(variantAttributes).every(([key, value]) => {
-                              return option.attributes?.[key] === value;
+                            
+                            // Check if all variant attributes match, handling key spacing issues (e.g., 'Color ' vs 'Color')
+                            const allMatch = Object.entries(variantAttributes).every(([selectedKey, selectedValue]) => {
+                              // Try exact match first
+                              if (option.attributes?.[selectedKey] === selectedValue) return true;
+                              
+                              // Try trimmed key match (handles 'Color' vs 'Color ' issues from database)
+                              const trimmedSelectedKey = selectedKey.trim();
+                              const matchingKey = Object.keys(option.attributes).find(k => k.trim() === trimmedSelectedKey);
+                              if (matchingKey && option.attributes[matchingKey] === selectedValue) return true;
+                              
+                              return false;
                             });
+                            
+                            // Verify same number of keys for exact match
+                            const attributeKeys = Object.keys(option.attributes).map(k => k.trim());
+                            const selectedKeys = Object.keys(variantAttributes).map(k => k.trim());
+                            const sameKeyCount = attributeKeys.length === selectedKeys.length;
+                            
+                            return allMatch && sameKeyCount;
                           });
                           
                           if (matchingOption) {
@@ -991,8 +1008,8 @@ useEffect(() => {
                       piecesPerPackage: piecesPerPackage,
                       pricePerPackage: unitPrice * piecesPerPackage,
                       subtotal: totalPrice,
-                      variantId: params.variantId ? parseInt(params.variantId) : undefined,
-                      variantName: params.variantName
+                      variantId: params.variantId && params.variantId !== '' ? parseInt(params.variantId) : undefined,
+                      variantName: params.variantName || 'Default'
                     }],
                     subtotal: totalPrice,
                     discounts: 0,
@@ -1184,6 +1201,11 @@ useEffect(() => {
                       </View>
                       <View style={styles.productDetails}>
                         <Text style={styles.productName} numberOfLines={2}>{item.product.name}</Text>
+                        {item.variant && item.variant !== 'Default' ? (
+                          <Text style={styles.variantName} numberOfLines={2}>
+                            {item.variant}
+                          </Text>
+                        ) : null}
                         <Text style={styles.productSpecs}>
                           {(() => {
                             // Get package info from product level (piece-based system)
@@ -1463,6 +1485,11 @@ useEffect(() => {
                 </View>
                 <View style={styles.productDetails}>
                   <Text style={styles.productName} numberOfLines={2}>{productName}</Text>
+                  {params.variantName && params.variantName !== 'Default' ? (
+                    <Text style={styles.variantName} numberOfLines={2}>
+                      {params.variantName}
+                    </Text>
+                  ) : null}
                   <Text style={styles.productSpecs}>
                     {piecesPerPackage} pieces per {packageType}
                   </Text>
@@ -2128,6 +2155,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#111827',
+    marginBottom: 4,
+  },
+  variantName: {
+    fontSize: 12,
+    color: '#6B7280',
     marginBottom: 4,
   },
   productSpecs: {

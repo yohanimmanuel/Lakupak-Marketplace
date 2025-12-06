@@ -61,17 +61,45 @@ export default function OrdersScreen() {
   useEffect(() => {
     if (!isAuthenticated || !authUser?.id) {
       setNotifications([]);
+      // Clear orders if user is not authenticated
+      const dataStore = useDataStore.getState();
+      if (dataStore.orders.length > 0) {
+        dataStore.setOrders([]);
+      }
       return;
     }
-    // Only load if we don't have orders yet (initial load)
-    loadOrdersData(false);
+    
+    // Validate that cached orders belong to current user
+    const dataStore = useDataStore.getState();
+    const cachedUserId = dataStore.user?.id;
+    
+    // If user changed, clear old orders and force refresh
+    if (cachedUserId !== authUser.id && dataStore.orders.length > 0) {
+      dataStore.setOrders([]);
+      loadOrdersData(true); // Force refresh with correct user
+    } else {
+      // Only load if we don't have orders yet (initial load)
+      loadOrdersData(false);
+    }
   }, [isAuthenticated, authUser?.id, loadOrdersData]);
 
   // Keep notifications in sync with store orders while preserving read state
+  // CRITICAL: Validate orders belong to current user before displaying
   useEffect(() => {
+    if (!authUser?.id) {
+      setNotifications([]);
+      return;
+    }
+    
+    // Filter orders to ensure they belong to current user
+    // This prevents showing other users' orders during race conditions
+    const dataStore = useDataStore.getState();
+    const cachedUserId = dataStore.user?.id;
+    const validOrders = cachedUserId === authUser.id ? orders : [];
+    
     setNotifications((prev) => {
       const previousMap = new Map(prev.map(notification => [notification.id, notification]));
-      const derived = orders.map((order) => {
+      const derived = validOrders.map((order) => {
         let title = 'Payment Required';
         let message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
 
@@ -127,7 +155,7 @@ export default function OrdersScreen() {
         return existing ? { ...notification, isRead: existing.isRead } : notification;
       });
     });
-  }, [orders]);
+  }, [orders, authUser?.id]);
 
   // WebSocket handles updates automatically - no need to refresh on focus
 
