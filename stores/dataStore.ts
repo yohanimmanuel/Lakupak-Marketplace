@@ -238,7 +238,7 @@ export const useDataStore = create<DataState>()(
         if (!forceRefresh && ordersLastUpdated && (now - ordersLastUpdated) < CACHE_DURATION) {
           // Double-check cached orders belong to current user
           if (cachedUserId === userId) {
-            return
+          return
           }
           // If user mismatch, force refresh
         }
@@ -253,11 +253,11 @@ export const useDataStore = create<DataState>()(
           const currentUserId = currentAuthState.user?.id
           
           if (currentUserId === userId) {
-            set({
-              orders,
-              ordersLastUpdated: now,
-              isOrdersLoading: false
-            })
+          set({
+            orders,
+            ordersLastUpdated: now,
+            isOrdersLoading: false
+          })
           } else {
             // User changed during load - don't set orders
             set({ orders: [], ordersLastUpdated: null, isOrdersLoading: false })
@@ -528,10 +528,10 @@ export const useDataStore = create<DataState>()(
           products: [],
           productsLastUpdated: null,
           orders: [], // CRITICAL: Clear orders immediately on logout
-          ordersLastUpdated: null,
+           ordersLastUpdated: null,
           isUserLoading: false,
           isProductsLoading: false,
-          isOrdersLoading: false,
+           isOrdersLoading: false,
           pollingInterval: null,
           isPolling: false,
           isWebSocketConnected: false,

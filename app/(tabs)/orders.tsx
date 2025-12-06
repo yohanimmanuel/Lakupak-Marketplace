@@ -78,8 +78,8 @@ export default function OrdersScreen() {
       dataStore.setOrders([]);
       loadOrdersData(true); // Force refresh with correct user
     } else {
-      // Only load if we don't have orders yet (initial load)
-      loadOrdersData(false);
+    // Only load if we don't have orders yet (initial load)
+    loadOrdersData(false);
     }
   }, [isAuthenticated, authUser?.id, loadOrdersData]);
 

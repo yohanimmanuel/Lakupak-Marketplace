@@ -47,7 +47,7 @@ export default function BuyNowModal({
   // Refs for long-press functionality
   const longPressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+
   // Track previous product ID to prevent unnecessary resets
   const previousProductId = useRef<string | null>(null);
   const previousVisible = useRef<boolean>(false);
@@ -93,38 +93,38 @@ export default function BuyNowModal({
     if (visible) {
       // Only reset if product changed or modal just opened
       if (productChanged || modalJustOpened) {
-        // Reset quantity and animation value
-        setQuantity(1);
-        setIsClosing(false);
-        slideAnim.setValue(screenHeight);
+      // Reset quantity and animation value
+      setQuantity(1);
+      setIsClosing(false);
+      slideAnim.setValue(screenHeight);
+      
+      // Set default variant options for new structure
+      if (product && 'variants' in product && 'variantOptions' in product) {
+        const definitions = (product.variants || []) as unknown as Array<{
+          id: number;
+          variantType: string;
+          options: string[] | Record<string, unknown>;
+        }>;
         
-        // Set default variant options for new structure
-        if (product && 'variants' in product && 'variantOptions' in product) {
-          const definitions = (product.variants || []) as unknown as Array<{
-            id: number;
-            variantType: string;
-            options: string[] | Record<string, unknown>;
-          }>;
-          
-          const initialSelection: Record<string, string> = {};
-          definitions.forEach(def => {
-            const options = Array.isArray(def.options) ? def.options : [];
-            if (options.length > 0) {
-              initialSelection[def.variantType] = String(options[0]);
-            }
-          });
-          setSelectedVariantOptions(initialSelection);
+        const initialSelection: Record<string, string> = {};
+        definitions.forEach(def => {
+          const options = Array.isArray(def.options) ? def.options : [];
+          if (options.length > 0) {
+            initialSelection[def.variantType] = String(options[0]);
+          }
+        });
+        setSelectedVariantOptions(initialSelection);
         }
       }
       
       // Animate to 0 with smooth timing (only if modal just opened or product changed)
       if (productChanged || modalJustOpened) {
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      }
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
     }
     
     // Update refs
@@ -297,7 +297,7 @@ export default function BuyNowModal({
     let variantName = 'Default';
     if (currentVariantOption && currentVariantOption.attributes) {
       variantName = Object.entries(currentVariantOption.attributes)
-        .map(([key, value]) => `${key}: ${value}`)
+      .map(([key, value]) => `${key}: ${value}`)
         .join(', ');
     } else if (Object.keys(selectedVariantOptions).length > 0) {
       // Fallback to selected options if no variant option found

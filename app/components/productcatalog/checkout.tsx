@@ -1333,15 +1333,23 @@ useEffect(() => {
                                 
                                 const matchingOption = marketplaceProduct.variantOptions.find(option => {
                                   if (!option.attributes) return false;
-                                  return Object.entries(variantAttributes).every(([key, value]) => {
-                                    return option.attributes?.[key] === value;
-                                  });
+                                  
+                                  // Check if all variant attributes match, handling key spacing issues (e.g., 'Color ' vs 'Color')
+                                  return Object.entries(variantAttributes).every(([selectedKey, selectedValue]) => {
+                                    // Try exact match first
+                                    if (option.attributes?.[selectedKey] === selectedValue) return true;
+                                    
+                                    // Try trimmed key match (handles 'Color' vs 'Color ' issues from database)
+                                    const trimmedSelectedKey = selectedKey.trim();
+                                    const matchingKey = Object.keys(option.attributes).find(k => k.trim() === trimmedSelectedKey);
+                                    if (matchingKey && option.attributes[matchingKey] === selectedValue) return true;
+                                    
+                                    return false;
+                                  }) && Object.keys(variantAttributes).length === Object.keys(option.attributes || {}).length;
                                 });
                                 
                                 if (matchingOption?.moq) {
                                   moq = matchingOption.moq;
-                                } else if (marketplaceProduct.variantOptions.length > 0 && marketplaceProduct.variantOptions[0]?.moq) {
-                                  moq = marketplaceProduct.variantOptions[0].moq;
                                 }
                               }
                               
