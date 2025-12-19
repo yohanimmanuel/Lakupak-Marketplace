@@ -749,7 +749,7 @@ useEffect(() => {
                 // Generate required fields using marketplace user data
     const buyerId = `LKB-${authUser?.id?.toString().padStart(8, '0') || Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
                 const orderDate = new Date().toISOString();
-    const customerEmail = authUser?.email || `${addresses[0].phone.replace(/[^0-9]/g, '')}@lakulaku.com`;
+    const customerEmail = authUser?.email || `${addresses[0].phone.replace(/[^0-9]/g, '')}@laku.com`;
                 
                 let createdOrders = [];
                 

@@ -22,12 +22,12 @@ export default function WelcomeScreen() {
               style={styles.logoImage}
               resizeMode="contain"
             />
-            <Text style={styles.logoText}>Laku-Laku</Text>
+            <Text style={styles.logoText}>Laku</Text>
           </View>
 
           {/* Title Section */}
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>Welcome to Laku-Laku Marketplace</Text>
+            <Text style={styles.title}>Welcome to Laku Marketplace</Text>
             <Text style={styles.subtitle}>
               Your trusted marketplace for buying and selling. Discover amazing products, connect with sellers, and grow your business all in one place.
             </Text>

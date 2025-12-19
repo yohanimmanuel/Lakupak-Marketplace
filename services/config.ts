@@ -35,11 +35,11 @@ function getApiBaseUrl(): string {
   
   // Production and staging URLs from environment variables
   if (environment === 'production') {
-    return process.env.EXPO_PUBLIC_API_BASE_URL || 'https://api.laku-laku.com';
+    return process.env.EXPO_PUBLIC_API_BASE_URL || 'https://api.laku.com';
   }
   
   if (environment === 'staging') {
-    return process.env.EXPO_PUBLIC_API_BASE_URL || 'https://staging-api.laku-laku.com';
+    return process.env.EXPO_PUBLIC_API_BASE_URL || 'https://staging-api.laku.com';
   }
   
   // Development environment

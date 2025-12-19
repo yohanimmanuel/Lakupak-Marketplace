@@ -73,7 +73,7 @@ export default function NotificationsScreen() {
       // Sample discount notifications
       await NotificationService.createDiscountNotification(
         'Special Discount Available',
-        'Get 15% off on your next order from Laku-Laku Marketplace. Use code SAVE15 at checkout.',
+        'Get 15% off on your next order from Laku Marketplace. Use code SAVE15 at checkout.',
         userId
       );
       await NotificationService.createDiscountNotification(

@@ -30,13 +30,13 @@ export default function CommunityRulesModal() {
         return (
           <ScrollView style={{ padding: 16 }}>
             <Text style={{ fontSize: 16, lineHeight: 24, color: '#111827', marginBottom: 16 }}>
-              Welcome to Laku-Laku Marketplace! Our community rules ensure a safe, respectful, and productive environment for all users.
+              Welcome to Laku Marketplace! Our community rules ensure a safe, respectful, and productive environment for all users.
             </Text>
             <Text style={{ fontSize: 16, lineHeight: 24, color: '#111827', marginBottom: 16 }}>
               These guidelines apply to all interactions on our platform, including product listings, reviews, messages, and community discussions.
             </Text>
             <Text style={{ fontSize: 16, lineHeight: 24, color: '#111827', marginBottom: 16 }}>
-              By using Laku-Laku, you agree to follow these community standards and help us maintain a positive marketplace experience for everyone.
+              By using Laku, you agree to follow these community standards and help us maintain a positive marketplace experience for everyone.
             </Text>
             <Text style={{ fontSize: 16, lineHeight: 24, color: '#111827' }}>
               Violations of these rules may result in warnings, content removal, account restrictions, or permanent suspension.
@@ -170,7 +170,7 @@ export default function CommunityRulesModal() {
                 Core Principles
               </Text>
               <Text style={{ fontSize: 14, lineHeight: 20, color: '#075985' }}>
-                Laku-Laku Marketplace is built on trust, respect, and mutual benefit. We expect all users to contribute positively to our community.
+                Laku Marketplace is built on trust, respect, and mutual benefit. We expect all users to contribute positively to our community.
               </Text>
             </View>
 

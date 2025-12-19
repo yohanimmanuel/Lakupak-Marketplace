@@ -110,7 +110,7 @@ export default function MyPurchasesModal() {
     }
 
     const transformedOrders = storeOrders.map((order) => {
-      const fallbackStoreName = order.storeName || order.user?.company?.name || 'Laku-Laku Store';
+      const fallbackStoreName = order.storeName || order.user?.company?.name || 'Laku Store';
       return {
         ...(order as unknown as Order),
         orderItems: (order.orderItems || []) as unknown as OrderItem[],

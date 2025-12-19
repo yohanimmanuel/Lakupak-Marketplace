@@ -43,7 +43,7 @@ export default function SecurityPrivacyConsent() {
             <View>
               <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 12 }}>Privacy Policy</Text>
               <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20, marginBottom: 16 }}>
-                This Privacy Policy explains how Laku-Laku collects, uses, discloses, and protects your personal information when you use our marketplace applications and services.
+                This Privacy Policy explains how Laku collects, uses, discloses, and protects your personal information when you use our marketplace applications and services.
               </Text>
 
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 8, marginBottom: 6 }}>1. Information We Collect</Text>
@@ -59,7 +59,7 @@ export default function SecurityPrivacyConsent() {
               <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
                 • Provide and improve core features including account creation, order processing, and wallet management.
                 {'\n'}• Authenticate your identity, send verification codes, and protect against fraud and abuse.
-                {'\n'}• Personalize your experience (e.g., recently viewed, buy again) aligned with Laku-Laku standards.
+                {'\n'}• Personalize your experience (e.g., recently viewed, buy again) aligned with Laku standards.
                 {'\n'}• Communicate with you about orders, promotions, and service updates.
                 {'\n'}• Comply with legal obligations and enforce our Terms.
               </Text>
@@ -89,7 +89,7 @@ export default function SecurityPrivacyConsent() {
 
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 12, marginBottom: 6 }}>7. Children</Text>
               <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
-                Laku-Laku is not directed to children under the age of 13 (or the minimum age in your jurisdiction). We do not knowingly collect personal information from children.
+                Laku is not directed to children under the age of 13 (or the minimum age in your jurisdiction). We do not knowingly collect personal information from children.
               </Text>
 
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 12, marginBottom: 6 }}>8. Changes to This Policy</Text>
@@ -101,7 +101,7 @@ export default function SecurityPrivacyConsent() {
             <View>
               <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 12 }}>Terms & Conditions</Text>
               <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20, marginBottom: 16 }}>
-                These Terms govern your access to and use of Laku-Laku marketplace applications and services. By using our services, you agree to these Terms.
+                These Terms govern your access to and use of Laku marketplace applications and services. By using our services, you agree to these Terms.
               </Text>
 
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 8, marginBottom: 6 }}>1. Accounts</Text>
@@ -130,12 +130,12 @@ export default function SecurityPrivacyConsent() {
 
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 12, marginBottom: 6 }}>5. Intellectual Property</Text>
               <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
-                Laku-Laku trademarks, logos, and content are protected by law. You may not use our branding without prior written permission.
+                Laku trademarks, logos, and content are protected by law. You may not use our branding without prior written permission.
               </Text>
 
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 12, marginBottom: 6 }}>6. Liability</Text>
               <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
-                To the extent permitted by law, Laku-Laku is not liable for indirect, incidental, or consequential damages. Our aggregate liability is limited to amounts you paid within the last 6 months.
+                To the extent permitted by law, Laku is not liable for indirect, incidental, or consequential damages. Our aggregate liability is limited to amounts you paid within the last 6 months.
               </Text>
 
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 12, marginBottom: 6 }}>7. Termination</Text>
@@ -145,7 +145,7 @@ export default function SecurityPrivacyConsent() {
 
               <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 12, marginBottom: 6 }}>8. Governing Law</Text>
               <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
-                These Terms are governed by applicable local laws where Laku-Laku operates or as required by mandatory consumer protection laws.
+                These Terms are governed by applicable local laws where Laku operates or as required by mandatory consumer protection laws.
               </Text>
             </View>
           )}

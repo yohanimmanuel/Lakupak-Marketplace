@@ -162,7 +162,7 @@ export default function SignUpModal() {
                     Create Account 👋
                   </Text>
                   <Text style={{ color: '#6b7280', fontSize: 14, lineHeight: 20 }}>
-                    Join Laku-Laku Marketplace and start your journey
+                    Join Laku Marketplace and start your journey
                   </Text>
                 </View>
 
@@ -190,7 +190,7 @@ export default function SignUpModal() {
                   Create Account 👋
                 </Text>
                 <Text style={{ color: '#6b7280', fontSize: 14, lineHeight: 20 }}>
-                  Join Laku-Laku Marketplace and start your journey
+                  Join Laku Marketplace and start your journey
                 </Text>
               </View>
             )}

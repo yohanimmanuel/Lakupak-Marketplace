@@ -7,7 +7,7 @@ export default function WelcomeModal() {
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
       <Stack.Screen options={{
-        title: 'Welcome to Laku-Laku!',
+        title: 'Welcome to Laku!',
         headerStyle: { backgroundColor: '#ffffff' },
         headerTitleStyle: { color: '#111827' },
         headerTintColor: '#0a61d7',
@@ -15,7 +15,7 @@ export default function WelcomeModal() {
       <View style={{ padding: 20 }}>
         <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 8 }}>Start Distributing!</Text>
         <Text style={{ fontSize: 14, color: '#374151', marginBottom: 16 }}>
-          Join Laku-Laku as a distributor to access wholesale tools, manage catalogs, and reach more buyers.
+          Join Laku as a distributor to access wholesale tools, manage catalogs, and reach more buyers.
         </Text>
         <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
           <Pressable onPress={() => router.back()} style={{ paddingVertical: 10, paddingHorizontal: 14, marginRight: 8 }}>

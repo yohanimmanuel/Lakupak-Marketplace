@@ -14,7 +14,7 @@ export type Notification = {
   productImage?: string;
 };
 
-const NOTIFICATIONS_KEY_PREFIX = 'laku_laku_notifications_';
+const NOTIFICATIONS_KEY_PREFIX = 'laku_notifications_';
 
 export class NotificationService {
   // Get user-specific storage key
@@ -178,7 +178,7 @@ export class NotificationService {
       await this.addNotification({
         type: 'order',
         title: 'Shipped Out',
-        message: `Parcel ${trackingNumber} for your order ${orderId} has been shipped out by Laku-Laku Logistics. Click here to see order details and track your parcel.`,
+        message: `Parcel ${trackingNumber} for your order ${orderId} has been shipped out by Laku Logistics. Click here to see order details and track your parcel.`,
         orderId: orderId,
         status: 'shipped'
       }, userId);
@@ -202,7 +202,7 @@ export class NotificationService {
       await this.addNotification({
         type: 'order',
         title: 'Confirm Receipt',
-        message: `Please check that all items for your order ${orderId} have been delivered. Thank you for shopping with Laku-Laku!`,
+        message: `Please check that all items for your order ${orderId} have been delivered. Thank you for shopping with Laku!`,
         orderId: orderId,
         status: 'delivered'
       }, userId);

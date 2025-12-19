@@ -156,7 +156,7 @@ function RootLayoutNav() {
           name="useraccounts/startdistributing"
           options={{
             presentation: 'modal',
-            title: 'Welcome to Laku-Laku!',
+            title: 'Welcome to Laku!',
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',

@@ -1,4 +1,4 @@
-// Centralized sample product data for the Laku-Laku marketplace
+// Centralized sample product data for the Laku Marketplace
 export interface Product {
   id: string;
   name: string;
@@ -102,7 +102,7 @@ export const sampleProducts: Product[] = [
     packageType: 'Carton',
     piecesPerPackage: 10,
     seller: {
-      name: 'Laku-Laku Official Store',
+      name: 'Laku Official Store',
       avatar: 'L',
       rating: 4.9,
       reviewCount: 2100,

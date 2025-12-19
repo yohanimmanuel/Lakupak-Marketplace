@@ -52,7 +52,7 @@ export default function HelpCenter() {
           <View style={{ marginBottom: 16 }}>
             <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>Contact support</Text>
             <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
-              For unresolved issues, contact us via support@laku-laku.com. Provide your order ID and a brief description.
+              For unresolved issues, contact us via support@laku.com. Provide your order ID and a brief description.
             </Text>
           </View>
         </ScrollView>
