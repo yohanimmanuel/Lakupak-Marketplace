@@ -1,7 +1,7 @@
 # 🤗 Laku-Marketplace (Mobile) 🤗
 
 ## Overview
-Laku-Marketplace is the buyer-facing mobile app for Laku-Laku. It enables verified retailers (warungs, kiosks, small shops) to browse products, place orders, track deliveries, and reorder quickly. Built with React Native (Expo) and connected to the existing Laku-Laku backend (Next.js + Prisma).
+Laku-Marketplace is the buyer-facing mobile app for Laku. It enables verified retailers (warungs, kiosks, small shops) to browse products, place orders, track deliveries, and reorder quickly. Built with React Native (Expo) and connected to the existing Laku backend (Next.js + Prisma).
 
 ## Key Security & Trust Principles
 - Verified buyer access; pricing and offers scoped to approved distributors.
@@ -56,7 +56,7 @@ export default ({ config }) => ({
 ```
 
 ## Data & APIs
-- Uses existing Laku-Laku endpoints (users, products, orders, buyers)
+- Uses existing Laku endpoints (users, products, orders, buyers)
 - Typed DTOs; Zod validation at request/response boundaries
 - React Query for caching and mutations (cart, checkout, orders)
 
@@ -71,7 +71,7 @@ export default ({ config }) => ({
 
 ## Styling
 - NativeWind with Tailwind classnames
-- Align colors/typography with Laku-Laku design system
+- Align colors/typography with Laku design system
 
 ## Testing
 - Jest + jest-expo for unit tests
