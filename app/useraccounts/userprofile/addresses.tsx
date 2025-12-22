@@ -15,7 +15,7 @@ export default function AddressesList() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const navigation = useNavigation()
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!token) return;
     try {
       const data = await getMarketplaceAddresses(token)
@@ -23,9 +23,9 @@ export default function AddressesList() {
     } catch (error) {
       setList([])
     }
-  }
+  }, [token]); // Wrapped in useCallback with token dependency
 
-  useEffect(() => { load() }, [token])
+  useEffect(() => { load() }, [load]) // Now load is stable, so we can include it
 
   // Refresh whenever screen gets focus (after returning from edit)
   useFocusEffect(

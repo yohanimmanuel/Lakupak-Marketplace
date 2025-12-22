@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -36,39 +36,8 @@ export default function NotificationsScreen() {
     hydrate();
   }, [hydrate]);
 
-  // Load notifications from storage (only when authenticated)
-  useEffect(() => {
-    if (!isAuthenticated || !authUser?.id) {
-      setNotifications([]);
-      return;
-    }
-
-    const loadNotifications = async () => {
-      try {
-        const storedNotifications = await NotificationService.getNotifications(authUser.id);
-        
-        // Filter to only show non-order notifications
-        const nonOrderNotifications = storedNotifications.filter(n => n.type !== 'order');
-        
-        // If no notifications exist, add some sample data for demonstration
-        if (nonOrderNotifications.length === 0) {
-          await addSampleNotifications(authUser.id);
-          const allNotifications = await NotificationService.getNotifications(authUser.id);
-          const filteredNotifications = allNotifications.filter(n => n.type !== 'order');
-          setNotifications(filteredNotifications);
-        } else {
-          setNotifications(nonOrderNotifications);
-        }
-      } catch (error) {
-        setNotifications([]);
-      }
-    };
-
-    loadNotifications();
-  }, [isAuthenticated, authUser?.id]);
-
-  // Add sample notifications for demonstration
-  const addSampleNotifications = async (userId: number) => {
+  // Add sample notifications for demonstration - wrapped in useCallback
+  const addSampleNotifications = useCallback(async (userId: number) => {
     try {
       // Sample discount notifications
       await NotificationService.createDiscountNotification(
@@ -102,7 +71,38 @@ export default function NotificationsScreen() {
       );
     } catch (error) {
     }
-  };
+  }, []); // No dependencies - function doesn't use any props/state
+
+  // Load notifications from storage (only when authenticated)
+  useEffect(() => {
+    if (!isAuthenticated || !authUser?.id) {
+      setNotifications([]);
+      return;
+    }
+
+    const loadNotifications = async () => {
+      try {
+        const storedNotifications = await NotificationService.getNotifications(authUser.id);
+        
+        // Filter to only show non-order notifications
+        const nonOrderNotifications = storedNotifications.filter(n => n.type !== 'order');
+        
+        // If no notifications exist, add some sample data for demonstration
+        if (nonOrderNotifications.length === 0) {
+          await addSampleNotifications(authUser.id);
+          const allNotifications = await NotificationService.getNotifications(authUser.id);
+          const filteredNotifications = allNotifications.filter(n => n.type !== 'order');
+          setNotifications(filteredNotifications);
+        } else {
+          setNotifications(nonOrderNotifications);
+        }
+      } catch (error) {
+        setNotifications([]);
+      }
+    };
+
+    loadNotifications();
+  }, [isAuthenticated, authUser?.id, addSampleNotifications]); // Added addSampleNotifications to dependencies
 
   // Refresh notifications when screen comes into focus
   useEffect(() => {

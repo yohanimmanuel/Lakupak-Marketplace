@@ -40,10 +40,12 @@ export default function BuyAgainModal() {
   );
 
   // Update products immediately when store changes
+  // getOrderedProducts is a stable function from Zustand store, so it's safe to include
+  // storeOrderedProducts is included to trigger recalculation when ordered products change
   useEffect(() => {
     const ordered = getOrderedProducts(products);
     setOrderedProducts(ordered);
-  }, [products, getOrderedProducts, storeOrderedProducts]);
+  }, [products, getOrderedProducts, storeOrderedProducts]); // storeOrderedProducts triggers when store updates
 
   // Get related products from websocket-enabled products store
   const relatedProducts = React.useMemo(() => {

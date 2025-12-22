@@ -91,12 +91,13 @@ export default function CartScreen() {
     initializeCart();
     
     // Remove any test products that might be in the cart
+    // Note: cartItems and removeItem are from Zustand store (stable references)
     const testItems = cartItems.filter(item => 
       item.product.name === 'Test Product' || 
       item.product.id === 'test-1'
     );
     testItems.forEach(item => removeItem(item.id));
-  }, []);
+  }, [initializeCart, cartItems, removeItem]); // Added dependencies - Zustand store functions are stable
 
   // Subscribe to WebSocket for real-time cart updates
   useEffect(() => {
