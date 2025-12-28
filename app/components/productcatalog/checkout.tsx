@@ -13,8 +13,7 @@ import {
   StatusBar,
   Animated,
 } from 'react-native';
-import { InteractionManager } from 'react-native';
-import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -114,8 +113,8 @@ export default function CheckoutScreen() {
   // Determine if this is a cart checkout or single product checkout
   const isCartCheckout = selectedCartItems.length > 0 && !productId;
   
-  // Get the actual product data (for single product checkout)
-  const product = products.find(p => p.id === productId);
+  // Get the actual product data (for single product checkout) - memoized to update when products change
+  const product = useMemo(() => products.find(p => p.id === productId), [products, productId]);
   
   // Group cart items by distributor
 const slugify = (value: string) =>
@@ -165,7 +164,7 @@ const resolveDistributorId = (product?: MarketplaceProduct): string => {
   
 const distributorGroups = useMemo(
   () => (isCartCheckout ? groupByDistributor(selectedCartItems) : {}),
-  [isCartCheckout, selectedCartItems, products]
+  [isCartCheckout, selectedCartItems]
 );
   
 
@@ -229,7 +228,7 @@ const distributorGroups = useMemo(
     return [];
   };
 
-const distributorsInfo = useMemo(() => getDistributorsInfo(), [isCartCheckout, selectedCartItems, product, products]);
+const distributorsInfo = useMemo(() => getDistributorsInfo(), [isCartCheckout, selectedCartItems, product]);
 
 const distributorsInfoMap = useMemo(() => {
   return distributorsInfo.reduce<Record<string, DistributorInfo>>((acc, info) => {
@@ -369,7 +368,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     return options;
   };
 
-  const shippingOptions = getAvailableShippingOptions(product);
+  // Memoize shipping options to recalculate when product data changes (important for shipping fee updates)
+  const shippingOptions = useMemo(() => getAvailableShippingOptions(product), [product]);
 
   // Time options for dropdown
   const timeOptions = [
@@ -419,28 +419,17 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     return `${hours}:${minutes}`;
   };
 
-  // Refresh products/cart once when screen gains focus without blocking navigation.
-  useFocusEffect(
-    React.useCallback(() => {
-      const task = InteractionManager.runAfterInteractions(() => {
-        try {
-          // Use store accessors directly to avoid changing hook deps and re-render loops
-          const dataState = useDataStore.getState();
-          dataState.forceRefreshProducts?.();
-
-          const cartState = useCartStore.getState();
-          if (typeof cartState.checkAuthAndLoadCart === 'function') {
-            cartState.checkAuthAndLoadCart();
-          } else {
-            cartState.loadCartOnStart?.();
-          }
-        } catch {}
-      });
-      return () => {
-        task?.cancel?.();
-      };
-    }, [])
-  );
+  // Refresh products on checkout page mount - follows industry best practices:
+  // This "stale-while-revalidate" approach balances performance and data freshness
+  useEffect(() => {
+    const dataState = useDataStore.getState();
+    // Only refresh if not currently loading to avoid duplicate requests
+    if (!dataState.isProductsLoading) {
+      // loadProductsData(false) respects cache: returns cached if < 1 min old, fetches if stale
+      // This is the standard pattern used by major e-commerce platforms
+      dataState.loadProductsData(false);
+    }
+  }, []); // Run once on mount only
 
   const initializeModalDateTime = (existingDate?: Date | null) => {
     if (existingDate) {

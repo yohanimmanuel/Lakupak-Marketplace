@@ -97,7 +97,7 @@ export default function CartScreen() {
       item.product.id === 'test-1'
     );
     testItems.forEach(item => removeItem(item.id));
-  }, [initializeCart, cartItems, removeItem]); // Added dependencies - Zustand store functions are stable
+  }, [initializeCart, removeItem]); // Removed cartItems dependency to prevent rerender loops
 
   // Subscribe to WebSocket for real-time cart updates
   useEffect(() => {
