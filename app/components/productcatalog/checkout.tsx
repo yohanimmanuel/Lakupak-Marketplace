@@ -1189,7 +1189,55 @@ useEffect(() => {
                         )}
                       </View>
                       <View style={styles.productDetails}>
-                        <Text style={styles.productName} numberOfLines={2}>{item.product.name}</Text>
+                        <View style={styles.productNameRow}>
+                          <Text style={styles.productName} numberOfLines={2}>{item.product.name}</Text>
+                          {(() => {
+                            const marketplaceProduct = item.product as MarketplaceProduct;
+                            const offerBadge = marketplaceProduct.offerBadge;
+                            const hasActiveOffer = marketplaceProduct.hasActiveOffer;
+                            const discount = marketplaceProduct.discount || 0;
+                            const originalPrice = marketplaceProduct.originalSellingPrice || 0;
+                            const currentPrice = marketplaceProduct.sellingPrice || 0;
+                            
+                            // Calculate discount display based on type
+                            let discountDisplay = 'Discount';
+                            if (marketplaceProduct.discountType === 'fixed' && marketplaceProduct.discountValue) {
+                              // Show fixed discount amount with currency
+                              discountDisplay = `${formatCurrency(marketplaceProduct.discountValue)} OFF`;
+                            } else {
+                              // Calculate percentage discount if we have both prices
+                              let discountPercentage = 0;
+                              if (originalPrice > 0 && currentPrice > 0 && currentPrice < originalPrice) {
+                                discountPercentage = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
+                              }
+                              if (discountPercentage > 0) {
+                                discountDisplay = `${discountPercentage}% OFF`;
+                              }
+                            }
+                            
+                            // Only show DISCOUNT badge (not Promotion badge)
+                            if (offerBadge && hasActiveOffer) {
+                              if (offerBadge === 'Discount' || offerBadge === 'All Offers') {
+                                return (
+                                  <View style={styles.discountBadge}>
+                                    <Text style={styles.discountBadgeText}>
+                                      {discountDisplay}
+                                    </Text>
+                                  </View>
+                                );
+                              }
+                            } else if (discount > 0) {
+                              return (
+                                <View style={styles.discountBadge}>
+                                  <Text style={styles.discountBadgeText}>
+                                    -{discount}%
+                                  </Text>
+                                </View>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </View>
                         {item.variant && item.variant !== 'Default' ? (
                           <Text style={styles.variantName} numberOfLines={2}>
                             {item.variant}
@@ -2148,11 +2196,29 @@ const styles = StyleSheet.create({
   productDetails: {
     flex: 1,
   },
+  productNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: 'wrap',
+  },
   productName: {
     fontSize: 16,
     fontWeight: '500',
     color: '#111827',
-    marginBottom: 4,
+    flexShrink: 1,
+  },
+  discountBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  discountBadgeText: {
+    color: '#DC2626',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   variantName: {
     fontSize: 12,
