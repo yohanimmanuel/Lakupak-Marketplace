@@ -1190,7 +1190,7 @@ useEffect(() => {
                       </View>
                       <View style={styles.productDetails}>
                         <View style={styles.productNameRow}>
-                          <Text style={styles.productName} numberOfLines={2}>{item.product.name}</Text>
+                        <Text style={styles.productName} numberOfLines={2}>{item.product.name}</Text>
                           {(() => {
                             const marketplaceProduct = item.product as MarketplaceProduct;
                             const offerBadge = marketplaceProduct.offerBadge;
