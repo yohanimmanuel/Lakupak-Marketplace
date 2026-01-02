@@ -1,9 +1,6 @@
 import * as SecureStore from 'expo-secure-store'
 import { create } from 'zustand'
 import { getMe, type MobileUser } from '../services/user'
-import { useUserActivityStore } from './userActivityStore'
-import { useDataStore } from './dataStore'
-import { useCartStore } from './cartStore'
 
 type User = MobileUser
 
@@ -18,25 +15,36 @@ type AuthState = {
 }
 
 async function clearUserScopedStores() {
-  try {
-    useUserActivityStore.getState().clearUserData()
-  } catch {
-    // Ignore errors if userActivityStore is unavailable
-  }
-  try {
-    const dataState = useDataStore.getState()
-    dataState.stopAutoRefresh?.()
-    dataState.clearCache()
-  } catch {
-    // Ignore errors if dataStore is unavailable
-  }
-  try {
-    const cartState = useCartStore.getState()
-    // Clear cart items immediately (local only, no database call)
-    cartState.clearCartLocal()
-  } catch {
-    // Ignore errors if cartStore is unavailable
-  }
+  await Promise.all([
+    (async () => {
+      try {
+        const { useUserActivityStore } = await import('./userActivityStore')
+        useUserActivityStore.getState().clearUserData()
+      } catch {
+        // Ignore errors if userActivityStore is unavailable
+      }
+    })(),
+    (async () => {
+      try {
+        const { useDataStore } = await import('./dataStore')
+        const dataState = useDataStore.getState()
+        dataState.stopAutoRefresh?.()
+        dataState.clearCache()
+      } catch {
+        // Ignore errors if dataStore is unavailable
+      }
+    })(),
+    (async () => {
+      try {
+        const { useCartStore } = await import('./cartStore')
+        const cartState = useCartStore.getState()
+        // Clear cart items immediately (local only, no database call)
+        cartState.clearCartLocal()
+      } catch {
+        // Ignore errors if cartStore is unavailable
+      }
+    })(),
+  ])
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -64,6 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // If setting a new user, load their cart
     if (u?.id) {
       try {
+        const { useCartStore } = await import('./cartStore');
         const cartStore = useCartStore.getState();
         cartStore.setUserId(u.id);
       } catch {
