@@ -5,6 +5,8 @@ import { Stack, useRouter } from 'expo-router';
 import { loginWithCredentials } from '../../../services/auth';
 // import { signInWithGoogle } from '../../../services/auth'; // Temporarily disabled
 import { useAuthStore } from '../../../stores/authStore';
+import { useDataStore } from '../../../stores/dataStore';
+import { useCartStore } from '../../../stores/cartStore';
 import { ArrowLeft, Eye, EyeOff, Info } from 'lucide-react-native';
 
 export default function LoginModal() {
@@ -162,9 +164,7 @@ export default function LoginModal() {
                   await setToken(result.token);
                   await setUser(result.user);
                   
-                  // Import stores
-                  const { useDataStore } = await import('../../../stores/dataStore');
-                  const { useCartStore } = await import('../../../stores/cartStore');
+                  // Get store instances
                   const dataStore = useDataStore.getState();
                   const cartStore = useCartStore.getState();
                   

@@ -420,7 +420,6 @@ export default function SignUpModal() {
                       await signupStep3(signupData.username.trim(), signupData.password);
                       
                       // Create account directly with username/password (skip phone verification)
-                      const { verifyOtp } = await import('../../../services/auth');
                       const result = await verifyOtp({
                         phone: '+0000000000', // Dummy phone for testing - will be replaced by backend
                         countryCode: 'US',
