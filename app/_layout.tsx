@@ -345,6 +345,15 @@ function RootLayoutNav() {
           }} 
         />
         
+        {/* Search Screen */}
+        <Stack.Screen 
+          name="search" 
+          options={{ 
+            headerShown: false,
+            contentStyle: { backgroundColor: '#ffffff' }
+          }} 
+        />
+        
         {/* Order Details Modal Screen */}
         <Stack.Screen 
           name="components/ordersshipment/OrderDetails" 

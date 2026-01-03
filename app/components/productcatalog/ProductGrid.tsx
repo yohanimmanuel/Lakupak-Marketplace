@@ -27,6 +27,7 @@ interface ProductGridProps {
   refreshing?: boolean;
   hasMore?: boolean;
   emptyMessage?: string;
+  backgroundColor?: string;
 }
 
 export default function ProductGrid({
@@ -41,9 +42,10 @@ export default function ProductGrid({
   refreshing = false,
   hasMore = true,
   emptyMessage = "No products found",
+  backgroundColor: bgColor,
 }: ProductGridProps) {
   // Using explicit colors instead of theme colors
-  const backgroundColor = '#ffffff'; // White
+  const backgroundColor = bgColor || '#ffffff'; // Use provided background or default to white
   const textColor = '#111827'; // Black
   const primaryColor = '#0a61d7'; // Blue
 
@@ -122,6 +124,7 @@ export default function ProductGrid({
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           onRefresh ? (
             <RefreshControl

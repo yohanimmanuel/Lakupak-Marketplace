@@ -311,23 +311,23 @@ export default function HomeScreen() {
           right: 16,
           transform: [{ translateY: searchBarTranslateY }]
         }}>
-          <RNView style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            backgroundColor: '#ffffff', 
-            borderRadius: 10, 
-            paddingHorizontal: 12, 
-            height: 44,
-            borderWidth: 1,
-            borderColor: '#e5e7eb',
-          }}>
-            <Search color="#6B7280" size={20} />
-            <TextInput 
-              placeholder="Search for products..." 
-              style={{ flex: 1, marginLeft: 8, color: '#111827', paddingVertical: 0 }} 
-              placeholderTextColor="#6B7280" 
-            />
-          </RNView>
+          <Pressable onPress={() => router.push('/search')}>
+            <RNView style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              backgroundColor: '#ffffff', 
+              borderRadius: 10, 
+              paddingHorizontal: 12, 
+              height: 44,
+              borderWidth: 1,
+              borderColor: '#e5e7eb',
+            }}>
+              <Search color="#6B7280" size={20} />
+              <Text style={{ flex: 1, marginLeft: 8, color: '#6B7280', paddingVertical: 0 }}>
+                Search for products...
+              </Text>
+            </RNView>
+          </Pressable>
         </Animated.View>
       </RNView>
 

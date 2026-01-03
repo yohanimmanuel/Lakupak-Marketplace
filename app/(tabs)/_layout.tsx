@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Link, Tabs, usePathname } from 'expo-router';
+import { Link, Tabs, usePathname, useRouter } from 'expo-router';
 import { Pressable, View, TextInput, Animated, Text, StatusBar } from 'react-native';
 import { Home as HomeIcon, Boxes, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquare, MessageSquareText } from 'lucide-react-native';
 import { Settings } from 'lucide-react-native';
@@ -13,14 +13,12 @@ const MIN_HEADER_HEIGHT = 115;
 const SCROLL_DISTANCE = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT; // 55
 
 export default function TabLayout() {
+  const router = useRouter();
   const pathname = usePathname();
   const primaryBlue = '#0a61d7';
   const inactiveGrey = '#6B7280';
   const { user, isLoading } = useAuthStore();
   const { scrollY } = useHeaderScrollStore();
-
-  const [query, setQuery] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
 
   // Interpolate header translation based on scroll position
   const headerContentTranslateY = scrollY.interpolate({
@@ -57,25 +55,20 @@ export default function TabLayout() {
   };
 
   const SearchPill = (
-    <View
+    <Pressable
+      onPress={() => router.push('/search')}
       style={{
         flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 10, paddingHorizontal: 12,
         height: 44, flexGrow: 1, flexBasis: 0, marginRight: 7, marginLeft: 16, minWidth: 280, borderWidth: 1, borderColor: '#e5e7eb',
       }}
     >
       <Search color="#6B7280" size={20} />
-      <View style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder="Search for products..."
-          style={{ flex: 1, marginLeft: 8, color: '#111827', paddingVertical: 0 }}
-          placeholderTextColor="#6B7280"
-        />
-      </View>
-    </View>
+      <Text
+        style={{ flex: 1, marginLeft: 8, color: '#6B7280', fontSize: 14 }}
+      >
+        Search for products...
+      </Text>
+    </Pressable>
   );
 
   const rightIconsBlue = (
