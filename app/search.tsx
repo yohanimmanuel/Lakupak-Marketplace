@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -41,7 +41,10 @@ export default function SearchScreen() {
 
   // Get all products for categories
   const { products: allProducts } = useDataStore();
-  const dynamicCategories = generateDynamicCategories(allProducts);
+  const dynamicCategories = useMemo(
+    () => generateDynamicCategories(allProducts),
+    [allProducts]
+  );
 
   // Search state
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -67,34 +70,12 @@ export default function SearchScreen() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
 
-  // Load recent searches on mount
-  useEffect(() => {
-    loadRecentSearches();
-  }, []);
-
-  // Handle initial query from URL params
-  useEffect(() => {
-    if (params.q && typeof params.q === 'string') {
-      setSearchQuery(params.q);
-      setActiveQuery(params.q);
-      performSearch(params.q, 'All', 'relevance', 1);
-    }
-  }, [params.q]);
-
-  // Auto-focus input on mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const loadRecentSearches = async () => {
+  const loadRecentSearches = useCallback(async () => {
     const searches = await getRecentSearches();
     setRecentSearches(searches);
-  };
+  }, []);
 
-  const performSearch = async (
+  const performSearch = useCallback(async (
     query: string,
     category: string = selectedCategory,
     sort: string = selectedSort,
@@ -146,10 +127,17 @@ export default function SearchScreen() {
       setActiveQuery(query);
 
       // Extract unique categories from results
-      const categories = Array.from(
+      const newPageCategories = Array.from(
         new Set(sortedProducts.map(p => p.category).filter(Boolean))
       );
-      setAvailableCategories(categories);
+      
+      if (append) {
+        // Merge new categories with existing ones when paginating
+        setAvailableCategories(prev => Array.from(new Set([...prev, ...newPageCategories])));
+      } else {
+        // Replace categories when starting a new search
+        setAvailableCategories(newPageCategories);
+      }
 
       // Save to recent searches (only on first page)
       if (page === 1) {
@@ -168,7 +156,30 @@ export default function SearchScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedCategory, selectedSort, token, loadRecentSearches, router]);
+
+  // Load recent searches on mount
+  useEffect(() => {
+    loadRecentSearches();
+  }, [loadRecentSearches]);
+
+  // Handle initial query from URL params
+  useEffect(() => {
+    if (params.q && typeof params.q === 'string') {
+      setSearchQuery(params.q);
+      setActiveQuery(params.q);
+      performSearch(params.q, 'All', 'relevance', 1);
+    }
+  }, [params.q]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  // Auto-focus input on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
