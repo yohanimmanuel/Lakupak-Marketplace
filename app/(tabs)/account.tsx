@@ -178,20 +178,6 @@ export default function AccountScreen() {
               </View>
             </Pressable>
           </Link>
-          <View style={{ flexDirection: 'row' }}>
-            <Link href="/useraccounts/userprofile/following" asChild>
-              <Pressable style={{ flexDirection: 'row', alignItems: 'baseline', marginRight: 18 }}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>120</Text>
-                <Text style={{ marginLeft: 6, color: '#6B7280' }}>Following</Text>
-              </Pressable>
-            </Link>
-            <Link href="/useraccounts/userprofile/followers" asChild>
-              <Pressable style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>340</Text>
-                <Text style={{ marginLeft: 6, color: '#6B7280' }}>Followers</Text>
-              </Pressable>
-            </Link>
-          </View>
         </View>
       );
     } else {
