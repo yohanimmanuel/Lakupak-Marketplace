@@ -7,9 +7,11 @@ import {
   Dimensions,
   ScrollView,
   Image,
+  Pressable,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { CheckCircle, Home, Package } from 'lucide-react-native';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CheckCircle, Home, Package, ArrowLeft } from 'lucide-react-native';
 import { formatCurrency } from '../utils/currencyUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -23,7 +25,9 @@ type PaymentSuccessParams = {
 
 export default function PaymentSuccessScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<PaymentSuccessParams>();
+  const primaryBlue = '#0a61d7';
   
   const orderId = params.orderId || '';
   const totalAmount = parseFloat(params.totalAmount || '0');
@@ -41,6 +45,21 @@ export default function PaymentSuccessScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                <Pressable onPress={() => router.back()} hitSlop={10}>
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </Pressable>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Payment Success</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Header Section */}

@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft } from 'lucide-react-native';
 
 export default function CommunityRulesModal() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const primaryBlue = '#0a61d7';
   const [activeTab, setActiveTab] = useState<'overview' | 'dos' | 'donts' | 'summary'>('overview');
 
   const TabButton = ({ id, title }: { id: typeof activeTab; title: string }) => (
@@ -222,6 +228,21 @@ export default function CommunityRulesModal() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                <Pressable onPress={() => router.back()} hitSlop={10}>
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </Pressable>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Community Rules</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
       {/* Sticky Tabs */}
       <View style={{ 
         flexDirection: 'row', 

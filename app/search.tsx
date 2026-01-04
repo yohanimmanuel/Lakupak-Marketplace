@@ -5,12 +5,12 @@ import {
   TextInput,
   Pressable,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Search as SearchIcon, X } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
@@ -24,9 +24,11 @@ import {
   removeRecentSearch,
   clearRecentSearches,
 } from '../utils/searchStorage';
-import { generateDynamicCategories } from '../utils/categoryUtils';
+import { generateDynamicCategories, generateTopBrands, generateTopDistributors } from '../utils/categoryUtils';
 import RecentSearches from './components/searchengine/RecentSearches';
 import PopularCategories from './components/searchengine/PopularCategories';
+import TopBrands from './components/searchengine/TopBrands';
+import TopDistributors from './components/searchengine/TopDistributors';
 import SearchResults from './components/searchengine/SearchResults';
 import SearchSuggestions from './components/searchengine/SearchSuggestions';
 import { Product } from '../data/sampleProducts';
@@ -39,10 +41,18 @@ export default function SearchScreen() {
   const { toggleLikedProduct } = useUserActivityStore();
   const likedProducts = useUserActivityStore(state => state.likedProducts);
 
-  // Get all products for categories
+  // Get all products for categories and brands
   const { products: allProducts } = useDataStore();
   const dynamicCategories = useMemo(
     () => generateDynamicCategories(allProducts),
+    [allProducts]
+  );
+  const topBrands = useMemo(
+    () => generateTopBrands(allProducts),
+    [allProducts]
+  );
+  const topDistributors = useMemo(
+    () => generateTopDistributors(allProducts),
     [allProducts]
   );
 
@@ -69,6 +79,7 @@ export default function SearchScreen() {
   // Debounce timer
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
+  const isDistributorSearchRef = useRef(false);
 
   const loadRecentSearches = useCallback(async () => {
     const searches = await getRecentSearches();
@@ -102,8 +113,29 @@ export default function SearchScreen() {
         token: token || undefined,
       });
 
+      // Filter results by company/distributor name if query matches a distributor name
+      let filteredProducts = result.products;
+      const queryLower = query.trim().toLowerCase();
+      const matchingDistributor = topDistributors.find(d => d.name.toLowerCase().trim() === queryLower);
+      
+      if (matchingDistributor) {
+        // If query matches a distributor name, filter by company name
+        filteredProducts = result.products.filter(product => {
+          const companyName = product.seller?.company?.name?.toLowerCase().trim();
+          return companyName === queryLower;
+        });
+        
+        // If no API results match, fall back to client-side filtering
+        if (filteredProducts.length === 0) {
+          filteredProducts = allProducts.filter(product => {
+            const companyName = product.seller?.company?.name?.toLowerCase().trim();
+            return companyName === queryLower;
+          });
+        }
+      }
+
       // Sort results based on selected sort option
-      let sortedProducts = [...result.products];
+      let sortedProducts = [...filteredProducts];
       if (sort === 'price_low') {
         sortedProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
       } else if (sort === 'price_high') {
@@ -121,9 +153,11 @@ export default function SearchScreen() {
         setSearchResults(sortedProducts);
       }
 
-      setTotalCount(result.pagination.totalCount);
+      // Use filtered count if we filtered by distributor
+      const finalTotalCount = matchingDistributor ? sortedProducts.length : result.pagination.totalCount;
+      setTotalCount(finalTotalCount);
       setCurrentPage(page);
-      setHasMore(page < result.pagination.totalPages);
+      setHasMore(matchingDistributor ? false : page < result.pagination.totalPages);
       setActiveQuery(query);
 
       // Extract unique categories from results
@@ -156,7 +190,7 @@ export default function SearchScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedCategory, selectedSort, token, loadRecentSearches, router]);
+  }, [selectedCategory, selectedSort, token, loadRecentSearches, router, topDistributors, allProducts]);
 
   // Load recent searches on mount
   useEffect(() => {
@@ -165,21 +199,15 @@ export default function SearchScreen() {
 
   // Handle initial query from URL params
   useEffect(() => {
-    if (params.q && typeof params.q === 'string') {
+    if (params.q && typeof params.q === 'string' && !isDistributorSearchRef.current) {
       setSearchQuery(params.q);
       setActiveQuery(params.q);
       performSearch(params.q, 'All', 'relevance', 1);
     }
-  }, [params.q]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Reset the flag after processing
+    isDistributorSearchRef.current = false;
+  }, [params.q, performSearch]);
 
-  // Auto-focus input on mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
@@ -232,7 +260,9 @@ export default function SearchScreen() {
   };
 
   const handleRecentSearchPress = (query: string) => {
+    Keyboard.dismiss();
     setSearchQuery(query);
+    setActiveQuery(query); // Set immediately to prevent suggestions
     setSearchResults([]);
     setTotalCount(0);
     setLoading(true);
@@ -250,11 +280,122 @@ export default function SearchScreen() {
   };
 
   const handleCategoryPress = (categoryName: string) => {
+    Keyboard.dismiss();
     setSearchQuery(categoryName);
+    setActiveQuery(categoryName); // Set immediately to prevent suggestions
     setSearchResults([]);
     setTotalCount(0);
     setLoading(true);
     performSearch(categoryName, 'All', selectedSort, 1);
+  };
+
+  const handleDistributorPress = async (distributorName: string) => {
+    Keyboard.dismiss();
+    setSearchQuery(distributorName);
+    setActiveQuery(distributorName); // Set immediately to prevent suggestions
+    setSearchResults([]);
+    setTotalCount(0);
+    setLoading(true);
+    
+    // Set flag to prevent useEffect from overwriting results
+    isDistributorSearchRef.current = true;
+    
+    try {
+      // First, try API search
+      const result = await marketplaceService.getProducts({
+        search: distributorName.trim(),
+        page: 1,
+        limit: 20,
+        token: token || undefined,
+      });
+
+      // Filter API results to match distributor exactly
+      const filteredResults = result.products.filter(product => {
+        const companyName = product.seller?.company?.name?.toLowerCase().trim();
+        const searchName = distributorName.toLowerCase().trim();
+        return companyName === searchName;
+      });
+
+      if (filteredResults.length > 0) {
+        // Use filtered API results
+        let sortedProducts = [...filteredResults];
+        if (selectedSort === 'price_low') {
+          sortedProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
+        } else if (selectedSort === 'price_high') {
+          sortedProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
+        }
+
+        setSearchResults(sortedProducts);
+        setTotalCount(filteredResults.length);
+        setAvailableCategories(Array.from(new Set(sortedProducts.map(p => p.category).filter(Boolean))));
+        setCurrentPage(1);
+        setHasMore(false);
+      } else {
+        // Fallback to client-side filtering from cached products
+        const cachedFiltered = allProducts.filter(product => {
+          const companyName = product.seller?.company?.name?.toLowerCase().trim();
+          const searchName = distributorName.toLowerCase().trim();
+          return companyName === searchName;
+        });
+
+        if (cachedFiltered.length > 0) {
+          let sortedProducts = [...cachedFiltered];
+          if (selectedSort === 'price_low') {
+            sortedProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
+          } else if (selectedSort === 'price_high') {
+            sortedProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
+          }
+
+          setSearchResults(sortedProducts);
+          setTotalCount(sortedProducts.length);
+          setAvailableCategories(Array.from(new Set(sortedProducts.map(p => p.category).filter(Boolean))));
+          setCurrentPage(1);
+          setHasMore(false);
+        } else {
+          // No results found
+          setSearchResults([]);
+          setTotalCount(0);
+          setAvailableCategories([]);
+          setCurrentPage(1);
+          setHasMore(false);
+        }
+      }
+
+      // Save to recent searches
+      await addRecentSearch(distributorName.trim());
+      await loadRecentSearches();
+
+      // Don't update URL params to avoid triggering useEffect
+      // router.setParams({ q: distributorName.trim() });
+    } catch (error) {
+      // On error, try client-side filtering
+      const cachedFiltered = allProducts.filter(product => {
+        const companyName = product.seller?.company?.name?.toLowerCase().trim();
+        const searchName = distributorName.toLowerCase().trim();
+        return companyName === searchName;
+      });
+
+      if (cachedFiltered.length > 0) {
+        let sortedProducts = [...cachedFiltered];
+        if (selectedSort === 'price_low') {
+          sortedProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
+        } else if (selectedSort === 'price_high') {
+          sortedProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
+        }
+
+        setSearchResults(sortedProducts);
+        setTotalCount(sortedProducts.length);
+        setAvailableCategories(Array.from(new Set(sortedProducts.map(p => p.category).filter(Boolean))));
+      } else {
+        setSearchResults([]);
+        setTotalCount(0);
+        setAvailableCategories([]);
+      }
+      setCurrentPage(1);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCategoryFilter = (category: string) => {
@@ -321,108 +462,116 @@ export default function SearchScreen() {
     [searchResults, toggleLikedProduct]
   );
 
-  const showInitialState = !searchQuery.trim() && !activeQuery && searchResults.length === 0;
-  const showSuggestions = searchQuery.trim() && !activeQuery && searchResults.length === 0;
-  const showResults = activeQuery || searchResults.length > 0;
+  const showInitialState = !searchQuery.trim() && !activeQuery && searchResults.length === 0 && !loading;
+  const showSuggestions = searchQuery.trim() && !activeQuery && searchResults.length === 0 && !loading;
+  const showResults = activeQuery || searchResults.length > 0 || loading;
 
   return (
-    <>
+    <View style={styles.container}>
       <Stack.Screen
         options={{
-          headerShown: false,
+          header: () => (
+            <View style={styles.headerContainer}>
+              <View style={styles.header}>
+                <Pressable onPress={() => router.back()} style={styles.backButton}>
+                  <ArrowLeft color="#0a61d7" size={24} />
+                </Pressable>
+
+                <View style={styles.searchBar}>
+                  <SearchIcon color="#6B7280" size={20} />
+                  <TextInput
+                    ref={inputRef}
+                    value={searchQuery}
+                    onChangeText={handleSearchChange}
+                    onSubmitEditing={handleSearchSubmit}
+                    placeholder="Search for products..."
+                    style={styles.searchInput}
+                    placeholderTextColor="#6B7280"
+                    returnKeyType="search"
+                  />
+                  {searchQuery ? (
+                    <Pressable onPress={handleClearSearch} style={styles.clearButton}>
+                      <X color="#6B7280" size={20} />
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+          ),
         }}
       />
-      <SafeAreaView style={styles.container} edges={['top']}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft color="#0a61d7" size={24} />
-          </Pressable>
 
-          <View style={styles.searchBar}>
-            <SearchIcon color="#6B7280" size={20} />
-            <TextInput
-              ref={inputRef}
-              value={searchQuery}
-              onChangeText={handleSearchChange}
-              onSubmitEditing={handleSearchSubmit}
-              placeholder="Search for products..."
-              style={styles.searchInput}
-              placeholderTextColor="#6B7280"
-              returnKeyType="search"
-            />
-            {searchQuery ? (
-              <Pressable onPress={handleClearSearch} style={styles.clearButton}>
-                <X color="#6B7280" size={20} />
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
-
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      {/* Content */}
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {showInitialState ? (
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
-          <View style={{ flex: 1 }}>
-            {/* Content */}
-            {showInitialState ? (
-              <ScrollView
-                style={styles.content}
-                contentContainerStyle={styles.contentContainer}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-              <RecentSearches
-                searches={recentSearches}
-                onSearchPress={handleRecentSearchPress}
-                onRemoveSearch={handleRemoveRecentSearch}
-                onClearAll={handleClearAllRecentSearches}
-              />
-              <PopularCategories
-                categories={dynamicCategories}
-                onCategoryPress={handleCategoryPress}
-              />
-            </ScrollView>
-          ) : showSuggestions ? (
-            <ScrollView
-              style={styles.content}
-              contentContainerStyle={styles.contentContainer}
-              showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
-            >
-              <SearchSuggestions
-                query={searchQuery}
-                recentSearches={recentSearches}
-                products={allProducts}
-                onSuggestionPress={handleSuggestionPress}
-              />
-            </ScrollView>
-          ) : showResults ? (
-            <SearchResults
-              query={activeQuery}
-              products={searchResults}
-              totalCount={totalCount}
-              loading={loading}
-              refreshing={refreshing}
-              hasMore={hasMore}
-              onProductPress={handleProductPress}
-              onAddToCart={handleAddToCart}
-              onToggleFavorite={handleToggleFavorite}
-              favorites={likedProducts}
-              onRefresh={handleRefresh}
-              onLoadMore={handleLoadMore}
-              onCategoryFilter={handleCategoryFilter}
-              onSortChange={handleSortChange}
-              selectedCategory={selectedCategory}
-              selectedSort={selectedSort}
-              availableCategories={availableCategories}
-            />
-            ) : null}
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </>
+          <RecentSearches
+            searches={recentSearches}
+            onSearchPress={handleRecentSearchPress}
+            onRemoveSearch={handleRemoveRecentSearch}
+            onClearAll={handleClearAllRecentSearches}
+          />
+          <PopularCategories
+            categories={dynamicCategories}
+            onCategoryPress={handleCategoryPress}
+          />
+          <TopBrands
+            brands={topBrands}
+            onBrandPress={handleCategoryPress}
+          />
+          <TopDistributors
+            distributors={topDistributors}
+            onDistributorPress={handleDistributorPress}
+          />
+        </ScrollView>
+      ) : showSuggestions ? (
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          <SearchSuggestions
+            query={searchQuery}
+            recentSearches={recentSearches}
+            products={allProducts}
+            onSuggestionPress={handleSuggestionPress}
+          />
+        </ScrollView>
+      ) : showResults ? (
+        <SearchResults
+          query={activeQuery}
+          products={searchResults}
+          totalCount={totalCount}
+          loading={loading}
+          refreshing={refreshing}
+          hasMore={hasMore}
+          onProductPress={handleProductPress}
+          onAddToCart={handleAddToCart}
+          onToggleFavorite={handleToggleFavorite}
+          favorites={likedProducts}
+          onRefresh={handleRefresh}
+          onLoadMore={handleLoadMore}
+          onCategoryFilter={handleCategoryFilter}
+          onSortChange={handleSortChange}
+          selectedCategory={selectedCategory}
+          selectedSort={selectedSort}
+          availableCategories={availableCategories}
+        />
+      ) : null}
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -431,18 +580,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  headerContainer: {
+    backgroundColor: '#ffffff',
+    paddingTop: 33,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
   },
   backButton: {
     padding: 4,
     marginRight: 8,
+    marginLeft: -4,
   },
   searchBar: {
     flex: 1,
@@ -451,9 +606,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    borderRadius: 10,
+    borderRadius: 22,
     paddingHorizontal: 12,
-    height: 44,
+    height: 40,
+    marginLeft: 4,
   },
   searchInput: {
     flex: 1,
@@ -471,6 +627,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flexGrow: 1,
+    paddingBottom: 20,
   },
 });
 

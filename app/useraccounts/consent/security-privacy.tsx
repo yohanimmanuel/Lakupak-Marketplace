@@ -1,21 +1,31 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft } from 'lucide-react-native';
 
 export default function SecurityPrivacyConsent() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const primaryBlue = '#0a61d7';
   const [activeTab, setActiveTab] = useState<'privacy' | 'terms'>('privacy');
   return (
     <>
-      <Stack.Screen options={{
-        presentation: 'modal',
-        title: 'Security & Privacy',
-        headerShown: true,
-        headerStyle: { backgroundColor: '#ffffff' },
-        headerTitleStyle: { color: '#111827', fontWeight: '700' },
-        headerTintColor: '#0a61d7',
-        headerShadowVisible: true,
-      }} />
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                <Pressable onPress={() => router.back()} hitSlop={10}>
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </Pressable>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Security & Privacy</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
       <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
         {/* Sticky Tabs */}
         <View style={{ paddingHorizontal: 16, paddingTop: 4, backgroundColor: '#ffffff' }}>

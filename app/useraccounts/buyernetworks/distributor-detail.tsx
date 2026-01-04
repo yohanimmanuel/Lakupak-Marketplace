@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, Alert, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Users, MapPin, Phone, Mail, Star, Package, MessageSquare, Store, Calendar, Building2, FileText, Clock } from 'lucide-react-native';
+import { View, Text, ScrollView, Image, Alert, StyleSheet, Pressable } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { Users, MapPin, Phone, Mail, Star, Package, MessageSquare, Store, Calendar, Building2, FileText, Clock, ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { API_BASE_URL } from '../../../services/config';
@@ -51,6 +51,7 @@ interface OrderResponse {
   totalAmount: number;
   storeName?: string;
   userId?: number | null;
+  createdAt?: string;
   orderItems: Array<{ 
     packageQuantity?: number;
     product?: {
@@ -91,6 +92,7 @@ export default function DistributorDetailScreen() {
   const [distributor, setDistributor] = useState<Distributor | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
   const iconGray = '#6B7280';
 
@@ -254,6 +256,26 @@ export default function DistributorDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                <Pressable 
+                  onPress={() => router.back()} 
+                  hitSlop={10}
+                  accessibilityLabel="Go back"
+                  accessibilityRole="button"
+                >
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </Pressable>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 }}>Distributor Details</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
       <ScrollView style={styles.scroll}>
         {distributor.banner ? (
           <Image source={{ uri: distributor.banner }} style={styles.banner} />

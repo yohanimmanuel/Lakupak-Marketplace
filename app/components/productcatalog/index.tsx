@@ -1,6 +1,5 @@
 // Product Catalog Components
 export { default as ProductMarketplace } from './ProductMarketplace';
-export { default as ProductGrid } from './ProductGrid';
 export { default as BuyNowModal } from './BuyNowModal';
 // ProductMarketplaceExample removed - using real data instead
 

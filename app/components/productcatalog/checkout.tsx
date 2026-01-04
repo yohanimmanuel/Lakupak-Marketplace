@@ -13,7 +13,8 @@ import {
   StatusBar,
   Animated,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   ArrowLeft, 
   MapPin, 
@@ -72,7 +73,9 @@ interface DistributorInfo {
 
 export default function CheckoutScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<CheckoutParams>();
+  const primaryBlue = '#0a61d7';
   
   // Get product cache; read auth user directly from auth store (avoids stale user after logout/login)
   const { products } = useDataStore();
@@ -1101,7 +1104,21 @@ useEffect(() => {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
-
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </TouchableOpacity>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Checkout</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
       <ScrollView 
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 100 }} // Add space for sticky bottom bar

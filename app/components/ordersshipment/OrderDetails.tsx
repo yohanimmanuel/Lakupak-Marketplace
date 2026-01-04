@@ -12,6 +12,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CheckCircle,
   Truck,
@@ -31,6 +32,7 @@ import {
   FileText,
   Gift,
   Building2,
+  ArrowLeft,
 } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
@@ -144,6 +146,7 @@ interface OrderDetailsModalProps {
 
 export default function OrderDetailsModal() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const { token, user } = useAuthStore();
   
@@ -1051,8 +1054,30 @@ export default function OrderDetailsModal() {
   // TypeScript assertion that order is not null after the check above
   const orderData = order as Order;
 
+  const primaryBlue = '#0a61d7';
+  
   return (
     <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 44) + 8 }]}>
+              <View style={styles.headerContent}>
+                <TouchableOpacity 
+                  onPress={() => router.back()} 
+                  hitSlop={10}
+                  accessibilityLabel="Go back"
+                  accessibilityRole="button"
+                >
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Order Details</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -1072,6 +1097,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  headerContainer: {
+    backgroundColor: '#ffffff',
+    borderBottomColor: '#e5e7eb',
+    borderBottomWidth: 1,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerTitle: {
+    color: '#111827',
+    fontSize: 20,
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'left',
+    marginLeft: 35,
   },
   loadingContainer: {
     flex: 1,

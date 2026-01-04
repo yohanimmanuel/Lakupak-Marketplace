@@ -58,8 +58,8 @@ export default function TabLayout() {
     <Pressable
       onPress={() => router.push('/search')}
       style={{
-        flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 10, paddingHorizontal: 12,
-        height: 44, flexGrow: 1, flexBasis: 0, marginRight: 7, marginLeft: 16, minWidth: 280, borderWidth: 1, borderColor: '#e5e7eb',
+        flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 22, paddingHorizontal: 12,
+        height: 40, flexGrow: 1, flexBasis: 0, marginRight: 7, marginLeft: 20, minWidth: 280, borderWidth: 1, borderColor: '#e5e7eb',
       }}
     >
       <Search color="#6B7280" size={20} />
@@ -92,7 +92,7 @@ export default function TabLayout() {
   function renderHeaderContent() {
     if (pathname?.endsWith('/categories') || pathname === '/categories') {
       return (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingLeft: 0, paddingRight: 20, paddingVertical: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingLeft: 0, paddingRight: 20, paddingVertical: 16, marginTop: -5 }}>
           {SearchPill}
           {rightIconsBlue}
         </View>
@@ -145,9 +145,10 @@ export default function TabLayout() {
           <View style={{ 
             width: '100%', 
             marginTop: 18, 
-            paddingLeft: 16,
+            paddingLeft: 20,
+            paddingRight: 20,
           }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 10, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: '#e5e7eb' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 22, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: '#e5e7eb' }}>
               <Search color="#6B7280" size={20} />
               <TextInput placeholder="Search for products..." style={{ flex: 1, marginLeft: 8, color: '#111827', paddingVertical: 0 }} placeholderTextColor="#6B7280" />
             </View>

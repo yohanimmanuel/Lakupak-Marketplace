@@ -124,3 +124,66 @@ export const getCategoryIcon = (categoryName: string): string => {
 export const getCategoryColor = (categoryName: string): string => {
   return categoryColorMap[categoryName] || categoryColorMap['Default'];
 };
+
+export interface TopBrand {
+  name: string;
+}
+
+export const generateTopBrands = (products: MarketplaceProduct[]): TopBrand[] => {
+  // Count products by brand
+  const brandCounts: { [key: string]: number } = {};
+  
+  products.forEach(product => {
+    const brand = product.brand?.trim();
+    if (brand && brand !== '' && brand !== 'N/A' && brand !== 'Unknown') {
+      brandCounts[brand] = (brandCounts[brand] || 0) + 1;
+    }
+  });
+
+  // Convert to array and sort by count (descending), then limit to top 8
+  const brands = Object.entries(brandCounts)
+    .map(([name]) => ({ name }))
+    .sort((a, b) => brandCounts[b.name] - brandCounts[a.name])
+    .slice(0, 8);
+
+  return brands;
+};
+
+export interface TopDistributor {
+  name: string;
+  logo: string;
+}
+
+export const generateTopDistributors = (products: MarketplaceProduct[]): TopDistributor[] => {
+  // Count products by distributor (company name)
+  const distributorCounts: { [key: string]: { count: number; logo: string } } = {};
+  
+  products.forEach(product => {
+    const company = product.seller?.company;
+    if (company && company.name && company.name.trim() !== '' && company.name !== 'N/A') {
+      const distributorName = company.name.trim();
+      if (!distributorCounts[distributorName]) {
+        distributorCounts[distributorName] = {
+          count: 0,
+          logo: company.logo || '',
+        };
+      }
+      distributorCounts[distributorName].count += 1;
+      // Use logo if available
+      if (company.logo && !distributorCounts[distributorName].logo) {
+        distributorCounts[distributorName].logo = company.logo;
+      }
+    }
+  });
+
+  // Convert to array and sort by count (descending), then limit to top 8
+  const distributors = Object.entries(distributorCounts)
+    .map(([name, data]) => ({
+      name,
+      logo: data.logo,
+    }))
+    .sort((a, b) => distributorCounts[b.name].count - distributorCounts[a.name].count)
+    .slice(0, 8);
+
+  return distributors;
+};

@@ -1,32 +1,24 @@
-import { useLayoutEffect, useEffect } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { Stack, useRouter } from 'expo-router';
 import { Link } from 'expo-router';
-import { User as UserIcon } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { User as UserIcon, ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
 
 export default function MessagesScreen() {
-  const navigation = useNavigation();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const token = useAuthStore(s => s.token);
   const authUser = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
   
   const isAuthenticated = !!token && !!authUser;
+  const primaryBlue = '#0a61d7';
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      title: 'Messages',
-      headerStyle: { backgroundColor: '#ffffff' },
-      headerTitleStyle: { color: '#111827' },
-      headerTintColor: '#0a61d7',
-      headerBackTitleVisible: false,
-    });
-  }, [navigation]);
 
   const renderLoginPrompt = () => (
     <View style={styles.loginPromptContainer}>
@@ -53,6 +45,21 @@ export default function MessagesScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                <Pressable onPress={() => router.back()} hitSlop={10}>
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </Pressable>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Messages</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
       {isAuthenticated ? (
         <Text style={styles.title}>Messages</Text>
       ) : (

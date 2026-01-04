@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Modal, RefreshControl } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
-import ProductGrid from '../productcatalog/ProductGrid';
+import ProductMarketplace from '../productcatalog/ProductMarketplace';
 import ProductCardSkeleton from './ProductCardSkeleton';
 import { Product } from '../../../data/sampleProducts';
 
@@ -64,13 +64,6 @@ export default function SearchResults({
 
   return (
     <View style={styles.container}>
-      {/* Results Header */}
-      <View style={styles.header}>
-        <Text style={styles.resultCount}>
-          {totalCount} {totalCount === 1 ? 'result' : 'results'} for "{query}"
-        </Text>
-      </View>
-
       {/* Filter and Sort Controls */}
       <View style={styles.controls}>
         {/* Category Filter */}
@@ -97,8 +90,39 @@ export default function SearchResults({
       </View>
 
       {/* Product Grid */}
-      <View style={styles.productsSection}>
-        {loading ? (
+      <ScrollView
+        style={styles.productsSection}
+        contentContainerStyle={styles.productsScrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#0a61d7"
+            colors={["#0a61d7"]}
+          />
+        }
+        onScroll={(event) => {
+          const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+          const paddingToBottom = 20;
+          if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+            if (hasMore && !loading) {
+              onLoadMore();
+            }
+          }
+        }}
+        scrollEventThrottle={400}
+      >
+        {/* Result Counter */}
+        <View style={styles.resultCounterContainer}>
+          <Text style={styles.resultCount}>
+            {totalCount} {totalCount === 1 ? 'result' : 'results'} for "{query}"
+          </Text>
+        </View>
+
+        {loading && products.length === 0 ? (
           <View style={styles.skeletonContainer}>
             <View style={styles.skeletonRow}>
               <ProductCardSkeleton />
@@ -121,22 +145,44 @@ export default function SearchResults({
             </Text>
           </View>
         ) : (
-          <ProductGrid
-            products={products}
-            onProductPress={onProductPress}
+          <View key={query} style={styles.productsContainer}>
+            <View style={styles.leftColumn}>
+              {products.filter((_, index) => index % 2 === 0).map((product) => (
+                <View key={product.id} style={styles.productItem}>
+                  <ProductMarketplace
+                    product={product}
+                    onPress={onProductPress}
+                    onAddToCart={onAddToCart}
+                    onBuyNow={() => {}}
+                    onChatSeller={() => {}}
+                    onShare={() => {}}
+                    onToggleFavorite={onToggleFavorite}
+                    isFavorite={favorites.includes(product.id)}
+                    type="card"
+                  />
+                </View>
+              ))}
+            </View>
+            <View style={styles.rightColumn}>
+              {products.filter((_, index) => index % 2 === 1).map((product) => (
+                <View key={product.id} style={styles.productItem}>
+                  <ProductMarketplace
+                    product={product}
+                    onPress={onProductPress}
             onAddToCart={onAddToCart}
+                    onBuyNow={() => {}}
+                    onChatSeller={() => {}}
+                    onShare={() => {}}
             onToggleFavorite={onToggleFavorite}
-            favorites={favorites}
-            onRefresh={onRefresh}
-            onLoadMore={onLoadMore}
-            loading={loading}
-            refreshing={refreshing}
-            hasMore={hasMore}
-            emptyMessage="No products found"
-                backgroundColor="#f9fafb"
+                    isFavorite={favorites.includes(product.id)}
+                    type="card"
           />
-        )}
+                </View>
+              ))}
       </View>
+          </View>
+        )}
+      </ScrollView>
 
       {/* Category Filter Modal */}
       <Modal
@@ -253,26 +299,26 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  header: {
-    backgroundColor: '#ffffff',
+  resultCounterContainer: {
+    backgroundColor: '#f9fafb',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    paddingBottom: 16,
+    paddingTop: 16,
   },
   resultCount: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#000000',
+    fontWeight: '700',
   },
   controls: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    marginTop: -12,
     backgroundColor: '#ffffff',
+    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
-    gap: 8,
   },
   filterButton: {
     flex: 1,
@@ -284,7 +330,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    borderRadius: 8,
+    borderRadius: 22,
   },
   filterButtonText: {
     flex: 1,
@@ -297,8 +343,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f9fafb',
   },
-  skeletonContainer: {
+  productsScrollContent: {
+    paddingBottom: 20,
+  },
+  productsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 18,
+    backgroundColor: '#f9fafb',
+    gap: 14,
+  },
+  leftColumn: {
     flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  rightColumn: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  productItem: {
+    marginBottom: 4,
+    backgroundColor: '#f9fafb',
+  },
+  skeletonContainer: {
     paddingHorizontal: 16,
     paddingTop: 16,
   },
@@ -308,7 +374,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,

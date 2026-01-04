@@ -349,7 +349,7 @@ function RootLayoutNav() {
         <Stack.Screen 
           name="search" 
           options={{ 
-            headerShown: false,
+            headerShown: true,
             contentStyle: { backgroundColor: '#ffffff' }
           }} 
         />

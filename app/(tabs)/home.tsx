@@ -58,9 +58,9 @@ import { generateDynamicCategories } from '../../utils/categoryUtils';
 
 // Header constants
 const HEADER_VISUAL_HEIGHT = 220; // Visual height of the blue header (taller for rounded corners)
-const MAX_HEADER_HEIGHT = 165; // Content area initial position
-const MIN_HEADER_HEIGHT = 110; // Search bar area with proper top padding
-const SCROLL_DISTANCE = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT; // 50
+const MAX_HEADER_HEIGHT = 154; // Content area initial position
+const MIN_HEADER_HEIGHT = 99; // Search bar area with proper top padding
+const SCROLL_DISTANCE = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT; // 55
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -306,7 +306,7 @@ export default function HomeScreen() {
         {/* Search bar - stays fixed, moves up slightly to stick at top */}
         <Animated.View style={{ 
           position: 'absolute',
-          top: 105,
+          top: 100,
           left: 16,
           right: 16,
           transform: [{ translateY: searchBarTranslateY }]
@@ -316,9 +316,9 @@ export default function HomeScreen() {
               flexDirection: 'row', 
               alignItems: 'center', 
               backgroundColor: '#ffffff', 
-              borderRadius: 10, 
+              borderRadius: 22, 
               paddingHorizontal: 12, 
-              height: 44,
+              height: 40,
               borderWidth: 1,
               borderColor: '#e5e7eb',
             }}>
@@ -576,9 +576,9 @@ const styles = StyleSheet.create({
   },
   productsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     backgroundColor: '#f9fafb',
-    gap: 8,
+    gap: 14,
   },
   leftColumn: {
     flex: 1,

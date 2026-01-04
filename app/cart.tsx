@@ -10,9 +10,9 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Link } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, MessageSquareText, Minus, Plus, ShoppingBag, Package, Star, Truck, MapPin, ChevronDown, Trash2, User as UserIcon } from 'lucide-react-native';
 import { Product } from '../data/sampleProducts';
 import { MarketplaceProduct, marketplaceService } from '../services/marketplace';
@@ -31,8 +31,9 @@ const { width: screenWidth } = Dimensions.get('window');
 type ProductType = Product | MarketplaceProduct;
 
 export default function CartScreen() {
-  const navigation = useNavigation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const primaryBlue = '#0a61d7';
   
   // Auth store
   const token = useAuthStore(s => s.token);
@@ -60,30 +61,6 @@ export default function CartScreen() {
   
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(null);
-
-  useEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      title: 'Shopping Cart',
-      headerStyle: { backgroundColor: '#f9fafb' },
-      headerTitleStyle: { color: '#111827' },
-      headerTintColor: '#0a61d7',
-      headerBackTitleVisible: false,
-      headerRight: () => (
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => {
-              // Navigate to messages
-              router.push('/messages');
-            }}
-          >
-            <MessageSquareText size={20} color="#111827" />
-          </TouchableOpacity>
-        </View>
-      ),
-    });
-  }, [navigation, router]);
 
   // Clear any test data on mount
   useEffect(() => {
@@ -592,27 +569,101 @@ export default function CartScreen() {
   // Show login prompt when not authenticated
   if (!isAuthenticated) {
     return (
-      <View style={styles.container}>
-        <ScrollView style={styles.scrollView}>
-          {renderLoginPrompt()}
-        </ScrollView>
-      </View>
+      <>
+        <Stack.Screen
+          options={{
+            presentation: 'modal',
+            header: () => (
+              <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                  <Pressable onPress={() => router.back()} hitSlop={10}>
+                    <ArrowLeft color={primaryBlue} size={24} />
+                  </Pressable>
+                  <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Shopping Cart</Text>
+                  <TouchableOpacity
+                    style={{ padding: 8 }}
+                    onPress={() => {
+                      router.push('/messages');
+                    }}
+                  >
+                    <MessageSquareText size={20} color="#111827" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ),
+          }}
+        />
+        <View style={styles.container}>
+          <ScrollView style={styles.scrollView}>
+            {renderLoginPrompt()}
+          </ScrollView>
+        </View>
+      </>
     );
   }
 
   if (cartItems.length === 0) {
     return (
-      <View style={styles.container}>
-        <ScrollView style={styles.scrollView}>
-          {renderEmptyCart()}
-          {renderYouMayAlsoLike()}
-        </ScrollView>
-      </View>
+      <>
+        <Stack.Screen
+          options={{
+            presentation: 'modal',
+            header: () => (
+              <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                  <Pressable onPress={() => router.back()} hitSlop={10}>
+                    <ArrowLeft color={primaryBlue} size={24} />
+                  </Pressable>
+                  <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Shopping Cart</Text>
+                  <TouchableOpacity
+                    style={{ padding: 8 }}
+                    onPress={() => {
+                      router.push('/messages');
+                    }}
+                  >
+                    <MessageSquareText size={20} color="#111827" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ),
+          }}
+        />
+        <View style={styles.container}>
+          <ScrollView style={styles.scrollView}>
+            {renderEmptyCart()}
+            {renderYouMayAlsoLike()}
+          </ScrollView>
+        </View>
+      </>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <>
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                <Pressable onPress={() => router.back()} hitSlop={10}>
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </Pressable>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Shopping Cart</Text>
+                <TouchableOpacity
+                  style={{ padding: 8 }}
+                  onPress={() => {
+                    router.push('/messages');
+                  }}
+                >
+                  <MessageSquareText size={20} color="#111827" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ),
+        }}
+      />
+      <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         {cartItems.map(renderCartItem)}
         {renderYouMayAlsoLike()}
@@ -680,7 +731,8 @@ export default function CartScreen() {
         onConfirm={handleBuyNow}
         mode="cart"
       />
-    </View>
+      </View>
+    </>
   );
 }
 

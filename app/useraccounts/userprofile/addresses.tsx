@@ -1,19 +1,23 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { Plus, Trash2, Circle, CheckCircle2 } from 'lucide-react-native';
-import { Link } from 'expo-router';
+import { Stack, Link, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { getMarketplaceAddresses, deleteMarketplaceAddress, MobileAddress } from '../../../services/user';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 
 type Address = MobileAddress
 
 export default function AddressesList() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const primaryBlue = '#0a61d7';
   const token = useAuthStore(s => s.token) as string | null;
   const [list, setList] = useState<Address[]>([]);
   const [deleteMode, setDeleteMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
-  const navigation = useNavigation()
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -34,21 +38,6 @@ export default function AddressesList() {
     }, [token])
   )
 
-  React.useLayoutEffect?.(() => {
-    navigation.setOptions?.({
-      headerRight: () => (
-        deleteMode ? (
-          <Pressable onPress={() => { setDeleteMode(false); setSelectedIds(new Set()) }} style={{ paddingVertical: 6, paddingHorizontal: 8 }}>
-            <Text style={{ color: '#0a61d7', fontWeight: '700' }}>Undo</Text>
-          </Pressable>
-        ) : (
-          <Pressable onPress={() => { setDeleteMode(true) }} style={{ padding: 8 }}>
-            <Trash2 color="#ef4444" size={18} />
-          </Pressable>
-        )
-      ),
-    })
-  }, [navigation, deleteMode])
 
   const toggleSelect = (id: number) => {
     setSelectedIds(prev => {
@@ -75,8 +64,33 @@ export default function AddressesList() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-      <ScrollView contentContainerStyle={{ padding: 16 }}>
+    <>
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                <Pressable onPress={() => router.back()} hitSlop={10}>
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </Pressable>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>My Addresses</Text>
+                {deleteMode ? (
+                  <Pressable onPress={() => { setDeleteMode(false); setSelectedIds(new Set()) }} style={{ paddingVertical: 6, paddingHorizontal: 8 }}>
+                    <Text style={{ color: '#0a61d7', fontWeight: '700' }}>Undo</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable onPress={() => { setDeleteMode(true) }} style={{ padding: 8 }}>
+                    <Trash2 color="#ef4444" size={18} />
+                  </Pressable>
+                )}
+              </View>
+            </View>
+          ),
+        }}
+      />
+      <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+        <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ color: '#6B7280', marginBottom: 8 }}>Address</Text>
         {(list || []).map((a) => (
           <View key={a.id} style={{ borderWidth: 1, borderColor: selectedIds.has(a.id) && deleteMode ? '#0a61d7' : '#e5e7eb', backgroundColor: selectedIds.has(a.id) && deleteMode ? '#0a61d70d' : '#ffffff', borderRadius: 12, padding: 14, marginBottom: 12 }}>
@@ -122,7 +136,8 @@ export default function AddressesList() {
           </Pressable>
         </View>
       )}
-    </View>
+      </View>
+    </>
   );
 }
 

@@ -1,25 +1,14 @@
-import { useLayoutEffect } from 'react';
 import { StyleSheet, View, Text, Pressable, ScrollView } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
-import { Link, useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+import { Stack, Link, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
-  const navigation = useNavigation();
-  const logout = useAuthStore(s => s.logout);
   const router = useRouter();
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      title: 'Settings',
-      headerStyle: { backgroundColor: '#ffffff' },
-      headerTitleStyle: { color: '#111827' },
-      headerTintColor: '#0a61d7',
-      headerBackTitleVisible: false,
-    });
-  }, [navigation]);
+  const insets = useSafeAreaInsets();
+  const primaryBlue = '#0a61d7';
+  const logout = useAuthStore(s => s.logout);
 
   const SectionHeader = ({ title }: { title: string }) => (
     <View style={{ backgroundColor: '#f9fafb', paddingVertical: 10, paddingHorizontal: 16 }}>
@@ -52,8 +41,23 @@ export default function SettingsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-      <ScrollView style={{ flex: 1 }}>
+    <>
+      <Stack.Screen
+        options={{
+          header: () => (
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                <Pressable onPress={() => router.back()} hitSlop={10}>
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </Pressable>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Settings</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
+      <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+        <ScrollView style={{ flex: 1 }}>
         <SectionHeader title="My Account" />
         <Row title="Account & Security" href={{ pathname: '/useraccounts/userprofile/editprofile' }} />
         <Row title="My Addresses" href={{ pathname: '/useraccounts/userprofile/addresses' }} />
@@ -71,6 +75,7 @@ export default function SettingsScreen() {
         </Pressable>
       </View>
     </View>
+    </>
   );
 }
 

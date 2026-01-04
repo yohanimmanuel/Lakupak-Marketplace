@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from 'react-native';
 import ProductMarketplace from './ProductMarketplace';
-import ProductGrid from './ProductGrid';
+
 import Colors from '../../../constants/Colors';
 import { useColorScheme } from '../useColorScheme';
 import { useThemeColor } from '../Themed';
@@ -99,19 +99,6 @@ export default function ProductMarketplaceExample() {
           {sampleProducts.length} products available
         </Text>
       </View>
-
-      {/* Product Grid */}
-      <ProductGrid
-        products={sampleProducts}
-        onProductPress={handleProductPress}
-        onAddToCart={handleAddToCart}
-        onToggleFavorite={handleToggleFavorite}
-        favorites={favorites}
-        onRefresh={handleRefresh}
-        onLoadMore={handleLoadMore}
-        refreshing={refreshing}
-        hasMore={false}
-      />
     </View>
   );
 }

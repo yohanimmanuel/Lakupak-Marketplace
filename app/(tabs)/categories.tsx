@@ -365,9 +365,9 @@ const styles = StyleSheet.create({
   },
   productsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     backgroundColor: '#f9fafb', // Gray background
-    gap: 8, // Space between columns - narrower gap
+    gap: 14, // Space between columns - narrower gap
   },
   leftColumn: {
     flex: 1,

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Dimensions, Pressable } from 'react-native';
 import { Stack, useRouter, useFocusEffect } from 'expo-router';
-import { Heart } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Heart, ArrowLeft } from 'lucide-react-native';
 import { useUserActivityStore } from '../../../stores/userActivityStore';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore } from '../../../stores/cartStore';
@@ -14,6 +15,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export default function FavouritesModal() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { products } = useDataStore();
   const { getLikedProducts, toggleLikedProduct, loadUserActivities, refreshUserActivities } = useUserActivityStore();
   const storeLikedProducts = useUserActivityStore(state => state.likedProducts);
@@ -150,15 +152,25 @@ export default function FavouritesModal() {
     );
   };
 
+  const primaryBlue = '#0a61d7';
+  
   return (
     <View style={[styles.container, { backgroundColor: '#f9fafb' }]}>
-      <Stack.Screen options={{
-        presentation: 'modal',
-        title: 'Favourites',
-        headerStyle: { backgroundColor: '#ffffff' },
-        headerTitleStyle: { color: '#111827' },
-        headerTintColor: '#0a61d7',
-      }} />
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+                <Pressable onPress={() => router.back()} hitSlop={10}>
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </Pressable>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Favourites</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
       
       <ScrollView style={styles.scrollView}>
 
@@ -226,7 +238,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    marginTop: 16,
+    paddingTop: 14,
   },
   header: {
     padding: 20,
