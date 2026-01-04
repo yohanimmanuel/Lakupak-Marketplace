@@ -16,41 +16,45 @@ const { width: screenWidth } = Dimensions.get('window');
 export default function BuyAgainModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { products } = useDataStore();
-  const { getOrderedProducts, toggleLikedProduct, loadUserActivities, refreshUserActivities } = useUserActivityStore();
+  const { products, orders, loadOrdersData } = useDataStore();
+  const { toggleLikedProduct } = useUserActivityStore();
   const storeLikedProducts = useUserActivityStore(state => state.likedProducts);
-  const storeOrderedProducts = useUserActivityStore(state => state.orderedProducts);
   const { addItem } = useCartStore();
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   
   const [orderedProducts, setOrderedProducts] = useState<MarketplaceProduct[]>([]);
 
-  // Load user activities when component mounts
+  // Load orders when component mounts
   useEffect(() => {
-    if (user?.id) {
-      loadUserActivities(user.id);
+    if (user?.id && token) {
+      loadOrdersData(false);
     }
-  }, [user?.id, loadUserActivities]);
+  }, [user?.id, token, loadOrdersData]);
 
-  // Refresh data when page comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      if (user?.id) {
-        refreshUserActivities();
-      }
-    }, [user?.id, refreshUserActivities])
-  );
-
-  // Update products immediately when store changes
-  // getOrderedProducts is a stable function from Zustand store, so it's safe to include
-  // storeOrderedProducts is included to trigger recalculation when ordered products change
+  // Extract ordered products from orders
   useEffect(() => {
-    const ordered = getOrderedProducts(products);
-    setOrderedProducts(ordered);
-  }, [products, getOrderedProducts, storeOrderedProducts]); // storeOrderedProducts triggers when store updates
+    if (orders.length > 0 && products.length > 0) {
+      // Get unique product IDs from orders
+      const orderProductIds = orders.flatMap(order => 
+        (order.orderItems || []).map(item => item.productId).filter(Boolean) as string[]
+      );
+      const uniqueOrderProductIds = Array.from(new Set(orderProductIds));
+      
+      // Match with products from store
+      const matchedProducts = uniqueOrderProductIds
+        .map(productId => products.find(p => p.id === productId))
+        .filter((product): product is MarketplaceProduct => product !== undefined);
+      
+      setOrderedProducts(matchedProducts);
+    } else {
+      setOrderedProducts([]);
+    }
+  }, [orders, products]);
 
   // Get related products from websocket-enabled products store
   const relatedProducts = React.useMemo(() => {
+    if (products.length === 0) return [];
+    
     const orderedProductIds = orderedProducts.map((p: MarketplaceProduct) => p.id);
     return products
       .filter(p => !orderedProductIds.includes(p.id))
