@@ -26,6 +26,7 @@ import { websocketService } from '../../../services/websocket';
 import { useDataStore, MarketplaceOrder } from '../../../stores/dataStore';
 import MapComponent from './MapComponent';
 import { geocodeAddress, GeocodeResult, getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
+import ProductImageModal from '../productcatalog/ProductImageModal';
 
 const { width } = Dimensions.get('window');
 
@@ -76,6 +77,7 @@ interface DeliveryOrder {
   assignedLogistics?: string;
   trackingNumber?: string;
   deliveryNote?: string;
+  pod?: string | null;
   orderDate?: string;
   createdAt: string;
   updatedAt: string;
@@ -92,6 +94,7 @@ export default function DeliveryInformation() {
   const [isLoading, setIsLoading] = useState(true);
   const [geocodeResult, setGeocodeResult] = useState<GeocodeResult | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [showPodModal, setShowPodModal] = useState(false);
 
   useEffect(() => {
     if (orderId) {
@@ -468,8 +471,11 @@ export default function DeliveryInformation() {
                   ]}>
                     {item.status}
                   </Text>
-                  {item.isLatest && item.id === 'delivered' && (
-                    <TouchableOpacity style={styles.proofButton}>
+                  {item.isLatest && item.id === 'delivered' && order?.pod && (
+                    <TouchableOpacity 
+                      style={styles.proofButton}
+                      onPress={() => setShowPodModal(true)}
+                    >
                       <Text style={styles.proofButtonText}>View Proof of Delivery</Text>
                     </TouchableOpacity>
                   )}
@@ -603,6 +609,16 @@ export default function DeliveryInformation() {
           {renderTimeline()}
         </View>
       </ScrollView>
+
+      {/* Proof of Delivery Modal */}
+      {order?.pod && (
+        <ProductImageModal
+          visible={showPodModal}
+          images={[order.pod]}
+          onClose={() => setShowPodModal(false)}
+          initialIndex={0}
+        />
+      )}
     </View>
   );
 }
