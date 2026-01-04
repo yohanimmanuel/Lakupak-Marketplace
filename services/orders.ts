@@ -21,12 +21,12 @@ export interface OrderItem {
   offerNameSnapshot?: string;
   promotionDetailsSnapshot?: string;
   variantNameSnapshot?: string;
-  productNameSnapshot?: string;
-  productSkuSnapshot?: string;
-  productTypeSnapshot?: string;
-  originalPriceSnapshot?: string;
-  discountPercentage?: number;
-  discountAmount?: number;
+    productNameSnapshot?: string;
+    productSkuSnapshot?: string;
+    productTypeSnapshot?: string;
+    originalPriceSnapshot?: number;
+    discountPercentage?: number;
+    discountAmount?: number;
   moqSnapshot?: number;
   product?: {
     userId?: number | null;

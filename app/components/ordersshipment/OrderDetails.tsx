@@ -65,7 +65,7 @@ interface OrderItem {
     freeQuantity: number;
   };
   promotionDetailsSnapshot?: string;
-  originalPriceSnapshot?: string;
+  originalPriceSnapshot?: number;
 }
 
 interface ShippingInfo {
@@ -558,12 +558,12 @@ export default function OrderDetailsModal() {
     // Filter products into discounted and non-discounted groups
     const discountedItems = orderData.orderItems?.filter((item: OrderItem) => 
       item.originalPriceSnapshot && 
-      parseFloat(item.originalPriceSnapshot) > (item.pricePerPackage || item.unitPrice || 0)
+      item.originalPriceSnapshot > (item.pricePerPackage || item.unitPrice || 0)
     ) || [];
     
     const nonDiscountedItems = orderData.orderItems?.filter((item: OrderItem) => 
       !item.originalPriceSnapshot || 
-      parseFloat(item.originalPriceSnapshot) <= (item.pricePerPackage || item.unitPrice || 0)
+      item.originalPriceSnapshot <= (item.pricePerPackage || item.unitPrice || 0)
     ) || [];
 
     const renderProductItem = (item: OrderItem, index: number) => (
@@ -589,10 +589,10 @@ export default function OrderDetailsModal() {
           <View style={styles.priceRow}>
             <View style={styles.priceContainer}>
               {item.originalPriceSnapshot && 
-                parseFloat(item.originalPriceSnapshot) > (item.pricePerPackage || item.unitPrice) ? (
+                item.originalPriceSnapshot > (item.pricePerPackage || item.unitPrice) ? (
                 <>
                   <Text style={styles.originalPrice}>
-                    {formatCurrency(parseFloat(item.originalPriceSnapshot))}
+                    {formatCurrency(item.originalPriceSnapshot)}
                   </Text>
                   <Text style={styles.discountedPrice}>
                     {formatCurrency(item.pricePerPackage || item.unitPrice)}

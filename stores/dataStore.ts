@@ -23,7 +23,7 @@ export interface MarketplaceOrderItem {
   offerApplied?: boolean
   offerBadgeSnapshot?: string | null
   offerNameSnapshot?: string | null
-  originalPriceSnapshot?: string | null
+  originalPriceSnapshot?: number | null
   discountPercentage?: number | null
   discountAmount?: number | null
   promotionDetailsSnapshot?: string | null
