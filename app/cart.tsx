@@ -574,8 +574,8 @@ export default function CartScreen() {
           options={{
             presentation: 'modal',
             header: () => (
-              <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+              <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 4, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14}}>
                   <Pressable onPress={() => router.back()} hitSlop={10}>
                     <ArrowLeft color={primaryBlue} size={24} />
                   </Pressable>
@@ -586,7 +586,7 @@ export default function CartScreen() {
                       router.push('/messages');
                     }}
                   >
-                    <MessageSquareText size={20} color="#111827" />
+                    <MessageSquareText size={22} color={primaryBlue} hitSlop={10} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -609,8 +609,8 @@ export default function CartScreen() {
           options={{
             presentation: 'modal',
             header: () => (
-              <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+              <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 4, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14 }}>
                   <Pressable onPress={() => router.back()} hitSlop={10}>
                     <ArrowLeft color={primaryBlue} size={24} />
                   </Pressable>
@@ -621,7 +621,7 @@ export default function CartScreen() {
                       router.push('/messages');
                     }}
                   >
-                    <MessageSquareText size={20} color="#111827" />
+                    <MessageSquareText size={22} color={primaryBlue} hitSlop={12} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -644,8 +644,8 @@ export default function CartScreen() {
         options={{
           presentation: 'modal',
           header: () => (
-            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
+            <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 4, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14 }}>
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
@@ -656,7 +656,7 @@ export default function CartScreen() {
                     router.push('/messages');
                   }}
                 >
-                  <MessageSquareText size={20} color="#111827" />
+                  <MessageSquareText size={22} color={primaryBlue} />
                 </TouchableOpacity>
               </View>
             </View>

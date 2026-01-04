@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, MessageSquare, Search, ChevronRight, Star, Package, Truck, CheckCircle, Clock, MapPin, Phone } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft, MessageSquareText, Search, ChevronRight, Star, Package, Truck, CheckCircle, Clock, MapPin, Phone } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { marketplaceService, MarketplaceProduct } from '../../../services/marketplace';
@@ -62,6 +63,7 @@ interface Order {
 export default function MyPurchasesModal() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const token = useAuthStore(s => s.token);
   const authUser = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
@@ -576,7 +578,7 @@ export default function MyPurchasesModal() {
       <Stack.Screen options={{
         presentation: 'modal',
         header: () => (
-          <View style={{ backgroundColor: '#ffffff', paddingTop: 50, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 3 }}>
+          <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
             {/* Standard header row - back, title, message */}
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
               <Pressable onPress={() => router.back()} hitSlop={10}>
@@ -584,7 +586,7 @@ export default function MyPurchasesModal() {
               </Pressable>
               <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>My Purchases</Text>
               <Pressable onPress={() => router.push('/messages')} hitSlop={10}>
-                <MessageSquare color={primaryBlue} size={22} />
+                <MessageSquareText color={primaryBlue} size={22} />
               </Pressable>
             </View>
             
