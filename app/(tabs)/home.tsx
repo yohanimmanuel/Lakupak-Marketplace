@@ -74,11 +74,12 @@ export default function HomeScreen() {
   const user = useAuthStore(s => s.user);
   const isAuthenticated = !!token && !!user;
 
-  // Redirect to welcome if not authenticated - use early return pattern instead of useEffect
-  if (!isAuthenticated) {
-    router.replace('/useraccounts/welcome');
-    return null;
-  }
+  // Redirect to welcome if not authenticated - use useEffect to avoid render-time navigation
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/useraccounts/welcome');
+    }
+  }, [isAuthenticated, router]);
 
   // Data state from cache
   const { 
@@ -246,6 +247,11 @@ export default function HomeScreen() {
     }, 120000); // 2 minutes
     return () => clearInterval(intervalId);
   }, [forceRefreshProducts]);
+
+  // Early return after all hooks to prevent rendering unauthenticated content
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <RNView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
