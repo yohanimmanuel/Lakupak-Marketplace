@@ -74,12 +74,11 @@ export default function HomeScreen() {
   const user = useAuthStore(s => s.user);
   const isAuthenticated = !!token && !!user;
 
-  // Redirect to welcome if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.replace('/useraccounts/welcome');
-    }
-  }, [isAuthenticated, router]);
+  // Redirect to welcome if not authenticated - use early return pattern instead of useEffect
+  if (!isAuthenticated) {
+    router.replace('/useraccounts/welcome');
+    return null;
+  }
 
   // Data state from cache
   const { 

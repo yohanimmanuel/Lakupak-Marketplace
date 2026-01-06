@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -62,19 +62,24 @@ export default function CartScreen() {
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(null);
 
-  // Clear any test data on mount
+  // Clear any test data on mount - use useRef to track if already initialized
+  const hasInitialized = useRef(false);
   useEffect(() => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
+    
     // Initialize cart immediately on app start
     initializeCart();
     
     // Remove any test products that might be in the cart
-    // Note: cartItems and removeItem are from Zustand store (stable references)
-    const testItems = cartItems.filter(item => 
+    // Use current cartItems snapshot to avoid stale closures
+    const currentCartItems = cartStore.items;
+    const testItems = currentCartItems.filter(item => 
       item.product.name === 'Test Product' || 
       item.product.id === 'test-1'
     );
     testItems.forEach(item => removeItem(item.id));
-  }, [initializeCart, removeItem]); // Removed cartItems dependency to prevent rerender loops
+  }, []); // Empty deps - only run once on mount
 
   // Subscribe to WebSocket for real-time cart updates
   useEffect(() => {
@@ -87,14 +92,15 @@ export default function CartScreen() {
       // Refresh cart when products are updated (published/unpublished)
       if (message.type === 'product_updated' || message.type === 'prices_updated') {
         // Reload cart from database to get filtered items (unpublished products removed)
-        loadFromDatabase();
+        // Use store method directly to avoid stale closure issues
+        useCartStore.getState().loadFromDatabase();
       }
     });
 
     return () => {
       unsubscribe();
     };
-  }, [isAuthenticated, token, loadFromDatabase]);
+  }, [isAuthenticated, token]); // loadFromDatabase removed - using store method directly
 
   // Get related products from websocket-enabled products store
   const relatedProducts = React.useMemo(() => {
