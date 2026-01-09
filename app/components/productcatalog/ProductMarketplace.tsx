@@ -111,8 +111,15 @@ export default function ProductMarketplace({
   // Helper function to calculate price range from variant options
   const getPriceRange = (): { min: number; max: number; hasRange: boolean } => {
     if ('variantOptions' in product && product.variantOptions && Array.isArray(product.variantOptions)) {
+      // If offer is not active, use original prices instead of discounted prices
+      const hasActiveOffer = product.hasActiveOffer === true;
       const prices = product.variantOptions
-        .map((vo: { sellingPrice: string | number }) => {
+        .map((vo: { sellingPrice: string | number; originalSellingPrice?: string | number | null }) => {
+          // When offer is not active, prefer originalSellingPrice if available
+          if (!hasActiveOffer && vo.originalSellingPrice && vo.originalSellingPrice !== '') {
+            const price = typeof vo.originalSellingPrice === 'string' ? parseFloat(vo.originalSellingPrice) : vo.originalSellingPrice;
+            return isNaN(price) ? 0 : price;
+          }
           const price = typeof vo.sellingPrice === 'string' ? parseFloat(vo.sellingPrice) : vo.sellingPrice;
           return isNaN(price) ? 0 : price;
         })
@@ -152,6 +159,15 @@ export default function ProductMarketplace({
     const priceRange = getPriceRange();
     if (priceRange.min > 0) {
       return priceRange.min; // Return minimum price for single value display
+    }
+    
+    // If offer is not active, prefer originalSellingPrice if available
+    const hasActiveOffer = product.hasActiveOffer === true;
+    if (!hasActiveOffer) {
+      const originalPrice = getOriginalSellingPrice();
+      if (originalPrice > 0) {
+        return originalPrice;
+      }
     }
     
     const sp = product.sellingPrice;
