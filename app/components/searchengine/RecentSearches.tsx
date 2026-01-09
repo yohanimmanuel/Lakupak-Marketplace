@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { Clock, X } from 'lucide-react-native';
 
 interface RecentSearchesProps {
@@ -7,6 +7,7 @@ interface RecentSearchesProps {
   onSearchPress: (query: string) => void;
   onRemoveSearch: (query: string) => void;
   onClearAll: () => void;
+  isLoading?: boolean;
 }
 
 export default function RecentSearches({
@@ -14,7 +15,22 @@ export default function RecentSearches({
   onSearchPress,
   onRemoveSearch,
   onClearAll,
+  isLoading = false,
 }: RecentSearchesProps) {
+  // Show loading indicator while fetching search history
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Recent Searches</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#0a61d7" />
+        </View>
+      </View>
+    );
+  }
+
   if (searches.length === 0) {
     return null;
   }
@@ -108,6 +124,11 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 4,
     marginLeft: 8,
+  },
+  loadingContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

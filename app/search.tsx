@@ -18,12 +18,7 @@ import { useDataStore } from '../stores/dataStore';
 import { useCartStore } from '../stores/cartStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { marketplaceService, MarketplaceProduct } from '../services/marketplace';
-import {
-  getRecentSearches,
-  addRecentSearch,
-  removeRecentSearch,
-  clearRecentSearches,
-} from '../utils/searchStorage';
+import { searchHistoryService } from '../services/searchHistory';
 import { generateDynamicCategories, generateTopBrands, generateTopDistributors } from '../utils/categoryUtils';
 import RecentSearches from './components/searchengine/RecentSearches';
 import PopularCategories from './components/searchengine/PopularCategories';
@@ -37,6 +32,8 @@ export default function SearchScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const token = useAuthStore(s => s.token);
+  const user = useAuthStore(s => s.user);
+  const userId = user?.id;
   const { addItem } = useCartStore();
   const { toggleLikedProduct } = useUserActivityStore();
   const likedProducts = useUserActivityStore(state => state.likedProducts);
@@ -60,6 +57,7 @@ export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeQuery, setActiveQuery] = useState<string>('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isLoadingSearchHistory, setIsLoadingSearchHistory] = useState(false);
   
   // Results state
   const [searchResults, setSearchResults] = useState<MarketplaceProduct[]>([]);
@@ -80,11 +78,26 @@ export default function SearchScreen() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<TextInput>(null);
   const isDistributorSearchRef = useRef(false);
+  const isClearingRef = useRef(false);
 
   const loadRecentSearches = useCallback(async () => {
-    const searches = await getRecentSearches();
-    setRecentSearches(searches);
-  }, []);
+    if (!userId) {
+      setRecentSearches([]);
+      setIsLoadingSearchHistory(false);
+      return;
+    }
+    
+    setIsLoadingSearchHistory(true);
+    try {
+      const searches = await searchHistoryService.getRecentSearches(userId, 10, token || undefined);
+      setRecentSearches(searches);
+    } catch (error) {
+      console.error('Error loading search history:', error);
+      setRecentSearches([]);
+    } finally {
+      setIsLoadingSearchHistory(false);
+    }
+  }, [userId, token]);
 
   const performSearch = useCallback(async (
     query: string,
@@ -174,8 +187,8 @@ export default function SearchScreen() {
       }
 
       // Save to recent searches (only on first page)
-      if (page === 1) {
-        await addRecentSearch(query.trim());
+      if (page === 1 && userId) {
+        await searchHistoryService.addRecentSearch(userId, query.trim(), token || undefined);
         await loadRecentSearches();
       }
 
@@ -190,23 +203,42 @@ export default function SearchScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedCategory, selectedSort, token, loadRecentSearches, router, topDistributors, allProducts]);
+  }, [selectedCategory, selectedSort, token, userId, loadRecentSearches, router, topDistributors, allProducts]);
 
-  // Load recent searches on mount
+  // Load recent searches on mount and when user changes
+  // Clear immediately when userId changes, then load new data
   useEffect(() => {
-    loadRecentSearches();
-  }, [loadRecentSearches]);
+    // Clear immediately to prevent showing old user's searches when switching accounts
+    setRecentSearches([]);
+    setIsLoadingSearchHistory(false);
+    
+    // Then load the new user's searches
+    if (userId) {
+      loadRecentSearches();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]); // Only depend on userId - loadRecentSearches is stable and depends on userId/token
 
   // Handle initial query from URL params
   useEffect(() => {
-    if (params.q && typeof params.q === 'string' && !isDistributorSearchRef.current) {
-      setSearchQuery(params.q);
-      setActiveQuery(params.q);
-      performSearch(params.q, 'All', 'relevance', 1);
+    // Don't process if we're in the middle of clearing
+    if (isClearingRef.current) {
+      return;
     }
+    
+    // Only process if params.q exists and is different from current query
+    if (params.q && typeof params.q === 'string' && !isDistributorSearchRef.current) {
+      // Only update if the query actually changed
+      if (params.q !== searchQuery) {
+        setSearchQuery(params.q);
+        setActiveQuery(params.q);
+        performSearch(params.q, 'All', 'relevance', 1);
+      }
+    }
+    // Don't auto-clear when params.q is undefined - only clear when explicitly cleared via handleClearSearch
     // Reset the flag after processing
     isDistributorSearchRef.current = false;
-  }, [params.q, performSearch]);
+  }, [params.q, performSearch, searchQuery]);
 
 
   const handleSearchChange = (text: string) => {
@@ -249,6 +281,7 @@ export default function SearchScreen() {
   };
 
   const handleClearSearch = () => {
+    isClearingRef.current = true;
     setSearchQuery('');
     setActiveQuery('');
     setSearchResults([]);
@@ -257,6 +290,10 @@ export default function SearchScreen() {
     setSelectedSort('relevance');
     router.setParams({ q: undefined });
     inputRef.current?.focus();
+    // Reset the flag after a short delay to allow URL params to update
+    setTimeout(() => {
+      isClearingRef.current = false;
+    }, 200);
   };
 
   const handleRecentSearchPress = (query: string) => {
@@ -270,13 +307,27 @@ export default function SearchScreen() {
   };
 
   const handleRemoveRecentSearch = async (query: string) => {
-    await removeRecentSearch(query);
-    await loadRecentSearches();
+    if (!userId) return;
+    // Optimistically update UI - remove from list immediately
+    setRecentSearches(prev => prev.filter(s => s !== query));
+    // Delete in background
+    searchHistoryService.removeRecentSearch(userId, query, token || undefined).catch(error => {
+      console.error('Error removing search history:', error);
+      // Reload on error to sync with server
+      loadRecentSearches();
+    });
   };
 
   const handleClearAllRecentSearches = async () => {
-    await clearRecentSearches();
-    await loadRecentSearches();
+    if (!userId) return;
+    // Optimistically update UI - clear immediately
+    setRecentSearches([]);
+    // Clear in background
+    searchHistoryService.clearRecentSearches(userId, token || undefined).catch(error => {
+      console.error('Error clearing search history:', error);
+      // Reload on error to sync with server
+      loadRecentSearches();
+    });
   };
 
   const handleCategoryPress = (categoryName: string) => {
@@ -291,14 +342,14 @@ export default function SearchScreen() {
 
   const handleDistributorPress = async (distributorName: string) => {
     Keyboard.dismiss();
+    // Set flag to prevent useEffect from overwriting results
+    isDistributorSearchRef.current = true;
+    
     setSearchQuery(distributorName);
     setActiveQuery(distributorName); // Set immediately to prevent suggestions
     setSearchResults([]);
     setTotalCount(0);
     setLoading(true);
-    
-    // Set flag to prevent useEffect from overwriting results
-    isDistributorSearchRef.current = true;
     
     try {
       // First, try API search
@@ -362,11 +413,19 @@ export default function SearchScreen() {
       }
 
       // Save to recent searches
-      await addRecentSearch(distributorName.trim());
-      await loadRecentSearches();
+      if (userId) {
+        await searchHistoryService.addRecentSearch(userId, distributorName.trim(), token || undefined);
+        await loadRecentSearches();
+      }
 
-      // Don't update URL params to avoid triggering useEffect
-      // router.setParams({ q: distributorName.trim() });
+      // Update URL params to show distributor name in search bar
+      // Do this after search completes to avoid triggering useEffect during search
+      router.setParams({ q: distributorName.trim() });
+      
+      // Reset flag after a delay to allow URL params to update
+      setTimeout(() => {
+        isDistributorSearchRef.current = false;
+      }, 100);
     } catch (error) {
       // On error, try client-side filtering
       const cachedFiltered = allProducts.filter(product => {
@@ -393,6 +452,9 @@ export default function SearchScreen() {
       }
       setCurrentPage(1);
       setHasMore(false);
+      
+      // Reset flag in case of error
+      isDistributorSearchRef.current = false;
     } finally {
       setLoading(false);
     }
@@ -520,6 +582,7 @@ export default function SearchScreen() {
             onSearchPress={handleRecentSearchPress}
             onRemoveSearch={handleRemoveRecentSearch}
             onClearAll={handleClearAllRecentSearches}
+            isLoading={isLoadingSearchHistory}
           />
           <PopularCategories
             categories={dynamicCategories}
