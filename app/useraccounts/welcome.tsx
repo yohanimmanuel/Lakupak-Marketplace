@@ -1,9 +1,53 @@
-import React from 'react';
-import { View, Text, Pressable, Image, StyleSheet } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, Pressable, Image, StyleSheet, ScrollView, Dimensions } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { SvgXml } from 'react-native-svg';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+interface Slide {
+  image: any;
+  title: string;
+  description: string;
+}
+
+const slides: Slide[] = [
+  {
+    image: require('../../assets/images/teamonlinework.jpg'),
+    title: 'Connect with Distributors',
+    description: 'Browse thousands of products from verified sellers. Chat directly with sellers, negotiate prices, and build lasting business relationships.',
+  },
+  {
+    image: require('../../assets/images/transitwarehouse.jpg'),
+    title: 'Fast & Reliable Delivery',
+    description: 'Get your orders delivered quickly and safely. Our marketplace connects you with sellers who ensure fast shipping and secure packaging.',
+  },
+  {
+    image: require('../../assets/images/marketplace.jpg'),
+    title: 'Trusted Marketplace',
+    description: 'Shop with confidence from our verified sellers. Our marketplace provides secure transactions, quality products, and excellent customer support.',
+  },
+];
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const handleScroll = (event: any) => {
+    const slideSize = SCREEN_WIDTH;
+    const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
+    setCurrentIndex(index);
+  };
+
+  const scrollToSlide = (index: number) => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({
+        x: index * SCREEN_WIDTH,
+        animated: true,
+      });
+    }
+  };
 
   return (
     <>
@@ -11,26 +55,48 @@ export default function WelcomeScreen() {
         headerShown: false,
       }} />
       
-      <View
-        style={styles.container}
-      >
+      <View style={styles.container}>
         <View style={styles.contentContainer}>
-          {/* Logo Section */}
-          <View style={styles.logoContainer}>
-            <Image 
-              source={require('../../assets/images/LakuMobileLogoWhite.png')} 
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-            <Text style={styles.logoText}>Laku</Text>
-          </View>
 
-          {/* Title Section */}
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>Welcome to Laku Marketplace</Text>
-            <Text style={styles.subtitle}>
-              Your trusted marketplace for buying and selling. Discover amazing products, connect with sellers, and grow your business all in one place.
-            </Text>
+          {/* Image Carousel */}
+          <View style={styles.carouselContainer}>
+            <ScrollView
+              ref={scrollViewRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={handleScroll}
+              scrollEventThrottle={16}
+              style={styles.carousel}
+            >
+              {slides.map((slide, index) => (
+                <View key={index} style={styles.slide}>
+                  <Image 
+                    source={slide.image} 
+                    style={styles.slideImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.slideContent}>
+                    <Text style={styles.slideTitle}>{slide.title}</Text>
+                    <Text style={styles.slideDescription}>{slide.description}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Bullet Indicators */}
+            <View style={styles.paginationContainer}>
+              {slides.map((_, index) => (
+                <Pressable
+                  key={index}
+                  onPress={() => scrollToSlide(index)}
+                  style={[
+                    styles.paginationDot,
+                    currentIndex === index && styles.paginationDotActive,
+                  ]}
+                />
+              ))}
+            </View>
           </View>
         </View>
 
@@ -58,46 +124,89 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a61d7',
+    backgroundColor: '#ffffff',
   },
   contentContainer: {
     flex: 1,
-    paddingHorizontal: 24,
     paddingTop: 60,
     justifyContent: 'center',
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
+    paddingHorizontal: 24,
   },
-  logoImage: {
+  logoImageContainer: {
     width: 80,
     height: 80,
+    borderRadius: 40,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  logoImage: {
+    width: 60,
+    height: 60,
   },
   logoText: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: '800',
+    color: '#0a61d7',
     letterSpacing: 1,
   },
-  titleContainer: {
+  carouselContainer: {
+    marginBottom: 0,
+  },
+  carousel: {
+    flexGrow: 0,
+  },
+  slide: {
+    width: SCREEN_WIDTH,
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
-  title: {
-    fontSize: 24,
+  slideImage: {
+    width: SCREEN_WIDTH - 100,
+    height: 250,
+    borderRadius: 0,
+    marginBottom: 50,
+    backgroundColor: '#ffffff',
+  },
+  slideContent: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  slideTitle: {
+    fontSize: 22,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#111827',
     textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 32,
+    marginBottom: 12,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#e0e7ff',
+  slideDescription: {
+    fontSize: 15,
+    color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
     paddingHorizontal: 8,
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    gap: 8,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D1D5DB',
+  },
+  paginationDotActive: {
+    width: 24,
+    backgroundColor: '#0a61d7',
   },
   buttonContainer: {
     paddingHorizontal: 24,
@@ -113,24 +222,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loginButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#0a61d7',
     borderWidth: 2,
     borderColor: '#0a61d7',
   },
   loginButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0a61d7',
+    color: '#ffffff',
   },
   registerButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#ffffff',
+    borderColor: '#0a61d7',
   },
   registerButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#0a61d7',
   },
 });
 
