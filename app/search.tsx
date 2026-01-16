@@ -79,6 +79,7 @@ export default function SearchScreen() {
   const inputRef = useRef<TextInput>(null);
   const isDistributorSearchRef = useRef(false);
   const isClearingRef = useRef(false);
+  const isManualEditingRef = useRef(false);
 
   const loadRecentSearches = useCallback(async () => {
     if (!userId) {
@@ -226,6 +227,11 @@ export default function SearchScreen() {
       return;
     }
     
+    // Don't process if user is manually editing the search input
+    if (isManualEditingRef.current) {
+      return;
+    }
+    
     // Only process if params.q exists and is different from current query
     if (params.q && typeof params.q === 'string' && !isDistributorSearchRef.current) {
       // Only update if the query actually changed
@@ -242,6 +248,9 @@ export default function SearchScreen() {
 
 
   const handleSearchChange = (text: string) => {
+    // Mark that user is manually editing
+    isManualEditingRef.current = true;
+    
     setSearchQuery(text);
 
     // Clear any pending debounce
@@ -255,12 +264,18 @@ export default function SearchScreen() {
       setTotalCount(0);
       setActiveQuery('');
       setLoading(false);
+      // Clear URL params to prevent useEffect from re-triggering
+      router.setParams({ q: undefined });
+      // Keep isManualEditingRef as true to prevent useEffect from restoring the query
     }
     // Don't perform search here - only show suggestions
   };
 
   const handleSearchSubmit = () => {
     if (searchQuery.trim()) {
+      // Reset manual editing flag when search is submitted
+      isManualEditingRef.current = false;
+      
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
@@ -273,6 +288,7 @@ export default function SearchScreen() {
   };
 
   const handleSuggestionPress = (suggestion: string) => {
+    isManualEditingRef.current = false; // Reset manual editing flag when selecting suggestion
     setSearchQuery(suggestion);
     setSearchResults([]);
     setTotalCount(0);
@@ -282,6 +298,7 @@ export default function SearchScreen() {
 
   const handleClearSearch = () => {
     isClearingRef.current = true;
+    isManualEditingRef.current = false; // Reset manual editing flag when clearing
     setSearchQuery('');
     setActiveQuery('');
     setSearchResults([]);
@@ -298,6 +315,7 @@ export default function SearchScreen() {
 
   const handleRecentSearchPress = (query: string) => {
     Keyboard.dismiss();
+    isManualEditingRef.current = false; // Reset manual editing flag when selecting recent search
     setSearchQuery(query);
     setActiveQuery(query); // Set immediately to prevent suggestions
     setSearchResults([]);
@@ -332,6 +350,7 @@ export default function SearchScreen() {
 
   const handleCategoryPress = (categoryName: string) => {
     Keyboard.dismiss();
+    isManualEditingRef.current = false; // Reset manual editing flag when selecting category
     setSearchQuery(categoryName);
     setActiveQuery(categoryName); // Set immediately to prevent suggestions
     setSearchResults([]);
@@ -344,6 +363,7 @@ export default function SearchScreen() {
     Keyboard.dismiss();
     // Set flag to prevent useEffect from overwriting results
     isDistributorSearchRef.current = true;
+    isManualEditingRef.current = false; // Reset manual editing flag when selecting distributor
     
     setSearchQuery(distributorName);
     setActiveQuery(distributorName); // Set immediately to prevent suggestions
