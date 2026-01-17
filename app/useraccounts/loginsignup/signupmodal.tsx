@@ -150,13 +150,18 @@ export default function SignUpModal() {
           {/* Main Content */}
           <ScrollView 
             style={{ flex: 1, backgroundColor: '#ffffff' }}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 40, paddingBottom: 40 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40 }}
             keyboardShouldPersistTaps="handled"
           >
 
             {/* Initial Welcome Screen */}
             {signupStep === 0 && (
               <View>
+                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Pressable onPress={() => router.push('/useraccounts/welcome')}>
+                     <Image source={require('../../../assets/images/LakuLakuMobileIcon.png')} style={{ width: 135, height: 90 }} />
+                  </Pressable>
+                </View>
                 <View style={{ marginBottom: 32 }}>
                   <Text style={{ color: '#111827', fontSize: 28, fontWeight: '700', marginBottom: 8 }}>
                     Create Account 👋

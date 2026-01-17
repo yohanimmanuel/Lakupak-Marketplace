@@ -247,6 +247,18 @@ export default function SearchScreen() {
   }, [params.q, performSearch, searchQuery]);
 
 
+  const handleSearchFocus = () => {
+    // When search bar is focused, show suggestions (not results)
+    // Clear activeQuery and results, but keep searchQuery
+    if (activeQuery || searchResults.length > 0) {
+      isManualEditingRef.current = true;
+      setActiveQuery('');
+      setSearchResults([]);
+      setTotalCount(0);
+      setLoading(false);
+    }
+  };
+
   const handleSearchChange = (text: string) => {
     // Mark that user is manually editing
     isManualEditingRef.current = true;
@@ -267,6 +279,14 @@ export default function SearchScreen() {
       // Clear URL params to prevent useEffect from re-triggering
       router.setParams({ q: undefined });
       // Keep isManualEditingRef as true to prevent useEffect from restoring the query
+    } else {
+      // When typing, always show suggestions (clear active query if exists)
+      if (activeQuery) {
+        setActiveQuery('');
+        setSearchResults([]);
+        setTotalCount(0);
+        setLoading(false);
+      }
     }
     // Don't perform search here - only show suggestions
   };
@@ -565,6 +585,7 @@ export default function SearchScreen() {
                     ref={inputRef}
                     value={searchQuery}
                     onChangeText={handleSearchChange}
+                    onFocus={handleSearchFocus}
                     onSubmitEditing={handleSearchSubmit}
                     placeholder="Search for products..."
                     style={styles.searchInput}
