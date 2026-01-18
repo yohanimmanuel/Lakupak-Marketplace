@@ -125,9 +125,9 @@ function RootLayoutNav() {
       // Register for push notifications
       const pushToken = await pushNotificationService.registerForPushNotifications();
       
-      // Save token to server if user is logged in
-      if (pushToken && user?.id) {
-        await pushNotificationService.savePushTokenToServer(user.id, pushToken);
+      // Save token to server if user is logged in (auth required by API)
+      if (pushToken && user?.id && token) {
+        await pushNotificationService.savePushTokenToServer(user.id, pushToken, token);
       }
     };
 
@@ -165,7 +165,7 @@ function RootLayoutNav() {
         responseListener.current.remove();
       }
     };
-  }, [user?.id, router]);
+  }, [user?.id, token, router]);
 
   // Reload all data when user logs in or changes (after logout/login)
   useEffect(() => {

@@ -96,14 +96,15 @@ class PushNotificationService {
     }
   }
 
-  // Save push token to server
-  async savePushTokenToServer(userId: number, token: string): Promise<boolean> {
+  // Save push token to server (requires auth token for /api/mobile/push-token)
+  async savePushTokenToServer(userId: number, token: string, authToken?: string): Promise<boolean> {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
       const response = await fetch(`${API_BASE_URL}/api/mobile/push-token`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           userId,
           token,
@@ -118,14 +119,15 @@ class PushNotificationService {
     }
   }
 
-  // Remove push token from server (on logout)
-  async removePushTokenFromServer(token: string): Promise<boolean> {
+  // Remove push token from server on logout (requires auth token for /api/mobile/push-token)
+  async removePushTokenFromServer(token: string, authToken?: string): Promise<boolean> {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
       const response = await fetch(`${API_BASE_URL}/api/mobile/push-token`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({ token }),
       });
 

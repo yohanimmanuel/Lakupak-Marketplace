@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "401644633846",
+    "project_id": "laku-laku",
+    "storage_bucket": "laku-laku.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:401644633846:android:48ff49a7fe0797c107f6d7",
+        "android_client_info": {
+          "package_name": "com.laku.marketplace"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBN0HhV9s2IoYoBp1182Q7D8Syid1TuG0E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
