@@ -23,7 +23,8 @@
         "foregroundImage": "./assets/images/LakuLakuMobile.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -40,6 +41,14 @@
         "@rnmapbox/maps",
         {
           "RNMapboxMapsImpl": "mapbox"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/LakuLakuMobileIcon.png",
+          "color": "#0a61d7",
+          "sounds": []
         }
       ]
     ],

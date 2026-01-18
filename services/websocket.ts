@@ -4,11 +4,18 @@ import { API_BASE_URL } from './config';
 type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
 interface WebSocketMessage {
-  type: 'offer_updated' | 'product_updated' | 'prices_updated' | 'order_updated' | 'ping' | 'pong';
+  type: 'offer_updated' | 'product_updated' | 'prices_updated' | 'order_updated' | 'notification' | 'ping' | 'pong';
   data?: unknown;
   productIds?: string[];
   offerIds?: string[];
   orderIds?: string[];
+  notification?: {
+    type: string;
+    title: string;
+    body: string;
+    data?: Record<string, unknown>;
+    targetUserId?: number;
+  };
 }
 
 type MessageHandler = (message: WebSocketMessage) => void;

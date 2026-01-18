@@ -7,6 +7,8 @@ import { getMe, MobileUser } from '../services/user'
 import { websocketService } from '../services/websocket'
 import { ordersService } from '../services/orders'
 import { useAuthStore } from './authStore'
+import { pushNotificationService } from '../services/pushNotifications'
+import { supabaseRealtimeService } from '../services/supabaseRealtime'
 
 export interface MarketplaceOrderItem {
   productId?: string | null
@@ -362,7 +364,24 @@ export const useDataStore = create<DataState>()(
           clearInterval(pollingInterval)
         }
         
-        // Try WebSocket first (real-time updates)
+        // Start Supabase Realtime for order notifications
+        const authState = useAuthStore.getState()
+        const userId = authState.user?.id
+        if (userId) {
+          // Subscribe to order changes via Supabase Realtime
+          supabaseRealtimeService.subscribeToOrders(userId)
+          
+          // Add callback to refresh orders when they change
+          supabaseRealtimeService.onOrderChange((orderChange) => {
+            const state = get()
+            // Refresh orders to get the latest data
+            if (!state.isOrdersLoading) {
+              state.forceRefreshOrders()
+            }
+          })
+        }
+        
+        // Try WebSocket first (real-time updates) - for product/offer updates
         try {
           websocketService.connect(token)
           
@@ -381,6 +400,27 @@ export const useDataStore = create<DataState>()(
             if (message.type === 'order_updated' && message.orderIds && message.orderIds.length > 0) {
               // Update only the specific orders that changed via WebSocket
               state.updateOrdersFromWebSocket(message.orderIds)
+            }
+
+            // Handle notification messages
+            if (message.type === 'notification' && message.notification) {
+              const { type, title, body, data, targetUserId } = message.notification
+              const authState = useAuthStore.getState()
+              const currentUserId = authState.user?.id
+
+              // Only show notification if it's for this user or for all users
+              if (!targetUserId || targetUserId === currentUserId) {
+                // Show push notification
+                if (type === 'order') {
+                  const orderId = data?.orderId as string
+                  const orderStatus = data?.orderStatus as string
+                  if (orderId && orderStatus) {
+                    pushNotificationService.showOrderNotification(orderId, orderStatus, title, body)
+                  }
+                } else {
+                  pushNotificationService.scheduleLocalNotification(title, body, data as Record<string, unknown>)
+                }
+              }
             }
           })
           
@@ -470,6 +510,9 @@ export const useDataStore = create<DataState>()(
         
         // Disconnect WebSocket
         websocketService.disconnect()
+        
+        // Disconnect Supabase Realtime
+        supabaseRealtimeService.disconnect()
         
         // Unsubscribe from WebSocket messages
         if (websocketUnsubscribe) {

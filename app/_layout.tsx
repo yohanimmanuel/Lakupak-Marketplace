@@ -1,16 +1,18 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import * as Notifications from 'expo-notifications';
 
 import { useColorScheme } from './components/useColorScheme';
 import { useAuthStore } from '../stores/authStore';
 import { useDataStore } from '../stores/dataStore';
 import { useCartStore } from '../stores/cartStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
+import { pushNotificationService } from '../services/pushNotifications';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -51,10 +53,13 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
   const { hydrateFromStorage, token, user } = useAuthStore();
   const { refreshAllData, startAutoRefresh, stopAutoRefresh } = useDataStore();
   const { initializeCart } = useCartStore();
   const { loadUserActivities } = useUserActivityStore();
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+  const responseListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -113,6 +118,54 @@ function RootLayoutNav() {
       startAutoRefresh(token);
     }
   }, [token, startAutoRefresh]);
+
+  // Initialize push notifications
+  useEffect(() => {
+    const initializePushNotifications = async () => {
+      // Register for push notifications
+      const pushToken = await pushNotificationService.registerForPushNotifications();
+      
+      // Save token to server if user is logged in
+      if (pushToken && user?.id) {
+        await pushNotificationService.savePushTokenToServer(user.id, pushToken);
+      }
+    };
+
+    initializePushNotifications();
+
+    // Listen for incoming notifications (when app is in foreground)
+    notificationListener.current = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        // Notification received while app is in foreground
+        // The notification will be shown automatically based on handler config
+        console.log('Notification received:', notification);
+      }
+    );
+
+    // Listen for notification interactions (when user taps notification)
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data;
+        
+        // Navigate based on notification type
+        if (data?.type === 'order' && data?.orderId) {
+          router.push({
+            pathname: '/components/ordersshipment/OrderDetails',
+            params: { orderId: String(data.orderId) },
+          });
+        }
+      }
+    );
+
+    return () => {
+      if (notificationListener.current) {
+        notificationListener.current.remove();
+      }
+      if (responseListener.current) {
+        responseListener.current.remove();
+      }
+    };
+  }, [user?.id, router]);
 
   // Reload all data when user logs in or changes (after logout/login)
   useEffect(() => {

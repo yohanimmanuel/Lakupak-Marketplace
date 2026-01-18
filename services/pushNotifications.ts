@@ -1,0 +1,261 @@
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import { API_BASE_URL } from './config';
+
+// Configure notification handler
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+export interface PushNotificationData {
+  type: 'order' | 'promotion' | 'system';
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+}
+
+class PushNotificationService {
+  private expoPushToken: string | null = null;
+
+  // Request permissions and get push token
+  async registerForPushNotifications(): Promise<string | null> {
+    try {
+      // Check existing permissions
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      // Request permissions if not granted
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        return null;
+      }
+
+      // Get project ID from Constants
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId || 'af69d157-1a15-41d7-90bd-26c05d9fc474';
+
+      // Try to get Expo push token
+      // This may fail if FCM is not configured for Android
+      try {
+        const tokenData = await Notifications.getExpoPushTokenAsync({
+          projectId,
+        });
+        this.expoPushToken = tokenData.data;
+      } catch {
+        // FCM not configured - push notifications won't work but app should continue
+        if (Platform.OS === 'android') {
+          await this.setupAndroidChannels();
+        }
+        return null;
+      }
+
+      // Configure Android notification channels
+      if (Platform.OS === 'android') {
+        await this.setupAndroidChannels();
+      }
+
+      return this.expoPushToken;
+    } catch {
+      return null;
+    }
+  }
+
+  // Setup Android notification channels (can work without FCM for local notifications)
+  private async setupAndroidChannels(): Promise<void> {
+    try {
+      await Notifications.setNotificationChannelAsync('orders', {
+        name: 'Order Updates',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#0a61d7',
+        sound: 'default',
+      });
+
+      await Notifications.setNotificationChannelAsync('promotions', {
+        name: 'Promotions & Offers',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        lightColor: '#10b981',
+      });
+
+      await Notifications.setNotificationChannelAsync('system', {
+        name: 'System Notifications',
+        importance: Notifications.AndroidImportance.LOW,
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  // Save push token to server
+  async savePushTokenToServer(userId: number, token: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/mobile/push-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          token,
+          platform: Platform.OS,
+        }),
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Error saving push token to server:', error);
+      return false;
+    }
+  }
+
+  // Remove push token from server (on logout)
+  async removePushTokenFromServer(token: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/mobile/push-token`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('Error removing push token from server:', error);
+      return false;
+    }
+  }
+
+  // Schedule a local notification (for testing or immediate display)
+  async scheduleLocalNotification(
+    title: string,
+    body: string,
+    data?: Record<string, unknown>,
+    channelId: string = 'orders'
+  ): Promise<string> {
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data,
+        sound: 'default',
+        ...(Platform.OS === 'android' && { channelId }),
+      },
+      trigger: null, // Immediate
+    });
+
+    return notificationId;
+  }
+
+  // Show order status notification
+  async showOrderNotification(
+    orderId: string,
+    orderStatus: string,
+    customTitle?: string,
+    customMessage?: string
+  ): Promise<void> {
+    let title = customTitle || '';
+    let body = customMessage || '';
+
+    if (!customTitle || !customMessage) {
+      switch (orderStatus.toLowerCase()) {
+        case 'pending':
+          title = 'Order Placed';
+          body = `Your order #${orderId} has been placed and is awaiting confirmation.`;
+          break;
+        case 'confirmed':
+          title = 'Order Confirmed';
+          body = `Great news! Your order #${orderId} has been confirmed and is being processed.`;
+          break;
+        case 'packed':
+          title = 'Order Packed';
+          body = `Your order #${orderId} has been packed and is ready for shipping.`;
+          break;
+        case 'shipped':
+          title = 'Order Shipped';
+          body = `Your order #${orderId} is on its way! Track your delivery for updates.`;
+          break;
+        case 'delivered':
+          title = 'Order Delivered';
+          body = `Your order #${orderId} has been delivered. Enjoy your purchase!`;
+          break;
+        case 'cancelled':
+          title = 'Order Cancelled';
+          body = `Your order #${orderId} has been cancelled.`;
+          break;
+        case 'returned':
+          title = 'Order Returned';
+          body = `Your order #${orderId} return has been processed.`;
+          break;
+        default:
+          title = 'Order Update';
+          body = `Your order #${orderId} status has been updated to ${orderStatus}.`;
+      }
+    }
+
+    await this.scheduleLocalNotification(title, body, {
+      type: 'order',
+      orderId,
+      orderStatus,
+    }, 'orders');
+  }
+
+  // Show promotion notification
+  async showPromotionNotification(
+    title: string,
+    message: string,
+    data?: Record<string, unknown>
+  ): Promise<void> {
+    await this.scheduleLocalNotification(title, message, {
+      type: 'promotion',
+      ...data,
+    }, 'promotions');
+  }
+
+  // Add notification response listener
+  addNotificationResponseListener(
+    callback: (response: Notifications.NotificationResponse) => void
+  ): Notifications.EventSubscription {
+    return Notifications.addNotificationResponseReceivedListener(callback);
+  }
+
+  // Add notification received listener (when app is in foreground)
+  addNotificationReceivedListener(
+    callback: (notification: Notifications.Notification) => void
+  ): Notifications.EventSubscription {
+    return Notifications.addNotificationReceivedListener(callback);
+  }
+
+  // Get current push token
+  getPushToken(): string | null {
+    return this.expoPushToken;
+  }
+
+  // Get badge count
+  async getBadgeCount(): Promise<number> {
+    return await Notifications.getBadgeCountAsync();
+  }
+
+  // Set badge count
+  async setBadgeCount(count: number): Promise<void> {
+    await Notifications.setBadgeCountAsync(count);
+  }
+
+  // Clear all notifications
+  async clearAllNotifications(): Promise<void> {
+    await Notifications.dismissAllNotificationsAsync();
+    await this.setBadgeCount(0);
+  }
+}
+
+export const pushNotificationService = new PushNotificationService();
