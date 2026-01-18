@@ -222,6 +222,19 @@ export default function HomeScreen() {
     // Handle sale banner press
   }, []);
 
+  const handleCategoryPress = useCallback((categoryName: string) => {
+    // Navigate to search page with category filter to show filtered results
+    router.push({
+      pathname: '/search',
+      params: { category: categoryName }
+    });
+  }, [router]);
+
+  const handleSeeAllPress = useCallback(() => {
+    // Navigate to search page without query to show initial state
+    router.push('/search');
+  }, [router]);
+
   // Revalidate products when screen gains focus
   useFocusEffect(
     React.useCallback(() => {
@@ -391,7 +404,7 @@ export default function HomeScreen() {
           <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: 10 }]}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Categories</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={handleSeeAllPress}>
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
@@ -407,7 +420,7 @@ export default function HomeScreen() {
                   key={index}
                   name={category.name}
                   icon={category.icon}
-                  onPress={() => {}}
+                  onPress={() => handleCategoryPress(category.name)}
                 />
               ))}
             </ScrollView>
@@ -417,7 +430,7 @@ export default function HomeScreen() {
           <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: -10 }]}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Featured Products</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={handleSeeAllPress}>
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>

@@ -122,6 +122,19 @@ export default function CategoriesScreen() {
     }
   }, [user?.id, products, toggleLikedProduct]);
 
+  const handleCategoryPress = useCallback((categoryName: string) => {
+    // Navigate to search page with category filter to show filtered results
+    router.push({
+      pathname: '/search',
+      params: { category: categoryName }
+    });
+  }, [router]);
+
+  const handleSeeAllPress = useCallback(() => {
+    // Navigate to search page without query to show initial state
+    router.push('/search');
+  }, [router]);
+
   // Handlers
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -170,7 +183,7 @@ export default function CategoriesScreen() {
           <Text style={[styles.sectionTitle, { color: textColor }]}>
             Explore by Category
           </Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleSeeAllPress}>
             <Text style={[styles.seeAllText, { color: primaryColor }]}>
               See all
             </Text>
@@ -189,7 +202,7 @@ export default function CategoriesScreen() {
               key={index}
               name={category.name}
               icon={category.icon}
-              onPress={() => {}}
+              onPress={() => handleCategoryPress(category.name)}
             />
           ))}
         </ScrollView>
@@ -202,7 +215,7 @@ export default function CategoriesScreen() {
           <Text style={[styles.sectionTitle, { color: textColor }]}>
             New This Week
           </Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleSeeAllPress}>
             <Text style={[styles.seeAllText, { color: primaryColor }]}>
               See all
             </Text>

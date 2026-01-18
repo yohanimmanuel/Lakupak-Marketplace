@@ -193,9 +193,22 @@ export default function SearchScreen() {
         await loadRecentSearches();
       }
 
-      // Update URL params
+      // Update URL params for both q and category
       if (page === 1) {
-        router.setParams({ q: query.trim() });
+        const params: { q?: string; category?: string } = { q: query.trim() };
+        // Clear category param if category is 'All' or not specified, otherwise set it
+        if (category && category !== 'All') {
+          params.category = category;
+        } else {
+          params.category = undefined; // Remove category param
+        }
+        router.setParams(params);
+        // Also update selectedCategory state to match the category param
+        if (category && category !== 'All') {
+          setSelectedCategory(category);
+        } else {
+          setSelectedCategory('All');
+        }
       }
     } catch (error) {
       setSearchResults([]);
@@ -220,7 +233,7 @@ export default function SearchScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]); // Only depend on userId - loadRecentSearches is stable and depends on userId/token
 
-  // Handle initial query from URL params
+  // Handle initial query and category from URL params
   useEffect(() => {
     // Don't process if we're in the middle of clearing
     if (isClearingRef.current) {
@@ -230,6 +243,16 @@ export default function SearchScreen() {
     // Don't process if user is manually editing the search input
     if (isManualEditingRef.current) {
       return;
+    }
+    
+    // Handle category parameter (for category filtering)
+    if (params.category && typeof params.category === 'string') {
+      const categoryName = params.category;
+      setSelectedCategory(categoryName);
+      setSearchQuery(categoryName);
+      setActiveQuery(categoryName);
+      performSearch(categoryName, categoryName, 'relevance', 1);
+      return; // Category param takes precedence
     }
     
     // Only process if params.q exists and is different from current query
@@ -244,7 +267,7 @@ export default function SearchScreen() {
     // Don't auto-clear when params.q is undefined - only clear when explicitly cleared via handleClearSearch
     // Reset the flag after processing
     isDistributorSearchRef.current = false;
-  }, [params.q, performSearch, searchQuery]);
+  }, [params.q, params.category, performSearch, searchQuery]);
 
 
   const handleSearchFocus = () => {
@@ -296,6 +319,9 @@ export default function SearchScreen() {
       // Reset manual editing flag when search is submitted
       isManualEditingRef.current = false;
       
+      // Clear category filter when user submits manual query
+      setSelectedCategory('All');
+      
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
@@ -303,7 +329,8 @@ export default function SearchScreen() {
       setSearchResults([]);
       setTotalCount(0);
       setLoading(true);
-      performSearch(searchQuery.trim(), selectedCategory, selectedSort, 1);
+      // Perform search with 'All' category (no category filter for manual queries)
+      performSearch(searchQuery.trim(), 'All', selectedSort, 1);
     }
   };
 
@@ -325,7 +352,8 @@ export default function SearchScreen() {
     setTotalCount(0);
     setSelectedCategory('All');
     setSelectedSort('relevance');
-    router.setParams({ q: undefined });
+    // Clear both q and category URL params
+    router.setParams({ q: undefined, category: undefined });
     inputRef.current?.focus();
     // Reset the flag after a short delay to allow URL params to update
     setTimeout(() => {
