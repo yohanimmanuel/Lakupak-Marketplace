@@ -41,6 +41,7 @@ import { useCartStore, CartItem } from '../../../stores/cartStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { NotificationService } from '../../../services/notificationService';
+import { pushNotificationService } from '../../../services/pushNotifications';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -1061,12 +1062,12 @@ useEffect(() => {
                 // Create immediate notification for successful order
                 if (createdOrders.length > 0) {
                   const firstOrder = createdOrders[0];
+                  // API returns { order, orders }; orderId can be on root, order.orderId, or orders[0].orderId
+                  const o = firstOrder?.order ?? firstOrder?.orders?.[0] ?? firstOrder;
+                  const orderId = (firstOrder?.orderId ?? o?.orderId ?? firstOrder?.order_id) || 'Unknown';
+                  const orderStatus = firstOrder?.orderStatus ?? o?.orderStatus ?? firstOrder?.order_status ?? o?.order_status ?? 'Pending';
                   
-                  // Ensure we have valid order data
-                  const orderId = firstOrder.orderId || firstOrder.order_id || 'Unknown';
-                  const orderStatus = firstOrder.orderStatus || firstOrder.order_status || 'Pending';
-                  
-                  // Create immediate notification
+                  // In-app list (AsyncStorage)
                   await NotificationService.createOrderNotifications(
                     orderId, 
                     createdOrders.length, 
@@ -1075,19 +1076,30 @@ useEffect(() => {
                     orderStatus,
                     undefined
                   );
-                }
 
-                // Navigate to payment success page with the first order's details
-                const firstOrder = createdOrders[0];
-                router.push({
-                  pathname: '/payment-success',
-                  params: {
-                    orderId: firstOrder.orderId,
-                    totalAmount: total.toString(),
-                    orderStatus: firstOrder.orderStatus,
-                    orderCount: createdOrders.length.toString()
-                  }
-                });
+                  // System notification (tray) so buyer sees "Order Placed" on their phone
+                  try {
+                    await pushNotificationService.showOrderNotification(
+                      orderId,
+                      'Pending',
+                      'Order Placed',
+                      createdOrders.length > 1
+                        ? `Your ${createdOrders.length} orders have been placed and are awaiting confirmation.`
+                        : `Your order #${orderId} has been placed and is awaiting confirmation.`
+                    );
+                  } catch (_) { /* best-effort */ }
+
+                  // Navigate to payment success page with the first order's details
+                  router.push({
+                    pathname: '/payment-success',
+                    params: {
+                      orderId,
+                      totalAmount: total.toString(),
+                      orderStatus,
+                      orderCount: createdOrders.length.toString()
+                    }
+                  });
+                }
 
               } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Failed to place order. Please try again.';

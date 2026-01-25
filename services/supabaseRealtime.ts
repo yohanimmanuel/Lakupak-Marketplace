@@ -1,6 +1,7 @@
 import { createClient, RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
-import { useAuthStore } from '../stores/authStore';
 import { pushNotificationService } from './pushNotifications';
+import { NotificationService } from './notificationService';
+import { useAuthStore } from '../stores/authStore';
 
 // Supabase configuration
 // You need to add these to your .env file:
@@ -43,6 +44,16 @@ class SupabaseRealtimeService {
     return this.supabase;
   }
 
+  // Match buyerId to this marketplace user: mobile_user_X, LKB-<padded>, or LKB-<padded>-*
+  private matchesBuyer(buyerId: string | null | undefined, marketplaceUserId: number): boolean {
+    if (!buyerId) return false;
+    if (buyerId === `mobile_user_${marketplaceUserId}`) return true;
+    const padded = marketplaceUserId.toString().padStart(8, '0');
+    if (buyerId === `LKB-${padded}`) return true;
+    if (buyerId.startsWith(`LKB-${padded}-`)) return true;
+    return false;
+  }
+
   // Subscribe to order changes for a specific buyer
   subscribeToOrders(marketplaceUserId: number): void {
     const client = this.getClient();
@@ -51,10 +62,8 @@ class SupabaseRealtimeService {
     // Unsubscribe from existing channel
     this.unsubscribe();
 
-    // Build the buyer ID pattern (mobile_user_{userId})
-    const buyerIdPattern = `mobile_user_${marketplaceUserId}`;
-
-    // Subscribe to Order table changes
+    // Subscribe to Order table changes. No server filter: Realtime doesn't support like,
+    // and LKB-<id>-<distributor> has many values. We filter in the callback.
     this.orderChannel = client
       .channel(`orders:${marketplaceUserId}`)
       .on(
@@ -63,24 +72,24 @@ class SupabaseRealtimeService {
           event: 'UPDATE',
           schema: 'public',
           table: 'Order',
-          filter: `buyerId=eq.${buyerIdPattern}`,
         },
         (payload) => {
           const newRecord = payload.new as Record<string, unknown>;
           const oldRecord = payload.old as Record<string, unknown>;
+          const buyerId = newRecord.buyerId ? String(newRecord.buyerId) : null;
+          if (!this.matchesBuyer(buyerId, marketplaceUserId)) return;
 
           // Only trigger if orderStatus changed
           if (newRecord.orderStatus !== oldRecord.orderStatus) {
             const orderChange: OrderChange = {
               orderId: String(newRecord.orderId || ''),
               orderStatus: String(newRecord.orderStatus || ''),
-              buyerId: newRecord.buyerId ? String(newRecord.buyerId) : null,
+              buyerId,
               storeName: newRecord.storeName ? String(newRecord.storeName) : null,
               totalAmount: Number(newRecord.totalAmount || 0),
               userId: newRecord.userId ? Number(newRecord.userId) : null,
             };
 
-            // Notify all callbacks
             this.callbacks.forEach((callback) => {
               try {
                 callback(orderChange);
@@ -89,8 +98,13 @@ class SupabaseRealtimeService {
               }
             });
 
-            // Show push notification
-            this.showOrderNotification(orderChange);
+            // Show phone notification AND add to in-app notification list
+            this.showOrderNotification(orderChange).catch((err) =>
+              console.error('Failed to show push notification:', err)
+            );
+            this.addToNotificationList(orderChange).catch((err) =>
+              console.error('Failed to add in-app notification:', err)
+            );
           }
         }
       )
@@ -100,21 +114,21 @@ class SupabaseRealtimeService {
           event: 'INSERT',
           schema: 'public',
           table: 'Order',
-          filter: `buyerId=eq.${buyerIdPattern}`,
         },
         (payload) => {
           const newRecord = payload.new as Record<string, unknown>;
+          const buyerId = newRecord.buyerId ? String(newRecord.buyerId) : null;
+          if (!this.matchesBuyer(buyerId, marketplaceUserId)) return;
 
           const orderChange: OrderChange = {
             orderId: String(newRecord.orderId || ''),
             orderStatus: String(newRecord.orderStatus || 'Pending'),
-            buyerId: newRecord.buyerId ? String(newRecord.buyerId) : null,
+            buyerId,
             storeName: newRecord.storeName ? String(newRecord.storeName) : null,
             totalAmount: Number(newRecord.totalAmount || 0),
             userId: newRecord.userId ? Number(newRecord.userId) : null,
           };
 
-          // Notify all callbacks
           this.callbacks.forEach((callback) => {
             try {
               callback(orderChange);
@@ -163,12 +177,50 @@ class SupabaseRealtimeService {
         break;
     }
 
-    // Show local notification
-    await pushNotificationService.scheduleLocalNotification(title, body, {
-      type: 'order',
-      orderId,
-      orderStatus,
-    });
+    // Show local notification (phone notification tray)
+    await pushNotificationService.showOrderNotification(orderId, orderStatus, title, body);
+  }
+
+  // Add to in-app notification list (NotificationService stores in AsyncStorage)
+  private async addToNotificationList(order: OrderChange): Promise<void> {
+    const { orderId, orderStatus } = order;
+
+    let title = 'Order Update';
+    let body = `Your order #${orderId} status has been updated.`;
+
+    switch (orderStatus) {
+      case 'Confirmed':
+        title = 'Order Confirmed';
+        body = `Great news! Your order #${orderId} has been confirmed and is being processed.`;
+        break;
+      case 'Packed':
+        title = 'Order Packed';
+        body = `Your order #${orderId} has been packed and is ready for shipping.`;
+        break;
+      case 'Shipped':
+        title = 'Order Shipped';
+        body = `Your order #${orderId} is on its way! Track your delivery for updates.`;
+        break;
+      case 'Delivered':
+        title = 'Order Delivered';
+        body = `Your order #${orderId} has been delivered. Enjoy your purchase!`;
+        break;
+      case 'Cancelled':
+        title = 'Order Cancelled';
+        body = `Your order #${orderId} has been cancelled.`;
+        break;
+      case 'Returned':
+        title = 'Order Returned';
+        body = `Your order #${orderId} return has been processed.`;
+        break;
+    }
+
+    // Get current user ID for storing notification per-user
+    const authState = useAuthStore.getState();
+    const userId = authState.user?.id ?? null;
+
+    // Add to in-app notification list
+    await NotificationService.createOrderNotifications(orderId, 1, undefined, userId, title, body);
   }
 
   // Add callback for order changes

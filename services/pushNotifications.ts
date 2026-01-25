@@ -3,10 +3,9 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { API_BASE_URL } from './config';
 
-// Configure notification handler
+// Configure notification handler (shouldShowBanner/shouldShowList replace deprecated shouldShowAlert)
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
     shouldShowBanner: true,

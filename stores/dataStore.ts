@@ -408,10 +408,9 @@ export const useDataStore = create<DataState>()(
               const authState = useAuthStore.getState()
               const currentUserId = authState.user?.id
 
-              // Only show notification if it's for this user or for all users
               if (!targetUserId || targetUserId === currentUserId) {
-                // Show push notification
                 if (type === 'order') {
+                  // WebSocket is only sent when Expo had 0 tokens (fallback); show local so user gets a notification in foreground
                   const orderId = data?.orderId as string
                   const orderStatus = data?.orderStatus as string
                   if (orderId && orderStatus) {

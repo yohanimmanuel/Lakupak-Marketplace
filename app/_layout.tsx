@@ -92,14 +92,25 @@ function RootLayoutNav() {
 
   // Handle app state changes to pause/resume auto-refresh
   useEffect(() => {
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
         // App is in foreground - start auto-refresh with WebSocket + polling fallback
-        // Get fresh token from store
         const currentToken = useAuthStore.getState().token;
+        const currentUser = useAuthStore.getState().user;
         startAutoRefresh(currentToken || undefined);
+
+        // Retry push registration if we still don't have a token (e.g. first run failed, permission granted later, FCM later available)
+        if (currentUser?.id && currentToken && !pushNotificationService.getPushToken()) {
+          try {
+            const pushToken = await pushNotificationService.registerForPushNotifications();
+            if (pushToken) {
+              await pushNotificationService.savePushTokenToServer(currentUser.id, pushToken, currentToken);
+            }
+          } catch (error) {
+            // Silently handle errors - will retry on next foreground
+          }
+        }
       } else if (nextAppState === 'background' || nextAppState === 'inactive') {
-        // App is in background - stop auto-refresh to save resources
         stopAutoRefresh();
       }
     };
@@ -133,14 +144,8 @@ function RootLayoutNav() {
 
     initializePushNotifications();
 
-    // Listen for incoming notifications (when app is in foreground)
-    notificationListener.current = Notifications.addNotificationReceivedListener(
-      (notification) => {
-        // Notification received while app is in foreground
-        // The notification will be shown automatically based on handler config
-        console.log('Notification received:', notification);
-      }
-    );
+    // Listen for incoming notifications (when app is in foreground); shown via setNotificationHandler
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
 
     // Listen for notification interactions (when user taps notification)
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
