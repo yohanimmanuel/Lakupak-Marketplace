@@ -32,34 +32,17 @@ function getEnvironment(): Environment {
  */
 function getApiBaseUrl(): string {
   const environment = getEnvironment();
-  
-  // Production and staging URLs from environment variables
+
   if (environment === 'production') {
     return process.env.EXPO_PUBLIC_API_BASE_URL || 'https://api.laku.com';
   }
-  
   if (environment === 'staging') {
     return process.env.EXPO_PUBLIC_API_BASE_URL || 'https://staging-api.laku.com';
   }
-  
-  // Development environment
   const customUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-  
-  if (customUrl) {
-    // If custom URL is provided in .env, use it (for physical devices on same network)
-    return customUrl;
-  }
-  
-  // Default development URLs
-  if (Platform.OS === 'android') {
-    // Android emulator: 10.0.2.2 maps to host machine's localhost
-    return 'http://10.0.2.2:3000';
-  } else if (Platform.OS === 'ios') {
-    // iOS simulator can use localhost
-    return 'http://localhost:3000';
-  }
-  
-  // Fallback
+  if (customUrl) return customUrl;
+  if (Platform.OS === 'android') return 'http://10.0.2.2:3000';
+  if (Platform.OS === 'ios') return 'http://localhost:3000';
   return 'http://localhost:3000';
 }
 
