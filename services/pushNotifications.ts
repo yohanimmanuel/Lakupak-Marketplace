@@ -1,16 +1,21 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import Constants from 'expo-constants';
 import { API_BASE_URL } from './config';
 
 // Configure notification handler (shouldShowBanner/shouldShowList replace deprecated shouldShowAlert)
+// Only show push notifications when app is in background/closed; let WebSocket handle foreground
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async () => {
+    const isAppInForeground = AppState.currentState === 'active';
+    
+    return {
+      shouldPlaySound: !isAppInForeground, // Sound only when not in foreground
+      shouldSetBadge: true,
+      shouldShowBanner: !isAppInForeground, // Banner only when app is closed/background
+      shouldShowList: !isAppInForeground, // List only when app is closed/background
+    };
+  },
 });
 
 export interface PushNotificationData {
