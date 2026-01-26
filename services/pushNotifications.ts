@@ -4,16 +4,27 @@ import Constants from 'expo-constants';
 import { API_BASE_URL } from './config';
 
 // Configure notification handler (shouldShowBanner/shouldShowList replace deprecated shouldShowAlert)
-// Only show push notifications when app is in background/closed; let WebSocket handle foreground
+// Strategy:
+// - Remote push notifications: only show when app is closed/background
+// - Local notifications (from WebSocket): always show (for in-app notifications)
 Notifications.setNotificationHandler({
-  handleNotification: async () => {
+  handleNotification: async (notification) => {
     const isAppInForeground = AppState.currentState === 'active';
     
+    // Check if this is a remote notification (from Expo push) or local (from WebSocket)
+    // Remote push notifications have trigger.type === 'push'
+    const trigger = notification.request.trigger;
+    const isRemoteNotification = trigger && 'type' in trigger && trigger.type === 'push';
+    
+    // If it's a remote push and app is in foreground, don't show (WebSocket will handle it)
+    // If it's a local notification (WebSocket), always show
+    const shouldShow = !isRemoteNotification || !isAppInForeground;
+    
     return {
-      shouldPlaySound: !isAppInForeground, // Sound only when not in foreground
+      shouldPlaySound: shouldShow,
       shouldSetBadge: true,
-      shouldShowBanner: !isAppInForeground, // Banner only when app is closed/background
-      shouldShowList: !isAppInForeground, // List only when app is closed/background
+      shouldShowBanner: shouldShow,
+      shouldShowList: shouldShow,
     };
   },
 });
