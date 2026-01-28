@@ -253,13 +253,14 @@ export default function HomeScreen() {
     }, [forceRefreshProducts, scrollY, setScrollY])
   );
 
-  // Light background refresh while this screen is visible
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      forceRefreshProducts();
-    }, 120000); // 2 minutes
-    return () => clearInterval(intervalId);
-  }, [forceRefreshProducts]);
+  // Light background refresh removed - dataStore already handles auto-refresh via WebSocket + polling fallback
+  // This was causing duplicate requests and unnecessary backend load
+  // useEffect(() => {
+  //   const intervalId = setInterval(() => {
+  //     forceRefreshProducts();
+  //   }, 120000); // 2 minutes
+  //   return () => clearInterval(intervalId);
+  // }, [forceRefreshProducts]);
 
   // Early return after all hooks to prevent rendering unauthenticated content
   if (!isAuthenticated) {

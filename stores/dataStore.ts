@@ -130,8 +130,8 @@ interface DataState {
   clearCache: () => void
 }
 
-const CACHE_DURATION = 1 * 60 * 1000 // 1 minute
-const AUTO_REFRESH_INTERVAL = 10 * 1000 // 10 seconds - refresh offers automatically
+const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes - increased from 1min to reduce unnecessary requests
+const AUTO_REFRESH_INTERVAL = 60 * 1000 // 60 seconds - reduced from 10s to prevent backend overload
 
 export const useDataStore = create<DataState>()(
   persist(
