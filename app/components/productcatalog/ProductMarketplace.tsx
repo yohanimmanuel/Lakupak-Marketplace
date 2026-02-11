@@ -8,7 +8,6 @@ import {
   Dimensions,
   StyleSheet,
   Alert,
-  Modal,
 } from 'react-native';
 import { router, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -944,13 +943,6 @@ export default function ProductMarketplace({
           <Text style={[styles.noReviewsTitle, { color: textColor }]}>
             No Reviews Yet
           </Text>
-          <Text style={styles.noReviewsSubtitle}>
-            Be the first to review this product!
-          </Text>
-          <TouchableOpacity style={[styles.submitReviewButton, { backgroundColor: primaryColor }]}>
-            <Ionicons name="star-outline" size={16} color="white" />
-            <Text style={styles.submitReviewText}>Submit Review</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <>

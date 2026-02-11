@@ -316,7 +316,25 @@ export default function OrderDetailsModal() {
   };
 
   const handleRateOrder = () => {
-    Alert.alert('Rate Order', 'Rating functionality coming soon!');
+    if (!order) return;
+
+    const orderData = order as Order;
+    const items = orderData.orderItems ?? orderData.items ?? [];
+    const reviewItems = items
+      .filter((item: OrderItem) => item.productId)
+      .map((item: OrderItem) => ({
+      productId: String(item.productId),
+      productName: item.productName ?? item.name ?? 'Product',
+      image: (item.images && item.images[0]) ? item.images[0] : (item.image ?? ''),
+    }));
+
+    router.push({
+      pathname: '/components/productcatalog/ProductReview',
+      params: {
+        orderId: orderData.orderId,
+        itemsJson: JSON.stringify(reviewItems),
+      },
+    });
   };
 
   const copyOrderId = () => {

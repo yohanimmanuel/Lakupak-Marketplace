@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, Alert, StyleSheet, Pressable } from 'react-native';
+import { View, Text, ScrollView, Image, Alert, StyleSheet, Pressable, TouchableOpacity } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Users, MapPin, Phone, Mail, Star, Package, MessageSquare, Store, Calendar, Building2, FileText, Clock, ArrowLeft } from 'lucide-react-native';
@@ -232,6 +232,22 @@ export default function DistributorDetailScreen() {
     Alert.alert('View Store', 'Navigate to store page');
   };
 
+  const handleLeaveReview = () => {
+    if (!distributor) return;
+
+    router.push({
+      pathname: '/useraccounts/buyernetworks/distributorrating',
+      params: {
+        id: String(distributor.id),
+        name: distributor.name,
+        logo: distributor.logo ?? '',
+        description: distributor.description ?? '',
+        industryType: distributor.industryType ?? '',
+        totalOrders: String(distributor.totalOrders ?? 0),
+      },
+    });
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -276,7 +292,10 @@ export default function DistributorDetailScreen() {
           ),
         }}
       />
-      <ScrollView style={styles.scroll}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
         {distributor.banner ? (
           <Image source={{ uri: distributor.banner }} style={styles.banner} />
         ) : (
@@ -388,6 +407,17 @@ export default function DistributorDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      <View style={[styles.bottomContainer, { paddingBottom: 3 + insets.bottom }]}>
+        <TouchableOpacity
+          style={styles.reviewButton}
+          onPress={handleLeaveReview}
+          accessibilityLabel="Rate and review distributor"
+          accessibilityRole="button"
+        >
+          <Text style={styles.reviewButtonText}>Rate & Review Distributor</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -432,5 +462,27 @@ const styles = StyleSheet.create({
   orderTotal: { fontSize: 16, fontWeight: '700', color: '#111827' },
   orderStatus: { fontSize: 12, color: '#10b981', marginTop: 4 },
   orderItems: { fontSize: 12, color: '#6b7280', marginTop: 4 },
+  bottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  reviewButton: {
+    backgroundColor: '#0a61d7',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
 });
-
