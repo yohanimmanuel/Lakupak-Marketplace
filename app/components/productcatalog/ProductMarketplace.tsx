@@ -28,6 +28,25 @@ import { API_BASE_URL } from '../../../services/config';
 const { width: screenWidth } = Dimensions.get('window');
 const cardWidth = (screenWidth - 48) / 2; // 2 columns with padding
 
+/** Product reviews from API (by productId) */
+interface ProductReviewItem {
+  id: number;
+  rating: number;
+  title?: string;
+  comment?: string;
+  imageUrls: string[];
+  createdAt: string;
+  reviewerDisplayName: string;
+  reviewerProfileImage?: string;
+}
+interface ProductReviewsData {
+  productId: string;
+  totalReviews: number;
+  overallRating: number;
+  breakdown: Record<number, number>;
+  reviews: ProductReviewItem[];
+}
+
 // Normalize relative image paths to absolute URLs
 const normalizeUrl = (url?: string | null): string | undefined => {
   if (!url) return undefined;
@@ -88,6 +107,11 @@ export default function ProductMarketplace({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showImageModal, setShowImageModal] = useState(false);
   const [showAddToCartModal, setShowAddToCartModal] = useState(false);
+  const [productReviewsData, setProductReviewsData] = useState<ProductReviewsData | null>(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewImageModalVisible, setReviewImageModalVisible] = useState(false);
+  const [reviewImageModalImages, setReviewImageModalImages] = useState<string[]>([]);
+  const [reviewImageModalInitialIndex, setReviewImageModalInitialIndex] = useState(0);
 
   // Safe value getters to prevent undefined/null errors
   const safeGetString = (value: unknown, fallback: string = ''): string => {
@@ -243,6 +267,27 @@ export default function ProductMarketplace({
       }
     }
   }, [product.id, type, addViewedProduct, product, user?.id]);
+
+  // Fetch product reviews by productId for Customer Reviews section
+  const productIdForReviews = safeGetString(product.id) || (product as { productId?: string }).productId || '';
+  useEffect(() => {
+    if (!productIdForReviews || type !== 'full') return;
+    let cancelled = false;
+    setReviewsLoading(true);
+    setProductReviewsData(null);
+    fetch(`${API_BASE_URL}/api/mobile/reviews/product?productId=${encodeURIComponent(productIdForReviews)}`)
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load reviews'))))
+      .then((data: ProductReviewsData) => {
+        if (!cancelled) setProductReviewsData(data);
+      })
+      .catch(() => {
+        if (!cancelled) setProductReviewsData(null);
+      })
+      .finally(() => {
+        if (!cancelled) setReviewsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [productIdForReviews, type]);
 
   // Get related products from the same category using websocket-enabled products from dataStore
   const relatedProducts = React.useMemo(() => {
@@ -665,7 +710,7 @@ export default function ProductMarketplace({
             {safeGetNumber(product.rating)}
           </Text>
         </View>
-        <Text style={styles.reviewCount}>({safeGetNumber(product.reviewCount)} reviews)</Text>
+        <Text style={styles.reviewCount}>({productReviewsData ? productReviewsData.totalReviews : safeGetNumber(product.reviewCount)} reviews)</Text>
         <Text style={styles.separator}>•</Text>
         <Text style={styles.soldCount}>Sold {safeGetString(product.soldCount, '0')}</Text>
       </View>
@@ -775,13 +820,14 @@ export default function ProductMarketplace({
   const renderSellerInfo = () => {
     const sellerCompany = 'company' in (product.seller || {}) ? (product.seller as { company?: { logo?: string } })?.company : undefined;
     const companyLogo = normalizeUrl(sellerCompany?.logo);
-    
-    return (
-      <View style={[styles.section, styles.sellerSection]}>
+    const sellerId = (product as { userId?: number }).userId;
+    const canOpenSellerInfo = typeof sellerId === 'number' && sellerId > 0;
+
+    const content = (
+      <>
         <Text style={[styles.sectionTitle, { color: textColor }]}>
           Seller Information
         </Text>
-        
         <View style={styles.sellerHeader}>
           <View style={styles.sellerAvatar}>
             {companyLogo ? (
@@ -811,6 +857,31 @@ export default function ProductMarketplace({
             </View>
           </View>
         </View>
+      </>
+    );
+
+    if (canOpenSellerInfo) {
+      return (
+        <TouchableOpacity
+          style={[styles.section, styles.sellerSection]}
+          onPress={() => {
+            router.push({
+              pathname: '/useraccounts/buyernetworks/seller-information',
+              params: { id: String(sellerId) },
+            });
+          }}
+          activeOpacity={0.8}
+          accessibilityLabel="View seller information"
+          accessibilityRole="button"
+        >
+          {content}
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <View style={[styles.section, styles.sellerSection]}>
+        {content}
       </View>
     );
   };
@@ -922,24 +993,50 @@ export default function ProductMarketplace({
     </View>
   );
 
+  const formatReviewDate = (iso: string) => {
+    try {
+      const d = new Date(iso);
+      const now = new Date();
+      const diffMs = now.getTime() - d.getTime();
+      const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+      if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+      }
+      return d.toLocaleDateString();
+    } catch {
+      return 'Recently';
+    }
+  };
+
+  const totalReviewsFromApi = productReviewsData?.totalReviews ?? 0;
+  const overallRatingFromApi = productReviewsData?.overallRating ?? 0;
+  const breakdownFromApi = productReviewsData?.breakdown ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const reviewsList = productReviewsData?.reviews ?? [];
+
   const renderReviews = () => (
     <View style={styles.section}>
       <View style={styles.reviewsHeader}>
         <Text style={[styles.sectionTitle, { color: textColor }]}>
           Customer Reviews
         </Text>
-        {safeGetNumber(product.reviews?.totalReviews) > 0 && (
-          <TouchableOpacity>
-            <Text style={[styles.viewAllText, { color: primaryColor }]}>
-              View All ({safeGetNumber(product.reviews?.totalReviews)})
-            </Text>
-          </TouchableOpacity>
+        {totalReviewsFromApi > 0 && (
+          <Text style={[styles.viewAllText, { color: primaryColor }]}>
+            {totalReviewsFromApi} {totalReviewsFromApi === 1 ? 'review' : 'reviews'}
+          </Text>
         )}
       </View>
 
-      {safeGetNumber(product.reviews?.totalReviews) === 0 ? (
+      {reviewsLoading ? (
         <View style={styles.noReviewsContainer}>
-          <Ionicons name="chatbubbles-outline" size={48} color="#9CA3AF" />
+          <Text style={[styles.noReviewsTitle, { color: textColor }]}>Loading reviews...</Text>
+        </View>
+      ) : totalReviewsFromApi === 0 ? (
+        <View style={styles.noReviewsContainer}>
+          <Ionicons name="chatbubbles-outline" size={30} color="#9CA3AF" />
           <Text style={[styles.noReviewsTitle, { color: textColor }]}>
             No Reviews Yet
           </Text>
@@ -949,14 +1046,13 @@ export default function ProductMarketplace({
           <View style={styles.ratingBreakdown}>
             <View style={styles.overallRating}>
               <Text style={[styles.overallRatingNumber, { color: textColor }]}>
-                {safeGetNumber(product.reviews?.overallRating)}
+                {overallRatingFromApi}
               </Text>
-              {renderStars(safeGetNumber(product.reviews?.overallRating), 16)}
+              {renderStars(overallRatingFromApi, 16)}
               <Text style={styles.totalReviews}>
-                {safeGetNumber(product.reviews?.totalReviews)} reviews
+                {totalReviewsFromApi} reviews
               </Text>
             </View>
-            
             <View style={styles.ratingBars}>
               {[5, 4, 3, 2, 1].map((rating) => (
                 <View key={rating} style={styles.ratingBar}>
@@ -965,41 +1061,99 @@ export default function ProductMarketplace({
                     <View
                       style={[
                         styles.bar,
-                        { width: `${safeGetNumber(product.reviews?.totalReviews) > 0 ? (safeGetNumber(product.reviews?.breakdown?.[rating]) / safeGetNumber(product.reviews?.totalReviews, 1)) * 100 : 0}%` }
+                        { width: `${totalReviewsFromApi > 0 ? ((breakdownFromApi[rating] ?? 0) / totalReviewsFromApi) * 100 : 0}%` }
                       ]}
                     />
                   </View>
                   <Text style={styles.barCount}>
-                    {safeGetNumber(product.reviews?.breakdown?.[rating])}
+                    {breakdownFromApi[rating] ?? 0}
                   </Text>
                 </View>
               ))}
             </View>
           </View>
 
-          {product.reviews?.sampleReview && (
-            <View style={styles.sampleReview}>
-              <View style={styles.reviewerAvatar}>
-                <Text style={styles.reviewerAvatarText}>
-                  {safeGetString(product.reviews.sampleReview.user, 'U').charAt(0).toUpperCase()}
-                </Text>
-              </View>
+          {reviewsList.map((review) => {
+            const avatarUri = review.reviewerProfileImage
+              ? (review.reviewerProfileImage.startsWith('http')
+                  ? review.reviewerProfileImage
+                  : normalizeUrl(review.reviewerProfileImage))
+              : null;
+            const normalizedImageUrls = (review.imageUrls ?? [])
+              .map((url) => normalizeUrl(url))
+              .filter((u): u is string => u != null);
+            return (
+            <View key={review.id} style={styles.sampleReview}>
+              <TouchableOpacity
+                style={styles.reviewerAvatar}
+                onPress={() => {
+                  if (avatarUri) {
+                    setReviewImageModalImages([avatarUri]);
+                    setReviewImageModalInitialIndex(0);
+                    setReviewImageModalVisible(true);
+                  }
+                }}
+                activeOpacity={avatarUri ? 0.8 : 1}
+                disabled={!avatarUri}
+              >
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={styles.reviewerAvatarImage} resizeMode="cover" />
+                ) : (
+                  <Text style={styles.reviewerAvatarText}>
+                    {safeGetString(review.reviewerDisplayName, 'U').charAt(0).toUpperCase()}
+                  </Text>
+                )}
+              </TouchableOpacity>
               <View style={styles.reviewContent}>
                 <View style={styles.reviewHeader}>
-                  {renderStars(safeGetNumber(product.reviews.sampleReview.rating), 12)}
+                  {renderStars(review.rating, 12)}
                   <Text style={styles.reviewerName}>
-                    {safeGetString(product.reviews.sampleReview.user, 'Anonymous')}
+                    {safeGetString(review.reviewerDisplayName, 'Customer')}
                   </Text>
                   <Text style={styles.reviewDate}>
-                    {safeGetString(product.reviews.sampleReview.date, 'Recently')}
+                    {formatReviewDate(review.createdAt)}
                   </Text>
                 </View>
-                <Text style={[styles.reviewComment, { color: textColor }]}>
-                  "{safeGetString(product.reviews.sampleReview.comment, 'No comment')}"
-                </Text>
+                {review.title ? (
+                  <Text style={[styles.reviewComment, { color: textColor, fontWeight: '600', marginBottom: 4 }]}>
+                    {review.title}
+                  </Text>
+                ) : null}
+                {review.comment ? (
+                  <Text style={[styles.reviewComment, { color: textColor }]}>
+                    "{review.comment}"
+                  </Text>
+                ) : null}
+                {normalizedImageUrls.length > 0 ? (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.reviewImagesScroll}
+                    contentContainerStyle={styles.reviewImagesContainer}
+                  >
+                    {normalizedImageUrls.map((uri, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        onPress={() => {
+                          setReviewImageModalImages(normalizedImageUrls);
+                          setReviewImageModalInitialIndex(idx);
+                          setReviewImageModalVisible(true);
+                        }}
+                        activeOpacity={0.9}
+                      >
+                        <Image
+                          source={{ uri }}
+                          style={styles.reviewImage}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                ) : null}
               </View>
             </View>
-          )}
+          );
+          })}
         </>
       )}
     </View>
@@ -1098,6 +1252,14 @@ export default function ProductMarketplace({
         images={images}
         onClose={() => setShowImageModal(false)}
         initialIndex={currentImageIndex}
+      />
+
+      {/* Review / profile image modal (reused same component) */}
+      <ProductImageModal
+        visible={reviewImageModalVisible}
+        images={reviewImageModalImages}
+        onClose={() => setReviewImageModalVisible(false)}
+        initialIndex={reviewImageModalInitialIndex}
       />
       
       {/* Add to Cart Modal */}
@@ -1816,6 +1978,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  reviewerAvatarImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   reviewerAvatarText: {
     color: '#6B7280',
@@ -1843,13 +2011,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
   },
+  reviewImagesScroll: {
+    marginTop: 8,
+  },
+  reviewImagesContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  reviewImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
   noReviewsContainer: {
     alignItems: 'center',
     paddingVertical: 32,
     paddingHorizontal: 16,
   },
   noReviewsTitle: {
-    fontSize: 18,
+    fontSize: 12,
     fontWeight: '600',
     marginTop: 16,
     marginBottom: 8,

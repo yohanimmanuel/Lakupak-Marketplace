@@ -9,12 +9,15 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Star, MessageSquare, Package, ImagePlus, X } from 'lucide-react-native';
 import { API_BASE_URL } from '../../../services/config';
 import { pickMultipleImages } from '../../../services/imagePicker';
+import { useAuthStore } from '../../../stores/authStore';
 
 export interface OrderReviewItem {
   productId: string;
@@ -58,6 +61,7 @@ export default function ProductReviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
+  const token = useAuthStore((s) => s.token);
   const { orderId, productId, productName, image, itemsJson } = params as ProductReviewParams;
 
   const items = useMemo((): OrderReviewItem[] => {
@@ -121,10 +125,50 @@ export default function ProductReviewScreen() {
       return;
     }
 
+    if (!orderId || typeof orderId !== 'string' || orderId.trim() === '') {
+      Alert.alert('Error', 'Order information is missing. Cannot submit review.');
+      return;
+    }
+
+    if (!token) {
+      Alert.alert('Sign in required', 'Please sign in to submit a review.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
-      // TODO: Wire this up to your backend: send productReviews + deliveryRating + deliveryComment + orderId
+      const productReviewsPayload = items.map((item, i) => ({
+        productId: item.productId,
+        rating: productReviews[i]?.rating ?? 0,
+        title: productReviews[i]?.title?.trim() || undefined,
+        comment: productReviews[i]?.comment?.trim() || undefined,
+        imageUrls: (productReviews[i]?.images ?? []).slice(0, MAX_PHOTOS_PER_PRODUCT),
+      }));
+
+      const body = {
+        orderId: orderId.trim(),
+        productReviews: productReviewsPayload,
+        deliveryRating: deliveryRating > 0 ? deliveryRating : undefined,
+        deliveryComment: deliveryComment.trim() || undefined,
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/mobile/reviews/order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const message = (data?.error as string) || `Request failed (${response.status})`;
+        throw new Error(message);
+      }
+
       Alert.alert('Thank You', 'Your review has been submitted.', [
         {
           text: 'OK',
@@ -132,7 +176,8 @@ export default function ProductReviewScreen() {
         },
       ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to submit review. Please try again.', [{ text: 'OK' }]);
+      const message = error instanceof Error ? error.message : 'Failed to submit review. Please try again.';
+      Alert.alert('Error', message, [{ text: 'OK' }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -299,10 +344,16 @@ export default function ProductReviewScreen() {
         }}
       />
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? Math.max(insets.top, 40) : 0}
+      >
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 80 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.contentCard}>
           {orderId ? (
@@ -456,30 +507,31 @@ export default function ProductReviewScreen() {
         </View>
       </ScrollView>
 
-      <View
-        style={[
-          styles.bottomContainer,
-          { paddingBottom: 18 + insets.bottom },
-        ]}
-      >
-        <TouchableOpacity
-          style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={!canSubmit}
-          accessibilityLabel={isSubmitting ? 'Submitting review' : 'Submit review'}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canSubmit }}
+        <View
+          style={[
+            styles.bottomContainer,
+            { paddingBottom: insets.bottom },
+          ]}
         >
-          <Text
-            style={[
-              styles.submitButtonText,
-              !canSubmit && styles.submitButtonTextDisabled,
-            ]}
+          <TouchableOpacity
+            style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={!canSubmit}
+            accessibilityLabel={isSubmitting ? 'Submitting review' : 'Submit review'}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canSubmit }}
           >
-            {isSubmitting ? 'Submitting...' : 'Submit review'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <Text
+              style={[
+                styles.submitButtonText,
+                !canSubmit && styles.submitButtonTextDisabled,
+              ]}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit review'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -673,7 +725,7 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: -11,
     left: 0,
     right: 0,
     backgroundColor: '#ffffff',
@@ -684,7 +736,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     backgroundColor: '#0a61d7',
-    paddingVertical: 16,
+    paddingVertical: 13,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',

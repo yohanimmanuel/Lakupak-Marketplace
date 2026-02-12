@@ -244,6 +244,18 @@ function RootLayoutNav() {
             headerTintColor: '#0a61d7',
           }}
         />
+        {/* Seller Information modal - same pattern as distributor-detail */}
+        <Stack.Screen
+          name="useraccounts/buyernetworks/seller-information"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Seller Information',
+            headerStyle: { backgroundColor: '#ffffff' },
+            headerTitleStyle: { color: '#111827', fontWeight: '600' },
+            headerTintColor: '#0a61d7',
+          }}
+        />
         <Stack.Screen
           name="useraccounts/purchases/mypurchases"
           options={{

@@ -8,11 +8,14 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Star, MessageSquare, Truck, Package, ThumbsUp } from 'lucide-react-native';
 import { API_BASE_URL } from '../../../services/config';
+import { useAuthStore } from '../../../stores/authStore';
 
 interface DistributorRatingParams {
   id?: string;
@@ -34,6 +37,7 @@ const normalizeUrl = (url?: string | null): string | undefined => {
 export default function DistributorRatingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const token = useAuthStore((s) => s.token);
   const { id, name, logo, description, industryType, totalOrders } = params as DistributorRatingParams;
   const insets = useSafeAreaInsets();
 
@@ -61,6 +65,11 @@ export default function DistributorRatingScreen() {
       return;
     }
 
+    if (!token) {
+      Alert.alert('Sign in required', 'Please sign in to submit a review.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -74,9 +83,22 @@ export default function DistributorRatingScreen() {
         comment,
       };
 
-      // TODO: Wire this up to your backend reviews API, e.g.:
-      // const response = await fetch(`${API_BASE_URL}/api/reviews/distributor`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(payload) });
-      // if (!response.ok) throw new Error(await response.text());
+      const baseUrl = API_BASE_URL?.replace(/\/$/, '') || '';
+      const response = await fetch(`${baseUrl}/api/mobile/reviews/distributor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const message = (data?.error as string) || `Request failed (${response.status})`;
+        throw new Error(message);
+      }
 
       Alert.alert('Thank You', 'Your review has been submitted.', [
         {
@@ -155,10 +177,16 @@ export default function DistributorRatingScreen() {
         }}
       />
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? Math.max(insets.top, 40) : 0}
+      >
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: 140 }}
+        contentContainerStyle={{ paddingBottom: 80 }}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.contentCard}>
           <View style={styles.headerSection}>
@@ -281,25 +309,26 @@ export default function DistributorRatingScreen() {
         </View>
       </ScrollView>
 
-      <View style={[styles.bottomContainer, { paddingBottom: 18 + insets.bottom }]}>
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!overallRating || isSubmitting) && styles.submitButtonDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={!overallRating || isSubmitting}
-        >
-          <Text
+        <View style={[styles.bottomContainer, { paddingBottom: 3 + insets.bottom }]}>
+          <TouchableOpacity
             style={[
-              styles.submitButtonText,
-              (!overallRating || isSubmitting) && styles.submitButtonTextDisabled,
+              styles.submitButton,
+              (!overallRating || isSubmitting) && styles.submitButtonDisabled,
             ]}
+            onPress={handleSubmit}
+            disabled={!overallRating || isSubmitting}
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Review'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <Text
+              style={[
+                styles.submitButtonText,
+                (!overallRating || isSubmitting) && styles.submitButtonTextDisabled,
+              ]}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Review'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -439,7 +468,7 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: -15,
     left: 0,
     right: 0,
     backgroundColor: '#ffffff',
