@@ -1,32 +1,42 @@
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImageToCloudinaryDirect } from './imageUpload';
 
-export async function pickImage(): Promise<string | null> {
+export type PickImageOptions = {
+  folder?: string;
+  allowsEditing?: boolean;
+  aspect?: [number, number];
+};
+
+export type PickMultipleOptions = {
+  folder?: string;
+  selectionLimit?: number;
+};
+
+const DEFAULT_FOLDER = 'avatars';
+const DEFAULT_MULTI_LIMIT = 5;
+
+export async function pickImage(options: PickImageOptions = {}): Promise<string | null> {
+  const { folder = DEFAULT_FOLDER, allowsEditing = true, aspect = [1, 1] } = options;
   try {
-    // Request permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       throw new Error('Permission to access media library is required');
     }
 
-    // Launch image picker with optimized settings
     const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7, // Reduced for better performance
-      exif: false, // Disable EXIF data for faster processing
-      base64: false, // No base64 needed for direct upload
+      allowsEditing,
+      aspect,
+      quality: 0.7,
+      exif: false,
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
-      // Direct upload to Cloudinary (faster, no base64 conversion)
-      const uploadResult = await uploadImageToCloudinaryDirect(result.assets[0].uri, 'users');
-      
+      const uploadResult = await uploadImageToCloudinaryDirect(result.assets[0].uri, folder);
       if (uploadResult.success && uploadResult.url) {
         return uploadResult.url;
-      } else {
-        throw new Error(uploadResult.error || 'Upload failed');
       }
+      throw new Error(uploadResult.error || 'Upload failed');
     }
 
     return null;
@@ -35,35 +45,70 @@ export async function pickImage(): Promise<string | null> {
   }
 }
 
-export async function takePhoto(): Promise<string | null> {
+export async function takePhoto(options: PickImageOptions = {}): Promise<string | null> {
+  const { folder = DEFAULT_FOLDER, allowsEditing = true, aspect = [1, 1] } = options;
   try {
-    // Request permission
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       throw new Error('Permission to access camera is required');
     }
 
-    // Launch camera with optimized settings
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7, // Reduced for better performance
-      exif: false, // Disable EXIF data for faster processing
-      base64: false, // No base64 needed for direct upload
+      allowsEditing,
+      aspect,
+      quality: 0.7,
+      exif: false,
+      base64: false,
     });
 
     if (!result.canceled && result.assets[0]) {
-      // Direct upload to Cloudinary (faster, no base64 conversion)
-      const uploadResult = await uploadImageToCloudinaryDirect(result.assets[0].uri, 'users');
-      
+      const uploadResult = await uploadImageToCloudinaryDirect(result.assets[0].uri, folder);
       if (uploadResult.success && uploadResult.url) {
         return uploadResult.url;
-      } else {
-        throw new Error(uploadResult.error || 'Upload failed');
       }
+      throw new Error(uploadResult.error || 'Upload failed');
     }
 
     return null;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Pick multiple images at once (e.g. for review photos). Uploads each to Cloudinary and returns URLs.
+ */
+export async function pickMultipleImages(options: PickMultipleOptions = {}): Promise<string[]> {
+  const { folder = DEFAULT_FOLDER, selectionLimit = DEFAULT_MULTI_LIMIT } = options;
+  try {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      throw new Error('Permission to access media library is required');
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsMultipleSelection: true,
+      selectionLimit: Math.max(1, Math.min(selectionLimit, 10)),
+      allowsEditing: false,
+      quality: 0.7,
+      exif: false,
+      base64: false,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      const urls: string[] = [];
+      for (const asset of result.assets) {
+        const uploadResult = await uploadImageToCloudinaryDirect(asset.uri, folder);
+        if (uploadResult.success && uploadResult.url) {
+          urls.push(uploadResult.url);
+        } else {
+          throw new Error(uploadResult.error || 'Upload failed');
+        }
+      }
+      return urls;
+    }
+
+    return [];
   } catch (error) {
     throw error;
   }

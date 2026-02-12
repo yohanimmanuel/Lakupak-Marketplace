@@ -46,11 +46,14 @@ export default function EditProfileModal() {
   const uploadImage = async (source: 'camera' | 'library', type: 'profile' | 'banner') => {
     if (!token) return;
 
+    const folder = type === 'profile' ? 'avatars' : 'banners';
     try {
       setIsUploading(true);
-      
-      const imageUri = source === 'camera' ? await takePhoto() : await pickImage();
-      
+
+      const imageUri = source === 'camera'
+        ? await takePhoto({ folder })
+        : await pickImage({ folder });
+
       if (!imageUri) return;
 
       // Update user profile with image URI

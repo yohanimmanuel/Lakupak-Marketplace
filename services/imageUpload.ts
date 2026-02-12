@@ -8,71 +8,45 @@ export interface ImageUploadResult {
 }
 
 /**
- * Direct upload to Cloudinary (faster, optimized for mobile)
- * Uses native file upload instead of base64 conversion
+ * Server-mediated upload: send file to backend, backend uploads to Cloudinary.
+ * Same flow as profile/banner upload; no client-side signature needed.
  */
 export const uploadImageToCloudinaryDirect = async (
   imageUri: string,
   folder: string = 'products'
 ): Promise<ImageUploadResult> => {
   try {
-    // Step 1: Get upload signature from backend
-    const signatureResponse = await fetch(`${API_BASE_URL}/api/upload/image`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        getSignature: true,
-        folder,
-      }),
-    });
-
-    if (!signatureResponse.ok) {
-      throw new Error('Failed to get upload signature');
-    }
-
-    const signatureData = await signatureResponse.json();
-
-    // Step 2: Upload directly to Cloudinary using native file
     const formData = new FormData();
-    
-    // Create file object from URI (React Native)
     const filename = imageUri.split('/').pop() || 'image.jpg';
     const match = /\.(\w+)$/.exec(filename);
     const type = match ? `image/${match[1]}` : 'image/jpeg';
-    
-    // @ts-ignore - React Native FormData supports file objects with uri, name, type
+
+    // React Native FormData: append file with uri, name, type
+    // @ts-ignore - RN FormData accepts { uri, name, type }
     formData.append('file', {
       uri: imageUri,
       name: filename,
-      type,
+      type: type === 'image/jpg' ? 'image/jpeg' : type,
     });
-    
-    formData.append('signature', signatureData.signature);
-    formData.append('timestamp', signatureData.timestamp.toString());
-    formData.append('api_key', signatureData.apiKey);
-    formData.append('folder', signatureData.folder);
+    formData.append('folder', folder);
 
-    const uploadResponse = await fetch(
-      `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`,
-      {
-        method: 'POST',
-        body: formData,
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/api/upload/image`, {
+      method: 'POST',
+      body: formData,
+      // Do not set Content-Type so React Native sets multipart/form-data with boundary
+    });
 
-    if (!uploadResponse.ok) {
-      const errorData = await uploadResponse.json();
-      throw new Error(errorData.error?.message || 'Upload to Cloudinary failed');
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      const msg = errBody?.error || response.statusText || 'Upload failed';
+      throw new Error(msg);
     }
 
-    const result = await uploadResponse.json();
-
+    const data = await response.json();
     return {
       success: true,
-      url: result.secure_url,
-      publicId: result.public_id,
+      url: data.url,
+      publicId: data.publicId,
     };
   } catch (error) {
     return {

@@ -8,11 +8,13 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Star, MessageSquare, Package } from 'lucide-react-native';
+import { ArrowLeft, Star, MessageSquare, Package, ImagePlus, X } from 'lucide-react-native';
 import { API_BASE_URL } from '../../../services/config';
+import { pickMultipleImages } from '../../../services/imagePicker';
 
 export interface OrderReviewItem {
   productId: string;
@@ -36,16 +38,20 @@ const normalizeUrl = (url?: string | null): string | undefined => {
   return `${base}${path}`;
 };
 
+const MAX_PHOTOS_PER_PRODUCT = 5;
+
 interface ProductReviewState {
   rating: number;
   title: string;
   comment: string;
+  images: string[];
 }
 
 const defaultReviewState = (): ProductReviewState => ({
   rating: 0,
   title: '',
   comment: '',
+  images: [],
 });
 
 export default function ProductReviewScreen() {
@@ -88,6 +94,7 @@ export default function ProductReviewScreen() {
   const [deliveryRating, setDeliveryRating] = useState<number>(0);
   const [deliveryComment, setDeliveryComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingPhotoIndex, setUploadingPhotoIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (items.length > 0) {
@@ -151,13 +158,41 @@ export default function ProductReviewScreen() {
     );
   };
 
-  const updateProductReview = (index: number, field: keyof ProductReviewState, value: number | string) => {
+  const updateProductReview = (index: number, field: keyof ProductReviewState, value: number | string | string[]) => {
     setProductReviews((prev) => {
       const next = [...prev];
       if (!next[index]) next[index] = defaultReviewState();
       next[index] = { ...next[index], [field]: value };
       return next;
     });
+  };
+
+  const addReviewPhotos = async (productIndex: number) => {
+    const review = productReviews[productIndex];
+    const currentCount = review?.images?.length ?? 0;
+    if (!review || currentCount >= MAX_PHOTOS_PER_PRODUCT) return;
+    const remaining = MAX_PHOTOS_PER_PRODUCT - currentCount;
+    try {
+      setUploadingPhotoIndex(productIndex);
+      const urls = await pickMultipleImages({
+        folder: 'reviews',
+        selectionLimit: remaining,
+      });
+      if (urls.length > 0) {
+        const current = productReviews[productIndex]?.images ?? [];
+        const combined = [...current, ...urls].slice(0, MAX_PHOTOS_PER_PRODUCT);
+        updateProductReview(productIndex, 'images', combined);
+      }
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not add photos.');
+    } finally {
+      setUploadingPhotoIndex(null);
+    }
+  };
+
+  const removeReviewPhoto = (productIndex: number, imageIndex: number) => {
+    const current = productReviews[productIndex]?.images ?? [];
+    updateProductReview(productIndex, 'images', current.filter((_, i) => i !== imageIndex));
   };
 
   if (items.length === 0) {
@@ -344,6 +379,46 @@ export default function ProductReviewScreen() {
                     numberOfLines={4}
                     textAlignVertical="top"
                   />
+                </View>
+
+                <View style={styles.section}>
+                  <Text style={styles.inputLabel}>Review photos (optional, max {MAX_PHOTOS_PER_PRODUCT})</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Add clear photos of the product. You can select multiple at once.
+                  </Text>
+                  <View style={styles.photoRow}>
+                    {(review.images ?? []).map((uri, imgIdx) => (
+                      <View key={imgIdx} style={styles.photoThumbWrap}>
+                        <Image source={{ uri }} style={styles.photoThumb} />
+                        <TouchableOpacity
+                          style={styles.photoRemove}
+                          onPress={() => removeReviewPhoto(index, imgIdx)}
+                          accessibilityLabel="Remove photo"
+                          accessibilityRole="button"
+                        >
+                          <X size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    {(review.images?.length ?? 0) < MAX_PHOTOS_PER_PRODUCT && (
+                      <TouchableOpacity
+                        style={styles.photoAdd}
+                        onPress={() => addReviewPhotos(index)}
+                        disabled={uploadingPhotoIndex === index}
+                        accessibilityLabel="Add photos"
+                        accessibilityRole="button"
+                      >
+                        {uploadingPhotoIndex === index ? (
+                          <ActivityIndicator size="small" color={primaryBlue} />
+                        ) : (
+                          <ImagePlus size={24} color={iconGray} />
+                        )}
+                        <Text style={styles.photoAddText}>
+                          Add {(review.images?.length ?? 0) > 0 ? 'more' : 'photos'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
               </View>
             );
@@ -553,6 +628,48 @@ const styles = StyleSheet.create({
     color: '#111827',
     minHeight: 140,
     backgroundColor: '#f9fafb',
+  },
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+  },
+  photoThumbWrap: {
+    position: 'relative',
+  },
+  photoThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoAdd: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoAddText: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 4,
   },
   bottomContainer: {
     position: 'absolute',
