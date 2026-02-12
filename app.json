@@ -15,7 +15,10 @@
     },
     "ios": {
       "bundleIdentifier": "com.laku.marketplace",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.laku.marketplace",
@@ -34,7 +37,11 @@
     "plugins": [
       [
         "expo-build-properties",
-        { "android": { "usesCleartextTraffic": true } }
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
       ],
       "expo-router",
       "expo-secure-store",
