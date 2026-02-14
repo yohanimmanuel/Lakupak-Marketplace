@@ -96,12 +96,12 @@ export interface MarketplaceProduct {
   };
   shipping: {
     preferences: string[];
-    standard: { price: number; free: boolean; available: boolean };
-    express: { price: number; free: boolean; available: boolean };
-    sameDay: { price: number; free: boolean; available: boolean };
-    nextDay: { price: number; free: boolean; available: boolean };
-    scheduled: { price: number; free: boolean; available: boolean };
-    pickup: { price: number; free: boolean; available: boolean };
+    standard: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
+    express: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
+    sameDay: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
+    nextDay: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
+    scheduled: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
+    pickup: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
   };
   assurance: {
     halalCertified: boolean;
@@ -294,31 +294,43 @@ export const marketplaceService = {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
                 express {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
                 sameDay {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
                 nextDay {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
                 scheduled {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
                 pickup {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
               }
               shippingInfo {
@@ -500,31 +512,43 @@ export const marketplaceService = {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
                 express {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
                 sameDay {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
                 nextDay {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
                 scheduled {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
                 pickup {
                   price
                   free
                   available
+                  minDays
+                  maxDays
                 }
               }
               shippingInfo {

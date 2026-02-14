@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, Pressable, Image, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, Pressable, Image, StyleSheet, ScrollView, Dimensions, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SvgXml } from 'react-native-svg';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface Slide {
-  image: any;
+  /** require() asset id (number) in Metro, or ImageSourcePropType for URI */
+  image: number;
   title: string;
   description: string;
 }
@@ -34,7 +35,7 @@ export default function WelcomeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const handleScroll = (event: any) => {
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const slideSize = SCREEN_WIDTH;
     const index = Math.round(event.nativeEvent.contentOffset.x / slideSize);
     setCurrentIndex(index);

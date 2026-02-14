@@ -282,93 +282,131 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     }
   ];
 
-  // Get available shipping options from distributor's preferences
+  // Format min/max for "Estimated delivery: X" line (real data from distributor) – all as business days
+  const formatDeliveryDuration = (minDays?: number | null, maxDays?: number | null): string => {
+    const min = minDays != null && !Number.isNaN(minDays) ? minDays : null;
+    const max = maxDays != null && !Number.isNaN(maxDays) ? maxDays : null;
+    if (min != null && max != null) {
+      if (min === max) return min === 1 ? '1 business day' : `${min} business days`;
+      return `${min}-${max} business days`;
+    }
+    if (min != null) return `${min}+ business days`;
+    if (max != null) return `Up to ${max} business days`;
+    return '';
+  };
+
+  // Build "X-Y business days" description from real min/max (no double "days")
+  const formatBusinessDaysDescription = (minDays?: number | null, maxDays?: number | null): string => {
+    const min = minDays != null && !Number.isNaN(minDays) ? minDays : null;
+    const max = maxDays != null && !Number.isNaN(maxDays) ? maxDays : null;
+    if (min != null && max != null) {
+      if (min === max) return min === 1 ? '1 business day' : `${min} business days`;
+      return `${min}-${max} business days`;
+    }
+    if (min != null) return `${min}+ business days`;
+    if (max != null) return `Up to ${max} business days`;
+    return '';
+  };
+
+  // Get available shipping options from distributor's preferences (real min/max from DistributorOperations)
   const getAvailableShippingOptions = (productData?: MarketplaceProduct) => {
     const targetProduct = productData || product;
     if (!targetProduct?.shipping) {
-      // Fallback: Always provide standard delivery if no shipping data
       return [{
         id: 'standard',
         name: 'Standard Delivery',
         description: '3-5 business days',
         price: 0,
-        estimatedDays: '3-5',
+        estimatedDays: '3-5 business days',
         free: false
       }];
     }
-    
+
+    const s = targetProduct.shipping;
     const options = [];
-    
-    // Standard Delivery - Always available as default
+
+    const stdMin = (s.standard as { minDays?: number | null })?.minDays ?? 3;
+    const stdMax = (s.standard as { maxDays?: number | null })?.maxDays ?? 5;
+    const stdDesc = formatBusinessDaysDescription(stdMin, stdMax) || '3-5 business days';
+    const stdEstimated = formatDeliveryDuration(stdMin, stdMax) || '3-5 business days';
     options.push({
       id: 'standard',
       name: 'Standard Delivery',
-      description: '3-5 business days',
-      price: targetProduct.shipping.standard?.price, // Default to 15,000 IDR if not specified
-      estimatedDays: '3-5',
-      free: targetProduct.shipping.standard?.free // Default to not free if not specified
+      description: stdDesc,
+      price: s.standard?.price ?? 0,
+      estimatedDays: stdEstimated,
+      free: s.standard?.free ?? false
     });
-    
-    // Express Shipping
-    if (targetProduct.shipping.express?.available) {
+
+    if (s.express?.available) {
+      const min = (s.express as { minDays?: number | null })?.minDays ?? 1;
+      const max = (s.express as { maxDays?: number | null })?.maxDays ?? 2;
+      const desc = formatBusinessDaysDescription(min, max) || '1-2 business days';
+      const estimated = formatDeliveryDuration(min, max) || '1-2 business days';
       options.push({
         id: 'express',
         name: 'Express Shipping',
-        description: '1-2 business days',
-        price: targetProduct.shipping.express.price,
-        estimatedDays: '1-2',
-        free: targetProduct.shipping.express.free
+        description: desc,
+        price: s.express.price,
+        estimatedDays: estimated,
+        free: s.express.free
       });
     }
-    
-    // Same-day Delivery
-    if (targetProduct.shipping.sameDay?.available) {
+
+    if (s.sameDay?.available) {
+      const min = (s.sameDay as { minDays?: number | null })?.minDays;
+      const max = (s.sameDay as { maxDays?: number | null })?.maxDays;
+      const estimated = formatDeliveryDuration(min, max);
       options.push({
         id: 'same_day',
         name: 'Same-day Delivery',
-        description: 'Same day delivery',
-        price: targetProduct.shipping.sameDay.price,
-        estimatedDays: 'Same day',
-        free: targetProduct.shipping.sameDay.free
+        description: estimated || 'Same business day delivery',
+        price: s.sameDay.price,
+        estimatedDays: estimated || 'Same business day',
+        free: s.sameDay.free
       });
     }
-    
-    // Next-day Delivery
-    if (targetProduct.shipping.nextDay?.available) {
+
+    if (s.nextDay?.available) {
+      const min = (s.nextDay as { minDays?: number | null })?.minDays ?? 1;
+      const max = (s.nextDay as { maxDays?: number | null })?.maxDays ?? 1;
+      const desc = formatBusinessDaysDescription(min, max);
+      const estimated = formatDeliveryDuration(min, max) || '1 business day';
       options.push({
         id: 'next_day',
         name: 'Next-day Delivery',
-        description: 'Next business day delivery',
-        price: targetProduct.shipping.nextDay.price,
-        estimatedDays: '1 day',
-        free: targetProduct.shipping.nextDay.free
+        description: desc || 'Next business day delivery',
+        price: s.nextDay.price,
+        estimatedDays: estimated,
+        free: s.nextDay.free
       });
     }
-    
-    // Scheduled Delivery
-    if (targetProduct.shipping.scheduled?.available) {
+
+    if (s.scheduled?.available) {
+      const min = (s.scheduled as { minDays?: number | null })?.minDays;
+      const max = (s.scheduled as { maxDays?: number | null })?.maxDays;
+      const estimated = formatDeliveryDuration(min, max);
       options.push({
         id: 'scheduled',
         name: 'Scheduled Delivery',
-        description: 'Schedule your preferred delivery time',
-        price: targetProduct.shipping.scheduled.price,
-        estimatedDays: 'As scheduled',
-        free: targetProduct.shipping.scheduled.free
+        description: estimated,
+        price: s.scheduled.price,
+        estimatedDays: estimated || 'As scheduled',
+        free: s.scheduled.free
       });
     }
-    
-    // Pickup Available
-    if (targetProduct.shipping.pickup?.available) {
+
+    if (s.pickup?.available) {
       options.push({
         id: 'pickup',
         name: 'Pickup Available',
         description: 'Pick up at distributor warehouse',
-        price: 0, // Always free for pickup
+        price: 0,
         estimatedDays: 'Immediate',
         free: true
       });
     }
-    
+
     return options;
   };
 

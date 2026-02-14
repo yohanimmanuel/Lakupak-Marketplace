@@ -100,7 +100,7 @@ export default function HomeScreen() {
   // Header scroll animation
   const scrollY = useRef(new Animated.Value(0)).current;
   const { setScrollY } = useHeaderScrollStore();
-  const scrollViewRef = useRef<any>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Set scrollY in store synchronously before first render to prevent flickering
   useLayoutEffect(() => {

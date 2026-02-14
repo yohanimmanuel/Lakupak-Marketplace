@@ -135,6 +135,12 @@ interface Order {
   shippingMethodLabel?: string;
   shippingMethod?: string;
   deliveryOption?: string;
+  estimatedDeliveryDate?: string | null;
+  estimatedDeliveryMinDays?: number | null;
+  estimatedDeliveryMaxDays?: number | null;
+  /** Fallback from distributor's shipping option when order has no estimated duration */
+  shippingOptionMinDays?: number | null;
+  shippingOptionMaxDays?: number | null;
 }
 
 interface OrderDetailsModalProps {
@@ -479,7 +485,40 @@ export default function OrderDetailsModal() {
         
         {/* Delivery Status Information */}
         <View style={styles.deliveryStatusContainer}>
-          
+          {(() => {
+            const hideEstimated = ['Delivered', 'Returned', 'Cancelled'].includes(orderData.orderStatus);
+            if (hideEstimated) return null;
+
+            // Use order-level duration if distributor set it; otherwise fall back to shipping option duration from company
+            const minDays = orderData.estimatedDeliveryMinDays ?? orderData.shippingOptionMinDays;
+            const maxDays = orderData.estimatedDeliveryMaxDays ?? orderData.shippingOptionMaxDays;
+            const hasRange = minDays != null || maxDays != null;
+            const rangeText = hasRange
+              ? minDays != null && maxDays != null
+                ? `${minDays}–${maxDays} business days`
+                : minDays != null
+                  ? `${minDays}+ business days`
+                  : maxDays != null
+                    ? `Up to ${maxDays} business days`
+                    : '—'
+              : '—';
+            const estimatedDateText = orderData.estimatedDeliveryDate
+              ? new Date(orderData.estimatedDeliveryDate).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+              : 'Pending';
+
+            return (
+              <View style={styles.estimatedDeliveryBlock}>
+                <View style={styles.deliveryEstimatedRangeRow}>
+                  <Text style={styles.deliveryEstimatedRangeLabel}>Estimated delivery date: </Text>
+                  <Text style={styles.deliveryEstimatedRangeValue}>{estimatedDateText}</Text>
+                </View>
+                <View style={styles.deliveryEstimatedRangeRow}>
+                  <Text style={styles.deliveryEstimatedRangeLabel}>Estimated delivery: </Text>
+                  <Text style={styles.deliveryEstimatedRangeValue}>{rangeText}</Text>
+                </View>
+              </View>
+            );
+          })()}
           <View style={styles.deliveryStatusRow}>
             <Truck size={16} color="#10b981" />
             <Text style={styles.deliveryStatusText}>
@@ -839,7 +878,6 @@ export default function OrderDetailsModal() {
           <RotateCcw size={20} color="#6b7280" />
           <View style={styles.supportContent}>
             <Text style={styles.supportTitle}>Request for Return/Refund</Text>
-            <Text style={styles.supportSubtitle}>You can request return/refund until 11 Oct</Text>
           </View>
           <ChevronRight size={16} color="#6b7280" />
         </TouchableOpacity>
@@ -1209,6 +1247,28 @@ const styles = StyleSheet.create({
   deliveryStatusContainer: {
     marginBottom: 16,
     paddingBottom: 12,
+  },
+  estimatedDeliveryBlock: {
+    marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  deliveryEstimatedRangeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  deliveryEstimatedRangeLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginRight: 4,
+  },
+  deliveryEstimatedRangeValue: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '500',
   },
   deliveryMethodText: {
     fontSize: 14,
