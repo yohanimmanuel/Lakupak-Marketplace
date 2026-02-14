@@ -1,5 +1,10 @@
+import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadImageToCloudinaryDirect } from './imageUpload';
+
+/** Short delay so content URIs (e.g. Android gallery) are readable before upload; reduces first-upload failures. */
+const UPLOAD_READY_DELAY_MS = Platform.OS === 'android' ? 250 : 100;
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export type PickImageOptions = {
   folder?: string;
@@ -32,6 +37,7 @@ export async function pickImage(options: PickImageOptions = {}): Promise<string 
     });
 
     if (!result.canceled && result.assets[0]) {
+      await delay(UPLOAD_READY_DELAY_MS);
       const uploadResult = await uploadImageToCloudinaryDirect(result.assets[0].uri, folder);
       if (uploadResult.success && uploadResult.url) {
         return uploadResult.url;
@@ -62,6 +68,7 @@ export async function takePhoto(options: PickImageOptions = {}): Promise<string 
     });
 
     if (!result.canceled && result.assets[0]) {
+      await delay(UPLOAD_READY_DELAY_MS);
       const uploadResult = await uploadImageToCloudinaryDirect(result.assets[0].uri, folder);
       if (uploadResult.success && uploadResult.url) {
         return uploadResult.url;
@@ -96,6 +103,7 @@ export async function pickMultipleImages(options: PickMultipleOptions = {}): Pro
     });
 
     if (!result.canceled && result.assets.length > 0) {
+      await delay(UPLOAD_READY_DELAY_MS);
       const urls: string[] = [];
       for (const asset of result.assets) {
         const uploadResult = await uploadImageToCloudinaryDirect(asset.uri, folder);

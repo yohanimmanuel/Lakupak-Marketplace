@@ -7,15 +7,24 @@ export interface ImageUploadResult {
   error?: string;
 }
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isNetworkError(error: unknown): boolean {
+  if (error instanceof TypeError && (error.message === 'Failed to fetch' || error.message.includes('Network request failed'))) return true;
+  if (error instanceof Error && /network|fetch|request failed/i.test(error.message)) return true;
+  return false;
+}
+
 /**
  * Server-mediated upload: send file to backend, backend uploads to Cloudinary.
  * Same flow as profile/banner upload; no client-side signature needed.
+ * Retries once after a short delay on network error (fixes first-upload failure on Android/content URIs).
  */
 export const uploadImageToCloudinaryDirect = async (
   imageUri: string,
   folder: string = 'products'
 ): Promise<ImageUploadResult> => {
-  try {
+  const doUpload = async (): Promise<ImageUploadResult> => {
     const formData = new FormData();
     const filename = imageUri.split('/').pop() || 'image.jpg';
     const match = /\.(\w+)$/.exec(filename);
@@ -48,7 +57,22 @@ export const uploadImageToCloudinaryDirect = async (
       url: data.url,
       publicId: data.publicId,
     };
+  };
+
+  try {
+    return await doUpload();
   } catch (error) {
+    if (isNetworkError(error)) {
+      await delay(400);
+      try {
+        return await doUpload();
+      } catch (retryError) {
+        return {
+          success: false,
+          error: retryError instanceof Error ? retryError.message : 'Upload failed',
+        };
+      }
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Upload failed',

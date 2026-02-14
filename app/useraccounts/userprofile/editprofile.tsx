@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, Link, type LinkProps } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronRight, Camera, ArrowLeft } from 'lucide-react-native';
@@ -133,10 +133,16 @@ export default function EditProfileModal() {
             shadowOpacity: 0.25,
             shadowRadius: 3.84,
             elevation: 5,
-            opacity: isUploading ? 0.6 : 1,
+            opacity: isUploading ? 0.9 : 1,
           }}
+          accessibilityLabel={isUploading ? 'Uploading…' : 'Change profile or banner image'}
+          accessibilityState={{ busy: isUploading }}
         >
-          <Camera color="#0a61d7" size={20} />
+          {isUploading ? (
+            <ActivityIndicator size="small" color="#0a61d7" />
+          ) : (
+            <Camera color="#0a61d7" size={20} />
+          )}
         </Pressable>
       </View>
       
