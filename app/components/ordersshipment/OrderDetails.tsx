@@ -1140,8 +1140,8 @@ export default function OrderDetailsModal() {
         {renderOrderShippingInfo()}
         {renderDistributorInfo()}
         {renderProductInfo()}
-        {renderSupportCenter()}
         {renderOrderIdInfo()}
+        {renderSupportCenter()}
       </ScrollView>
       
       {renderBottomBar()}
