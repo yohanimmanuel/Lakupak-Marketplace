@@ -405,6 +405,10 @@ export const useDataStore = create<DataState>()(
             // Handle notification messages
             if (message.type === 'notification' && message.notification) {
               const { type, title, body, data, targetUserId } = message.notification
+              // Ignore dashboard-only notifications: same WebSocket is used by Dashboard and Marketplace,
+              // so dashboard_new (title "New notification") is for sellers only; do not show to buyers.
+              if (type === 'dashboard_new') return
+
               const authState = useAuthStore.getState()
               const currentUserId = authState.user?.id
 
