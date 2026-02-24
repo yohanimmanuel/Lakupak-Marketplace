@@ -32,7 +32,7 @@ yarn-error.*
 
 # local env files
 .env
-
+.env*.local
 
 # Firebase / FCM service account key - do not commit
 *-firebase-adminsdk-*.json
