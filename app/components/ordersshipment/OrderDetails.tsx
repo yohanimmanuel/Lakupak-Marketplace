@@ -552,18 +552,9 @@ export default function OrderDetailsModal() {
         
         {orderData.assignedLogistics && (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Carrier:</Text>
+            <Text style={styles.infoLabel}>Assigned Logistics:</Text>
             <Text style={[styles.infoValue, styles.infoValueMedium]}>
               {orderData.assignedLogistics}
-            </Text>
-          </View>
-        )}
-        
-        {orderData.trackingNumber && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Tracking Number:</Text>
-            <Text style={[styles.infoValue, styles.infoValueMedium]}>
-              {orderData.trackingNumber}
             </Text>
           </View>
         )}
