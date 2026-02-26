@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e5e7eb',
   },
   noOrdersCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#f9fafb',
     padding: 24,
     alignItems: 'center',
     marginHorizontal: 16,
