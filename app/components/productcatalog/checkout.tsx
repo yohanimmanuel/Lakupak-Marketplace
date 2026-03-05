@@ -335,6 +335,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
       description: stdDesc,
       price: s.standard?.price ?? 0,
       estimatedDays: stdEstimated,
+      minDays: stdMin,
+      maxDays: stdMax,
       free: s.standard?.free ?? false
     });
 
@@ -349,20 +351,24 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
         description: desc,
         price: s.express.price,
         estimatedDays: estimated,
+        minDays: min,
+        maxDays: max,
         free: s.express.free
       });
     }
 
     if (s.sameDay?.available) {
-      const min = (s.sameDay as { minDays?: number | null })?.minDays;
-      const max = (s.sameDay as { maxDays?: number | null })?.maxDays;
-      const estimated = formatDeliveryDuration(min, max);
+      const min = (s.sameDay as { minDays?: number | null })?.minDays ?? null;
+      const max = (s.sameDay as { maxDays?: number | null })?.maxDays ?? null;
+      const estimated = formatDeliveryDuration(min ?? undefined, max ?? undefined);
       options.push({
         id: 'same_day',
         name: 'Same-day Delivery',
         description: estimated || 'Same business day delivery',
         price: s.sameDay.price,
         estimatedDays: estimated || 'Same business day',
+        minDays: min,
+        maxDays: max,
         free: s.sameDay.free
       });
     }
@@ -378,20 +384,24 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
         description: desc || 'Next business day delivery',
         price: s.nextDay.price,
         estimatedDays: estimated,
+        minDays: min,
+        maxDays: max,
         free: s.nextDay.free
       });
     }
 
     if (s.scheduled?.available) {
-      const min = (s.scheduled as { minDays?: number | null })?.minDays;
-      const max = (s.scheduled as { maxDays?: number | null })?.maxDays;
-      const estimated = formatDeliveryDuration(min, max);
+      const min = (s.scheduled as { minDays?: number | null })?.minDays ?? null;
+      const max = (s.scheduled as { maxDays?: number | null })?.maxDays ?? null;
+      const estimated = formatDeliveryDuration(min ?? undefined, max ?? undefined);
       options.push({
         id: 'scheduled',
         name: 'Scheduled Delivery',
         description: estimated,
         price: s.scheduled.price,
         estimatedDays: estimated || 'As scheduled',
+        minDays: min,
+        maxDays: max,
         free: s.scheduled.free
       });
     }
@@ -403,6 +413,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
         description: 'Pick up at distributor warehouse',
         price: 0,
         estimatedDays: 'Immediate',
+        minDays: null,
+        maxDays: null,
         free: true
       });
     }
@@ -854,6 +866,12 @@ useEffect(() => {
                     const selectedId = selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id;
                     const selectedOption = shippingOptions.find(s => s.id === selectedId) || shippingOptions[0];
                     const distributorShippingCost = selectedOption ? selectedOption.price : 0;
+                    const estimatedMinDays = selectedOption && typeof (selectedOption as any).minDays === 'number'
+                      ? (selectedOption as any).minDays as number
+                      : null;
+                    const estimatedMaxDays = selectedOption && typeof (selectedOption as any).maxDays === 'number'
+                      ? (selectedOption as any).maxDays as number
+                      : null;
                     const distributorTotal = distributorSubtotal + distributorShippingCost;
                     
                     const toISODate = (dateValue: Date | null | undefined) => dateValue ? dateValue.toISOString() : null;
@@ -988,6 +1006,8 @@ useEffect(() => {
                         : null,
                       shippingMethodLabel: selectedOption?.name,
                       shippingMethod: selectedOption?.name,
+                      estimatedDeliveryMinDays: estimatedMinDays,
+                      estimatedDeliveryMaxDays: estimatedMaxDays,
                       orderStatus: 'Pending',
                       paymentStatus: 'Unpaid',
                       paymentTerms: 'Cash on Delivery',
@@ -1025,6 +1045,15 @@ useEffect(() => {
                     const minutes = String(dateValue.getMinutes()).padStart(2, '0');
                     return `${hours}:${minutes}`;
                   };
+
+                  const selectedOption =
+                    shippingOptions.find(option => option.id === selectedShipping) || shippingOptions[0];
+                  const estimatedMinDays = selectedOption && typeof (selectedOption as any).minDays === 'number'
+                    ? (selectedOption as any).minDays as number
+                    : null;
+                  const estimatedMaxDays = selectedOption && typeof (selectedOption as any).maxDays === 'number'
+                    ? (selectedOption as any).maxDays as number
+                    : null;
 
                   const orderData = {
                     orderId: orderId,
@@ -1066,8 +1095,10 @@ useEffect(() => {
                     preferredPickupTime: selectedShipping === 'pickup' && pickupDateTime
                       ? toTimeComponent(pickupDateTime)
                       : null,
-                    shippingMethodLabel: shippingOptions.find(option => option.id === selectedShipping)?.name,
-                    shippingMethod: shippingOptions.find(option => option.id === selectedShipping)?.name,
+                    shippingMethodLabel: selectedOption?.name,
+                    shippingMethod: selectedOption?.name,
+                    estimatedDeliveryMinDays: estimatedMinDays,
+                    estimatedDeliveryMaxDays: estimatedMaxDays,
                     orderStatus: 'Pending',
                     paymentStatus: 'Unpaid',
                     paymentTerms: 'Cash on Delivery',
