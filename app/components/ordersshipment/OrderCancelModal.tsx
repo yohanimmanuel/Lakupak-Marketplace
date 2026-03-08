@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -13,7 +13,8 @@ import {
   Platform,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { AlertCircle } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AlertCircle, ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 
@@ -57,13 +58,21 @@ const CANCELLATION_REASONS = [
   }
 ];
 
+const primaryBlue = '#0a61d7';
+
 export default function OrderCancelModal() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { orderId } = useLocalSearchParams();
   const { token, user } = useAuthStore();
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [customReason, setCustomReason] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+
+  const scrollToInput = () => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
+  };
 
   const handleCancelOrder = async () => {
     if (!selectedReason) {
@@ -156,14 +165,43 @@ export default function OrderCancelModal() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
+    <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          headerShown: true,
+          header: () => (
+            <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 44) + 8 }]}>
+              <View style={styles.headerContent}>
+                <TouchableOpacity 
+                  onPress={() => router.back()} 
+                  hitSlop={10}
+                  accessibilityLabel="Go back"
+                  accessibilityRole="button"
+                >
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Cancel Order</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={styles.scrollWrapper}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          ref={scrollRef}
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={{ paddingBottom: 30 }}
+        >
         {/* Warning Message */}
         <View style={styles.warningContainer}>
           <AlertCircle size={20} color="#f59e0b" />
@@ -229,13 +267,15 @@ export default function OrderCancelModal() {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              onFocus={scrollToInput}
             />
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-      {/* Bottom Action */}
-      <View style={styles.bottomContainer}>
+      {/* Bottom bar: absolute, outside KeyboardAvoidingView so layout resets cleanly when keyboard closes */}
+      <View style={[styles.bottomContainer, { paddingBottom: Math.max(insets.bottom, 18) }]}>
         <TouchableOpacity
           style={[
             styles.cancelOrderButton,
@@ -252,7 +292,7 @@ export default function OrderCancelModal() {
           </Text>
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -260,6 +300,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  scrollWrapper: {
+    flex: 1,
+  },
+  headerContainer: {
+    backgroundColor: '#ffffff',
+    borderBottomColor: '#e5e7eb',
+    borderBottomWidth: 1,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerTitle: {
+    color: '#111827',
+    fontSize: 20,
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'left',
+    marginLeft: 35,
   },
   content: {
     flex: 1,
