@@ -10,6 +10,7 @@ import {
   Alert,
   Clipboard,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -106,8 +107,8 @@ interface OrderUserInfo {
 interface Order {
   id: string;
   orderId: string;
-  status: 'Pending' | 'Confirmed' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Received';
-  orderStatus: 'Pending' | 'Confirmed' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Received';
+  status: 'Pending' | 'Confirmed' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Received' | 'Failed';
+  orderStatus: 'Pending' | 'Confirmed' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned' | 'Received' | 'Failed';
   orderDate: string;
   paymentMethod: string;
   paymentStatus: 'Unpaid' | 'Paid';
@@ -126,6 +127,7 @@ interface Order {
   assignedLogistics?: string;
   trackingNumber?: string;
   updatedAt: string;
+  receivedAt?: string | null;
   user?: OrderUserInfo;
   deliveryMethod?: string;
   preferredDeliveryDate?: string;
@@ -159,6 +161,7 @@ export default function OrderDetailsModal() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isReceived, setIsReceived] = useState(false);
+  const [isMarkingReceived, setIsMarkingReceived] = useState(false);
   const [showAllOrderInfo, setShowAllOrderInfo] = useState(false);
   const [productMOQs, setProductMOQs] = useState<Record<string, number | null>>({});
 
@@ -183,7 +186,7 @@ export default function OrderDetailsModal() {
         }
         
         setOrder(orderData);
-        setIsReceived(orderData?.orderStatus === 'Delivered' || orderData?.orderStatus === 'Received');
+        setIsReceived(orderData?.orderStatus === 'Received');
         
         // Fetch MOQ data for all products in the order
         if (orderData?.orderItems) {
@@ -268,6 +271,8 @@ export default function OrderDetailsModal() {
         return 'Your Order is Cancelled';
       case 'returned':
         return 'Your Order is Returned';
+      case 'failed':
+        return 'Delivery Failed';
       default:
         return 'Your Order is Pending';
     }
@@ -289,6 +294,8 @@ export default function OrderDetailsModal() {
         return 'Your order has been cancelled';
       case 'returned':
         return 'Your order is being returned';
+      case 'failed':
+        return 'Delivery could not be completed';
       case 'pending':
         return 'Your order is being processed';
       default:
@@ -298,7 +305,7 @@ export default function OrderDetailsModal() {
 
   const handleOrderReceived = async () => {
     if (!order) return;
-    
+    setIsMarkingReceived(true);
     try {
       const response = await fetch(`${API_BASE_URL}/api/mobile/orders/${orderData.id}/status`, {
         method: 'PUT',
@@ -311,13 +318,17 @@ export default function OrderDetailsModal() {
       
       if (response.ok) {
         setIsReceived(true);
-        setOrder((prev: Order | null) => prev ? { ...prev, status: 'Received' } : null);
+        setOrder((prev: Order | null) =>
+          prev ? { ...prev, status: 'Received', orderStatus: 'Received' } : null
+        );
         Alert.alert('Success', 'Order marked as received successfully!');
       } else {
         Alert.alert('Error', 'Failed to update order status');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to update order status');
+    } finally {
+      setIsMarkingReceived(false);
     }
   };
 
@@ -486,7 +497,7 @@ export default function OrderDetailsModal() {
         {/* Delivery Status Information */}
         <View style={styles.deliveryStatusContainer}>
           {(() => {
-            const hideEstimated = ['Delivered', 'Returned', 'Cancelled'].includes(orderData.orderStatus);
+            const hideEstimated = ['Delivered', 'Returned', 'Cancelled', 'Failed'].includes(orderData.orderStatus);
             if (hideEstimated) return null;
 
             // Use order-level duration if distributor set it; otherwise fall back to shipping option duration from company
@@ -1034,11 +1045,15 @@ export default function OrderDetailsModal() {
       );
     }
 
+    const handleReturnRefund = () => {
+      router.push(`/components/ordersshipment/ReturnRefundModal?orderId=${orderData.orderId}`);
+    };
+
     // Received - show Return/Refund and Rate
     if (isReceived) {
       return (
         <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.returnButton}>
+          <TouchableOpacity style={styles.returnButton} onPress={handleReturnRefund}>
             <Text style={styles.returnButtonText}>Return/Refund</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.rateButton} onPress={handleRateOrder}>
@@ -1049,19 +1064,83 @@ export default function OrderDetailsModal() {
       );
     }
 
-    // All other statuses - show Return/Refund and Order Received (disabled unless delivered)
-    const isOrderReceivedEnabled = orderData.orderStatus === 'Delivered';
-    
+    // Failed - delivery could not be completed; show Contact support
+    if (orderData.orderStatus === 'Failed') {
+      return (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            style={styles.contactSupportButton}
+            onPress={() => Alert.alert('Contact Support', 'Support functionality coming soon!')}
+          >
+            <Text style={styles.contactSupportButtonText}>Contact support</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Delivered (not yet received) - Return/Refund disabled until received; Order Received right; after pressing Order Received, UI shows Rate
+    if (orderData.orderStatus === 'Delivered') {
+      return (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            style={[styles.returnButton, styles.disabledButton]}
+            disabled
+          >
+            <Text style={[styles.returnButtonText, styles.disabledButtonText]}>Return/Refund</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.orderReceivedButton, isMarkingReceived && styles.disabledButton]}
+            onPress={handleOrderReceived}
+            disabled={isMarkingReceived}
+          >
+            {isMarkingReceived ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={styles.orderReceivedButtonText}>Order Received</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Cancelled - nothing to do; show go back
+    if (orderData.orderStatus === 'Cancelled') {
+      return (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity style={styles.goBackButton} onPress={() => router.back()}>
+            <Text style={styles.goBackButtonText}>Back to Orders</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Returned - show only Return/Refund and Rate (no Cancel Order or Order Received)
+    if (orderData.orderStatus === 'Returned') {
+      return (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity style={styles.returnButton} onPress={handleReturnRefund}>
+            <Text style={styles.returnButtonText}>Return/Refund</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.rateButton} onPress={handleRateOrder}>
+            <Star size={16} color="#ffffff" />
+            <Text style={styles.rateButtonText}>Rate</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Before delivery (Pending paid, Confirmed, Packed, Shipped) - show Cancel Order and Order Received (disabled)
+    const isOrderReceivedEnabled = false;
     return (
       <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.returnButton}>
-          <Text style={styles.returnButtonText}>Return/Refund</Text>
+        <TouchableOpacity style={styles.cancelButton} onPress={handleCancelOrder}>
+          <Text style={styles.cancelButtonText}>Cancel Order</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.orderReceivedButton, 
+            styles.orderReceivedButton,
             !isOrderReceivedEnabled && styles.disabledButton
-          ]} 
+          ]}
           onPress={isOrderReceivedEnabled ? handleOrderReceived : undefined}
           disabled={!isOrderReceivedEnabled}
         >
@@ -1631,6 +1710,21 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#ef4444',
   },
+  goBackButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  goBackButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
   payButton: {
     flex: 1,
     paddingVertical: 12,
@@ -1640,6 +1734,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   payButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#ffffff',
+  },
+  contactSupportButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#0a61d7',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  contactSupportButtonText: {
     fontSize: 16,
     fontWeight: '500',
     color: '#ffffff',

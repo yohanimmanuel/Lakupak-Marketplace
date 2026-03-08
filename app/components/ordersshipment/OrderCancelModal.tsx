@@ -100,8 +100,8 @@ export default function OrderCancelModal() {
             try {
               setIsLoading(true);
               
-              const reasonText = selectedReason === 'other' 
-                ? customReason.trim() 
+              const reasonText = selectedReason === 'other'
+                ? customReason.trim()
                 : CANCELLATION_REASONS.find(r => r.id === selectedReason)?.label || 'User requested cancellation';
 
               const requestBody = {
@@ -109,7 +109,9 @@ export default function OrderCancelModal() {
                 orderId: orderId,
                 userId: user?.id,
                 cancelledBy: user?.id?.toString() || 'User',
-                reason: reasonText
+                reason: reasonText,
+                reasonCode: selectedReason,
+                reasonDetail: selectedReason === 'other' ? customReason.trim() || undefined : undefined
               };
               
               

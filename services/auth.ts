@@ -117,4 +117,43 @@ export async function signupStep3(username: string, password: string): Promise<{
   return { success: true, message: 'Step 3 completed' }
 }
 
+// Forgot password: request reset (sends generic success; in production would send email)
+export async function requestForgotPassword(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/mobile/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim().toLowerCase() }),
+  })
+  const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string }
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to send reset instructions.')
+  }
+  return { message: data.message || 'If this email is registered, check your inbox for instructions.' }
+}
+
+// Reset password: set new password (requires verification code from email)
+export async function resetPassword(email: string, token: string, newPassword: string): Promise<{ message: string }> {
+  const trimmed = email.trim().toLowerCase()
+  const code = typeof token === 'string' ? token.trim() : ''
+  if (!code) {
+    throw new Error('Verification code is required. Check your email for the code we sent.')
+  }
+  if (newPassword.length < 6) {
+    throw new Error('Password must be at least 6 characters long.')
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/mobile/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: trimmed, token: code, password: newPassword }),
+  })
+  const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string; code?: string }
+  if (!res.ok) {
+    const err = new Error(data.error || 'Failed to reset password.')
+    ;(err as Error & { code?: string }).code = data.code
+    throw err
+  }
+  return { message: data.message || 'Password has been reset. You can now log in.' }
+}
+
 

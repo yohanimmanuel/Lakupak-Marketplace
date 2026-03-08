@@ -101,8 +101,8 @@ export default function OrdersScreen() {
     setNotifications((prev) => {
       const previousMap = new Map(prev.map(notification => [notification.id, notification]));
       const derived = validOrders.map((order) => {
-        let title = 'Payment Required';
-        let message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
+        let title = 'Order Placed';
+        let message = `Your order ${order.orderId} has been placed.`;
 
         if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
           title = 'Payment Required';
@@ -119,6 +119,9 @@ export default function OrdersScreen() {
         } else if (order.orderStatus === 'Delivered') {
           title = 'Order Delivered';
           message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered!`;
+        } else if (order.orderStatus === 'Received') {
+          title = 'Order Received';
+          message = `Thank you! You marked order ${order.orderId} as received. We hope you enjoy your purchase!`;
         } else if (order.orderStatus === 'Cancelled') {
           title = 'Order Cancelled';
           message = `We regret to inform you that your order ${order.orderId} has been cancelled.`;
@@ -182,6 +185,7 @@ export default function OrdersScreen() {
         const s = notification.status;
         switch (s) {
           case 'delivered':
+          case 'received':
             return <CheckCircle size={20} color="#10b981" />;
           case 'shipped':
             return <Truck size={20} color="#0a61d7" />;
@@ -204,6 +208,7 @@ export default function OrdersScreen() {
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'delivered':
+      case 'received':
         return '#10b981';
       case 'shipped':
         return '#0a61d7';

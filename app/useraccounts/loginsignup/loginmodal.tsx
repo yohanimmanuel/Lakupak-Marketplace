@@ -146,7 +146,10 @@ export default function LoginModal() {
             </View>
 
             {/* Forgot Password */}
-            <Pressable style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
+            <Pressable
+              onPress={() => router.push('/useraccounts/loginsignup/forgotpasswordmodal')}
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}
+            >
               <Info color='#0a61d7' size={16} style={{ marginRight: 6 }} />
               <Text style={{ color: '#0a61d7', fontSize: 14, fontWeight: '500' }}>
                 Forgot password?

@@ -358,6 +358,13 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
+          name="useraccounts/loginsignup/forgotpasswordmodal"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="useraccounts/userprofile/editprofile"
           options={{
             presentation: 'modal',
@@ -465,6 +472,22 @@ function RootLayoutNav() {
             presentation: 'modal',
             headerShown: true,
             title: 'Cancel Order',
+            headerStyle: {
+              backgroundColor: '#ffffff',
+            },
+            headerTintColor: '#0a61d7',
+            headerTitleStyle: {
+              color: '#111827',
+              fontWeight: '600',
+            },
+          }} 
+        />
+        <Stack.Screen 
+          name="components/ordersshipment/ReturnRefundModal" 
+          options={{ 
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Return / Refund',
             headerStyle: {
               backgroundColor: '#ffffff',
             },
