@@ -8,7 +8,7 @@ export type Notification = {
   timestamp: string;
   isRead: boolean;
   orderId?: string;
-  status?: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  status?: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' | 'returned' | 'failed';
   icon?: string;
   actionText?: string;
   productImage?: string;
@@ -124,8 +124,9 @@ export class NotificationService {
         const title = orderStatus || 'Payment Required';
         const message = orderDescription || `Your order ${orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
       
-      // Map order status to notification status
-      let notificationStatus: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' | undefined = 'pending';
+      // Map order status to notification status (Notification.status union)
+      type OrderNotificationStatus = NonNullable<Notification['status']>;
+      let notificationStatus: OrderNotificationStatus = 'pending';
       if (orderStatus) {
         switch (orderStatus.toLowerCase()) {
           case 'confirmed':
@@ -141,8 +142,18 @@ export class NotificationService {
           case 'cancelled':
             notificationStatus = 'cancelled';
             break;
+          case 'returned':
+            notificationStatus = 'returned';
+            break;
+          case 'failed':
+            notificationStatus = 'failed';
+            break;
+          case 'pending':
+            notificationStatus = 'pending';
+            break;
           default:
             notificationStatus = 'pending';
+            break;
         }
       }
 

@@ -175,6 +175,10 @@ class SupabaseRealtimeService {
         title = 'Order Returned';
         body = `Your order #${orderId} return has been processed.`;
         break;
+      case 'Failed':
+        title = 'Delivery Failed';
+        body = `We're sorry. Delivery of your order #${orderId} could not be completed. Please contact support.`;
+        break;
     }
 
     // Show local notification (phone notification tray)
@@ -212,6 +216,10 @@ class SupabaseRealtimeService {
       case 'Returned':
         title = 'Order Returned';
         body = `Your order #${orderId} return has been processed.`;
+        break;
+      case 'Failed':
+        title = 'Delivery Failed';
+        body = `We're sorry. Delivery of your order #${orderId} could not be completed. Please contact support.`;
         break;
     }
 

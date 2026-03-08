@@ -13,6 +13,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Link } from 'expo-router';
 import {
+  AlertCircle,
   Bell,
   ShoppingCart,
   ShoppingBag,
@@ -124,6 +125,9 @@ export default function OrdersScreen() {
         } else if (order.orderStatus === 'Returned') {
           title = 'Order Returned';
           message = `Your order ${order.orderId} has been returned to us.`;
+        } else if (order.orderStatus === 'Failed') {
+          title = 'Delivery Failed';
+          message = `We're sorry. Delivery of your order ${order.orderId} could not be completed. Please contact support.`;
         }
 
         const timestampSource = order.createdAt || order.orderDate || new Date().toISOString();
@@ -174,7 +178,9 @@ export default function OrdersScreen() {
     // Fallback to status icons
     switch (notification.type) {
       case 'order':
-        switch (notification.status) {
+        if (notification.status === 'failed') return <AlertCircle size={20} color="#ef4444" />;
+        const s = notification.status;
+        switch (s) {
           case 'delivered':
             return <CheckCircle size={20} color="#10b981" />;
           case 'shipped':
@@ -206,6 +212,7 @@ export default function OrdersScreen() {
       case 'pending':
         return '#f59e0b';
       case 'cancelled':
+      case 'failed':
         return '#ef4444';
       default:
         return '#6b7280';

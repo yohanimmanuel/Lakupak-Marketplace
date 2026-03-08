@@ -214,6 +214,10 @@ class PushNotificationService {
           title = 'Order Returned';
           body = `Your order #${orderId} return has been processed.`;
           break;
+        case 'failed':
+          title = 'Delivery Failed';
+          body = `We're sorry. Delivery of your order #${orderId} could not be completed. Please contact support.`;
+          break;
         default:
           title = 'Order Update';
           body = `Your order #${orderId} status has been updated to ${orderStatus}.`;
