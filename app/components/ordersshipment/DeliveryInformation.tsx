@@ -83,6 +83,7 @@ interface DeliveryOrder {
   updatedAt: string;
   orderItems?: DeliveryOrderItem[];
   user?: DeliveryOrderUser;
+  returnStatus?: string | null;
 }
 
 export default function DeliveryInformation() {
@@ -601,6 +602,24 @@ export default function DeliveryInformation() {
                 <Text style={styles.trackingID}>
                   Delivery Method: {order.deliveryMethod}
                 </Text>
+                {order.orderStatus === 'Returned' && (
+                  <Text style={styles.trackingID}>
+                    Return/refund status:{' '}
+                    <Text
+                      style={{
+                        fontWeight: '600',
+                        color:
+                          order.returnStatus === 'Accepted'
+                            ? '#16a34a'
+                            : order.returnStatus === 'Rejected'
+                            ? '#dc2626'
+                            : '#f59e0b',
+                      }}
+                    >
+                      {order.returnStatus || 'Pending review'}
+                    </Text>
+                  </Text>
+                )}
               </View>
             </View>
           </View>

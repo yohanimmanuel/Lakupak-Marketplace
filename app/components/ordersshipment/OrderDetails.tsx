@@ -143,6 +143,14 @@ interface Order {
   /** Fallback from distributor's shipping option when order has no estimated duration */
   shippingOptionMinDays?: number | null;
   shippingOptionMaxDays?: number | null;
+  returnStatus?: 'Accepted' | 'Rejected' | null;
+  returnRequests?: {
+    id?: number;
+    status: 'Pending' | 'Accepted' | 'Rejected';
+    reason?: string | null;
+    reasonDetail?: string | null;
+    createdAt?: string;
+  }[];
 }
 
 interface OrderDetailsModalProps {
@@ -487,16 +495,29 @@ export default function OrderDetailsModal() {
   };
 
 
-  const renderOrderShippingInfo = () => (
-    <View style={styles.section}>
-      <View style={styles.productCard}>
-        <View style={[styles.sectionTitleContainer, styles.shippingTitleContainer]}>
-          <Text style={[styles.sectionTitle, styles.shippingTitle]}>{getStatusText(orderData.orderStatus)}</Text>
-        </View>
+  const renderOrderShippingInfo = () => {
+    const hasPendingReturnRequest =
+      Array.isArray(orderData.returnRequests) &&
+      orderData.returnRequests.some((rr) => rr.status === 'Pending');
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.productCard}>
+          <View style={[styles.sectionTitleContainer, styles.shippingTitleContainer]}>
+            <Text style={[styles.sectionTitle, styles.shippingTitle]}>{getStatusText(orderData.orderStatus)}</Text>
+          </View>
+
+          {orderData.orderStatus === 'Received' && hasPendingReturnRequest && (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontSize: 13, color: '#16a34a', fontWeight: '500' }}>
+                You have requested a return. Please wait for distributor confirmation.
+              </Text>
+            </View>
+          )}
         
-        {/* Delivery Status Information */}
-        <View style={styles.deliveryStatusContainer}>
-          {(() => {
+          {/* Delivery Status Information */}
+          <View style={styles.deliveryStatusContainer}>
+            {(() => {
             const hideEstimated = ['Delivered', 'Returned', 'Cancelled', 'Failed'].includes(orderData.orderStatus);
             if (hideEstimated) return null;
 
@@ -517,8 +538,8 @@ export default function OrderDetailsModal() {
               ? new Date(orderData.estimatedDeliveryDate).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
               : 'Pending';
 
-            return (
-              <View style={styles.estimatedDeliveryBlock}>
+              return (
+                <View style={styles.estimatedDeliveryBlock}>
                 <View style={styles.deliveryEstimatedRangeRow}>
                   <Text style={styles.deliveryEstimatedRangeLabel}>Estimated delivery date: </Text>
                   <Text style={styles.deliveryEstimatedRangeValue}>{estimatedDateText}</Text>
@@ -527,91 +548,92 @@ export default function OrderDetailsModal() {
                   <Text style={styles.deliveryEstimatedRangeLabel}>Estimated delivery: </Text>
                   <Text style={styles.deliveryEstimatedRangeValue}>{rangeText}</Text>
                 </View>
-              </View>
-            );
-          })()}
-          <View style={styles.deliveryStatusRow}>
-            <Truck size={16} color="#10b981" />
-            <Text style={styles.deliveryStatusText}>
-              {getDeliveryStatusDescription(orderData.orderStatus)}
-            </Text>
-            <TouchableOpacity 
-              style={styles.chevronButton}
-              onPress={() => router.push({
-                pathname: '/components/ordersshipment/DeliveryInformation',
-                params: { orderId: orderData.orderId }
-              })}
-            >
-              <ChevronRight size={16} color="#6B7280" />
-            </TouchableOpacity>
+                </View>
+              );
+            })()}
+            <View style={styles.deliveryStatusRow}>
+              <Truck size={16} color="#10b981" />
+              <Text style={styles.deliveryStatusText}>
+                {getDeliveryStatusDescription(orderData.orderStatus)}
+              </Text>
+              <TouchableOpacity 
+                style={styles.chevronButton}
+                onPress={() => router.push({
+                  pathname: '/components/ordersshipment/DeliveryInformation',
+                  params: { orderId: orderData.orderId }
+                })}
+              >
+                <ChevronRight size={16} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            
+            {orderData.updatedAt && (
+              <Text style={styles.deliveryDateTimeText}>
+                {new Date(orderData.updatedAt).toLocaleDateString('en-GB', {
+                  day: '2-digit',
+                  month: '2-digit', 
+                  year: 'numeric'
+                })} {new Date(orderData.updatedAt).toLocaleTimeString('en-GB', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false
+                })}
+              </Text>
+            )}
           </View>
           
-          {orderData.updatedAt && (
-            <Text style={styles.deliveryDateTimeText}>
-              {new Date(orderData.updatedAt).toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: '2-digit', 
-                year: 'numeric'
-              })} {new Date(orderData.updatedAt).toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-              })}
-            </Text>
+          {orderData.assignedLogistics && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Assigned Logistics:</Text>
+              <Text style={[styles.infoValue, styles.infoValueMedium]}>
+                {orderData.assignedLogistics}
+              </Text>
+            </View>
+          )}
+          
+          {orderData.contactPerson && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Recipient:</Text>
+              <Text style={[styles.infoValue, styles.infoValueMedium]}>
+                {orderData.contactPerson}
+              </Text>
+            </View>
+          )}
+          
+          {orderData.contactPhone && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Phone:</Text>
+              <Text style={[styles.infoValue, styles.infoValueMedium]}>
+                {orderData.contactPhone}
+              </Text>
+            </View>
+          )}
+          
+          {orderData.deliveryAddress && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Address:</Text>
+              <Text style={[styles.infoValue, styles.infoValueWide]} numberOfLines={1} ellipsizeMode="tail">
+                {orderData.deliveryAddress}
+              </Text>
+            </View>
+          )}
+          
+          {orderData.deliveryNote && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Delivery Instruction:</Text>
+              <Text
+                style={[styles.infoValue, styles.infoValueWide]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {orderData.deliveryNote}
+              </Text>
+            </View>
           )}
         </View>
-        
-        {orderData.assignedLogistics && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Assigned Logistics:</Text>
-            <Text style={[styles.infoValue, styles.infoValueMedium]}>
-              {orderData.assignedLogistics}
-            </Text>
-          </View>
-        )}
-        
-        {orderData.contactPerson && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Recipient:</Text>
-            <Text style={[styles.infoValue, styles.infoValueMedium]}>
-              {orderData.contactPerson}
-            </Text>
-          </View>
-        )}
-        
-        {orderData.contactPhone && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Phone:</Text>
-            <Text style={[styles.infoValue, styles.infoValueMedium]}>
-              {orderData.contactPhone}
-            </Text>
-          </View>
-        )}
-        
-        {orderData.deliveryAddress && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Address:</Text>
-            <Text style={[styles.infoValue, styles.infoValueWide]} numberOfLines={1} ellipsizeMode="tail">
-              {orderData.deliveryAddress}
-            </Text>
-          </View>
-        )}
-        
-        {orderData.deliveryNote && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Delivery Instruction:</Text>
-            <Text
-              style={[styles.infoValue, styles.infoValueWide]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
-              {orderData.deliveryNote}
-            </Text>
-          </View>
-        )}
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderProductInfo = () => {
     // Filter products into discounted and non-discounted groups
@@ -876,7 +898,15 @@ export default function OrderDetailsModal() {
           <Text style={styles.sectionTitle}>Support Center</Text>
         </View>
         
-        <TouchableOpacity style={styles.supportItem}>
+        <TouchableOpacity
+          style={styles.supportItem}
+          onPress={() =>
+            router.push({
+              pathname: '/components/ordersshipment/ReturnRefundInfo',
+              params: { orderId: orderData.orderId },
+            })
+          }
+        >
           <RotateCcw size={20} color="#6b7280" />
           <View style={styles.supportContent}>
             <Text style={styles.supportTitle}>Request for Return/Refund</Text>
@@ -896,13 +926,41 @@ export default function OrderDetailsModal() {
         
         <View style={styles.supportDivider} />
         
-        <TouchableOpacity style={styles.supportItem}>
+        <TouchableOpacity
+          style={styles.supportItem}
+          onPress={() =>
+            router.push({
+              pathname: '/components/ordersshipment/OrderHelpCenter',
+              params: { orderId: orderData.orderId },
+            })
+          }
+        >
           <HelpCircle size={20} color="#6b7280" />
           <View style={styles.supportContent}>
             <Text style={styles.supportTitle}>Help Center</Text>
           </View>
           <ChevronRight size={16} color="#6b7280" />
         </TouchableOpacity>
+
+        {orderData.orderStatus === 'Returned' && (
+          <View style={{ marginTop: 8 }}>
+            <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 2 }}>Return/refund status</Text>
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color:
+                  orderData.returnStatus === 'Accepted'
+                    ? '#16a34a'
+                    : orderData.returnStatus === 'Rejected'
+                    ? '#dc2626'
+                    : '#f59e0b',
+              }}
+            >
+              {orderData.returnStatus || 'Pending review'}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );

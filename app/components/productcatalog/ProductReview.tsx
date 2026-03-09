@@ -112,9 +112,16 @@ export default function ProductReviewScreen() {
   const iconGray = '#6B7280';
 
   const allProductRatingsFilled = items.length > 0 && productReviews.every((r) => r.rating > 0);
-  const canSubmit = allProductRatingsFilled && !isSubmitting;
+  const canSubmit = allProductRatingsFilled && !isSubmitting && uploadingPhotoIndex === null;
 
   const handleSubmit = async () => {
+    if (uploadingPhotoIndex !== null) {
+      Alert.alert(
+        'Please wait',
+        'Photos are still uploading. You can submit your review once the upload finishes.'
+      );
+      return;
+    }
     if (!allProductRatingsFilled) {
       Alert.alert(
         'Rating Required',

@@ -11,12 +11,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AlertCircle, ArrowLeft } from 'lucide-react-native';
+import { AlertCircle, ArrowLeft, ImagePlus, X } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
+import { pickMultipleImages } from '../../../services/imagePicker';
 
 const RETURN_REASONS = [
   { id: 'wrong_item', label: 'Wrong item received', description: 'I received a different product than ordered' },
@@ -37,13 +39,49 @@ export default function ReturnRefundModal() {
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [reasonDetail, setReasonDetail] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   const scrollToInput = () => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
   };
 
+  const handleAddPhotos = async () => {
+    const currentCount = imageUrls.length;
+    if (currentCount >= 5) return;
+    const remaining = 5 - currentCount;
+    try {
+      setUploadingPhotos(true);
+      const urls = await pickMultipleImages({
+        folder: 'reviews',
+        selectionLimit: remaining,
+      });
+      if (urls && urls.length > 0) {
+        setImageUrls((prev) => {
+          const combined = [...prev, ...urls];
+          return combined.slice(0, 5);
+        });
+      }
+    } catch (error) {
+      Alert.alert(
+        'Upload failed',
+        error instanceof Error ? error.message : 'Could not upload images. Please try again.'
+      );
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setImageUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
+    if (uploadingPhotos) {
+      Alert.alert('Please wait', 'We are still uploading your photos. You can submit once it finishes.');
+      return;
+    }
     if (!selectedReason) {
       Alert.alert('Select Reason', 'Please select a reason for your return or refund.');
       return;
@@ -73,6 +111,7 @@ export default function ReturnRefundModal() {
           orderId: orderId.trim(),
           reason: selectedReason,
           reasonDetail: reasonDetail.trim() || undefined,
+          imageUrls,
         }),
       });
 
@@ -98,7 +137,7 @@ export default function ReturnRefundModal() {
     }
   };
 
-  const canSubmit = selectedReason && (selectedReason !== 'other' || reasonDetail.trim());
+  const canSubmit = !!selectedReason && (selectedReason !== 'other' || !!reasonDetail.trim()) && !uploadingPhotos && !isLoading;
 
   return (
     <View style={styles.container}>
@@ -207,6 +246,46 @@ export default function ReturnRefundModal() {
             </View>
           )}
 
+          <View style={styles.photosSection}>
+            <Text style={styles.inputLabel}>Photos (optional, max 5)</Text>
+            <Text style={styles.photosHint}>
+              Recommended for damaged, defective, not as described, or other reasons.
+            </Text>
+            <View style={styles.photoRow}>
+              {imageUrls.map((uri, index) => (
+                <View key={`${uri}-${index}`} style={styles.photoThumbWrap}>
+                  <Image source={{ uri }} style={styles.photoThumb} />
+                  <TouchableOpacity
+                    style={styles.photoRemove}
+                    onPress={() => handleRemovePhoto(index)}
+                    accessibilityLabel="Remove photo"
+                    accessibilityRole="button"
+                  >
+                    <X size={14} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {imageUrls.length < 5 && (
+                <TouchableOpacity
+                  style={styles.photoAdd}
+                  onPress={handleAddPhotos}
+                  disabled={uploadingPhotos}
+                  accessibilityLabel="Add photos"
+                  accessibilityRole="button"
+                >
+                  {uploadingPhotos ? (
+                    <ActivityIndicator size="small" color={primaryBlue} />
+                  ) : (
+                    <ImagePlus size={24} color="#6b7280" />
+                  )}
+                  <Text style={styles.photoAddText}>
+                    Add {imageUrls.length > 0 ? 'more' : 'photos'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
           <View style={styles.policyBlock}>
             <Text style={styles.policyText}>
               We will review your request and may email you with return instructions or next steps. Refunds are issued to your original payment method.
@@ -217,9 +296,9 @@ export default function ReturnRefundModal() {
 
       <View style={[styles.bottomContainer, { paddingBottom: Math.max(insets.bottom, 18) }]}>
         <TouchableOpacity
-          style={[styles.submitButton, (!canSubmit || isLoading) && styles.submitButtonDisabled]}
+          style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={!canSubmit || isLoading}
+          disabled={!canSubmit}
         >
           {isLoading ? (
             <ActivityIndicator color="#fff" size="small" />
@@ -227,7 +306,7 @@ export default function ReturnRefundModal() {
             <Text
               style={[
                 styles.submitButtonText,
-                (!canSubmit || isLoading) && styles.submitButtonTextDisabled,
+                !canSubmit && styles.submitButtonTextDisabled,
               ]}
             >
               Submit request
@@ -384,6 +463,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     minHeight: 100,
   },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+    marginBottom: 6,
+  },
   policyBlock: {
     paddingHorizontal: 8,
     paddingBottom: 16,
@@ -392,6 +477,57 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     lineHeight: 18,
+  },
+  photosSection: {
+    paddingHorizontal: 8,
+    paddingBottom: 16,
+  },
+  photosHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+  },
+  photoThumbWrap: {
+    position: 'relative',
+  },
+  photoThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoAdd: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoAddText: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 4,
   },
   bottomContainer: {
     position: 'absolute',
