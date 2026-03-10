@@ -144,8 +144,23 @@ function RootLayoutNav() {
 
     initializePushNotifications();
 
-    // Listen for incoming notifications (when app is in foreground); shown via setNotificationHandler
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
+    // When a push arrives in foreground, show one in-app notification with same title/body (no default; dedup with WebSocket)
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      if (AppState.currentState !== 'active') return;
+      const trigger = notification.request.trigger as { type?: string } | null;
+      const isRemote = trigger && trigger.type === 'push';
+      if (!isRemote) return;
+      const content = notification.request.content;
+      const data = content.data as { type?: string; orderId?: string; orderStatus?: string } | undefined;
+      if (data?.type === 'order' && data?.orderId) {
+        pushNotificationService.showOrderNotificationInApp(
+          String(data.orderId),
+          data.orderStatus ?? '',
+          content.title ?? undefined,
+          content.body ?? undefined
+        );
+      }
+    });
 
     // Listen for notification interactions (when user taps notification)
     responseListener.current = Notifications.addNotificationResponseReceivedListener(

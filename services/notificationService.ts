@@ -8,7 +8,7 @@ export type Notification = {
   timestamp: string;
   isRead: boolean;
   orderId?: string;
-  status?: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' | 'returned' | 'failed';
+  status?: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'received' | 'cancelled' | 'returned' | 'failed';
   icon?: string;
   actionText?: string;
   productImage?: string;
@@ -138,6 +138,9 @@ export class NotificationService {
             break;
           case 'delivered':
             notificationStatus = 'delivered';
+            break;
+          case 'received':
+            notificationStatus = 'received';
             break;
           case 'cancelled':
             notificationStatus = 'cancelled';

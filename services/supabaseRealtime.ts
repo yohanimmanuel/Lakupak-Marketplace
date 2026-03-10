@@ -167,6 +167,10 @@ class SupabaseRealtimeService {
         title = 'Order Delivered';
         body = `Your order #${orderId} has been delivered. Enjoy your purchase!`;
         break;
+      case 'Received':
+        title = 'Order Received';
+        body = `Your order #${orderId} has been marked as received. Thank you for confirming!`;
+        break;
       case 'Cancelled':
         title = 'Order Cancelled';
         body = `Your order #${orderId} has been cancelled.`;
@@ -208,6 +212,10 @@ class SupabaseRealtimeService {
       case 'Delivered':
         title = 'Order Delivered';
         body = `Your order #${orderId} has been delivered. Enjoy your purchase!`;
+        break;
+      case 'Received':
+        title = 'Order Received';
+        body = `Your order #${orderId} has been marked as received. Thank you for confirming!`;
         break;
       case 'Cancelled':
         title = 'Order Cancelled';

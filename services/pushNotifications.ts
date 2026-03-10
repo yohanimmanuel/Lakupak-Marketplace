@@ -174,6 +174,24 @@ class PushNotificationService {
     return notificationId;
   }
 
+  // Dedup: avoid showing the same order notification twice when multiple channels deliver (push/WebSocket/realtime)
+  private lastOrderNotificationShown: { orderId: string; orderStatus: string; at: number } | null = null;
+  private static readonly ORDER_NOTIFICATION_DEDUP_MS = 5000;
+
+  /**
+   * Show one in-app order notification when app is in foreground. Deduplicates push vs WebSocket.
+   * Call this from WebSocket handler or from push received listener so user sees same content and no duplicate.
+   */
+  showOrderNotificationInApp(
+    orderId: string,
+    orderStatus: string,
+    customTitle?: string,
+    customMessage?: string
+  ): void {
+    if (AppState.currentState !== 'active') return;
+    this.showOrderNotification(orderId, orderStatus, customTitle, customMessage);
+  }
+
   // Show order status notification
   async showOrderNotification(
     orderId: string,
@@ -181,6 +199,18 @@ class PushNotificationService {
     customTitle?: string,
     customMessage?: string
   ): Promise<void> {
+    const now = Date.now();
+    const statusKey = (orderStatus || 'unknown').toLowerCase();
+    if (
+      this.lastOrderNotificationShown &&
+      this.lastOrderNotificationShown.orderId === orderId &&
+      this.lastOrderNotificationShown.orderStatus === statusKey &&
+      now - this.lastOrderNotificationShown.at < PushNotificationService.ORDER_NOTIFICATION_DEDUP_MS
+    ) {
+      return;
+    }
+    this.lastOrderNotificationShown = { orderId, orderStatus: statusKey, at: now };
+
     let title = customTitle || '';
     let body = customMessage || '';
 
@@ -205,6 +235,10 @@ class PushNotificationService {
         case 'delivered':
           title = 'Order Delivered';
           body = `Your order #${orderId} has been delivered. Enjoy your purchase!`;
+          break;
+        case 'received':
+          title = 'Order Received';
+          body = `Your order #${orderId} has been marked as received. Thank you for confirming!`;
           break;
         case 'cancelled':
           title = 'Order Cancelled';

@@ -79,6 +79,17 @@ export interface Order {
   };
   seller?: Record<string, unknown>;
   orderItems: OrderItem[];
+  returnRequests?: {
+    id: number;
+    orderId: string;
+    marketplaceUserId: number;
+    reason: string;
+    reasonDetail?: string | null;
+    imageUrls: string[];
+    status: string;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+  }[];
 }
 
 interface MobileOrdersResponse {
@@ -188,6 +199,17 @@ class OrdersService {
                 discountPercentage
                 discountAmount
                 moqSnapshot
+              }
+              returnRequests {
+                id
+                orderId
+                marketplaceUserId
+                reason
+                reasonDetail
+                imageUrls
+                status
+                createdAt
+                updatedAt
               }
             }
             pagination {

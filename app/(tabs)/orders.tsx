@@ -31,6 +31,7 @@ import {
   Clock,
   MapPin,
   User as UserIcon,
+  RotateCcw,
 } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { API_BASE_URL } from '../../services/config';
@@ -116,6 +117,9 @@ export default function OrdersScreen() {
         } else if (order.orderStatus === 'Shipped') {
           title = 'Order Shipped';
           message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you.`;
+        } else if ((order.orderStatus === 'Delivered' || order.orderStatus === 'Received') && Array.isArray(order.returnRequests) && order.returnRequests.some((rr: { status: string }) => rr.status === 'Pending')) {
+          title = 'Return Request Submitted';
+          message = `Your return request for order ${order.orderId} has been submitted. We will process it and contact you if needed.`;
         } else if (order.orderStatus === 'Delivered') {
           title = 'Order Delivered';
           message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered!`;
@@ -191,6 +195,8 @@ export default function OrdersScreen() {
             return <Truck size={20} color="#0a61d7" />;
           case 'confirmed':
             return <CreditCard size={20} color="#10b981" />;
+          case 'returned':
+            return <RotateCcw size={20} color="#f59e0b" />;
           default:
             return <Package size={20} color="#6b7280" />;
         }
@@ -210,6 +216,8 @@ export default function OrdersScreen() {
       case 'delivered':
       case 'received':
         return '#10b981';
+      case 'returned':
+        return '#f59e0b';
       case 'shipped':
         return '#0a61d7';
       case 'confirmed':

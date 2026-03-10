@@ -496,9 +496,41 @@ export default function OrderDetailsModal() {
 
 
   const renderOrderShippingInfo = () => {
-    const hasPendingReturnRequest =
-      Array.isArray(orderData.returnRequests) &&
-      orderData.returnRequests.some((rr) => rr.status === 'Pending');
+    const latestReturnRequest =
+      Array.isArray(orderData.returnRequests) && orderData.returnRequests.length > 0
+        ? [...orderData.returnRequests].sort((a, b) => {
+            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return bTime - aTime;
+          })[0]
+        : null;
+
+    const returnStatusColors = latestReturnRequest
+      ? (() => {
+          switch (latestReturnRequest.status) {
+            case 'Pending':
+              return {
+                backgroundColor: '#fef9c3', // soft yellow
+                textColor: '#854d0e',
+              };
+            case 'Accepted':
+              return {
+                backgroundColor: '#16a34a', // strong green
+                textColor: '#ffffff',
+              };
+            case 'Rejected':
+              return {
+                backgroundColor: '#b91c1c', // strong red
+                textColor: '#ffffff',
+              };
+            default:
+              return {
+                backgroundColor: '#f8fafc',
+                textColor: '#111827',
+              };
+          }
+        })()
+      : null;
 
     return (
       <View style={styles.section}>
@@ -507,10 +539,28 @@ export default function OrderDetailsModal() {
             <Text style={[styles.sectionTitle, styles.shippingTitle]}>{getStatusText(orderData.orderStatus)}</Text>
           </View>
 
-          {orderData.orderStatus === 'Received' && hasPendingReturnRequest && (
-            <View style={{ marginBottom: 12 }}>
-              <Text style={{ fontSize: 13, color: '#16a34a', fontWeight: '500' }}>
-                You have requested a return. Please wait for distributor confirmation.
+          {['Received', 'Returned'].includes(orderData.orderStatus) && latestReturnRequest && returnStatusColors && (
+            <View
+              style={{
+                marginBottom: 12,
+                padding: 10,
+                borderRadius: 8,
+                backgroundColor: returnStatusColors.backgroundColor,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: returnStatusColors.textColor,
+                  fontWeight: '500',
+                }}
+              >
+                {latestReturnRequest.status === 'Pending' &&
+                  'You have requested a return. Please wait for distributor confirmation.'}
+                {latestReturnRequest.status === 'Accepted' &&
+                  'Your return request has been accepted. We are processing your return/refund.'}
+                {latestReturnRequest.status === 'Rejected' &&
+                  'Your return request was rejected. If you need help, please contact support.'}
               </Text>
             </View>
           )}

@@ -64,6 +64,17 @@ export interface MarketplaceOrder {
   isDeleted?: boolean
   deletedAt?: string | null
   orderItems?: MarketplaceOrderItem[]
+  returnRequests?: {
+    id: number;
+    orderId: string;
+    marketplaceUserId: number;
+    reason: string;
+    reasonDetail?: string | null;
+    imageUrls: string[];
+    status: string;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+  }[];
   user?: {
     id?: number
     name?: string
@@ -414,11 +425,11 @@ export const useDataStore = create<DataState>()(
 
               if (!targetUserId || targetUserId === currentUserId) {
                 if (type === 'order') {
-                  // WebSocket is only sent when Expo had 0 tokens (fallback); show local so user gets a notification in foreground
+                  // Show one in-app notification (same content as push); dedup with push-received in foreground
                   const orderId = data?.orderId as string
                   const orderStatus = data?.orderStatus as string
                   if (orderId && orderStatus) {
-                    pushNotificationService.showOrderNotification(orderId, orderStatus, title, body)
+                    pushNotificationService.showOrderNotificationInApp(orderId, orderStatus, title, body)
                   }
                 } else {
                   pushNotificationService.scheduleLocalNotification(title, body, data as Record<string, unknown>)
