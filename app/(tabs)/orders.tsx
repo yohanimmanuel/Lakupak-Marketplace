@@ -34,9 +34,7 @@ import {
   RotateCcw,
 } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
-import { API_BASE_URL } from '../../services/config';
-import { Notification } from '../../services/notificationService';
-import { useDataStore } from '../../stores/dataStore';
+import { useDataStore, type MarketplaceOrder, type MarketplaceOrderItem } from '../../stores/dataStore';
 import { useRouter } from 'expo-router';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -49,9 +47,8 @@ export default function OrdersScreen() {
   const orders = useDataStore(state => state.orders);
   const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
-  
+  // notifications state no longer used; kept only if needed later
+  // Local notification state no longer needed here; notifications now live in the Notifications tab
   const isAuthenticated = !!token && !!authUser;
 
   // SIMPLE: Load immediately when component mounts
@@ -62,7 +59,6 @@ export default function OrdersScreen() {
   // Load orders initially when authenticated (WebSocket will handle updates)
   useEffect(() => {
     if (!isAuthenticated || !authUser?.id) {
-      setNotifications([]);
       // Clear orders if user is not authenticated
       const dataStore = useDataStore.getState();
       if (dataStore.orders.length > 0) {
@@ -85,131 +81,7 @@ export default function OrdersScreen() {
     }
   }, [isAuthenticated, authUser?.id, loadOrdersData]);
 
-  // Keep notifications in sync with store orders while preserving read state
-  // CRITICAL: Validate orders belong to current user before displaying
-  useEffect(() => {
-    if (!authUser?.id) {
-      setNotifications([]);
-      return;
-    }
-    
-    // Filter orders to ensure they belong to current user
-    // This prevents showing other users' orders during race conditions
-    const dataStore = useDataStore.getState();
-    const cachedUserId = dataStore.user?.id;
-    const validOrders = cachedUserId === authUser.id ? orders : [];
-    
-    setNotifications((prev) => {
-      const previousMap = new Map(prev.map(notification => [notification.id, notification]));
-      const derived = validOrders.map((order) => {
-        let title = 'Order Placed';
-        let message = `Your order ${order.orderId} has been placed.`;
-
-        if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
-          title = 'Payment Required';
-          message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
-        } else if (order.orderStatus === 'Confirmed') {
-          title = 'Order Confirmed';
-          message = `Excellent! Your order ${order.orderId} has been confirmed by our distributor and is now being processed.`;
-        } else if (order.orderStatus === 'Packed') {
-          title = 'Order Packed';
-          message = `Fantastic! Your order ${order.orderId} has been carefully packed and is ready for shipment.`;
-        } else if (order.orderStatus === 'Shipped') {
-          title = 'Order Shipped';
-          message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you.`;
-        } else if ((order.orderStatus === 'Delivered' || order.orderStatus === 'Received') && Array.isArray(order.returnRequests) && order.returnRequests.some((rr: { status: string }) => rr.status === 'Pending')) {
-          title = 'Return Request Submitted';
-          message = `Your return request for order ${order.orderId} has been submitted. We will process it and contact you if needed.`;
-        } else if (order.orderStatus === 'Delivered') {
-          title = 'Order Delivered';
-          message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered!`;
-        } else if (order.orderStatus === 'Received') {
-          title = 'Order Received';
-          message = `Thank you! You marked order ${order.orderId} as received. We hope you enjoy your purchase!`;
-        } else if (order.orderStatus === 'Cancelled') {
-          title = 'Order Cancelled';
-          message = `We regret to inform you that your order ${order.orderId} has been cancelled.`;
-        } else if (order.orderStatus === 'Returned') {
-          title = 'Order Returned';
-          message = `Your order ${order.orderId} has been returned to us.`;
-        } else if (order.orderStatus === 'Failed') {
-          title = 'Delivery Failed';
-          message = `We're sorry. Delivery of your order ${order.orderId} could not be completed. Please contact support.`;
-        }
-
-        const timestampSource = order.createdAt || order.orderDate || new Date().toISOString();
-
-        const normalizedStatus = (order.orderStatus || '').toLowerCase() as Notification['status'];
-
-        return {
-          id: `order_${order.orderId}`,
-          type: 'order' as const,
-          title,
-          message,
-          timestamp: new Date(timestampSource).toLocaleString('en-US', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-          }).replace(',', ''),
-          isRead: false,
-          orderId: order.orderId,
-          status: normalizedStatus,
-          productImage: order.orderItems?.[0]?.images?.[0]
-        };
-      });
-
-      return derived.map((notification) => {
-        const existing = previousMap.get(notification.id);
-        return existing ? { ...notification, isRead: existing.isRead } : notification;
-      });
-    });
-  }, [orders, authUser?.id]);
-
-  // WebSocket handles updates automatically - no need to refresh on focus
-
-  const getNotificationIcon = (notification: Notification) => {
-    // For order notifications, use product image if available, otherwise fallback to status icon
-    if (notification.type === 'order' && notification.productImage) {
-      return (
-        <Image 
-          source={{ uri: notification.productImage }} 
-          style={styles.productImage}
-          resizeMode="cover"
-        />
-      );
-    }
-    
-    // Fallback to status icons
-    switch (notification.type) {
-      case 'order':
-        if (notification.status === 'failed') return <AlertCircle size={20} color="#ef4444" />;
-        const s = notification.status;
-        switch (s) {
-          case 'delivered':
-          case 'received':
-            return <CheckCircle size={20} color="#10b981" />;
-          case 'shipped':
-            return <Truck size={20} color="#0a61d7" />;
-          case 'confirmed':
-            return <CreditCard size={20} color="#10b981" />;
-          case 'returned':
-            return <RotateCcw size={20} color="#f59e0b" />;
-          default:
-            return <Package size={20} color="#6b7280" />;
-        }
-      case 'discount':
-        return <Tag size={20} color="#f59e0b" />;
-      case 'promotion':
-        return <Gift size={20} color="#8b5cf6" />;
-      case 'update':
-        return <Bell size={20} color="#6b7280" />;
-      default:
-        return <Bell size={20} color="#6b7280" />;
-    }
-  };
+  // WebSocket handles updates automatically - no need to derive notifications here anymore
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -233,91 +105,64 @@ export default function OrdersScreen() {
   };
 
 
-  const unreadCount = useMemo(
-    () => notifications.filter(n => !n.isRead).length,
-    [notifications]
-  );
-
-  const markAsRead = async (notificationId: string) => {
-    // SIMPLE: Just update local state
-    setNotifications(prev => 
-      prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
-    );
+  const formatOrderDate = (order: MarketplaceOrder) => {
+    const src = order.orderDate || order.createdAt || order.updatedAt;
+    if (!src) return '';
+    const d = new Date(src);
+    return Number.isNaN(d.getTime())
+      ? ''
+      : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  const markAllAsRead = async () => {
-    // SIMPLE: Just update local state
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, isRead: true }))
-    );
-  };
-
-  const toggleDropdown = (notificationId: string) => {
-    setOpenDropdowns(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(notificationId)) {
-        newSet.delete(notificationId);
-      } else {
-        newSet.add(notificationId);
-      }
-      return newSet;
-    });
-  };
-
-  const fetchOrderDetails = async (orderId: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/mobile/orders/${orderId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        return data.order;
-      }
-      return null;
-    } catch (error) {
-      return null;
+  const getOrderStatusColor = (status?: string) => {
+    switch ((status || '').toLowerCase()) {
+      case 'delivered':
+      case 'received':
+        return '#10b981';
+      case 'shipped':
+        return '#0a61d7';
+      case 'confirmed':
+        return '#10b981';
+      case 'pending':
+        return '#f59e0b';
+      case 'cancelled':
+      case 'failed':
+      case 'returned':
+        return '#ef4444';
+      default:
+        return '#6b7280';
     }
   };
 
-  const handleOrderCardPress = (notification: Notification) => {
-    if (notification.type === 'order' && notification.orderId) {
-      router.push({
-        pathname: '/components/ordersshipment/OrderDetails',
-        params: { orderId: notification.orderId }
-      });
+  /** Filled badge style like dashboard: { backgroundColor, color } */
+  const getOrderStatusBadgeStyle = (status?: string): { backgroundColor: string; color: string } => {
+    switch ((status || '').toLowerCase()) {
+      case 'pending':
+        return { backgroundColor: '#fefce8', color: '#a16207' };
+      case 'confirmed':
+        return { backgroundColor: '#eff6ff', color: '#1d4ed8' };
+      case 'packed':
+        return { backgroundColor: '#eef2ff', color: '#4338ca' };
+      case 'shipped':
+        return { backgroundColor: '#f0f9ff', color: '#0369a1' };
+      case 'delivered':
+      case 'received':
+        return { backgroundColor: '#ecfdf5', color: '#047857' };
+      case 'failed':
+      case 'cancelled':
+        return { backgroundColor: '#fff1f2', color: '#be123c' };
+      case 'returned':
+        return { backgroundColor: '#f3f4f6', color: '#4b5563' };
+      default:
+        return { backgroundColor: '#f3f4f6', color: '#6b7280' };
     }
   };
 
-  const handleUpdateOrderStatus = async (orderId: string, status: string) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/mobile/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status })
-      });
-      
-      if (response.ok) {
-        // Update local notifications
-        setNotifications(prev => 
-          prev.map(n => 
-            n.orderId === orderId 
-              ? { ...n, status: status.toLowerCase() as 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' }
-              : n
-          )
-        );
-        return true;
-      }
-      return false;
-    } catch (error) {
-      return false;
-    }
+  const getOrderAmountColor = (paymentStatus?: string) => {
+    const status = (paymentStatus || '').toLowerCase();
+    if (status === 'unpaid') return '#dc2626'; // red-600
+    if (status === 'paid') return '#16a34a'; // green-600
+    return '#111827';
   };
 
   const renderLoginPrompt = () => (
@@ -354,54 +199,88 @@ export default function OrdersScreen() {
             <View style={styles.loadingContainer}>
               <Text style={styles.loadingText}>Loading your orders...</Text>
             </View>
-          ) : notifications.length > 0 ? (
-            notifications.map((notification, index) => {
-              const isOpen = openDropdowns.has(notification.id);
+          ) : orders.length > 0 ? (
+            orders.map((order: MarketplaceOrder) => {
+              const totalProducts =
+                Array.isArray(order.orderItems) && order.orderItems.length > 0
+                  ? order.orderItems.length
+                  : 0;
+              const itemsLabel =
+                totalProducts > 0
+                  ? `${totalProducts} product${totalProducts > 1 ? 's' : ''}`
+                  : 'No products';
+
+              const dateLabel = formatOrderDate(order);
+              const statusBadgeStyle = getOrderStatusBadgeStyle(order.orderStatus);
+              const firstImage = order.orderItems?.[0]?.images?.[0];
+
               return (
-                <View key={notification.id} style={styles.orderUpdateCard}>
-                  <TouchableOpacity 
-                    style={styles.updateHeader}
-                    onPress={() => handleOrderCardPress(notification)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.updateHeaderLeft}>
-                      <View style={styles.timelineDot}>
-                        {getNotificationIcon(notification)}
+                <TouchableOpacity
+                  key={order.orderId}
+                  style={styles.orderCard}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/components/ordersshipment/OrderDetails',
+                      params: { orderId: order.orderId },
+                    })
+                  }
+                >
+                  <View style={styles.orderCardInner}>
+                    <View style={styles.orderCardLeft}>
+                      <View style={styles.orderCardThumbWrap}>
+                        {firstImage ? (
+                          <Image
+                            source={{ uri: firstImage }}
+                            style={styles.orderCardThumb}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={styles.orderCardThumbPlaceholder}>
+                            <Package size={24} color="#9ca3af" />
+                          </View>
+                        )}
                       </View>
-                      <View style={styles.updateTitleContainer}>
-                        <Text style={styles.updateTitle}>{notification.title}</Text>
-                        <Text style={styles.updateMessage}>{notification.message}</Text>
-                        <Text style={styles.updateTime}>{notification.timestamp}</Text>
+                      <View style={styles.orderCardBody}>
+                        <View style={styles.orderCardTopRow}>
+                          <Text style={styles.orderIdText}>{order.orderId}</Text>
+                        </View>
+                      <Text style={styles.orderDistributorText} numberOfLines={1}>
+                        {order.storeName || order.user?.company?.name || 'Distributor'}
+                      </Text>
+                      <Text style={styles.orderProductsText} numberOfLines={2}>
+                        {itemsLabel}
+                      </Text>
+                      <View style={styles.orderMetaRow}>
+                        <Text
+                          style={[
+                            styles.orderAmountText,
+                            { color: getOrderAmountColor(order.paymentStatus) },
+                          ]}
+                        >
+                          {order.totalAmount != null ? `Rp ${Math.round(order.totalAmount).toLocaleString('id-ID')}` : ''}
+                        </Text>
+                      </View>
+                      {dateLabel ? (
+                        <View style={styles.orderDateRow}>
+                          <Text style={styles.orderDateLabel}>Order Date:</Text>
+                          <Text style={styles.orderDateText}>{dateLabel}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    </View>
+                    <View style={styles.orderCardRight}>
+                      <View style={[styles.orderStatusPill, statusBadgeStyle]}>
+                        <Text style={[styles.orderStatusPillText, { color: statusBadgeStyle.color }]}>
+                          {order.orderStatus || 'Unknown'}
+                        </Text>
+                      </View>
+                      <View style={styles.orderCardChevron}>
+                        <ChevronRight size={20} color="#9ca3af" />
                       </View>
                     </View>
-                    <TouchableOpacity 
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        toggleDropdown(notification.id);
-                      }}
-                      style={styles.dropdownButton}
-                    >
-                      {isOpen ? (
-                        <ChevronUp size={20} color="#6b7280" />
-                      ) : (
-                        <ChevronDown size={20} color="#6b7280" />
-                      )}
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                  
-                  {/* Dropdown Content */}
-                  {isOpen && (
-                    <View style={styles.dropdownContent}>
-                      {notification.actionText ? (
-                        <TouchableOpacity style={styles.actionButton}>
-                          <Text style={styles.actionButtonText}>{notification.actionText}</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <Text style={styles.noUpdatesText}>No available updates</Text>
-                      )}
-                    </View>
-                  )}
-                </View>
+                  </View>
+                </TouchableOpacity>
               );
             })
           ) : (
@@ -510,50 +389,110 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
   },
-  orderUpdateCard: {
+  orderCard: {
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  updateHeader: {
+  orderCardInner: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    justifyContent: 'space-between',
+  },
+  orderCardLeft: {
+    flexDirection: 'row',
+    flex: 1,
+    minWidth: 0,
+  },
+  orderCardRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingLeft: 8,
+    paddingVertical: 2,
+  },
+  orderCardThumbWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#f3f4f6',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+    marginRight: 14,
+  },
+  orderCardThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  orderCardThumbPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orderCardBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  orderCardChevron: {
+    marginLeft: 8,
+  },
+  orderCardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: 16,
+    alignItems: 'center',
+    marginBottom: 2,
   },
-  updateHeaderLeft: {
-    flexDirection: 'row',
-    flex: 1,
-  },
-  updateTitleContainer: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  updateTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  updateMessage: {
+  orderIdText: {
     fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  orderDistributorText: {
+    fontSize: 13,
+    color: '#374151',
+    marginBottom: 2,
+  },
+  orderProductsText: {
+    fontSize: 13,
     color: '#6b7280',
-    lineHeight: 20,
-    marginBottom: 8,
+    marginBottom: 15,
   },
-  updateTime: {
+  orderMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  orderAmountText: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  orderStatusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  orderStatusPillText: {
     fontSize: 12,
-    color: '#9ca3af',
+    fontWeight: '600',
+    textTransform: 'capitalize',
   },
-  dropdownButton: {
-    padding: 8,
+  orderDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
   },
-  dropdownContent: {
-    backgroundColor: '#f9fafb',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+  orderDateLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginRight: 4,
+  },
+  orderDateText: {
+    fontSize: 12,
+    color: '#374151',
   },
   noOrdersCard: {
     backgroundColor: '#f9fafb',

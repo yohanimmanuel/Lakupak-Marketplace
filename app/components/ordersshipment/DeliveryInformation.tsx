@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   CheckCircle,
   Truck,
@@ -91,6 +92,8 @@ export default function DeliveryInformation() {
   const { orderId } = useLocalSearchParams();
   const { token } = useAuthStore();
   const orders = useDataStore(state => state.orders);
+  const insets = useSafeAreaInsets();
+  const primaryBlue = '#0a61d7';
   const [order, setOrder] = useState<DeliveryOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [geocodeResult, setGeocodeResult] = useState<GeocodeResult | null>(null);
@@ -491,7 +494,27 @@ export default function DeliveryInformation() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
+          header: () => (
+            <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 44) + 8 }]}>
+              <View style={styles.headerContent}>
+                <TouchableOpacity
+                  onPress={() => router.back()}
+                  hitSlop={10}
+                  accessibilityLabel="Go back"
+                  accessibilityRole="button"
+                >
+                  <ArrowLeft color={primaryBlue} size={24} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Delivery Information</Text>
+              </View>
+            </View>
+          ),
+        }}
+      />
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Progress Bar */}
@@ -646,6 +669,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  headerContainer: {
+    backgroundColor: '#ffffff',
+    borderBottomColor: '#e5e7eb',
+    borderBottomWidth: 1,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerTitle: {
+    color: '#111827',
+    fontSize: 20,
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'left',
+    marginLeft: 35,
   },
   content: {
     flex: 1,
