@@ -476,9 +476,9 @@ export default function OrderDetailsModal() {
       if (isPickup) {
         scheduleStatusText = 'No specific pickup date set';
       } else if (isBuyerCourier) {
-        scheduleStatusText = 'No specific date — managed by buyer';
+        scheduleStatusText = 'No specific date, managed by buyer';
       } else if (isSellerDelivery) {
-        scheduleStatusText = 'No specific date — distributor manages the schedule';
+        scheduleStatusText = 'No specific date, distributor manages the schedule';
       } else {
         scheduleStatusText = 'No specific date set';
       }
