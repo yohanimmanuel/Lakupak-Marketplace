@@ -96,12 +96,11 @@ export interface MarketplaceProduct {
   };
   shipping: {
     preferences: string[];
-    standard: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
-    express: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
-    sameDay: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
-    nextDay: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
-    scheduled: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
-    pickup: { price: number; free: boolean; available: boolean; minDays?: number | null; maxDays?: number | null };
+    selfPickup: { available: boolean; minDays?: number | null; maxDays?: number | null };
+    sellerDelivery: { available: boolean; minDays?: number | null; maxDays?: number | null };
+    buyerCourier: { available: boolean; minDays?: number | null; maxDays?: number | null };
+    leadTimeMinDays?: number | null;
+    leadTimeMaxDays?: number | null;
   };
   assurance: {
     halalCertified: boolean;
@@ -290,48 +289,23 @@ export const marketplaceService = {
         }
               shipping {
                 preferences
-                standard {
-                  price
-                  free
+                selfPickup {
                   available
                   minDays
                   maxDays
                 }
-                express {
-                  price
-                  free
+                sellerDelivery {
                   available
                   minDays
                   maxDays
                 }
-                sameDay {
-                  price
-                  free
+                buyerCourier {
                   available
                   minDays
                   maxDays
                 }
-                nextDay {
-                  price
-                  free
-                  available
-                  minDays
-                  maxDays
-                }
-                scheduled {
-                  price
-                  free
-                  available
-                  minDays
-                  maxDays
-                }
-                pickup {
-                  price
-                  free
-                  available
-                  minDays
-                  maxDays
-                }
+                leadTimeMinDays
+                leadTimeMaxDays
               }
               shippingInfo {
                 location
@@ -508,48 +482,23 @@ export const marketplaceService = {
               }
               shipping {
                 preferences
-                standard {
-                  price
-                  free
+                selfPickup {
                   available
                   minDays
                   maxDays
                 }
-                express {
-                  price
-                  free
+                sellerDelivery {
                   available
                   minDays
                   maxDays
                 }
-                sameDay {
-                  price
-                  free
+                buyerCourier {
                   available
                   minDays
                   maxDays
                 }
-                nextDay {
-                  price
-                  free
-                  available
-                  minDays
-                  maxDays
-                }
-                scheduled {
-                  price
-                  free
-                  available
-                  minDays
-                  maxDays
-                }
-                pickup {
-                  price
-                  free
-                  available
-                  minDays
-                  maxDays
-                }
+                leadTimeMinDays
+                leadTimeMaxDays
               }
               shippingInfo {
                 location

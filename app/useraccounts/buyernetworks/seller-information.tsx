@@ -267,19 +267,16 @@ export default function SellerInformationScreen() {
           {/* Shipping options */}
           <Text style={styles.subsectionLabel}>Shipping options</Text>
           {(() => {
-            const shippingOptions: { key: string; label: string; required?: boolean }[] = [
-              { key: 'Standard Shipping', label: 'Standard Shipping (Required)', required: true },
-              { key: 'Next-day Delivery', label: 'Next-day Delivery' },
-              { key: 'Express Shipping', label: 'Express Shipping' },
-              { key: 'Scheduled Delivery', label: 'Scheduled Delivery' },
-              { key: 'Same-day Delivery', label: 'Same-day Delivery' },
-              { key: 'Pickup Available', label: 'Pickup Available' },
+            const shippingOptions: { key: string; label: string }[] = [
+              { key: 'Self Pickup', label: 'Self Pickup (Buyer collects)' },
+              { key: 'Seller/Distributor Delivery', label: 'Seller / Distributor Delivery' },
+              { key: 'Buyer-arranged Courier', label: 'Buyer-arranged Courier' },
             ];
             const prefs = profile.shippingPreferences ?? [];
             return (
               <View style={styles.checkList}>
-                {shippingOptions.map(({ key, label, required }) => {
-                  const enabled = required || prefs.includes(key);
+                {shippingOptions.map(({ key, label }) => {
+                  const enabled = prefs.includes(key);
                   return (
                     <View key={key} style={styles.checkRow}>
                       {enabled ? <Check size={18} color={primaryBlue} strokeWidth={2.5} /> : <View style={styles.checkEmpty} />}

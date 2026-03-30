@@ -444,8 +444,10 @@ export default function OrderDetailsModal() {
     const method = shippingInfo?.method || fallbackMethodRaw;
 
     const lowerMethod = method?.toLowerCase() || '';
-    const isPickup = lowerMethod.includes('pickup');
-    const isScheduled = lowerMethod.includes('scheduled');
+    const isPickup = lowerMethod.includes('pickup') || lowerMethod.includes('self');
+    const isBuyerCourier = lowerMethod.includes('courier') || lowerMethod.includes('buyer-arranged') || lowerMethod.includes('buyer arranged');
+    const isSellerDelivery = lowerMethod.includes('seller') || lowerMethod.includes('distributor');
+
     const preferredDate = shippingInfo?.scheduledDate
       || (isPickup ? orderData.preferredPickupDate : orderData.preferredDeliveryDate)
       || orderData.preferredDeliveryDate
@@ -458,14 +460,33 @@ export default function OrderDetailsModal() {
       || orderData.preferredPickupTime
       || null;
 
-    const scheduleText = formatScheduledDateTime(preferredDate || undefined, preferredTime || undefined);
-    const estimatedText = shippingInfo?.estimatedDelivery || null;
-    const shouldShowSchedule = Boolean(scheduleText) && (isScheduled || isPickup);
+    const dateTimeText = formatScheduledDateTime(preferredDate || undefined, preferredTime || undefined);
+
+    // Always produce a scheduling status line
+    let scheduleStatusText: string;
+    if (dateTimeText) {
+      if (isPickup) {
+        scheduleStatusText = `Pickup scheduled: ${dateTimeText}`;
+      } else if (isBuyerCourier) {
+        scheduleStatusText = `Courier pickup: ${dateTimeText}`;
+      } else {
+        scheduleStatusText = `Delivery scheduled: ${dateTimeText}`;
+      }
+    } else {
+      if (isPickup) {
+        scheduleStatusText = 'No specific pickup date set';
+      } else if (isBuyerCourier) {
+        scheduleStatusText = 'No specific date — managed by buyer';
+      } else if (isSellerDelivery) {
+        scheduleStatusText = 'No specific date — distributor manages the schedule';
+      } else {
+        scheduleStatusText = 'No specific date set';
+      }
+    }
 
     return {
       methodLabel: method ? formatShippingOptionLabel(method) : null,
-      scheduleText: shouldShowSchedule ? scheduleText : null,
-      estimatedText: !shouldShowSchedule ? estimatedText : null,
+      scheduleStatusText,
     };
   };
 
@@ -810,29 +831,23 @@ export default function OrderDetailsModal() {
             </View>
           ) : null}
 
-          {orderData.shippingFee !== undefined && (() => {
-            const { methodLabel, scheduleText, estimatedText } = getShippingDetails();
+          {(() => {
+            const { methodLabel, scheduleStatusText } = getShippingDetails();
             return (
               <View style={styles.feeRow}>
-                <Text style={styles.feeSectionTitle}>Shipping Fee</Text>
+                <Text style={styles.feeSectionTitle}>Shipping</Text>
                 <View style={styles.feeDetailsWrapper}>
                   <View style={styles.feeMethodRow}>
                     <Text style={styles.shippingMethodLabel} numberOfLines={1}>
                       {methodLabel || 'Method not specified'}
                     </Text>
-                    <Text style={styles.feeValue}>
-                      {formatCurrency(orderData.shippingFee)}
+                    <Text style={[styles.feeValue, { color: '#6B7280', fontSize: 12 }]}>
+                      Cost agreed separately
                     </Text>
                   </View>
-                  {scheduleText ? (
-                    <Text style={styles.shippingMethodSchedule} numberOfLines={2}>
-                      {scheduleText}
-                    </Text>
-                  ) : estimatedText ? (
-                    <Text style={styles.shippingMethodSchedule} numberOfLines={2}>
-                      Estimated: {estimatedText}
-                    </Text>
-                  ) : null}
+                  <Text style={styles.shippingMethodSchedule} numberOfLines={2}>
+                    {scheduleStatusText}
+                  </Text>
                 </View>
               </View>
             );

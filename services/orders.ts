@@ -47,7 +47,7 @@ export interface Order {
   shippingMethod?: string;
   subtotal: number;
   discounts: number;
-  shippingFee: number;
+  shippingFee?: number;
   totalAmount: number;
   paymentTerms?: string;
   totalOrders?: number;

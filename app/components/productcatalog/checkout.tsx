@@ -175,7 +175,7 @@ const distributorGroups = useMemo(
   // State
   const [selectedAddress, setSelectedAddress] = useState('default');
   const [selectedPayment, setSelectedPayment] = useState('credit_card');
-  const [selectedShipping, setSelectedShipping] = useState('standard');
+  const [selectedShipping, setSelectedShipping] = useState('');
   // Per-distributor shipping selection for cart checkout
   const [selectedShippingByDistributor, setSelectedShippingByDistributor] = useState<Record<string, string>>({});
   const [activeDistributorId, setActiveDistributorId] = useState<string | null>(null);
@@ -189,7 +189,18 @@ const distributorGroups = useMemo(
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
   const [scheduledDateTime, setScheduledDateTime] = useState<Date | null>(null);
   const [pickupDateTime, setPickupDateTime] = useState<Date | null>(null);
-  
+
+  // Confirmed scheduling mode for seller_delivery and buyer_courier (single product)
+  const [sellerDeliveryMode, setSellerDeliveryMode] = useState<'buyer_scheduled' | 'distributor_managed' | null>(null);
+  const [buyerCourierMode, setBuyerCourierMode] = useState<'buyer_scheduled' | 'self_managed' | null>(null);
+  // Per-distributor confirmed scheduling mode for cart checkout
+  const [sellerDeliveryModeByDist, setSellerDeliveryModeByDist] = useState<Record<string, 'buyer_scheduled' | 'distributor_managed'>>({});
+  const [buyerCourierModeByDist, setBuyerCourierModeByDist] = useState<Record<string, 'buyer_scheduled' | 'self_managed'>>({});
+  // Which option opened the schedule modal (context), which step it is on, and which mode is selected on step 1
+  const [scheduleModalContext, setScheduleModalContext] = useState<'seller_delivery' | 'buyer_courier' | null>(null);
+  const [scheduleModalStep, setScheduleModalStep] = useState<1 | 2>(1);
+  const [scheduleStep1Mode, setScheduleStep1Mode] = useState<'buyer_scheduled' | 'managed' | null>(null);
+
   // Animation states - match BuyNowModal system
   const [deliverySlideAnim] = useState(new Animated.Value(screenHeight));
   const [pickupSlideAnim] = useState(new Animated.Value(screenHeight));
@@ -308,121 +319,36 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     return '';
   };
 
-  // Get available shipping options from distributor's preferences (real min/max from DistributorOperations)
-  const getAvailableShippingOptions = (productData?: MarketplaceProduct) => {
-    const targetProduct = productData || product;
-    if (!targetProduct?.shipping) {
-      return [{
-        id: 'standard',
-        name: 'Standard Delivery',
-        description: '3-5 business days',
-        price: 0,
-        estimatedDays: '3-5 business days',
-        free: false
-      }];
-    }
-
-    const s = targetProduct.shipping;
-    const options = [];
-
-    const stdMin = (s.standard as { minDays?: number | null })?.minDays ?? 3;
-    const stdMax = (s.standard as { maxDays?: number | null })?.maxDays ?? 5;
-    const stdDesc = formatBusinessDaysDescription(stdMin, stdMax) || '3-5 business days';
-    const stdEstimated = formatDeliveryDuration(stdMin, stdMax) || '3-5 business days';
-    options.push({
-      id: 'standard',
-      name: 'Standard Delivery',
-      description: stdDesc,
-      price: s.standard?.price ?? 0,
-      estimatedDays: stdEstimated,
-      minDays: stdMin,
-      maxDays: stdMax,
-      free: s.standard?.free ?? false
-    });
-
-    if (s.express?.available) {
-      const min = (s.express as { minDays?: number | null })?.minDays ?? 1;
-      const max = (s.express as { maxDays?: number | null })?.maxDays ?? 2;
-      const desc = formatBusinessDaysDescription(min, max) || '1-2 business days';
-      const estimated = formatDeliveryDuration(min, max) || '1-2 business days';
-      options.push({
-        id: 'express',
-        name: 'Express Shipping',
-        description: desc,
-        price: s.express.price,
-        estimatedDays: estimated,
-        minDays: min,
-        maxDays: max,
-        free: s.express.free
-      });
-    }
-
-    if (s.sameDay?.available) {
-      const min = (s.sameDay as { minDays?: number | null })?.minDays ?? null;
-      const max = (s.sameDay as { maxDays?: number | null })?.maxDays ?? null;
-      const estimated = formatDeliveryDuration(min ?? undefined, max ?? undefined);
-      options.push({
-        id: 'same_day',
-        name: 'Same-day Delivery',
-        description: estimated || 'Same business day delivery',
-        price: s.sameDay.price,
-        estimatedDays: estimated || 'Same business day',
-        minDays: min,
-        maxDays: max,
-        free: s.sameDay.free
-      });
-    }
-
-    if (s.nextDay?.available) {
-      const min = (s.nextDay as { minDays?: number | null })?.minDays ?? 1;
-      const max = (s.nextDay as { maxDays?: number | null })?.maxDays ?? 1;
-      const desc = formatBusinessDaysDescription(min, max);
-      const estimated = formatDeliveryDuration(min, max) || '1 business day';
-      options.push({
-        id: 'next_day',
-        name: 'Next-day Delivery',
-        description: desc || 'Next business day delivery',
-        price: s.nextDay.price,
-        estimatedDays: estimated,
-        minDays: min,
-        maxDays: max,
-        free: s.nextDay.free
-      });
-    }
-
-    if (s.scheduled?.available) {
-      const min = (s.scheduled as { minDays?: number | null })?.minDays ?? null;
-      const max = (s.scheduled as { maxDays?: number | null })?.maxDays ?? null;
-      const estimated = formatDeliveryDuration(min ?? undefined, max ?? undefined);
-      options.push({
-        id: 'scheduled',
-        name: 'Scheduled Delivery',
-        description: estimated,
-        price: s.scheduled.price,
-        estimatedDays: estimated || 'As scheduled',
-        minDays: min,
-        maxDays: max,
-        free: s.scheduled.free
-      });
-    }
-
-    if (s.pickup?.available) {
-      options.push({
-        id: 'pickup',
-        name: 'Pickup Available',
-        description: 'Pick up at distributor warehouse',
-        price: 0,
-        estimatedDays: 'Immediate',
-        minDays: null,
-        maxDays: null,
-        free: true
-      });
-    }
-
-    return options;
+  // Fixed shipping options — no fees, cost agreed between buyer and distributor
+  const getAvailableShippingOptions = (_productData?: MarketplaceProduct) => {
+    return [
+      {
+        id: 'self_pickup',
+        name: 'Self Pickup',
+        description: 'Coordinate pickup directly at the seller location',
+        estimatedDays: 'Coordinate with seller',
+        minDays: null as number | null,
+        maxDays: null as number | null,
+      },
+      {
+        id: 'seller_delivery',
+        name: 'Seller/Distributor Delivery',
+        description: 'Seller arranges delivery to your address',
+        estimatedDays: 'As agreed with seller',
+        minDays: null as number | null,
+        maxDays: null as number | null,
+      },
+      {
+        id: 'buyer_courier',
+        name: 'Buyer-arranged Courier',
+        description: 'You book and manage your own courier',
+        estimatedDays: 'Per your courier booking',
+        minDays: null as number | null,
+        maxDays: null as number | null,
+      },
+    ];
   };
 
-  // Memoize shipping options to recalculate when product data changes (important for shipping fee updates)
   const shippingOptions = useMemo(() => getAvailableShippingOptions(product), [product]);
 
   // Time options for dropdown
@@ -497,38 +423,52 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     }
   };
 
-  // Handle shipping option selection
+  // Handle shipping option selection — always set active state immediately, open relevant modal
   const handleShippingSelection = (optionId: string) => {
-    if (optionId === 'scheduled') {
-      initializeModalDateTime(scheduledDateTime);
-      setActiveDistributorId(distributorsInfo[0]?.id || null);
-      setShowScheduleModal(true);
-    } else if (optionId === 'pickup') {
+    setSelectedShipping(optionId);
+    if (optionId === 'self_pickup') {
       initializeModalDateTime(pickupDateTime);
       setActiveDistributorId(distributorsInfo[0]?.id || null);
       setShowPickupModal(true);
-    } else {
-      setSelectedShipping(optionId);
+    } else if (optionId === 'seller_delivery') {
+      setScheduleModalContext('seller_delivery');
+      setScheduleModalStep(1);
+      setScheduleStep1Mode(null);
+      initializeModalDateTime(scheduledDateTime);
+      setActiveDistributorId(distributorsInfo[0]?.id || null);
+      setShowScheduleModal(true);
+    } else if (optionId === 'buyer_courier') {
+      setScheduleModalContext('buyer_courier');
+      setScheduleModalStep(1);
+      setScheduleStep1Mode(null);
+      initializeModalDateTime(scheduledDateTime);
+      setActiveDistributorId(distributorsInfo[0]?.id || null);
+      setShowScheduleModal(true);
     }
   };
 
-  // Handle per-distributor shipping selection
+  // Handle per-distributor shipping selection — always set active state immediately, open relevant modal
   const handleDistributorShippingSelection = (distributorId: string, optionId: string) => {
-    if (optionId === 'scheduled') {
-      initializeModalDateTime(scheduledDateTimeByDistributor[distributorId]);
-      setActiveDistributorId(distributorId);
-      setShowScheduleModal(true);
-      return;
-    }
-
-    if (optionId === 'pickup') {
+    setSelectedShippingByDistributor(prev => ({ ...prev, [distributorId]: optionId }));
+    if (optionId === 'self_pickup') {
       initializeModalDateTime(pickupDateTimeByDistributor[distributorId]);
       setActiveDistributorId(distributorId);
       setShowPickupModal(true);
-      return;
+    } else if (optionId === 'seller_delivery') {
+      setScheduleModalContext('seller_delivery');
+      setScheduleModalStep(1);
+      setScheduleStep1Mode(null);
+      initializeModalDateTime(scheduledDateTimeByDistributor[distributorId]);
+      setActiveDistributorId(distributorId);
+      setShowScheduleModal(true);
+    } else if (optionId === 'buyer_courier') {
+      setScheduleModalContext('buyer_courier');
+      setScheduleModalStep(1);
+      setScheduleStep1Mode(null);
+      initializeModalDateTime(scheduledDateTimeByDistributor[distributorId]);
+      setActiveDistributorId(distributorId);
+      setShowScheduleModal(true);
     }
-
-    setSelectedShippingByDistributor(prev => ({ ...prev, [distributorId]: optionId }));
   };
 
   // Handle date/time selection
@@ -549,30 +489,58 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     setShowTimeDropdown(false);
   };
 
-  // Confirm scheduled delivery
-  const confirmScheduledDelivery = () => {
-    const [hours, minutes] = selectedTime.split(':');
-    const combinedDateTime = new Date(selectedDate);
-    combinedDateTime.setHours(parseInt(hours), parseInt(minutes));
+  // Step 1 → "managed" chosen: confirm immediately, no date needed
+  const confirmManagedSchedule = () => {
     if (isCartCheckout && activeDistributorId) {
-      setScheduledDateTimeByDistributor(prev => ({
-        ...prev,
-        [activeDistributorId]: combinedDateTime,
-      }));
-      setSelectedShippingByDistributor(prev => ({
-        ...prev,
-        [activeDistributorId]: 'scheduled',
-      }));
+      setScheduledDateTimeByDistributor(prev => ({ ...prev, [activeDistributorId]: null }));
+      if (scheduleModalContext === 'seller_delivery') {
+        setSellerDeliveryModeByDist(prev => ({ ...prev, [activeDistributorId]: 'distributor_managed' }));
+      } else {
+        setBuyerCourierModeByDist(prev => ({ ...prev, [activeDistributorId]: 'self_managed' }));
+      }
     } else {
-      setScheduledDateTime(combinedDateTime);
-      setSelectedShipping('scheduled');
+      setScheduledDateTime(null);
+      if (scheduleModalContext === 'seller_delivery') {
+        setSellerDeliveryMode('distributor_managed');
+      } else {
+        setBuyerCourierMode('self_managed');
+      }
     }
     setShowScheduleModal(false);
     setShowTimeDropdown(false);
+    setScheduleModalStep(1);
+    setScheduleStep1Mode(null);
     setActiveDistributorId(null);
   };
 
-  // Confirm pickup
+  // Step 2 → date/time confirmed
+  const confirmScheduledDelivery = () => {
+    const [hours, minutes] = selectedTime.split(':');
+    const dt = new Date(selectedDate);
+    dt.setHours(parseInt(hours), parseInt(minutes));
+    if (isCartCheckout && activeDistributorId) {
+      setScheduledDateTimeByDistributor(prev => ({ ...prev, [activeDistributorId]: dt }));
+      if (scheduleModalContext === 'seller_delivery') {
+        setSellerDeliveryModeByDist(prev => ({ ...prev, [activeDistributorId]: 'buyer_scheduled' }));
+      } else {
+        setBuyerCourierModeByDist(prev => ({ ...prev, [activeDistributorId]: 'buyer_scheduled' }));
+      }
+    } else {
+      setScheduledDateTime(dt);
+      if (scheduleModalContext === 'seller_delivery') {
+        setSellerDeliveryMode('buyer_scheduled');
+      } else {
+        setBuyerCourierMode('buyer_scheduled');
+      }
+    }
+    setShowScheduleModal(false);
+    setShowTimeDropdown(false);
+    setScheduleModalStep(1);
+    setScheduleStep1Mode(null);
+    setActiveDistributorId(null);
+  };
+
+  // Confirm pickup — selectedShipping already set to 'self_pickup' when option was tapped
   const confirmPickup = () => {
     const [hours, minutes] = selectedTime.split(':');
     const combinedDateTime = new Date(selectedDate);
@@ -582,13 +550,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
         ...prev,
         [activeDistributorId]: combinedDateTime,
       }));
-      setSelectedShippingByDistributor(prev => ({
-        ...prev,
-        [activeDistributorId]: 'pickup',
-      }));
     } else {
       setPickupDateTime(combinedDateTime);
-      setSelectedShipping('pickup');
     }
     setShowPickupModal(false);
     setShowTimeDropdown(false);
@@ -608,6 +571,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
       setIsDeliveryClosing(false);
       setShowScheduleModal(false);
       setShowTimeDropdown(false);
+      setScheduleModalStep(1);
+      setScheduleStep1Mode(null);
       setActiveDistributorId(null);
     });
   };
@@ -629,37 +594,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     });
   };
 
-  // Set default shipping option when component loads
-  useEffect(() => {
-    if (shippingOptions.length > 0 && !selectedShipping) {
-      // Standard shipping is always available, so use it as default
-      setSelectedShipping('standard');
-    }
-  }, [shippingOptions, selectedShipping]);
+  // Default shipping option is always pre-set to 'seller_delivery'
 
-useEffect(() => {
-  if (!isCartCheckout) return;
-
-  setSelectedShippingByDistributor((prev) => {
-    const next = { ...prev };
-    let hasChange = false;
-
-    Object.entries(distributorGroups).forEach(([distributorId, items]) => {
-      if (next[distributorId] || items.length === 0) {
-        return;
-      }
-
-      const firstProduct = getItemProduct(items[0]);
-      const options = getAvailableShippingOptions(firstProduct);
-      if (options.length > 0) {
-        next[distributorId] = options[0].id;
-        hasChange = true;
-      }
-    });
-
-    return hasChange ? next : prev;
-  });
-}, [isCartCheckout, distributorGroups]);
+  // Default shipping option is blank — user must choose
 
   // Handle delivery modal slide animation - match BuyNowModal system
   useEffect(() => {
@@ -750,31 +687,29 @@ useEffect(() => {
     return totalPrice;
   };
   
-  const calculateShippingCost = () => {
-    if (isCartCheckout) {
-      // For cart checkout, we need to calculate shipping for each distributor group
-      let totalShipping = 0;
-      Object.entries(distributorGroups).forEach(([distributorId, group]) => {
-        if (group.length > 0) {
-          const firstProduct = getItemProduct(group[0]);
-          const shippingOptions = getAvailableShippingOptions(firstProduct);
-          const selectedId = selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id;
-          const selectedOption = shippingOptions.find(s => s.id === selectedId) || shippingOptions[0];
-          if (selectedOption) {
-            totalShipping += selectedOption.price;
-          }
-        }
-      });
-      return totalShipping;
-    }
-    
-    const selectedShippingOption = shippingOptions.find(s => s.id === selectedShipping) || shippingOptions[0];
-    return selectedShippingOption ? selectedShippingOption.price : 0;
-  };
-  
   const subtotal = calculateSubtotal();
-  const shippingCost = calculateShippingCost();
-  const total = subtotal + shippingCost;
+  const total = subtotal;
+
+  // Validate that all shipping requirements are met before allowing order placement
+  const isOrderReady = useMemo(() => {
+    if (isCartCheckout) {
+      const groups = Object.entries(groupByDistributor(selectedCartItems));
+      if (groups.length === 0) return false;
+      return groups.every(([distributorId]) => {
+        const chosen = selectedShippingByDistributor[distributorId] || '';
+        if (!chosen) return false;
+        // seller_delivery and buyer_courier require a scheduling preference
+        if (chosen === 'seller_delivery') return !!sellerDeliveryModeByDist[distributorId];
+        if (chosen === 'buyer_courier') return !!buyerCourierModeByDist[distributorId];
+        return true; // self_pickup is always ready once selected
+      });
+    } else {
+      if (!selectedShipping) return false;
+      if (selectedShipping === 'seller_delivery') return !!sellerDeliveryMode;
+        if (selectedShipping === 'buyer_courier') return !!buyerCourierMode;
+      return true; // self_pickup
+    }
+  }, [isCartCheckout, selectedShipping, selectedShippingByDistributor, sellerDeliveryMode, buyerCourierMode, sellerDeliveryModeByDist, buyerCourierModeByDist, selectedCartItems]);
 
   const handlePlaceOrder = async () => {
     try {
@@ -863,16 +798,9 @@ useEffect(() => {
                     }, 0);
                     const firstProduct = getItemProduct(items[0]);
                     const shippingOptions = getAvailableShippingOptions(firstProduct);
-                    const selectedId = selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id;
-                    const selectedOption = shippingOptions.find(s => s.id === selectedId) || shippingOptions[0];
-                    const distributorShippingCost = selectedOption ? selectedOption.price : 0;
-                    const estimatedMinDays = selectedOption && typeof (selectedOption as any).minDays === 'number'
-                      ? (selectedOption as any).minDays as number
-                      : null;
-                    const estimatedMaxDays = selectedOption && typeof (selectedOption as any).maxDays === 'number'
-                      ? (selectedOption as any).maxDays as number
-                      : null;
-                    const distributorTotal = distributorSubtotal + distributorShippingCost;
+                    const selectedId = selectedShippingByDistributor[distributorId] || '';
+                    const selectedOption = shippingOptions.find(s => s.id === selectedId);
+                    const distributorTotal = distributorSubtotal;
                     
                     const toISODate = (dateValue: Date | null | undefined) => dateValue ? dateValue.toISOString() : null;
                     const toTimeComponent = (dateValue: Date | null | undefined) => {
@@ -976,13 +904,11 @@ useEffect(() => {
                       }),
                       subtotal: distributorSubtotal,
                       discounts: 0,
-                      shippingFee: distributorShippingCost,
+                      shippingFee: 0,
                       totalAmount: distributorTotal,
                       totalOrders: items.reduce((sum, item) => {
-                        // Get piecesPerPackage from product level (piece-based system)
                         const marketplaceProduct = getItemProduct(item) as MarketplaceProduct;
                         const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-                        
                         return sum + (item.quantity * piecesPerPackage);
                       }, 0),
                       contactPerson: authUser?.name || addresses[0].name,
@@ -990,24 +916,26 @@ useEffect(() => {
                       contactPhone: authUser?.phone || addresses[0].phone,
                       customerEmail: customerEmail,
                       deliveryAddress: addresses[0].address,
-                      deliveryMethod: (selectedId === 'pickup') ? 'Pickup' : 'Distributor Fleet',
+                      deliveryMethod: selectedId === 'self_pickup' ? 'Self Pickup'
+                        : selectedId === 'seller_delivery' ? 'Seller/Distributor Delivery'
+                        : 'Buyer-arranged Courier',
                       deliveryOption: selectedId,
-                      preferredDeliveryDate: selectedId === 'scheduled' && scheduledDateTimeByDistributor[distributorId]
+                      preferredDeliveryDate: (selectedId === 'seller_delivery' || selectedId === 'buyer_courier') && scheduledDateTimeByDistributor[distributorId]
                         ? toISODate(scheduledDateTimeByDistributor[distributorId])
                         : null,
-                      preferredDeliveryTime: selectedId === 'scheduled' && scheduledDateTimeByDistributor[distributorId]
+                      preferredDeliveryTime: (selectedId === 'seller_delivery' || selectedId === 'buyer_courier') && scheduledDateTimeByDistributor[distributorId]
                         ? toTimeComponent(scheduledDateTimeByDistributor[distributorId])
                         : null,
-                      preferredPickupDate: selectedId === 'pickup' && pickupDateTimeByDistributor[distributorId]
+                      preferredPickupDate: selectedId === 'self_pickup' && pickupDateTimeByDistributor[distributorId]
                         ? toISODate(pickupDateTimeByDistributor[distributorId])
                         : null,
-                      preferredPickupTime: selectedId === 'pickup' && pickupDateTimeByDistributor[distributorId]
+                      preferredPickupTime: selectedId === 'self_pickup' && pickupDateTimeByDistributor[distributorId]
                         ? toTimeComponent(pickupDateTimeByDistributor[distributorId])
                         : null,
                       shippingMethodLabel: selectedOption?.name,
                       shippingMethod: selectedOption?.name,
-                      estimatedDeliveryMinDays: estimatedMinDays,
-                      estimatedDeliveryMaxDays: estimatedMaxDays,
+                      estimatedDeliveryMinDays: null,
+                      estimatedDeliveryMaxDays: null,
                       orderStatus: 'Pending',
                       paymentStatus: 'Unpaid',
                       paymentTerms: 'Cash on Delivery',
@@ -1047,13 +975,7 @@ useEffect(() => {
                   };
 
                   const selectedOption =
-                    shippingOptions.find(option => option.id === selectedShipping) || shippingOptions[0];
-                  const estimatedMinDays = selectedOption && typeof (selectedOption as any).minDays === 'number'
-                    ? (selectedOption as any).minDays as number
-                    : null;
-                  const estimatedMaxDays = selectedOption && typeof (selectedOption as any).maxDays === 'number'
-                    ? (selectedOption as any).maxDays as number
-                    : null;
+                    shippingOptions.find(option => option.id === selectedShipping);
 
                   const orderData = {
                     orderId: orderId,
@@ -1073,32 +995,34 @@ useEffect(() => {
                     }],
                     subtotal: totalPrice,
                     discounts: 0,
-                    shippingFee: shippingCost,
-                    totalAmount: total,
+                    shippingFee: 0,
+                    totalAmount: totalPrice,
                     totalOrders: quantity * piecesPerPackage,
                     contactPerson: authUser?.name || addresses[0].name,
                     storeName: authUser?.storeName || addresses[0].company,
                     contactPhone: authUser?.phone || addresses[0].phone,
                     customerEmail: customerEmail,
                     deliveryAddress: addresses[0].address,
-                    deliveryMethod: selectedShipping === 'pickup' ? 'Pickup' : 'Distributor Fleet',
+                    deliveryMethod: selectedShipping === 'self_pickup' ? 'Self Pickup'
+                      : selectedShipping === 'seller_delivery' ? 'Seller/Distributor Delivery'
+                      : 'Buyer-arranged Courier',
                     deliveryOption: selectedShipping,
-                    preferredDeliveryDate: selectedShipping === 'scheduled' && scheduledDateTime
+                    preferredDeliveryDate: (selectedShipping === 'seller_delivery' || selectedShipping === 'buyer_courier') && scheduledDateTime
                       ? toISODate(scheduledDateTime)
                       : null,
-                    preferredDeliveryTime: selectedShipping === 'scheduled' && scheduledDateTime
+                    preferredDeliveryTime: (selectedShipping === 'seller_delivery' || selectedShipping === 'buyer_courier') && scheduledDateTime
                       ? toTimeComponent(scheduledDateTime)
                       : null,
-                    preferredPickupDate: selectedShipping === 'pickup' && pickupDateTime
+                    preferredPickupDate: selectedShipping === 'self_pickup' && pickupDateTime
                       ? toISODate(pickupDateTime)
                       : null,
-                    preferredPickupTime: selectedShipping === 'pickup' && pickupDateTime
+                    preferredPickupTime: selectedShipping === 'self_pickup' && pickupDateTime
                       ? toTimeComponent(pickupDateTime)
                       : null,
                     shippingMethodLabel: selectedOption?.name,
                     shippingMethod: selectedOption?.name,
-                    estimatedDeliveryMinDays: estimatedMinDays,
-                    estimatedDeliveryMaxDays: estimatedMaxDays,
+                    estimatedDeliveryMinDays: null,
+                    estimatedDeliveryMaxDays: null,
                     orderStatus: 'Pending',
                     paymentStatus: 'Unpaid',
                     paymentTerms: 'Cash on Delivery',
@@ -1527,80 +1451,68 @@ useEffect(() => {
                   <View style={styles.shippingSection}>
                     <View style={styles.shippingTitleContainer}>
                       <Truck size={20} color="#0a61d7" />
-                      <Text style={styles.shippingTitle}>Shipping Method</Text>
+                      <Text style={styles.shippingTitle}>Shipping Option</Text>
                     </View>
-                    {shippingOptions.length > 0 ? (
-                      shippingOptions.map((option) => {
-                        const selectedOptionForDistributor = selectedShippingByDistributor[distributorId] || shippingOptions[0]?.id;
-                        const pickupDateForDistributor = pickupDateTimeByDistributor[distributorId] || null;
-                        const scheduledDateForDistributor = scheduledDateTimeByDistributor[distributorId] || null;
+                    <Text style={{ fontSize: 11, color: '#6B7280', marginBottom: 10 }}>
+                      Shipping cost is agreed between buyer and distributor — not charged at checkout.
+                    </Text>
+                    {shippingOptions.map((option) => {
+                      const selectedOptForDist = selectedShippingByDistributor[distributorId] || '';
+                      const pickupDateForDist = pickupDateTimeByDistributor[distributorId] || null;
+                      const scheduledDateForDist = scheduledDateTimeByDistributor[distributorId] || null;
+                      const sellerModeForDist = sellerDeliveryModeByDist[distributorId] || null;
+                      const courierModeForDist = buyerCourierModeByDist[distributorId] || null;
 
-                        return (
-                          <TouchableOpacity
-                            key={option.id}
-                            style={[
-                              styles.shippingOption,
-                              selectedOptionForDistributor === option.id && styles.shippingOptionSelected
-                            ]}
-                            onPress={() => handleDistributorShippingSelection(distributorId, option.id)}
-                          >
-                            <View style={styles.shippingInfo}>
-                              <Text style={styles.shippingName}>{option.name}</Text>
-                              <Text style={styles.shippingDescription}>{option.description}</Text>
+                      return (
+                        <TouchableOpacity
+                          key={option.id}
+                          style={[styles.shippingOption, selectedOptForDist === option.id && styles.shippingOptionSelected]}
+                          onPress={() => handleDistributorShippingSelection(distributorId, option.id)}
+                        >
+                          <View style={styles.shippingInfo}>
+                            <Text style={[styles.shippingName, selectedOptForDist === option.id && { color: '#0a61d7' }]}>{option.name}</Text>
+                            <Text style={styles.shippingDescription}>{option.description}</Text>
+                            {option.id === 'self_pickup' && (
                               <View style={styles.shippingTime}>
                                 <Clock size={14} color="#6B7280" />
                                 <Text style={styles.shippingTimeText}>
-                                  {option.id === 'pickup' 
-                                    ? (selectedOptionForDistributor === 'pickup' && pickupDateForDistributor
-                                      ? `Pickup scheduled: ${pickupDateForDistributor.toLocaleString('en-US', {
-                                          weekday: 'short',
-                                          month: 'short',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit',
-                                          hour12: true
-                                        })}`
-                                      : 'Available for pickup')
-                                    : option.id === 'scheduled'
-                                    ? (selectedOptionForDistributor === 'scheduled' && scheduledDateForDistributor
-                                      ? `Delivery scheduled: ${scheduledDateForDistributor.toLocaleString('en-US', {
-                                          weekday: 'short',
-                                          month: 'short',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit',
-                                          hour12: true
-                                        })}`
-                                      : 'Schedule your preferred delivery time')
-                                    : `Estimated delivery: ${option.estimatedDays}`
-                                  }
+                                  {selectedOptForDist === 'self_pickup' && pickupDateForDist
+                                    ? `Pickup: ${pickupDateForDist.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                                    : 'Tap to schedule pickup date & time'}
                                 </Text>
                               </View>
-                            </View>
-                            <View style={styles.shippingPrice}>
-                              <Text style={[
-                                styles.shippingPriceText,
-                                option.free && styles.freeText
-                              ]}>
-                                {option.free ? 'FREE' : formatCurrency(option.price)}
-                              </Text>
-                              {selectedOptionForDistributor === option.id && (
-                                <CheckCircle size={20} color="#0a61d7" />
-                              )}
-                            </View>
-                          </TouchableOpacity>
-                        );
-                      })
-                    ) : (
-                      <View style={styles.noShippingCard}>
-                        <Text style={styles.noShippingText}>
-                          No shipping options available for this distributor.
-                        </Text>
-                        <Text style={styles.noShippingSubtext}>
-                          Please contact the distributor directly for delivery arrangements.
-                        </Text>
-                      </View>
-                    )}
+                            )}
+                            {option.id === 'seller_delivery' && selectedOptForDist === 'seller_delivery' && (
+                              <View style={styles.shippingTime}>
+                                <Clock size={14} color="#6B7280" />
+                                <Text style={styles.shippingTimeText}>
+                                  {sellerModeForDist === 'buyer_scheduled' && scheduledDateForDist
+                                    ? `Scheduled: ${scheduledDateForDist.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                                    : sellerModeForDist === 'distributor_managed'
+                                    ? 'Distributor manages the schedule'
+                                    : 'Tap to set scheduling preference'}
+                                </Text>
+                              </View>
+                            )}
+                            {option.id === 'buyer_courier' && selectedOptForDist === 'buyer_courier' && (
+                              <View style={styles.shippingTime}>
+                                <Clock size={14} color="#6B7280" />
+                                <Text style={styles.shippingTimeText}>
+                                  {courierModeForDist === 'buyer_scheduled' && scheduledDateForDist
+                                    ? `Courier: ${scheduledDateForDist.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                                    : courierModeForDist === 'self_managed'
+                                    ? "I'll manage my own courier"
+                                    : 'Tap to set scheduling preference'}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                          <View style={styles.shippingPrice}>
+                            {selectedOptForDist === option.id && <CheckCircle size={20} color="#0a61d7" />}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </View>
               </View>
@@ -1712,70 +1624,60 @@ useEffect(() => {
               <View style={styles.shippingSection}>
                 <View style={styles.shippingTitleContainer}>
                   <Truck size={20} color="#0a61d7" />
-                  <Text style={styles.shippingTitle}>Shipping Method</Text>
+                  <Text style={styles.shippingTitle}>Shipping Option</Text>
                 </View>
-                {shippingOptions.length > 0 ? (
-                  shippingOptions.map((option) => (
-                    <TouchableOpacity
-                      key={option.id}
-                      style={[
-                        styles.shippingOption,
-                        selectedShipping === option.id && styles.shippingOptionSelected
-                      ]}
-                      onPress={() => handleShippingSelection(option.id)}
-                    >
-                      <View style={styles.shippingInfo}>
-                        <Text style={styles.shippingName}>{option.name}</Text>
-                        <Text style={styles.shippingDescription}>{option.description}</Text>
+                <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 10 }}>
+                  Shipping cost is agreed between buyer and distributor, not charged at checkout.
+                </Text>
+                {shippingOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[styles.shippingOption, selectedShipping === option.id && styles.shippingOptionSelected]}
+                    onPress={() => handleShippingSelection(option.id)}
+                  >
+                    <View style={styles.shippingInfo}>
+                      <Text style={[styles.shippingName, selectedShipping === option.id && { color: '#0a61d7' }]}>{option.name}</Text>
+                      <Text style={styles.shippingDescription}>{option.description}</Text>
+                      {option.id === 'self_pickup' && (
                         <View style={styles.shippingTime}>
                           <Clock size={14} color="#6B7280" />
                           <Text style={styles.shippingTimeText}>
-                            {option.id === 'pickup' 
-                              ? (selectedShipping === 'pickup' && pickupDateTime ? `Pickup scheduled: ${pickupDateTime.toLocaleString('en-US', {
-                                  weekday: 'short',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true
-                                })}` : 'Available for pickup')
-                              : option.id === 'scheduled'
-                              ? (selectedShipping === 'scheduled' && scheduledDateTime ? `Delivery scheduled: ${scheduledDateTime.toLocaleString('en-US', {
-                                  weekday: 'short',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true
-                                })}` : 'Schedule your preferred delivery time')
-                              : `Estimated delivery: ${option.estimatedDays}`
-                            }
+                            {selectedShipping === 'self_pickup' && pickupDateTime
+                              ? `Pickup: ${pickupDateTime.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                              : 'Tap to schedule pickup date & time'}
                           </Text>
                         </View>
-                      </View>
-                      <View style={styles.shippingPrice}>
-                        <Text style={[
-                          styles.shippingPriceText,
-                          option.free && styles.freeText
-                        ]}>
-                          {option.free ? 'FREE' : formatCurrency(option.price)}
-                        </Text>
-                        {selectedShipping === option.id && (
-                          <CheckCircle size={20} color="#0a61d7" />
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <View style={styles.noShippingCard}>
-                    <Text style={styles.noShippingText}>
-                      No shipping options available for this distributor.
-                    </Text>
-                    <Text style={styles.noShippingSubtext}>
-                      Please contact the distributor directly for delivery arrangements.
-                    </Text>
-                  </View>
-                )}
+                      )}
+                      {option.id === 'seller_delivery' && selectedShipping === 'seller_delivery' && (
+                        <View style={styles.shippingTime}>
+                          <Clock size={14} color="#6B7280" />
+                          <Text style={styles.shippingTimeText}>
+                            {sellerDeliveryMode === 'buyer_scheduled' && scheduledDateTime
+                              ? `Scheduled: ${scheduledDateTime.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                              : sellerDeliveryMode === 'distributor_managed'
+                              ? 'Distributor manages the schedule'
+                              : 'Tap to set scheduling preference'}
+                          </Text>
+                        </View>
+                      )}
+                      {option.id === 'buyer_courier' && selectedShipping === 'buyer_courier' && (
+                        <View style={styles.shippingTime}>
+                          <Clock size={14} color="#6B7280" />
+                          <Text style={styles.shippingTimeText}>
+                            {buyerCourierMode === 'buyer_scheduled' && scheduledDateTime
+                              ? `Courier: ${scheduledDateTime.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                              : buyerCourierMode === 'self_managed'
+                              ? "I'll manage my own courier"
+                              : 'Tap to set scheduling preference'}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.shippingPrice}>
+                      {selectedShipping === option.id && <CheckCircle size={20} color="#0a61d7" />}
+                    </View>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
           </View>
@@ -1821,13 +1723,9 @@ useEffect(() => {
               <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>
-                {isCartCheckout 
-                  ? `Shipping (${Object.keys(distributorGroups).length} distributor${Object.keys(distributorGroups).length > 1 ? 's' : ''})`
-                  : `Shipping (${shippingOptions.find(s => s.id === selectedShipping)?.name || 'Standard'})`
-                }
+              <Text style={[styles.summaryLabel, { color: '#6B7280', fontSize: 11 }]}>
+                Shipping cost is agreed between buyer and distributor (not included here)
               </Text>
-              <Text style={styles.summaryValue}>{formatCurrency(shippingCost)}</Text>
             </View>
             <View style={[styles.summaryRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Total Payment</Text>
@@ -1851,15 +1749,16 @@ useEffect(() => {
           <Text style={styles.bottomTotalLabel}>Total</Text>
           <Text style={styles.bottomTotalValue}>{formatCurrency(total)}</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.placeOrderButton}
+        <TouchableOpacity
+          style={[styles.placeOrderButton, !isOrderReady && { backgroundColor: '#9CA3AF' }]}
           onPress={handlePlaceOrder}
+          disabled={!isOrderReady}
         >
           <Text style={styles.placeOrderText}>Place Order</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Scheduled Delivery Modal */}
+      {/* Schedule Modal — Step 1: choose mode / Step 2: pick date & time */}
       <Modal
         visible={showScheduleModal}
         transparent={true}
@@ -1868,109 +1767,178 @@ useEffect(() => {
         statusBarTranslucent={true}
       >
         <StatusBar backgroundColor="rgba(0, 0, 0, 0.5)" barStyle="light-content" />
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={handleDeliveryClose}
         >
-          <Animated.View 
-            style={[
-              styles.modalContent,
-              {
-                transform: [{ translateY: deliverySlideAnim }],
-              }
-            ]}
+          <Animated.View
+            style={[styles.modalContent, { transform: [{ translateY: deliverySlideAnim }] }]}
           >
-            <TouchableOpacity 
-              activeOpacity={1}
-              onPress={(e) => e.stopPropagation()}
-              style={{ flex: 1 }}
-            >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Schedule Delivery</Text>
-              <TouchableOpacity onPress={handleDeliveryClose}>
-                <X size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.modalBody}>
-              <Text style={styles.modalSubtitle}>Choose your preferred delivery date and time</Text>
-              
-              <View style={styles.dateTimeSection}>
-                <TouchableOpacity 
-                  style={styles.dateTimeButton}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <Calendar size={20} color="#0a61d7" />
-                  <View style={styles.dateTimeInfo}>
-                    <Text style={styles.dateTimeLabel}>Delivery Date</Text>
-                    <Text style={styles.dateTimeValue}>{formatDate(selectedDate)}</Text>
+            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()} style={{ flex: 1 }}>
+
+              {/* ── STEP 1: Mode selection ── */}
+              {scheduleModalStep === 1 && (
+                <>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>
+                      {scheduleModalContext === 'seller_delivery' ? 'Seller Delivery' : 'Courier Schedule'}
+                    </Text>
+                    <TouchableOpacity onPress={handleDeliveryClose}>
+                      <X size={24} color="#6B7280" />
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.dateTimeButton}
-                  onPress={() => setShowTimeDropdown(!showTimeDropdown)}
-                >
-                  <Clock size={20} color="#0a61d7" />
-                  <View style={styles.dateTimeInfo}>
-                    <Text style={styles.dateTimeLabel}>Delivery Time</Text>
-                    <Text style={styles.dateTimeValue}>{formatTime(selectedTime)}</Text>
-                  </View>
-                  <ChevronDown size={20} color="#6B7280" />
-                </TouchableOpacity>
-                
-                {showTimeDropdown && (
-                  <>
-                    <TouchableOpacity 
-                      style={styles.dropdownOverlay}
-                      onPress={handleCloseDropdown}
-                      activeOpacity={1}
-                    />
-                    <View style={styles.timeDropdown}>
-                      <View style={styles.timeDropdownHeader}>
-                        <Text style={styles.timeDropdownHeaderText}>Select Time</Text>
+
+                  <View style={styles.modalBody}>
+                    <Text style={styles.modalSubtitle}>How would you like to handle the schedule?</Text>
+
+                    <TouchableOpacity
+                      style={[styles.scheduleModeOption, scheduleStep1Mode === 'buyer_scheduled' && styles.scheduleModeOptionSelected]}
+                      onPress={() => setScheduleStep1Mode('buyer_scheduled')}
+                    >
+                      <Calendar size={20} color={scheduleStep1Mode === 'buyer_scheduled' ? '#0a61d7' : '#6B7280'} />
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={[styles.scheduleModeText, scheduleStep1Mode === 'buyer_scheduled' && { color: '#0a61d7' }]}>
+                          {scheduleModalContext === 'seller_delivery' ? 'I will schedule the delivery' : 'Schedule courier pickup'}
+                        </Text>
+                        <Text style={styles.scheduleModeDetail}>Pick a preferred date & time</Text>
                       </View>
-                      <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
-                        {timeOptions.map((time) => (
+                      {scheduleStep1Mode === 'buyer_scheduled' ? <CheckCircle size={18} color="#0a61d7" /> : <ChevronRight size={18} color="#9CA3AF" />}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.scheduleModeOption, scheduleStep1Mode === 'managed' && styles.scheduleModeOptionSelected]}
+                      onPress={() => setScheduleStep1Mode('managed')}
+                    >
+                      <Building2 size={20} color={scheduleStep1Mode === 'managed' ? '#0a61d7' : '#6B7280'} />
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={[styles.scheduleModeText, scheduleStep1Mode === 'managed' && { color: '#0a61d7' }]}>
+                          {scheduleModalContext === 'seller_delivery' ? 'Distributor manages the schedule' : "I'll self-manage the courier"}
+                        </Text>
+                        <Text style={styles.scheduleModeDetail}>
+                          {scheduleModalContext === 'seller_delivery'
+                            ? 'No specific date — distributor will contact you'
+                            : 'No specific date — you will arrange independently'}
+                        </Text>
+                      </View>
+                      {scheduleStep1Mode === 'managed' ? <CheckCircle size={18} color="#0a61d7" /> : <ChevronRight size={18} color="#9CA3AF" />}
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.modalFooter}>
+                    <TouchableOpacity style={styles.cancelButton} onPress={handleDeliveryClose}>
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.confirmButton, !scheduleStep1Mode && { opacity: 0.4 }]}
+                      disabled={!scheduleStep1Mode}
+                      onPress={() => {
+                        if (scheduleStep1Mode === 'buyer_scheduled') {
+                          initializeModalDateTime(null);
+                          setScheduleModalStep(2);
+                        } else {
+                          confirmManagedSchedule();
+                        }
+                      }}
+                    >
+                      <Text style={styles.confirmButtonText}>
+                        {scheduleStep1Mode === 'buyer_scheduled' ? 'Next' : 'Confirm'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
+              {/* ── STEP 2: Date & time picker ── */}
+              {scheduleModalStep === 2 && (
+                <>
+                  <View style={styles.modalHeader}>
+                    <TouchableOpacity
+                      onPress={() => { setShowTimeDropdown(false); setScheduleModalStep(1); }}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                    >
+                      <ArrowLeft size={20} color="#374151" />
+                      <Text style={[styles.modalTitle, { fontSize: 17 }]}>
+                        {scheduleModalContext === 'seller_delivery' ? 'Set Delivery Time' : 'Set Courier Time'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleDeliveryClose}>
+                      <X size={24} color="#6B7280" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.modalBody}>
+                    <Text style={styles.modalSubtitle}>Choose your preferred date and time</Text>
+
+                    <View style={styles.dateTimeSection}>
+                      <TouchableOpacity
+                        style={styles.dateTimeButton}
+                        onPress={() => setShowDatePicker(true)}
+                      >
+                        <Calendar size={20} color="#0a61d7" />
+                        <View style={styles.dateTimeInfo}>
+                          <Text style={styles.dateTimeLabel}>
+                            {scheduleModalContext === 'seller_delivery' ? 'Delivery Date' : 'Courier Date'}
+                          </Text>
+                          <Text style={styles.dateTimeValue}>{formatDate(selectedDate)}</Text>
+                        </View>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.dateTimeButton}
+                        onPress={() => setShowTimeDropdown(!showTimeDropdown)}
+                      >
+                        <Clock size={20} color="#0a61d7" />
+                        <View style={styles.dateTimeInfo}>
+                          <Text style={styles.dateTimeLabel}>
+                            {scheduleModalContext === 'seller_delivery' ? 'Delivery Time' : 'Courier Time'}
+                          </Text>
+                          <Text style={styles.dateTimeValue}>{formatTime(selectedTime)}</Text>
+                        </View>
+                        <ChevronDown size={20} color="#6B7280" />
+                      </TouchableOpacity>
+
+                      {showTimeDropdown && (
+                        <>
                           <TouchableOpacity
-                            key={time}
-                            style={[
-                              styles.timeOption,
-                              selectedTime === time && styles.timeOptionSelected
-                            ]}
-                            onPress={() => handleTimeSelect(time)}
-                          >
-                            <Text style={[
-                              styles.timeOptionText,
-                              selectedTime === time && styles.timeOptionTextSelected
-                            ]}>
-                              {formatTime(time)}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
+                            style={styles.dropdownOverlay}
+                            onPress={handleCloseDropdown}
+                            activeOpacity={1}
+                          />
+                          <View style={styles.timeDropdown}>
+                            <View style={styles.timeDropdownHeader}>
+                              <Text style={styles.timeDropdownHeaderText}>Select Time</Text>
+                            </View>
+                            <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
+                              {timeOptions.map((time) => (
+                                <TouchableOpacity
+                                  key={time}
+                                  style={[styles.timeOption, selectedTime === time && styles.timeOptionSelected]}
+                                  onPress={() => handleTimeSelect(time)}
+                                >
+                                  <Text style={[styles.timeOptionText, selectedTime === time && styles.timeOptionTextSelected]}>
+                                    {formatTime(time)}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
+                          </View>
+                        </>
+                      )}
                     </View>
-                  </>
-                )}
-              </View>
-              
-            </View>
-            
-            <View style={styles.modalFooter}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={handleDeliveryClose}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.confirmButton}
-                onPress={confirmScheduledDelivery}
-              >
-                <Text style={styles.confirmButtonText}>Confirm Delivery</Text>
-              </TouchableOpacity>
-            </View>
+                  </View>
+
+                  <View style={styles.modalFooter}>
+                    <TouchableOpacity style={styles.cancelButton} onPress={handleDeliveryClose}>
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.confirmButton} onPress={confirmScheduledDelivery}>
+                      <Text style={styles.confirmButtonText}>Confirm</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
             </TouchableOpacity>
           </Animated.View>
         </TouchableOpacity>
@@ -2394,8 +2362,28 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   shippingOptionSelected: {
-    borderColor: '#0a61d7',
     backgroundColor: '#F0F7FF',
+  },
+  scheduleModeOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 10,
+  },
+  scheduleModeOptionSelected: {
+    backgroundColor: '#EFF6FF',
+  },
+  scheduleModeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 2,
+  },
+  scheduleModeDetail: {
+    fontSize: 12,
+    color: '#6B7280',
   },
   shippingInfo: {
     flex: 1,
