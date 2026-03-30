@@ -1817,8 +1817,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                         </Text>
                         <Text style={styles.scheduleModeDetail}>
                           {scheduleModalContext === 'seller_delivery'
-                            ? 'No specific date — distributor will contact you'
-                            : 'No specific date — you will arrange independently'}
+                            ? 'No specific date, distributor will contact you'
+                            : 'No specific date, you will arrange independently'}
                         </Text>
                       </View>
                       {scheduleStep1Mode === 'managed' ? <CheckCircle size={18} color="#0a61d7" /> : <ChevronRight size={18} color="#9CA3AF" />}

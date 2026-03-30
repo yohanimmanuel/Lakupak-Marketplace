@@ -797,7 +797,7 @@ export default function ProductMarketplace({
           </View>
         </View>
         <Text style={styles.shippingNote}>
-          Free shipping for orders above {formatCurrency(500000)}
+          Shipping cost agreed between buyer and seller
         </Text>
       </View>
 

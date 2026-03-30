@@ -41,9 +41,9 @@ export interface Product {
     returnPolicy: string;
   };
   shipping: {
-    standard: { price: number; free: boolean };
-    express: { price: number };
-    sameDay: { price: number };
+    selfPickup: { available: boolean };
+    sellerDelivery: { available: boolean };
+    buyerCourier: { available: boolean };
   };
   assurance: {
     halalCertified: boolean;
@@ -112,9 +112,9 @@ export const sampleProducts: Product[] = [
       returnPolicy: '7 days',
     },
     shipping: {
-      standard: { price: 0, free: true },
-      express: { price: 25000 },
-      sameDay: { price: 50000 },
+      selfPickup: { available: true },
+      sellerDelivery: { available: true },
+      buyerCourier: { available: true },
     },
     assurance: {
       halalCertified: false,
@@ -168,9 +168,9 @@ export const sampleProducts: Product[] = [
       returnPolicy: '14 days',
     },
     shipping: {
-      standard: { price: 15000, free: false },
-      express: { price: 30000 },
-      sameDay: { price: 50000 },
+      selfPickup: { available: true },
+      sellerDelivery: { available: true },
+      buyerCourier: { available: false },
     },
     assurance: {
       halalCertified: false,
@@ -234,9 +234,9 @@ export const sampleProducts: Product[] = [
       returnPolicy: '7 days',
     },
     shipping: {
-      standard: { price: 0, free: true },
-      express: { price: 20000 },
-      sameDay: { price: 40000 },
+      selfPickup: { available: true },
+      sellerDelivery: { available: true },
+      buyerCourier: { available: true },
     },
     assurance: {
       halalCertified: false,
@@ -295,9 +295,9 @@ export const sampleProducts: Product[] = [
       returnPolicy: '7 days',
     },
     shipping: {
-      standard: { price: 10000, free: false },
-      express: { price: 25000 },
-      sameDay: { price: 45000 },
+      selfPickup: { available: false },
+      sellerDelivery: { available: true },
+      buyerCourier: { available: true },
     },
     assurance: {
       halalCertified: true,
