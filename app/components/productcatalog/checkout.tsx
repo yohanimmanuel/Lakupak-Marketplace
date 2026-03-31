@@ -319,9 +319,19 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     return '';
   };
 
-  // Fixed shipping options — no fees, cost agreed between buyer and distributor
-  const getAvailableShippingOptions = (_productData?: MarketplaceProduct) => {
-    return [
+  // Returns only the shipping options the distributor has enabled via their shippingPreferences.
+  // Falls back to all three if no preference data is available (e.g. legacy products).
+  const getAvailableShippingOptions = (productData?: MarketplaceProduct) => {
+    const shipping = productData?.shipping as {
+      selfPickup?: { available?: boolean };
+      sellerDelivery?: { available?: boolean; minDays?: number | null; maxDays?: number | null };
+      buyerCourier?: { available?: boolean };
+    } | undefined;
+
+    // If shipping availability data is missing, show all options as fallback
+    const hasAvailabilityData = shipping?.selfPickup != null || shipping?.sellerDelivery != null || shipping?.buyerCourier != null;
+
+    const all = [
       {
         id: 'self_pickup',
         name: 'Self Pickup',
@@ -329,14 +339,16 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
         estimatedDays: 'Coordinate with seller',
         minDays: null as number | null,
         maxDays: null as number | null,
+        available: !hasAvailabilityData || (shipping?.selfPickup?.available ?? true),
       },
       {
         id: 'seller_delivery',
         name: 'Seller/Distributor Delivery',
         description: 'Seller arranges delivery to your address',
         estimatedDays: 'As agreed with seller',
-        minDays: null as number | null,
-        maxDays: null as number | null,
+        minDays: (shipping?.sellerDelivery?.minDays ?? null) as number | null,
+        maxDays: (shipping?.sellerDelivery?.maxDays ?? null) as number | null,
+        available: !hasAvailabilityData || (shipping?.sellerDelivery?.available ?? true),
       },
       {
         id: 'buyer_courier',
@@ -345,8 +357,11 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
         estimatedDays: 'Per your courier booking',
         minDays: null as number | null,
         maxDays: null as number | null,
+        available: !hasAvailabilityData || (shipping?.buyerCourier?.available ?? true),
       },
     ];
+
+    return all.filter(o => o.available);
   };
 
   const shippingOptions = useMemo(() => getAvailableShippingOptions(product), [product]);
