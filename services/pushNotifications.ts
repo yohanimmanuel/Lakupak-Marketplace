@@ -56,8 +56,14 @@ class PushNotificationService {
         return null;
       }
 
-      // Get project ID from Constants
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId || 'af69d157-1a15-41d7-90bd-26c05d9fc474';
+      const projectId =
+        process.env.EXPO_PUBLIC_PROJECT_ID ??
+        Constants.expoConfig?.extra?.eas?.projectId;
+      if (!projectId) {
+        throw new Error(
+          'Expo project ID is not configured. Set EXPO_PUBLIC_PROJECT_ID or expo.extra.eas.projectId.'
+        );
+      }
 
       // Try to get Expo push token
       // This may fail if FCM is not configured for Android

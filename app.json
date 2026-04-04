@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "Laku",
-    "slug": "Laku-Laku",
+    "slug": "laku-marketplace",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/LakuLakuMobile.png",
-    "scheme": "laku",
+    "scheme": "lakumarketplace",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -57,7 +57,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/LakuIcon.png",
+          "icon": "./assets/images/LakuIconReal.png",
           "color": "#0a61d7",
           "sounds": []
         }
@@ -69,7 +69,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "af69d157-1a15-41d7-90bd-26c05d9fc474"
+        "projectId": "9b6b4fe3-0ab7-438b-aaed-477f75fb82e0"
       }
     }
   }
