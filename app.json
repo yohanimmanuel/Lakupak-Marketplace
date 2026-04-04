@@ -57,7 +57,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/LakuIconReal.png",
+          "icon": "./assets/images/LakuIcon.png",
           "color": "#0a61d7",
           "sounds": []
         }
