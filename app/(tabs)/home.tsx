@@ -212,9 +212,10 @@ export default function HomeScreen() {
     if (!user?.id) {
       return;
     }
-    const product = products.find(p => p.id === productId);
+    const key = String(productId);
+    const product = products.find((p) => String(p.id) === key);
     if (product) {
-      await toggleLikedProduct(productId, product);
+      await toggleLikedProduct(key, product as MarketplaceProduct);
     }
   }, [user?.id, products, toggleLikedProduct]);
 

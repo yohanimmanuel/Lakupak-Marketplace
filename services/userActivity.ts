@@ -174,7 +174,9 @@ class UserActivityService {
     }
   }
 
-  // Toggle favorite (add if not exists, remove if exists)
+  // Prefer addActivity/removeActivity from the client using local liked state — this helper
+  // re-queries the server and can disagree with the UI (inverted like/unlike on the backend).
+  /** @deprecated Use addActivity/removeActivity when the UI already knows the intended action. */
   async toggleFavorite(
     userId: number,
     productId: string,

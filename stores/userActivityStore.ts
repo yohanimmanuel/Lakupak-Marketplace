@@ -46,69 +46,84 @@ export const useUserActivityStore = create<UserActivityState>()(
       },
 
       addLikedProduct: async (productId, productData) => {
+        const pid = String(productId)
         const { currentUserId, likedProducts } = get()
-        if (!currentUserId) return
+        const authUserId = useAuthStore.getState().user?.id ?? null
+        const userId = currentUserId ?? authUserId
+        if (!userId) return
+        if (currentUserId !== userId) set({ currentUserId: userId })
 
-        // Optimistic update - update UI immediately
-        if (!likedProducts.includes(productId)) {
-          set({ likedProducts: [...likedProducts, productId] })
+        if (!likedProducts.some((id) => String(id) === pid)) {
+          set({ likedProducts: [...likedProducts, pid] })
         }
 
-        // API call in background
         try {
           const token = useAuthStore.getState().token
-          await userActivityService.addActivity(currentUserId, productId, productData, 'favorite', undefined, token || undefined)
-        } catch (error) {
-          // Revert on error
-          set({ likedProducts: likedProducts.filter(id => id !== productId) })
+          await userActivityService.addActivity(userId, pid, productData, 'favorite', undefined, token || undefined)
+        } catch {
+          set({ likedProducts: likedProducts.filter((id) => String(id) !== pid) })
         }
       },
 
       removeLikedProduct: async (productId) => {
+        const pid = String(productId)
         const { currentUserId, likedProducts } = get()
-        if (!currentUserId) return
+        const authUserId = useAuthStore.getState().user?.id ?? null
+        const userId = currentUserId ?? authUserId
+        if (!userId) return
+        if (currentUserId !== userId) set({ currentUserId: userId })
 
-        // Optimistic update - update UI immediately
-        const newLikedProducts = likedProducts.filter(id => id !== productId)
+        const newLikedProducts = likedProducts.filter((id) => String(id) !== pid)
         set({ likedProducts: newLikedProducts })
 
-        // API call in background
         try {
           const token = useAuthStore.getState().token
-          await userActivityService.removeActivity(currentUserId, productId, 'favorite', token || undefined)
-        } catch (error) {
-          // Revert on error
-          set({ likedProducts: [...newLikedProducts, productId] })
+          await userActivityService.removeActivity(userId, pid, 'favorite', token || undefined)
+        } catch {
+          set({ likedProducts: [...newLikedProducts, pid] })
         }
       },
 
       toggleLikedProduct: async (productId, productData) => {
+        const pid = String(productId)
         const { currentUserId, likedProducts } = get()
-        if (!currentUserId) {
+        const authUserId = useAuthStore.getState().user?.id ?? null
+        const userId = currentUserId ?? authUserId
+        if (!userId) {
           return
         }
-
-        const isCurrentlyLiked = likedProducts.includes(productId)
-        
-        // Optimistic update - update UI immediately
-        if (isCurrentlyLiked) {
-          set({ likedProducts: likedProducts.filter(id => id !== productId) })
-        } else {
-          set({ likedProducts: [...likedProducts, productId] })
+        if (currentUserId !== userId) {
+          set({ currentUserId: userId })
         }
 
-        // API call in background
+        // Use local state as source of truth for the API call. toggleFavorite() re-fetched
+        // the server and toggled from *that* state — when persist/server diverged, like became
+        // delete and unlike became add (inverted metrics on the dashboard).
+        const wasLiked = likedProducts.some((id) => String(id) === pid)
+        const previousLiked = likedProducts
+
+        if (wasLiked) {
+          set({ likedProducts: likedProducts.filter((id) => String(id) !== pid) })
+        } else {
+          set({ likedProducts: [...likedProducts, pid] })
+        }
+
         try {
           const token = useAuthStore.getState().token
-          const result = await userActivityService.toggleFavorite(currentUserId, productId, productData, token || undefined)
-          // No need to update UI again since we already did optimistic update
-        } catch (error) {
-          // Revert on error
-          if (isCurrentlyLiked) {
-            set({ likedProducts: [...likedProducts, productId] })
+          if (wasLiked) {
+            await userActivityService.removeActivity(userId, pid, 'favorite', token || undefined)
           } else {
-            set({ likedProducts: likedProducts.filter(id => id !== productId) })
+            await userActivityService.addActivity(
+              userId,
+              pid,
+              productData,
+              'favorite',
+              undefined,
+              token || undefined
+            )
           }
+        } catch {
+          set({ likedProducts: previousLiked })
         }
       },
 
@@ -164,12 +179,15 @@ export const useUserActivityStore = create<UserActivityState>()(
 
       isProductLiked: (productId) => {
         const { likedProducts } = get()
-        return likedProducts.includes(productId)
+        const pid = String(productId)
+        return likedProducts.some((id) => String(id) === pid)
       },
 
       getLikedProducts: (allProducts) => {
         const { likedProducts } = get()
-        return allProducts.filter(product => likedProducts.includes(product.id))
+        return allProducts.filter((product) =>
+          likedProducts.some((id) => String(id) === String(product.id))
+        )
       },
 
       getViewedProducts: (allProducts) => {

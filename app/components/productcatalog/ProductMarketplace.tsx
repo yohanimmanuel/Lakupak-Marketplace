@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { router, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Heart, ImageIcon, Share2, X, ArrowLeft, ShoppingCart, Gift } from 'lucide-react-native';
+import { Heart, ImageIcon, Share2, X, ArrowLeft, ShoppingCart, Gift, Star } from 'lucide-react-native';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import BuyNowModal from './BuyNowModal';
@@ -366,6 +366,12 @@ export default function ProductMarketplace({
     onBuyNow(product);
   };
 
+  const formatRatingLabel = (rating: number): string => {
+    const r = safeGetNumber(rating);
+    if (!Number.isFinite(r) || r <= 0) return '0.0';
+    return (Math.round(r * 10) / 10).toFixed(1);
+  };
+
   const renderStars = (rating: number, size: number = 16) => {
     const safeRating = safeGetNumber(rating);
     const stars = [];
@@ -381,6 +387,25 @@ export default function ProductMarketplace({
       );
     }
     return <View style={{ flexDirection: 'row' }}>{stars}</View>;
+  };
+
+  /** Bordered pill: star + numeric rating (product card & PDP header). */
+  const renderRatingBadge = (variant: 'card' | 'full') => {
+    const label = formatRatingLabel(safeGetNumber(product.rating));
+    const isCard = variant === 'card';
+    return (
+      <View
+        style={isCard ? styles.cardRatingBadge : styles.ratingBadge}
+        accessibilityLabel={`Rating ${label} out of 5`}
+      >
+        <Star
+          size={isCard ? 11 : 13}
+          color="#F59E0B"
+          fill="#F59E0B"
+        />
+        <Text style={isCard ? styles.cardRatingBadgeText : styles.ratingBadgeText}>{label}</Text>
+      </View>
+    );
   };
 
   // Card view rendering functions
@@ -520,21 +545,7 @@ export default function ProductMarketplace({
             
             {/* Discount Tag */}
             {renderCardDiscountTag()}
-            
-            {/* Favorite Button */}
-            {onToggleFavorite && (
-              <TouchableOpacity
-                style={styles.cardFavoriteButton}
-                onPress={() => onToggleFavorite(product.id)}
-              >
-                <Ionicons
-                  name={likedProducts.includes(safeGetString(product.id)) ? 'heart' : 'heart-outline'}
-                  size={16}
-                  color={likedProducts.includes(safeGetString(product.id)) ? '#EF4444' : '#9CA3AF'}
-                />
-              </TouchableOpacity>
-            )}
-            
+
             {/* Promo Badge */}
             {renderCardPromoBadge()}
             
@@ -549,11 +560,8 @@ export default function ProductMarketplace({
               {safeGetString(product.name, 'Unknown Product')}
             </Text>
 
-            {/* Rating */}
-            <View style={styles.cardRatingContainer}>
-              {renderStars(safeGetNumber(product.rating), 12)}
-              <Text style={styles.cardRatingText}>{safeGetNumber(product.rating)}</Text>
-            </View>
+            {/* Rating badge */}
+            <View style={styles.cardRatingContainer}>{renderRatingBadge('card')}</View>
 
             {/* Price */}
             <View style={styles.cardPriceContainer}>
@@ -568,10 +576,7 @@ export default function ProductMarketplace({
               </Text>
             </View>
 
-            {/* Sales Info */}
-            <Text style={styles.cardSalesInfo}>{safeGetString(product.soldCount, '0')} sold</Text>
-
-            {/* Stock Status */}
+            {/* Stock + sold */}
             <View style={styles.cardStockRow}>
               <Text
                 style={[
@@ -580,6 +585,10 @@ export default function ProductMarketplace({
                 ]}
               >
                 {safeGetString(product.stockStatus, 'In Stock')}
+              </Text>
+              <Text style={styles.cardStockPipe}> | </Text>
+              <Text style={styles.cardSoldInline}>
+                {safeGetString(product.soldCount, '0')} sold
               </Text>
             </View>
 
@@ -702,17 +711,12 @@ export default function ProductMarketplace({
         </View>
       </View>
 
-      {/* Rating & Sales */}
+      {/* Rating badge + reviews */}
       <View style={styles.ratingContainer}>
-        <View style={styles.ratingInfo}>
-          {renderStars(safeGetNumber(product.rating), 16)}
-          <Text style={[styles.ratingText, { color: textColor }]}>
-            {safeGetNumber(product.rating)}
-          </Text>
-        </View>
-        <Text style={styles.reviewCount}>({productReviewsData ? productReviewsData.totalReviews : safeGetNumber(product.reviewCount)} reviews)</Text>
-        <Text style={styles.separator}>•</Text>
-        <Text style={styles.soldCount}>Sold {safeGetString(product.soldCount, '0')}</Text>
+        {renderRatingBadge('full')}
+        <Text style={styles.reviewCount}>
+          ({productReviewsData ? productReviewsData.totalReviews : safeGetNumber(product.reviewCount)} reviews)
+        </Text>
       </View>
 
       {/* Pricing */}
@@ -801,17 +805,23 @@ export default function ProductMarketplace({
         </Text>
       </View>
 
-      {/* Stock Status */}
+      {/* Stock status + sold */}
       <View style={styles.stockContainer}>
         <Text style={styles.stockLabel}>Stock status:</Text>
-        <Text
-          style={[
-            styles.stockStatus,
-            { color: getStockStatusColor(safeGetString(product.stockStatus, 'In Stock')) },
-          ]}
-        >
-          {safeGetString(product.stockStatus, 'In Stock')}
-        </Text>
+        <View style={styles.stockRightRow}>
+          <Text
+            style={[
+              styles.stockStatus,
+              { color: getStockStatusColor(safeGetString(product.stockStatus, 'In Stock')) },
+            ]}
+          >
+            {safeGetString(product.stockStatus, 'In Stock')}
+          </Text>
+          <Text style={styles.stockPipe}> | </Text>
+          <Text style={styles.stockSoldInline}>
+            {safeGetString(product.soldCount, '0')} sold
+          </Text>
+        </View>
       </View>
 
     </View>
@@ -1281,7 +1291,7 @@ const styles = StyleSheet.create({
   // Card view styles
   card: {
     width: cardWidth,
-    borderRadius: 8,
+    borderRadius: 6,
     marginBottom: 8,
     overflow: 'hidden',
   },
@@ -1438,13 +1448,23 @@ const styles = StyleSheet.create({
   cardRatingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  cardRatingText: {
+  cardRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFBEB',
+  },
+  cardRatingBadgeText: {
     fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
+    color: '#111827',
+    fontWeight: '600',
   },
   cardPriceContainer: {
     flexDirection: 'column',
@@ -1461,20 +1481,24 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     textDecorationLine: 'line-through',
   },
-  cardSalesInfo: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
   cardStockRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
     flexWrap: 'wrap',
+    marginBottom: 4,
   },
   cardStockStatus: {
     fontSize: 12,
+    fontWeight: '500',
+  },
+  cardStockPipe: {
+    fontSize: 12,
+    color: '#D1D5DB',
+    fontWeight: '400',
+  },
+  cardSoldInline: {
+    fontSize: 12,
+    color: '#6B7280',
     fontWeight: '500',
   },
   cardPromotionBadge: {
@@ -1690,27 +1714,27 @@ const styles = StyleSheet.create({
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+    flexWrap: 'wrap',
     marginBottom: 12,
   },
-  ratingInfo: {
+  ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFBEB',
   },
-  ratingText: {
+  ratingBadgeText: {
     fontSize: 14,
-    fontWeight: '500',
+    color: '#111827',
+    fontWeight: '600',
   },
   reviewCount: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  separator: {
-    fontSize: 14,
-    color: '#D1D5DB',
-  },
-  soldCount: {
     fontSize: 14,
     color: '#6B7280',
   },
@@ -1761,13 +1785,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
   stockLabel: {
     fontSize: 14,
     color: '#6B7280',
   },
+  stockRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+  },
   stockStatus: {
     fontSize: 14,
+    fontWeight: '500',
+  },
+  stockPipe: {
+    fontSize: 14,
+    color: '#D1D5DB',
+  },
+  stockSoldInline: {
+    fontSize: 14,
+    color: '#6B7280',
     fontWeight: '500',
   },
   sellerHeader: {
