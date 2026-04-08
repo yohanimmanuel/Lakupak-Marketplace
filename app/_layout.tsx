@@ -445,6 +445,32 @@ function RootLayoutNav() {
             contentStyle: { backgroundColor: '#ffffff' }
           }} 
         />
+
+        <Stack.Screen
+          name="order-notifications"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            contentStyle: { backgroundColor: '#f9fafb' },
+          }}
+        />
+        <Stack.Screen
+          name="components/notifications/latest-update/[id]"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Latest updates',
+            headerStyle: {
+              backgroundColor: '#ffffff',
+            },
+            headerTintColor: '#0a61d7',
+            headerTitleStyle: {
+              color: '#111827',
+              fontWeight: '600',
+            },
+            contentStyle: { backgroundColor: '#f9fafb' },
+          }}
+        />
         
         {/* Order Details Modal Screen */}
         <Stack.Screen 

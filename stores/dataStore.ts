@@ -9,6 +9,7 @@ import { ordersService } from '../services/orders'
 import { useAuthStore } from './authStore'
 import { pushNotificationService } from '../services/pushNotifications'
 import { supabaseRealtimeService } from '../services/supabaseRealtime'
+import { usePlatformAnnouncementsRealtimeStore } from './platformAnnouncementsRealtimeStore'
 
 export interface MarketplaceOrderItem {
   productId?: string | null
@@ -411,6 +412,31 @@ export const useDataStore = create<DataState>()(
             if (message.type === 'order_updated' && message.orderIds && message.orderIds.length > 0) {
               // Update only the specific orders that changed via WebSocket
               state.updateOrdersFromWebSocket(message.orderIds)
+            }
+
+            if (message.type === 'platform_announcement_published' && message.announcement) {
+              const a = message.announcement
+              usePlatformAnnouncementsRealtimeStore.getState().pushIncoming({
+                id: a.id,
+                title: a.title,
+                body: a.body,
+                category: a.category,
+                imageUrl: a.imageUrl,
+                linkUrl: a.linkUrl,
+                publishedAt: a.publishedAt,
+                createdAt: a.createdAt,
+              })
+              const preview =
+                a.body && a.body.length > 120 ? `${a.body.slice(0, 117)}…` : (a.body ?? '')
+              pushNotificationService.scheduleLocalNotification(
+                a.title,
+                preview || a.title || 'New update from Laku',
+                { type: 'platform_announcement', announcementId: String(a.id) }
+              )
+            }
+
+            if (message.type === 'platform_announcement_unpublished' && typeof message.announcementId === 'number') {
+              usePlatformAnnouncementsRealtimeStore.getState().pushUnpublished(message.announcementId)
             }
 
             // Handle notification messages

@@ -3,12 +3,34 @@ import { API_BASE_URL } from './config';
 
 type WebSocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
+export type PlatformAnnouncementWsPayload = {
+  id: number;
+  title: string;
+  body: string;
+  category: string;
+  imageUrl: string | null;
+  linkUrl: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+};
+
 interface WebSocketMessage {
-  type: 'offer_updated' | 'product_updated' | 'prices_updated' | 'order_updated' | 'notification' | 'ping' | 'pong';
+  type:
+    | 'offer_updated'
+    | 'product_updated'
+    | 'prices_updated'
+    | 'order_updated'
+    | 'notification'
+    | 'platform_announcement_published'
+    | 'platform_announcement_unpublished'
+    | 'ping'
+    | 'pong';
   data?: unknown;
   productIds?: string[];
   offerIds?: string[];
   orderIds?: string[];
+  announcement?: PlatformAnnouncementWsPayload;
+  announcementId?: number;
   notification?: {
     type: string;
     title: string;
