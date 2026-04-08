@@ -38,6 +38,8 @@ export interface PushNotificationData {
 
 class PushNotificationService {
   private expoPushToken: string | null = null;
+  private lastPlatformAnnouncementShown: { announcementId: string; at: number } | null = null;
+  private static readonly PLATFORM_ANNOUNCEMENT_DEDUP_MS = 8000;
 
   // Request permissions and get push token
   async registerForPushNotifications(): Promise<string | null> {
@@ -166,6 +168,23 @@ class PushNotificationService {
     data?: Record<string, unknown>,
     channelId: string = 'orders'
   ): Promise<string> {
+    // Dedup platform announcements: WebSocket can deliver duplicates when reconnecting or when multiple
+    // subscribers are active temporarily; avoid spamming identical notifications.
+    const aType = (data as { type?: unknown } | undefined)?.type;
+    const announcementId = (data as { announcementId?: unknown } | undefined)?.announcementId;
+    if (aType === 'platform_announcement' && announcementId != null) {
+      const idStr = String(announcementId);
+      const now = Date.now();
+      if (
+        this.lastPlatformAnnouncementShown &&
+        this.lastPlatformAnnouncementShown.announcementId === idStr &&
+        now - this.lastPlatformAnnouncementShown.at < PushNotificationService.PLATFORM_ANNOUNCEMENT_DEDUP_MS
+      ) {
+        return '';
+      }
+      this.lastPlatformAnnouncementShown = { announcementId: idStr, at: now };
+    }
+
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title,

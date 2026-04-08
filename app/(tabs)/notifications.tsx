@@ -369,40 +369,50 @@ export default function NotificationsScreen() {
           </>
         )}
 
-        {hasOrderUpdates && (
-          <View style={[styles.latestSectionWrap, styles.orderUpdatesSectionBelowGap]}>
-            <View style={styles.latestSection}>
-              <View style={styles.latestSectionHeaderRow}>
-                <Text style={styles.sectionHeaderTitle}>Order updates</Text>
-                <TouchableOpacity
-                  onPress={() => router.push('/order-notifications')}
-                  hitSlop={8}
-                  style={styles.sectionHeaderAction}
+        <View style={[styles.latestSectionWrap, styles.orderUpdatesSectionBelowGap]}>
+          <View style={styles.latestSection}>
+            <View style={styles.latestSectionHeaderRow}>
+              <Text style={styles.sectionHeaderTitle}>Order updates</Text>
+              <TouchableOpacity
+                onPress={() => router.push('/order-notifications')}
+                hitSlop={8}
+                disabled={!hasOrderUpdates}
+                style={styles.sectionHeaderAction}
+              >
+                <Text
+                  style={[
+                    styles.sectionHeaderActionText,
+                    !hasOrderUpdates && styles.sectionHeaderActionDisabled,
+                  ]}
                 >
-                  <Text style={styles.sectionHeaderActionText}>View all</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.orderUpdatesListBox}>
-              {previewOrders.map((notification, index) => (
-                <OrderUpdateRow
-                  key={notification.id}
-                  notification={notification}
-                  isLast={index === previewOrders.length - 1}
-                  onPress={async () => {
-                    await markAsRead(notification.id);
-                    if (notification.orderId) {
-                      router.push({
-                        pathname: '/components/ordersshipment/OrderDetails',
-                        params: { orderId: notification.orderId },
-                      });
-                    }
-                }}
-              />
-              ))}
-              </View>
+                  View all
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.orderUpdatesListBox}>
+              {!hasOrderUpdates ? (
+                <Text style={styles.orderUpdatesEmpty}>No orders available yet</Text>
+              ) : (
+                previewOrders.map((notification, index) => (
+                  <OrderUpdateRow
+                    key={notification.id}
+                    notification={notification}
+                    isLast={index === previewOrders.length - 1}
+                    onPress={async () => {
+                      await markAsRead(notification.id);
+                      if (notification.orderId) {
+                        router.push({
+                          pathname: '/components/ordersshipment/OrderDetails',
+                          params: { orderId: notification.orderId },
+                        });
+                      }
+                    }}
+                  />
+                ))
+              )}
             </View>
           </View>
-        )}
+        </View>
 
         <View style={styles.latestSectionWrap}>
           <View style={styles.latestSection}>
@@ -570,6 +580,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#ffffff',
     overflow: 'hidden',
+  },
+  orderUpdatesEmpty: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 14,
+    color: '#6b7280',
   },
   latestSectionHeaderRow: {
     flexDirection: 'row',
