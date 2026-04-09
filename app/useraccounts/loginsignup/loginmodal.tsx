@@ -7,7 +7,7 @@ import { loginWithCredentials } from '../../../services/auth';
 import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore } from '../../../stores/cartStore';
-import { ArrowLeft, Eye, EyeOff, Info } from 'lucide-react-native';
+import { ArrowLeft, Eye, EyeOff, Info, Shield, HelpCircle, X } from 'lucide-react-native';
 
 export default function LoginModal() {
   const router = useRouter();
@@ -302,15 +302,18 @@ export default function LoginModal() {
               width: 200,
             }}
           >
-            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy'); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy'); }} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Shield size={18} color="#111827" />
               <Text style={{ color: '#111827', fontSize: 14 }}>Security & Privacy</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
-            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter'); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter'); }} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <HelpCircle size={18} color="#111827" />
               <Text style={{ color: '#111827', fontSize: 14 }}>Help Center</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
-            <Pressable onPress={closeMenu} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={closeMenu} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <X size={18} color="#ef4444" />
               <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Close</Text>
             </Pressable>
           </Animated.View>

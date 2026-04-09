@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, Alert, StyleSheet, Pressable, TouchableOpacity } from 'react-native';
+import React, { useRef, useState, useEffect } from 'react';
+import { View, Text, ScrollView, Image, Alert, StyleSheet, Pressable, TouchableOpacity, Share, Animated, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { Users, MapPin, Phone, Mail, Star, Package, MessageSquare, Store, Calendar, Building2, FileText, Clock, ArrowLeft } from 'lucide-react-native';
+import { Users, MapPin, Phone, Mail, Star, Package, MessageSquare, Store, Calendar, Building2, FileText, Clock, ArrowLeft, MoreVertical, Share2, Flag, HelpCircle } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { API_BASE_URL } from '../../../services/config';
@@ -92,6 +92,9 @@ export default function DistributorDetailScreen() {
   const [distributor, setDistributor] = useState<Distributor | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const menuOpacity = useRef(new Animated.Value(0)).current;
+  const menuScale = useRef(new Animated.Value(0.95)).current;
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
   const iconGray = '#6B7280';
@@ -248,6 +251,48 @@ export default function DistributorDetailScreen() {
     });
   };
 
+  const handleShareDistributor = async () => {
+    if (!distributor) return;
+    try {
+      const message = `Check out ${distributor.name} on Laku Marketplace.`;
+      await Share.share({ message });
+    } catch (e) {
+      Alert.alert('Share', 'Unable to open share dialog right now.');
+    }
+  };
+
+  const handleReportDistributor = () => {
+    if (!distributor) return;
+    router.push({
+      pathname: '/useraccounts/buyernetworks/ReportDistributorModal',
+      params: {
+        distributorId: String(distributor.id),
+        distributorName: distributor.name,
+      },
+    });
+  };
+
+  const handleNeedHelp = () => {
+    Alert.alert('Need help?', 'Please contact Laku support from the Help Center.');
+  };
+
+  const openMenu = () => {
+    setMenuVisible(true);
+    menuOpacity.setValue(0);
+    menuScale.setValue(0.95);
+    Animated.parallel([
+      Animated.timing(menuOpacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+      Animated.spring(menuScale, { toValue: 1, useNativeDriver: true, friction: 7, tension: 90 }),
+    ]).start();
+  };
+
+  const closeMenu = () => {
+    Animated.parallel([
+      Animated.timing(menuOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+      Animated.timing(menuScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+    ]).start(() => setMenuVisible(false));
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -275,11 +320,17 @@ export default function DistributorDetailScreen() {
       <Stack.Screen
         options={{
           presentation: 'modal',
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
+        options={{
+          presentation: 'modal',
           header: () => (
             <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
-                <Pressable 
-                  onPress={() => router.back()} 
+                <Pressable
+                  onPress={() => router.back()}
                   hitSlop={10}
                   accessibilityLabel="Go back"
                   accessibilityRole="button"
@@ -287,11 +338,20 @@ export default function DistributorDetailScreen() {
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
                 <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 }}>Distributor Details</Text>
+                <Pressable
+                  onPress={openMenu}
+                  hitSlop={10}
+                  accessibilityLabel="More options"
+                  accessibilityRole="button"
+                >
+                  <MoreVertical color={primaryBlue} size={22} />
+                </Pressable>
               </View>
             </View>
           ),
         }}
       />
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -418,6 +478,65 @@ export default function DistributorDetailScreen() {
           <Text style={styles.reviewButtonText}>Rate & Review Distributor</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="none"
+        onRequestClose={closeMenu}
+      >
+        <View style={styles.menuRoot}>
+          <Pressable
+            style={styles.menuBackdrop}
+            onPress={closeMenu}
+            accessibilityLabel="Close menu"
+            accessibilityRole="button"
+          />
+          <Animated.View
+            style={[
+              styles.menuSheet,
+              {
+                top: Math.max(insets.top, 44) + 8 + 44,
+                opacity: menuOpacity,
+                transform: [{ scale: menuScale }],
+              },
+            ]}
+          >
+            <Pressable
+              onPress={() => {
+                closeMenu();
+                handleShareDistributor();
+              }}
+              style={styles.menuRow}
+            >
+              <Share2 size={18} color="#111827" />
+              <Text style={styles.menuRowText}>Share</Text>
+            </Pressable>
+            <View style={styles.menuDivider} />
+            <Pressable
+              onPress={() => {
+                closeMenu();
+                handleReportDistributor();
+              }}
+              style={styles.menuRow}
+            >
+              <Flag size={18} color="#ef4444" />
+              <Text style={[styles.menuRowText, styles.menuRowTextDanger]}>Report distributor</Text>
+            </Pressable>
+            <View style={styles.menuDivider} />
+            <Pressable
+              onPress={() => {
+                closeMenu();
+                handleNeedHelp();
+              }}
+              style={styles.menuRow}
+            >
+              <HelpCircle size={18} color="#0a61d7" />
+              <Text style={[styles.menuRowText, styles.menuRowTextPrimary]}>Need help</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -484,5 +603,52 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#ffffff',
+  },
+  menuRoot: {
+    position: 'absolute',
+    top: -80,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  menuBackdrop: {
+    flex: 1,
+  },
+  menuSheet: {
+    position: 'absolute',
+    right: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingVertical: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    width: 200,
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 10,
+  },
+  menuRowText: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  menuRowTextPrimary: {
+    color: '#0a61d7',
+    fontWeight: '600',
+  },
+  menuRowTextDanger: {
+    color: '#ef4444',
+    fontWeight: '600',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#f3f4f6',
+    marginVertical: 2,
   },
 });

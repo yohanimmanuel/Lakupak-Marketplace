@@ -880,12 +880,47 @@ export default function OrderDetailsModal() {
       return null;
     }
 
+    const distributorId: string | null = (() => {
+      const anyOrder = orderData as any;
+      const raw =
+        anyOrder?.userId ??
+        anyOrder?.sellerId ??
+        anyOrder?.distributorId ??
+        anyOrder?.sellerUserId ??
+        null;
+      if (raw === null || raw === undefined) return null;
+      return String(raw);
+    })();
+
     return (
       <View style={styles.section}>
         <View style={styles.productCard}>
           <View style={styles.sectionTitleContainer}>
             <Building2 size={20} color="#0a61d7" />
             <Text style={styles.sectionTitle}>Distributor Information</Text>
+            <TouchableOpacity
+              onPress={() => {
+                if (!distributorId) {
+                  Alert.alert('Unavailable', 'Distributor details are not available for this order.');
+                  return;
+                }
+                router.push({
+                  pathname: '/useraccounts/buyernetworks/distributor-detail',
+                  params: { id: distributorId },
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="View distributor details"
+              style={[
+                styles.viewDistributorButton,
+                !distributorId && styles.viewDistributorButtonDisabled,
+              ]}
+              disabled={!distributorId}
+            >
+              <Text style={[styles.viewDistributorButtonText, !distributorId && styles.viewDistributorButtonTextDisabled]}>
+                View
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {distributorCompanyName && (
@@ -1424,6 +1459,23 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginLeft: 8,
     flex: 1,
+  },
+  viewDistributorButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  viewDistributorButtonDisabled: {
+    opacity: 0.5,
+  },
+  viewDistributorButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0a61d7',
+  },
+  viewDistributorButtonTextDisabled: {
+    color: '#6B7280',
   },
   shippingTitleContainer: {
     backgroundColor: '#0a61d7',

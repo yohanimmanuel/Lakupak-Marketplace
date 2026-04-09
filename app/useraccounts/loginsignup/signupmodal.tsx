@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { requestOtp, verifyOtp, signupStep1, signupStep2, signupStep3 } from '../../../services/auth';
 import { useAuthStore } from '../../../stores/authStore';
-import { ArrowLeft, Fingerprint } from 'lucide-react-native';
+import { ArrowLeft, Fingerprint, Shield, HelpCircle, X } from 'lucide-react-native';
 import { COUNTRIES, getFlagEmoji } from '../../../constants/countries';
 
 export default function SignUpModal() {
@@ -613,15 +613,18 @@ export default function SignUpModal() {
               width: 200,
             }}
           >
-            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy'); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy'); }} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Shield size={18} color="#111827" />
               <Text style={{ color: '#111827', fontSize: 14 }}>Security & Privacy</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
-            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter'); }} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter'); }} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <HelpCircle size={18} color="#111827" />
               <Text style={{ color: '#111827', fontSize: 14 }}>Help Center</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
-            <Pressable onPress={closeMenu} style={{ paddingVertical: 10, paddingHorizontal: 12 }}>
+            <Pressable onPress={closeMenu} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <X size={18} color="#ef4444" />
               <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Close</Text>
             </Pressable>
           </Animated.View>
