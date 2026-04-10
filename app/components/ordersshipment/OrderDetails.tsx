@@ -151,6 +151,11 @@ interface Order {
     reasonDetail?: string | null;
     createdAt?: string;
   }[];
+  /** Seller / distributor identifiers from API (order-level fallbacks for distributor detail link) */
+  userId?: number | string | null;
+  sellerId?: number | string | null;
+  distributorId?: number | string | null;
+  sellerUserId?: number | string | null;
 }
 
 interface OrderDetailsModalProps {
@@ -881,12 +886,11 @@ export default function OrderDetailsModal() {
     }
 
     const distributorId: string | null = (() => {
-      const anyOrder = orderData as any;
       const raw =
-        anyOrder?.userId ??
-        anyOrder?.sellerId ??
-        anyOrder?.distributorId ??
-        anyOrder?.sellerUserId ??
+        orderData.userId ??
+        orderData.sellerId ??
+        orderData.distributorId ??
+        orderData.sellerUserId ??
         null;
       if (raw === null || raw === undefined) return null;
       return String(raw);
