@@ -876,12 +876,12 @@ export default function ProductMarketplace({
           style={[styles.section, styles.sellerSection]}
           onPress={() => {
             router.push({
-              pathname: '/useraccounts/buyernetworks/seller-information',
-              params: { id: String(sellerId) },
+              pathname: '/useraccounts/buyernetworks/distributor-information',
+              params: { id: String(sellerId), name: safeGetString(product.seller?.name, 'Distributor') },
             });
           }}
           activeOpacity={0.8}
-          accessibilityLabel="View seller information"
+          accessibilityLabel="Open distributor products"
           accessibilityRole="button"
         >
           {content}

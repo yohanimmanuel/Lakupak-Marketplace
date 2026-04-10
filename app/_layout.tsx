@@ -272,6 +272,17 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
+          name="useraccounts/buyernetworks/distributor-information"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Distributor',
+            headerStyle: { backgroundColor: '#ffffff' },
+            headerTitleStyle: { color: '#111827', fontWeight: '600' },
+            headerTintColor: '#0a61d7',
+          }}
+        />
+        <Stack.Screen
           name="useraccounts/purchases/mypurchases"
           options={{
             presentation: 'modal',
