@@ -47,7 +47,6 @@ export default function AccountScreen() {
   const orders = useDataStore(state => state.orders);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const products = useDataStore(state => state.products);
-  const [recentDistributors, setRecentDistributors] = useState<Distributor[]>([]);
 
   useEffect(() => {
     hydrate();
@@ -60,71 +59,59 @@ export default function AccountScreen() {
     }
   }, [token, user?.id, loadOrdersData]);
 
-  useEffect(() => {
-    if (!token || !user?.id) {
-      setRecentDistributors([]);
-      return;
+  const recentDistributors: Distributor[] = React.useMemo(() => {
+    if (!token || !user?.id) return [];
+    try {
+      const successfulOrders = orders.filter(order =>
+        order.userId !== null &&
+        order.isDeleted !== true &&
+        !order.deletedAt &&
+        order.orderStatus !== 'Deleted' &&
+        order.orderStatus !== 'Cancelled'
+      );
+
+      const uniqueDistributors = new Map<number, { storeName: string; orderCount: number }>();
+
+      successfulOrders.forEach(order => {
+        const distributorId = order.userId!;
+        if (!uniqueDistributors.has(distributorId)) {
+          uniqueDistributors.set(distributorId, {
+            storeName: order.storeName || `Distributor #${distributorId}`,
+            orderCount: 0
+          });
+        }
+        uniqueDistributors.get(distributorId)!.orderCount++;
+      });
+
+      // Use products from websocket-enabled dataStore instead of fetching
+      const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
+      products.forEach((product) => {
+        if (product.userId && !sellerInfoMap.has(product.userId)) {
+          sellerInfoMap.set(product.userId, { seller: product.seller });
+        }
+      });
+
+      const distributorProfiles = Array.from(uniqueDistributors.keys()).map((distributorId) => {
+        const distributorData = uniqueDistributors.get(distributorId)!;
+        const sellerData = sellerInfoMap.get(distributorId);
+        const companyInfo = sellerData?.seller?.company;
+
+        const logoUrl = normalizeUrl(companyInfo?.logo) || normalizeUrl(sellerData?.seller?.avatar);
+
+        return {
+          id: distributorId,
+          name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
+          logo: logoUrl,
+          totalOrders: distributorData.orderCount
+        };
+      });
+
+      return distributorProfiles
+        .sort((a, b) => b.totalOrders - a.totalOrders)
+        .slice(0, 2);
+    } catch {
+      return [];
     }
-
-    const loadDistributors = () => {
-      try {
-        const successfulOrders = orders.filter(order => 
-          order.userId !== null &&
-          order.isDeleted !== true &&
-          !order.deletedAt &&
-          order.orderStatus !== 'Deleted' &&
-          order.orderStatus !== 'Cancelled'
-        );
-
-        const uniqueDistributors = new Map<number, { storeName: string; orderCount: number }>();
-        
-        successfulOrders.forEach(order => {
-          const distributorId = order.userId!;
-          if (!uniqueDistributors.has(distributorId)) {
-            uniqueDistributors.set(distributorId, {
-              storeName: order.storeName || `Distributor #${distributorId}`,
-              orderCount: 0
-            });
-          }
-          uniqueDistributors.get(distributorId)!.orderCount++;
-        });
-
-        // Use products from websocket-enabled dataStore instead of fetching
-        const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
-        products.forEach((product) => {
-          if (product.userId && !sellerInfoMap.has(product.userId)) {
-            sellerInfoMap.set(product.userId, {
-              seller: product.seller
-            });
-          }
-        });
-
-        const distributorProfiles = Array.from(uniqueDistributors.keys()).map((distributorId) => {
-          const distributorData = uniqueDistributors.get(distributorId)!;
-          const sellerData = sellerInfoMap.get(distributorId);
-          const companyInfo = sellerData?.seller?.company;
-          
-          const logoUrl = normalizeUrl(companyInfo?.logo) || normalizeUrl(sellerData?.seller?.avatar);
-          
-          return {
-            id: distributorId,
-            name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
-            logo: logoUrl,
-            totalOrders: distributorData.orderCount
-          };
-        });
-
-        const distributorsList = distributorProfiles
-          .sort((a, b) => b.totalOrders - a.totalOrders)
-          .slice(0, 2);
-
-        setRecentDistributors(distributorsList);
-      } catch (error) {
-        setRecentDistributors([]);
-      }
-    };
-
-    loadDistributors();
   }, [orders, products, token, user?.id]);
 
   const isAuthenticated = !!token && !!user;
@@ -300,6 +287,12 @@ export default function AccountScreen() {
             <Link href="/useraccounts/buyernetworks/mynetworks" asChild>
               <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
                 <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>View All Networks</Text>
+                <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
+              </Pressable>
+            </Link>
+            <Link href="/useraccounts/buyernetworks/followings" asChild>
+              <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6', marginTop: 14 }}>
+                <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>View All Followings</Text>
                 <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
               </Pressable>
             </Link>

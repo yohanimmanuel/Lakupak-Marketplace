@@ -7,6 +7,8 @@ import { marketplaceService, type MarketplaceProduct } from '../../../services/m
 import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
 import { API_BASE_URL } from '../../../services/config';
 import { websocketService } from '../../../services/websocket';
+import { useAuthStore } from '../../../stores/authStore';
+import { followDistributor, isFollowingDistributor, unfollowDistributor } from '../../../services/distributorFollowing';
 
 const primaryBlue = '#0a61d7';
 const { height: screenHeight } = Dimensions.get('window');
@@ -24,6 +26,7 @@ type DistributorProfile = {
   logo: string | null;
   bannerImage?: string | null;
   companyName: string | null;
+  followersCount?: number;
 };
 
 type DistributorReviewsData = {
@@ -71,6 +74,7 @@ export default function DistributorInformationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string; name?: string }>();
+  const token = useAuthStore((s) => s.token);
 
   const distributorId = useMemo(() => {
     const raw = params.id ? String(params.id) : '';
@@ -87,6 +91,7 @@ export default function DistributorInformationScreen() {
   const [error, setError] = useState<string | null>(null);
   const [allProducts, setAllProducts] = useState<ProductWithOptionalDates[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
   const [profile, setProfile] = useState<DistributorProfile | null>(null);
   const [reviews, setReviews] = useState<DistributorReviewsData | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -138,13 +143,22 @@ export default function DistributorInformationScreen() {
       }
 
       setAllProducts(matches);
+
+      if (token) {
+        try {
+          const state = await isFollowingDistributor(token, distributorId);
+          setIsFollowing(state);
+        } catch {
+          // non-blocking
+        }
+      }
     } catch (e) {
       setAllProducts([]);
       setError(e instanceof Error ? e.message : 'Failed to load products');
     } finally {
       setLoading(false);
     }
-  }, [distributorId]);
+  }, [distributorId, token]);
 
   useEffect(() => {
     if (!Number.isFinite(distributorId)) {
@@ -220,9 +234,10 @@ export default function DistributorInformationScreen() {
   const storeTotalRatings = useMemo(() => safeNum(reviews?.totalReviews), [reviews?.totalReviews]);
 
   const storeFollowersLabel = useMemo(() => {
-    // We don't have follower counts from API; keep it simple for now.
-    return '';
-  }, []);
+    const n = safeNum(profile?.followersCount);
+    if (n <= 0) return '';
+    return `${n} Followers`;
+  }, [profile?.followersCount]);
 
   const canViewSellerInfo = Number.isFinite(distributorId);
   const noop = useCallback(() => {}, []);
@@ -359,17 +374,31 @@ export default function DistributorInformationScreen() {
                   {storeRating.toFixed(1)}
                   {storeTotalRatings ? ` (${storeTotalRatings})` : ''}
                 </Text>
-                {storeFollowersLabel ? <Text style={styles.storeMetaTextOnBanner}> · {storeFollowersLabel}</Text> : null}
+                {storeFollowersLabel ? <Text style={styles.storeFollowersTextOnBanner}> · {storeFollowersLabel}</Text> : null}
               </View>
             </View>
           </View>
 
           <View style={styles.storeHeaderRight}>
             <Pressable
-              onPress={() => setIsFollowing((v) => !v)}
+              onPress={async () => {
+                if (!Number.isFinite(distributorId) || !token || followBusy) return;
+                const next = !isFollowing;
+                setFollowBusy(true);
+                setIsFollowing(next); // optimistic
+                try {
+                  if (next) await followDistributor(token, distributorId);
+                  else await unfollowDistributor(token, distributorId);
+                } catch {
+                  setIsFollowing(!next);
+                } finally {
+                  setFollowBusy(false);
+                }
+              }}
               accessibilityRole="button"
               accessibilityLabel={isFollowing ? 'Unfollow distributor' : 'Follow distributor'}
-              style={[styles.followBtn, isFollowing && styles.followBtnActive]}
+              style={[styles.followBtn, isFollowing && styles.followBtnActive, followBusy && { opacity: 0.7 }]}
+              disabled={followBusy || !token}
             >
               <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
                 {isFollowing ? 'Following' : '+ Follow'}
@@ -523,9 +552,6 @@ export default function DistributorInformationScreen() {
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Categories</Text>
-              <Pressable onPress={closeCategoryPicker} accessibilityRole="button" accessibilityLabel="Close">
-                <Text style={styles.sheetCloseText}>Close</Text>
-              </Pressable>
             </View>
             <View style={styles.sheetDivider} />
             <ScrollView style={{ maxHeight: Math.min(420, screenHeight * 0.55) }} showsVerticalScrollIndicator={false}>
@@ -620,7 +646,7 @@ const styles = StyleSheet.create({
 
   bannerBg: { width: '100%', minHeight: 110, justifyContent: 'center' },
   bannerBgImage: { resizeMode: 'cover' },
-  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
+  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.4)' },
   storeHeaderOnBanner: {
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -634,6 +660,7 @@ const styles = StyleSheet.create({
   storeNameOnBanner: { fontSize: 16, fontWeight: '800', color: '#ffffff' },
   storeMetaRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
   storeMetaTextOnBanner: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: '700' },
+  storeFollowersTextOnBanner: { fontSize: 12, color: 'rgba(255,255,255,0.9)' },
   storeAvatar: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', backgroundColor: '#f3f4f6' },
   storeAvatarImg: { width: 44, height: 44 },
   storeAvatarPlaceholder: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -718,9 +745,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10 },
-  sheetTitle: { fontSize: 14, fontWeight: '800', color: '#111827' },
-  sheetCloseText: { fontSize: 12, fontWeight: '800', color: primaryBlue },
-  sheetDivider: { height: 1, backgroundColor: '#f3f4f6', marginBottom: 6 },
+  sheetTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  sheetDivider: { height: 2, backgroundColor: '#f3f4f6', marginBottom: 6, marginHorizontal: -14 },
   sheetRow: { paddingVertical: 12 },
   sheetRowText: { fontSize: 13, color: '#374151', fontWeight: '500' },
   sheetRowTextActive: { color: primaryBlue },
