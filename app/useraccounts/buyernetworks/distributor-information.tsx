@@ -654,11 +654,7 @@ const styles = StyleSheet.create({
   followBtnTextActive: { color: '#ffffff' },
 
   body: { flex: 1, backgroundColor: '#F5F5F5' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: 20 },
   muted: { color: '#6b7280', fontSize: 12, textAlign: 'center' },
-  errorTitle: { color: '#111827', fontSize: 14, fontWeight: '700' },
-  retryBtn: { marginTop: 8, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: primaryBlue },
-  retryText: { color: '#ffffff', fontWeight: '700', fontSize: 12 },
   inlineError: {
     marginHorizontal: 14,
     marginTop: 10,
@@ -696,17 +692,12 @@ const styles = StyleSheet.create({
   filterTabBtn: { paddingVertical: 12, paddingHorizontal: 5, position: 'relative', alignItems: 'center' },
   filterTabInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 
-  categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 12 },
-  chip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff' },
-  chipActive: { borderColor: '#0a61d7', backgroundColor: '#eff6ff' },
-  chipText: { fontSize: 11, color: '#374151', fontWeight: '600' },
-  chipTextActive: { color: primaryBlue },
-
   emptyBlock: { padding: 20, alignItems: 'center' },
 
-  productsGrid: { paddingHorizontal: 14, flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  productsCol: { flex: 1, gap: 12 },
-  productItemWrap: { width: '100%' },
+  // Match homepage product list spacing (HomeScreen styles.productsContainer/productItem)
+  productsGrid: { flexDirection: 'row', paddingHorizontal: 18, gap: 14, alignItems: 'flex-start' },
+  productsCol: { flex: 1 },
+  productItemWrap: { width: '100%', marginBottom: 4 },
 
   sheetRoot: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end' },
   sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
@@ -731,7 +722,7 @@ const styles = StyleSheet.create({
   sheetCloseText: { fontSize: 12, fontWeight: '800', color: primaryBlue },
   sheetDivider: { height: 1, backgroundColor: '#f3f4f6', marginBottom: 6 },
   sheetRow: { paddingVertical: 12 },
-  sheetRowText: { fontSize: 13, color: '#374151', fontWeight: '700' },
+  sheetRowText: { fontSize: 13, color: '#374151', fontWeight: '500' },
   sheetRowTextActive: { color: primaryBlue },
 
   menuRoot: {
