@@ -1,5 +1,24 @@
 // Marketplace API service
 import { graphqlRequest } from './graphql';
+import { API_BASE_URL } from './config';
+
+/** Homepage sale banner + detail (Laku Admin → Offers). */
+export type MarketplaceHomeOfferPayload = {
+  id: number;
+  title: string;
+  subtitle: string;
+  discountText: string;
+  endDateText: string;
+  backgroundColor: string;
+  textColor: string;
+  detailsBody: string;
+  bannerImageUrl: string | null;
+  /** Full designed asset for home; when set, home card shows image only. */
+  customBannerImageUrl: string | null;
+  rightIconKey: string;
+  discountIconKey: string;
+  publishedAt: string | null;
+};
 
 // Interface for raw product data from API
 interface RawProductData {
@@ -599,5 +618,52 @@ export const marketplaceService = {
     } catch (error) {
       throw error;
     }
-  }
+  },
+
+  async getHomeOffer(token: string): Promise<MarketplaceHomeOfferPayload | null> {
+    const list = await this.getHomeOffersList(token);
+    return list.length > 0 ? list[0]! : null;
+  },
+
+  /** All published special offers (home carousel + list screen). */
+  async getHomeOffersList(token: string): Promise<MarketplaceHomeOfferPayload[]> {
+    const r = await fetch(`${API_BASE_URL}/api/mobile/offers`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!r.ok) return [];
+    const j = (await r.json()) as { offers?: Partial<MarketplaceHomeOfferPayload>[] };
+    const raw = j.offers ?? [];
+    return raw.map((o) => normalizeHomeOffer(o)).filter((x): x is MarketplaceHomeOfferPayload => x != null);
+  },
+
+  async getHomeOfferById(token: string, id: number): Promise<MarketplaceHomeOfferPayload | null> {
+    const r = await fetch(`${API_BASE_URL}/api/mobile/offers/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (r.status === 404) return null;
+    if (!r.ok) return null;
+    const j = (await r.json()) as { offer?: Partial<MarketplaceHomeOfferPayload> };
+    return normalizeHomeOffer(j.offer);
+  },
 };
+
+function normalizeHomeOffer(
+  raw: Partial<MarketplaceHomeOfferPayload> | null | undefined
+): MarketplaceHomeOfferPayload | null {
+  if (!raw || raw.id == null) return null;
+  return {
+    id: raw.id,
+    title: raw.title ?? '',
+    subtitle: raw.subtitle ?? '',
+    discountText: raw.discountText ?? '',
+    endDateText: raw.endDateText ?? '',
+    backgroundColor: raw.backgroundColor ?? '#0a61d7',
+    textColor: raw.textColor ?? '#FFFFFF',
+    detailsBody: raw.detailsBody ?? '',
+    bannerImageUrl: raw.bannerImageUrl ?? null,
+    customBannerImageUrl: raw.customBannerImageUrl ?? null,
+    rightIconKey: raw.rightIconKey ?? 'gift',
+    discountIconKey: raw.discountIconKey ?? 'flash',
+    publishedAt: raw.publishedAt ?? null,
+  };
+}

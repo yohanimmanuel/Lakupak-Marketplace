@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Product } from '../data/sampleProducts'
-import { marketplaceService, MarketplaceProduct } from '../services/marketplace'
+import { marketplaceService, MarketplaceProduct, type MarketplaceHomeOfferPayload } from '../services/marketplace'
 import { getMe, MobileUser } from '../services/user'
 import { websocketService } from '../services/websocket'
 import { ordersService } from '../services/orders'
@@ -111,6 +111,9 @@ interface DataState {
   // Orders data
   orders: MarketplaceOrder[]
   ordersLastUpdated: number | null
+
+  /** Published special offers for home carousel and /offers list. */
+  homeOffers: MarketplaceHomeOfferPayload[]
   
   // Loading states
   isUserLoading: boolean
@@ -133,6 +136,7 @@ interface DataState {
   loadProductsData: (forceRefresh?: boolean) => Promise<void>
   loadOrdersData: (forceRefresh?: boolean) => Promise<void>
   refreshAllData: (token?: string) => Promise<void>
+  loadHomeOffers: (token: string) => Promise<void>
   forceRefreshProducts: () => Promise<void>
   forceRefreshOrders: () => Promise<void>
   updateOrdersFromWebSocket: (orderIds: string[]) => Promise<void>
@@ -155,6 +159,7 @@ export const useDataStore = create<DataState>()(
       productsLastUpdated: null,
       orders: [],
       ordersLastUpdated: null,
+      homeOffers: [],
       isUserLoading: false,
       isProductsLoading: false,
       isOrdersLoading: false,
@@ -297,11 +302,21 @@ export const useDataStore = create<DataState>()(
         }
         // Force refresh products (bypass cache) when manually refreshing
         promises.push(get().forceRefreshProducts())
+        promises.push(get().loadHomeOffers(token))
         
         await Promise.all(promises)
 
         // Force refresh orders with current user validation
         await get().forceRefreshOrders()
+      },
+
+      loadHomeOffers: async (token) => {
+        try {
+          const offers = await marketplaceService.getHomeOffersList(token)
+          set({ homeOffers: offers })
+        } catch {
+          set({ homeOffers: [] })
+        }
       },
 
       forceRefreshProducts: async () => {
@@ -437,6 +452,13 @@ export const useDataStore = create<DataState>()(
 
             if (message.type === 'platform_announcement_unpublished' && typeof message.announcementId === 'number') {
               usePlatformAnnouncementsRealtimeStore.getState().pushUnpublished(message.announcementId)
+            }
+
+            if (message.type === 'home_offers_updated') {
+              const t = useAuthStore.getState().token
+              if (t) {
+                void get().loadHomeOffers(t)
+              }
             }
 
             // Handle notification messages
@@ -612,6 +634,7 @@ export const useDataStore = create<DataState>()(
           productsLastUpdated: null,
           orders: [], // CRITICAL: Clear orders immediately on logout
            ordersLastUpdated: null,
+          homeOffers: [],
           isUserLoading: false,
           isProductsLoading: false,
            isOrdersLoading: false,

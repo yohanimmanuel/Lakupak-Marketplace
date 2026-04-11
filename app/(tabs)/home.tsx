@@ -10,6 +10,9 @@ import {
   TextInput,
   Pressable,
   StatusBar,
+  useWindowDimensions,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '../components/Themed';
@@ -19,7 +22,7 @@ import { Store, ShoppingCart, MessageSquareText, Search } from 'lucide-react-nat
 import CartBadge from '../components/CartBadge';
 
 // Components
-import SaleBanner from '../components/paymentcheckout/SaleBanner';
+import SaleBanner, { SALE_BANNER_UNIFORM_HEIGHT } from '../components/paymentcheckout/SaleBanner';
 import ProductMarketplace from '../components/productcatalog/ProductMarketplace';
 import CategoryBadge from '../components/CategoryBadge';
 
@@ -82,9 +85,12 @@ export default function HomeScreen() {
   }, [isAuthenticated, router]);
 
   // Data state from cache
+  const { width: windowWidth } = useWindowDimensions();
+
   const { 
     products: cachedProducts, 
     user: cachedUser,
+    homeOffers,
     isProductsLoading,
     isUserLoading,
     loadProductsData,
@@ -152,6 +158,10 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [offerCarouselIndex, setOfferCarouselIndex] = useState(0);
+
+  const offerSlideWidth = Math.max(280, windowWidth - 32);
+  const offerSlideStep = offerSlideWidth + 12;
 
   // Use cached products only (no mock data fallback)
   const products = cachedProducts;
@@ -219,9 +229,22 @@ export default function HomeScreen() {
     }
   }, [user?.id, products, toggleLikedProduct]);
 
-  const handleSaleBannerPress = useCallback(() => {
-    // Handle sale banner press
-  }, []);
+  const handleOfferBannerPress = useCallback(
+    (offerId: number) => {
+      router.push(`/offers/${offerId}`);
+    },
+    [router]
+  );
+
+  const onOfferCarouselScrollEnd = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const x = e.nativeEvent.contentOffset.x;
+      if (homeOffers.length <= 1) return;
+      const i = Math.round(x / offerSlideStep);
+      setOfferCarouselIndex(Math.max(0, Math.min(i, homeOffers.length - 1)));
+    },
+    [homeOffers.length, offerSlideStep]
+  );
 
   const handleCategoryPress = useCallback((categoryName: string) => {
     // Navigate to search page with category filter to show filtered results
@@ -231,8 +254,11 @@ export default function HomeScreen() {
     });
   }, [router]);
 
+  const handleSpecialOffersSeeAll = useCallback(() => {
+    router.push('/offers/' as Parameters<typeof router.push>[0]);
+  }, [router]);
+
   const handleSeeAllPress = useCallback(() => {
-    // Navigate to search page without query to show initial state
     router.push('/search');
   }, [router]);
 
@@ -384,23 +410,80 @@ export default function HomeScreen() {
         <View style={{ backgroundColor: '#f9fafb' }}>
           {/* Content elements - stay in place until header is collapsed */}
           <Animated.View style={{ transform: [{ translateY: contentElementsTranslateY }] }}>
-          {/* Special Offers Section */}
-          <View style={{ backgroundColor: '#f9fafb', paddingTop: 5 }}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Special Offers</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
+          {/* Special Offers — horizontal carousel of all published offers */}
+          {homeOffers.length > 0 ? (
+            <View style={{ backgroundColor: '#f9fafb', paddingTop: 5 }}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Special Offers</Text>
+                <TouchableOpacity onPress={handleSpecialOffersSeeAll}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView
+                horizontal
+                nestedScrollEnabled
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={homeOffers.length > 1 ? offerSlideStep : undefined}
+                snapToAlignment="start"
+                decelerationRate="fast"
+                contentContainerStyle={{
+                  paddingLeft: 16,
+                  paddingRight: 16,
+                }}
+                onMomentumScrollEnd={onOfferCarouselScrollEnd}
+              >
+                {homeOffers.map((offer, idx) => (
+                  <RNView
+                    key={offer.id}
+                    style={{
+                      width: offerSlideWidth,
+                      marginRight: idx < homeOffers.length - 1 ? 12 : 0,
+                    }}
+                  >
+                    <SaleBanner
+                      title={offer.title}
+                      subtitle={offer.subtitle}
+                      discountText={offer.discountText || 'Offer'}
+                      endDate={offer.endDateText}
+                      onPress={() => handleOfferBannerPress(offer.id)}
+                      backgroundColor={offer.backgroundColor || primaryColor}
+                      textColor={offer.textColor || '#FFFFFF'}
+                      bannerImageUrl={offer.bannerImageUrl}
+                      customBannerImageUrl={offer.customBannerImageUrl}
+                      rightIconName={offer.rightIconKey}
+                      discountIconName={offer.discountIconKey}
+                      embeddedInCarousel
+                      fixedHeight={SALE_BANNER_UNIFORM_HEIGHT}
+                    />
+                  </RNView>
+                ))}
+              </ScrollView>
+              {homeOffers.length > 1 ? (
+                <RNView
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 10,
+                    marginBottom: 6,
+                  }}
+                >
+                  {homeOffers.map((_, i) => (
+                    <RNView
+                      key={`dot-${i}`}
+                      style={{
+                        width: i === offerCarouselIndex ? 8 : 6,
+                        height: i === offerCarouselIndex ? 8 : 6,
+                        borderRadius: 99,
+                        backgroundColor: i === offerCarouselIndex ? primaryColor : '#d1d5db',
+                      }}
+                    />
+                  ))}
+                </RNView>
+              ) : null}
             </View>
-            <SaleBanner
-              title="🎉 MEGA SALE 2025"
-              subtitle="Up to 90% OFF Everything!"
-              discountText="Flash Sale"
-              endDate="Ends in 2 days"
-              onPress={handleSaleBannerPress}
-              backgroundColor="#0a61d7"
-            />
-          </View>
+          ) : null}
         
           {/* Categories Section */}
           <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: 10 }]}>

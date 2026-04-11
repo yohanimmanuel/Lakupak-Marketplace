@@ -23,6 +23,7 @@ interface WebSocketMessage {
     | 'notification'
     | 'platform_announcement_published'
     | 'platform_announcement_unpublished'
+    | 'home_offers_updated'
     | 'ping'
     | 'pong';
   data?: unknown;

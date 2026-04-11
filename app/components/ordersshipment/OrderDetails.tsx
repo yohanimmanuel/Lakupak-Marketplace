@@ -1317,10 +1317,34 @@ export default function OrderDetailsModal() {
     );
   };
 
+  const primaryBlue = '#0a61d7';
+
+  const orderDetailsHeader = () => (
+    <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 44) + 8 }]}>
+      <View style={styles.headerContent}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={10}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
+          <ArrowLeft color={primaryBlue} size={24} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Order Details</Text>
+      </View>
+    </View>
+  );
+
+  const orderDetailsScreenOptions = {
+    presentation: 'modal' as const,
+    header: orderDetailsHeader,
+  };
+
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <Stack.Screen options={orderDetailsScreenOptions} />
+        <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Loading order details...</Text>
         </View>
@@ -1331,7 +1355,8 @@ export default function OrderDetailsModal() {
   if (!order) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <Stack.Screen options={orderDetailsScreenOptions} />
+        <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
         <View style={styles.loadingContainer}>
           <Text style={styles.loadingText}>Order not found</Text>
         </View>
@@ -1342,30 +1367,9 @@ export default function OrderDetailsModal() {
   // TypeScript assertion that order is not null after the check above
   const orderData = order as Order;
 
-  const primaryBlue = '#0a61d7';
-  
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          presentation: 'modal',
-          header: () => (
-            <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 44) + 8 }]}>
-              <View style={styles.headerContent}>
-                <TouchableOpacity 
-                  onPress={() => router.back()} 
-                  hitSlop={10}
-                  accessibilityLabel="Go back"
-                  accessibilityRole="button"
-                >
-                  <ArrowLeft color={primaryBlue} size={24} />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Order Details</Text>
-              </View>
-            </View>
-          ),
-        }}
-      />
+      <Stack.Screen options={orderDetailsScreenOptions} />
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>

@@ -458,6 +458,26 @@ function RootLayoutNav() {
         />
 
         <Stack.Screen
+          name="offers/index"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+            contentStyle: { backgroundColor: '#f9fafb' },
+          }}
+        />
+        <Stack.Screen
+          name="offers/[id]"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            headerStyle: { backgroundColor: '#ffffff' },
+            headerTintColor: '#0a61d7',
+            headerTitleStyle: { color: '#111827', fontWeight: '600' },
+            contentStyle: { backgroundColor: '#f9fafb' },
+          }}
+        />
+
+        <Stack.Screen
           name="order-notifications"
           options={{
             presentation: 'modal',
