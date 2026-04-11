@@ -75,10 +75,11 @@ export default function ReturnRefundInfo() {
             <Text style={styles.headerText}>Quick flow</Text>
           </View>
           <View style={styles.list}>
-            <Text style={styles.listItem}>1. Check the product&apos;s return policy and time limit.</Text>
-            <Text style={styles.listItem}>2. Start a return/refund request from order details.</Text>
-            <Text style={styles.listItem}>3. Follow any instructions to send back the item if needed.</Text>
-            <Text style={styles.listItem}>4. Wait for review and refund to your payment method or wallet.</Text>
+            <Text style={styles.listItem}>1. Check the product&apos;s return policy and time limit before buying a product.</Text>
+            <Text style={styles.listItem}>2. Returns and refunds are only available when products have been delivered and received.</Text>
+            <Text style={styles.listItem}>3. Start a return/refund request from order details.</Text>
+            <Text style={styles.listItem}>4. Follow any instructions to send back the item with strong proof and evidence of return request.</Text>
+            <Text style={styles.listItem}>5. Wait for review and refund to your payment method or wallet.</Text>
           </View>
         </View>
       </ScrollView>
