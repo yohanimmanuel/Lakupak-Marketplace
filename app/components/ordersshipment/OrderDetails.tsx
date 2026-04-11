@@ -39,6 +39,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { websocketService } from '../../../services/websocket';
 import { calculateOrderItemPromotion } from '../../../utils/promotionUtils';
+import OrderInvoiceModal from './OrderInvoiceModal';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -114,11 +115,14 @@ interface Order {
   paymentStatus: 'Unpaid' | 'Paid';
   paymentTerms: string;
   invoiceUrl?: string;
+  /** Distributor store name (from order API) */
+  storeName?: string;
+  subtotal?: number;
+  discounts?: number;
   items: OrderItem[];
   shippingInfo: ShippingInfo;
   totalAmount: number;
   total: number;
-  shippingFee: number;
   orderItems?: OrderItem[];
   contactPerson: string;
   contactPhone: string;
@@ -177,6 +181,7 @@ export default function OrderDetailsModal() {
   const [isMarkingReceived, setIsMarkingReceived] = useState(false);
   const [showAllOrderInfo, setShowAllOrderInfo] = useState(false);
   const [productMOQs, setProductMOQs] = useState<Record<string, number | null>>({});
+  const [invoiceModalVisible, setInvoiceModalVisible] = useState(false);
 
   const fetchOrderDetails = useCallback(async (orderId: string) => {
     try {
@@ -1106,12 +1111,20 @@ export default function OrderDetailsModal() {
         value: 'View',
         isSpecial: true,
         render: () => (
-          <TouchableOpacity style={styles.infoRow}>
+          <TouchableOpacity
+            style={styles.infoRow}
+            onPress={() => setInvoiceModalVisible(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="View invoice"
+          >
             <Text style={styles.infoLabel}>Invoice:</Text>
-            <Text style={styles.infoValue}>View</Text>
-            <ChevronRight size={14} color="#6b7280" />
+            <View style={styles.invoiceRowRight}>
+              <Text style={styles.invoiceLinkText}>View & download</Text>
+              <ChevronRight size={16} color="#0a61d7" />
+            </View>
           </TouchableOpacity>
-        )
+        ),
       },
       {
         key: 'orderTime',
@@ -1379,6 +1392,12 @@ export default function OrderDetailsModal() {
         {renderOrderIdInfo()}
         {renderSupportCenter()}
       </ScrollView>
+
+      <OrderInvoiceModal
+        visible={invoiceModalVisible}
+        onClose={() => setInvoiceModalVisible(false)}
+        order={orderData}
+      />
       
       {renderBottomBar()}
     </View>
@@ -1815,6 +1834,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0a61d7',
     marginRight: 4,
+  },
+  invoiceRowRight: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+  },
+  invoiceLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0a61d7',
   },
   bottomBar: {
     flexDirection: 'row',
