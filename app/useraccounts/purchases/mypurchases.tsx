@@ -294,8 +294,10 @@ export default function MyPurchasesModal() {
         router.push('/product');
         break;
       case 'details':
-        // Navigate to product page for now (placeholder)
-        router.push('/product');
+        router.push({
+          pathname: '/components/ordersshipment/OrderDetails',
+          params: { orderId: order.orderId },
+        });
         break;
     }
   };
@@ -377,7 +379,16 @@ export default function MyPurchasesModal() {
     const mainItem = order.orderItems[0];
 
     return (
-      <View key={order.orderId} style={styles.orderCard}>
+      <Pressable
+        key={order.orderId}
+        style={styles.orderCard}
+        onPress={() =>
+          router.push({
+            pathname: '/components/ordersshipment/OrderDetails',
+            params: { orderId: order.orderId },
+          })
+        }
+      >
         {/* Seller Info */}
         <View style={styles.sellerInfo}>
           <View style={styles.sellerLeft}>
@@ -492,7 +503,7 @@ export default function MyPurchasesModal() {
             </TouchableOpacity>
           ))}
         </View>
-      </View>
+      </Pressable>
     );
   };
 
