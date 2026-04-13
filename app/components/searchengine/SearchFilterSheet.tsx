@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  Easing,
   Modal,
   Pressable,
   ScrollView,
@@ -11,6 +12,7 @@ import {
   View,
 } from 'react-native';
 // no header actions; close via outside press / filter icon toggle
+import { ChevronDown } from 'lucide-react-native';
 
 export type ShippingOptionKey = 'selfPickup' | 'sellerDelivery' | 'buyerCourier';
 
@@ -47,8 +49,9 @@ export default function SearchFilterSheet({
   categoryOptions,
   topOffset,
 }: Props) {
-  const OPEN_MS = 90;
-  const CLOSE_MS = 90;
+  const OPEN_MS = 170;
+  const CLOSE_MS = 140;
+  const MAX_PILLS_COLLAPSED = 4;
   const [local, setLocal] = useState<SearchFilters>(initialFilters);
   const [closing, setClosing] = useState(false);
   const availableHeight = Math.max(0, screenHeight - Math.max(0, topOffset));
@@ -58,8 +61,9 @@ export default function SearchFilterSheet({
     availableHeight,
     Math.max(0, measuredContentHeight + measuredFooterHeight),
   );
-  // Animate height from 0 -> sheetHeight so it "drops down" under the search bar.
-  const heightAnim = useRef(new Animated.Value(0)).current;
+  // Smooth native-driver animation (better than animating height).
+  const translateAnim = useRef(new Animated.Value(-12)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
   const openedAtRef = useRef(0);
 
   useEffect(() => {
@@ -69,36 +73,47 @@ export default function SearchFilterSheet({
 
   useEffect(() => {
     if (!visible) return;
+    // Only run the opening animation once per open.
+    // Avoid depending on measured height; expanding "Show more" should not restart animation.
     setClosing(false);
     openedAtRef.current = Date.now();
-    heightAnim.setValue(0);
-  }, [visible, heightAnim]);
-
-  useEffect(() => {
-    if (!visible) return;
-    const target = Math.max(0, sheetHeight || availableHeight);
-    if (target <= 0) return;
-
-    // Avoid restarting the animation on every measurement tick.
-    heightAnim.stopAnimation((current) => {
-      const cur = typeof current === 'number' ? current : 0;
-      if (cur >= target - 1) return;
-      Animated.timing(heightAnim, {
-        toValue: target,
+    translateAnim.setValue(-12);
+    opacityAnim.setValue(0);
+    Animated.parallel([
+      Animated.timing(opacityAnim, {
+        toValue: 1,
         duration: OPEN_MS,
-        useNativeDriver: false,
-      }).start();
-    });
-  }, [visible, sheetHeight, availableHeight, heightAnim]);
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateAnim, {
+        toValue: 0,
+        duration: OPEN_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [visible, translateAnim, opacityAnim]);
+
+  // No height animation: we only update measured heights for layout.
 
   const closeAnimated = () => {
     if (closing) return;
     setClosing(true);
-    Animated.timing(heightAnim, {
-      toValue: 0,
-      duration: CLOSE_MS,
-      useNativeDriver: false,
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: CLOSE_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateAnim, {
+        toValue: -12,
+        duration: CLOSE_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       setClosing(false);
       onClose();
     });
@@ -114,6 +129,49 @@ export default function SearchFilterSheet({
     const list = [{ key: 'All' as const, label: 'All' }, ...shippingOptions];
     return list;
   }, [shippingOptions]);
+
+  const [showMore, setShowMore] = useState({
+    shippedFrom: false,
+    shippingOption: false,
+    category: false,
+  });
+
+  useEffect(() => {
+    if (!visible) return;
+    setShowMore({ shippedFrom: false, shippingOption: false, category: false });
+  }, [visible]);
+
+  const shippedFromShown = useMemo(() => {
+    if (showMore.shippedFrom) return shippedFromOptions;
+    return shippedFromOptions.slice(0, MAX_PILLS_COLLAPSED);
+  }, [shippedFromOptions, showMore.shippedFrom]);
+
+  const shippingOptionShown = useMemo(() => {
+    if (showMore.shippingOption) return shippingOptionButtons;
+    return shippingOptionButtons.slice(0, MAX_PILLS_COLLAPSED);
+  }, [shippingOptionButtons, showMore.shippingOption]);
+
+  const categoryShown = useMemo(() => {
+    if (showMore.category) return categoryOptions;
+    return categoryOptions.slice(0, MAX_PILLS_COLLAPSED);
+  }, [categoryOptions, showMore.category]);
+
+  const ShowMoreButton = ({
+    expanded,
+    onPress,
+  }: {
+    expanded: boolean;
+    onPress: () => void;
+  }) => (
+    <Pressable onPress={onPress} style={styles.showMoreBtn} accessibilityRole="button">
+      <Text style={styles.showMoreText}>{expanded ? 'Show less' : 'Show more'}</Text>
+      <ChevronDown
+        size={16}
+        color="#6b7280"
+        style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}
+      />
+    </Pressable>
+  );
 
   const Chip = ({
     label,
@@ -160,8 +218,10 @@ export default function SearchFilterSheet({
             styles.sheet,
             {
               top: topOffset,
-              height: heightAnim,
+              height: sheetHeight || undefined,
               maxHeight: availableHeight,
+              opacity: opacityAnim,
+              transform: [{ translateY: translateAnim }],
             },
           ]}
         >
@@ -173,7 +233,7 @@ export default function SearchFilterSheet({
           >
             <Text style={styles.sectionTitle}>Shipped From</Text>
             <View style={styles.chipGrid}>
-              {shippedFromOptions.map((opt) => (
+              {shippedFromShown.map((opt) => (
                 <Chip
                   key={opt}
                   label={opt}
@@ -182,10 +242,16 @@ export default function SearchFilterSheet({
                 />
               ))}
             </View>
+            {shippedFromOptions.length > MAX_PILLS_COLLAPSED ? (
+              <ShowMoreButton
+                expanded={showMore.shippedFrom}
+                onPress={() => setShowMore((p) => ({ ...p, shippedFrom: !p.shippedFrom }))}
+              />
+            ) : null}
 
             <Text style={styles.sectionTitle}>Shipping Option</Text>
             <View style={styles.chipGrid}>
-              {shippingOptionButtons.map((opt) => (
+              {shippingOptionShown.map((opt) => (
                 <Chip
                   key={opt.key}
                   label={opt.label}
@@ -194,6 +260,12 @@ export default function SearchFilterSheet({
                 />
               ))}
             </View>
+            {shippingOptionButtons.length > MAX_PILLS_COLLAPSED ? (
+              <ShowMoreButton
+                expanded={showMore.shippingOption}
+                onPress={() => setShowMore((p) => ({ ...p, shippingOption: !p.shippingOption }))}
+              />
+            ) : null}
 
             <Text style={styles.sectionTitle}>Price Range</Text>
             <View style={styles.priceRow}>
@@ -223,7 +295,7 @@ export default function SearchFilterSheet({
 
             <Text style={styles.sectionTitle}>Category</Text>
             <View style={styles.chipGrid}>
-              {categoryOptions.map((opt) => (
+              {categoryShown.map((opt) => (
                 <Chip
                   key={opt}
                   label={opt === 'All' ? 'All Categories' : opt}
@@ -232,6 +304,12 @@ export default function SearchFilterSheet({
                 />
               ))}
             </View>
+            {categoryOptions.length > MAX_PILLS_COLLAPSED ? (
+              <ShowMoreButton
+                expanded={showMore.category}
+                onPress={() => setShowMore((p) => ({ ...p, category: !p.category }))}
+              />
+            ) : null}
 
           </ScrollView>
 
@@ -304,6 +382,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  showMoreBtn: {
+    marginTop: 8,
+    paddingVertical: 8,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 6,
+  },
+  showMoreText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6b7280',
   },
   chip: {
     paddingHorizontal: 14,
