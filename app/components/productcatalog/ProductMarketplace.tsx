@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { router, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Heart, ImageIcon, Share2, X, ArrowLeft, ShoppingCart, Gift, Star } from 'lucide-react-native';
+import { Heart, ImageIcon, Share2, X, ArrowLeft, ShoppingCart, Gift, Star, Truck, MapPin } from 'lucide-react-native';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import BuyNowModal from './BuyNowModal';
@@ -463,10 +463,8 @@ export default function ProductMarketplace({
       // Promotion badge will be shown in the product info section
       if (offerBadge === 'Discount' || offerBadge === 'All Offers') {
         return (
-          <View style={[styles.cardDiscountTag, { backgroundColor: '#FEE2E2' }]}>
-            <Text style={[styles.cardDiscountTagText, { color: '#DC2626' }]}>
-              {discountDisplay}
-            </Text>
+          <View style={styles.cardDiscountTag}>
+            <Text style={styles.cardDiscountTagText}>{discountDisplay}</Text>
           </View>
         );
       }
@@ -493,14 +491,8 @@ export default function ProductMarketplace({
     const offerBadge = getOfferBadge();
     
     if (hasActiveOffer && (offerBadge === 'Promotion' || offerBadge === 'All Offers') && product?.promotionDetails) {
-      return (
-        <View style={[styles.cardPromotionBadge, styles.cardPromotionBadgeOverlay]}>
-          <Gift size={10} color="#9333EA" />
-          <Text style={styles.cardPromotionBadgeText}>
-            Buy {product.promotionDetails.minQuantity} Get {product.promotionDetails.freeQuantity}
-          </Text>
-        </View>
-      );
+      // Show Buy X Get Y below price instead (info section).
+      return null;
     }
     
     // Fallback to original badges logic for other promotions
@@ -532,6 +524,23 @@ export default function ProductMarketplace({
   };
 
   const renderCardView = () => {
+    const formatDeliveryTime = (): string | null => {
+      // Some call sites provide a narrower `shipping` shape; guard via `any`.
+      const min = safeGetNumber((product.shipping as any)?.leadTimeMinDays);
+      const max = safeGetNumber((product.shipping as any)?.leadTimeMaxDays);
+      if (min > 0 && max > 0) return min === max ? `${min} days` : `${min}-${max} days`;
+      if (min > 0) return `${min}+ days`;
+      const infoDays = safeGetString(product.shippingInfo?.days, '').trim();
+      return infoDays ? infoDays : null;
+    };
+
+    const deliveryTimeLabel = formatDeliveryTime();
+    const deliveryTimeDisplay = deliveryTimeLabel || 'Not provided';
+    const showBuyXGetY =
+      getHasActiveOffer() &&
+      (getOfferBadge() === 'Promotion' || getOfferBadge() === 'All Offers') &&
+      Boolean(product?.promotionDetails);
+
     return (
       <>
         <TouchableOpacity
@@ -556,12 +565,13 @@ export default function ProductMarketplace({
           {/* Product Info */}
           <View style={styles.cardProductInfo}>
             {/* Product Name */}
-            <Text style={[styles.cardProductName, { color: textColor }]} numberOfLines={2}>
+            <Text
+              style={[styles.cardProductName, { color: textColor }]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
               {safeGetString(product.name, 'Unknown Product')}
             </Text>
-
-            {/* Rating badge */}
-            <View style={styles.cardRatingContainer}>{renderRatingBadge('card')}</View>
 
             {/* Price */}
             <View style={styles.cardPriceContainer}>
@@ -576,28 +586,37 @@ export default function ProductMarketplace({
               </Text>
             </View>
 
-            {/* Stock + sold */}
+            {/* Promotion pill (Buy X Get Y) - below price */}
+            {showBuyXGetY && product?.promotionDetails ? (
+              <View style={styles.cardPromotionInline}>
+                <Gift size={10} color="#9333EA" />
+                <Text style={styles.cardPromotionInlineText} numberOfLines={1} ellipsizeMode="tail">
+                  Buy {product.promotionDetails.minQuantity} Get {product.promotionDetails.freeQuantity}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Sold + rating (no stock status on card) */}
             <View style={styles.cardStockRow}>
-              <Text
-                style={[
-                  styles.cardStockStatus,
-                  { color: getStockStatusColor(safeGetString(product.stockStatus, 'In Stock')) },
-                ]}
-              >
-                {safeGetString(product.stockStatus, 'In Stock')}
-              </Text>
-              <Text style={styles.cardStockPipe}> | </Text>
+              <View style={styles.cardRatingInline}>{renderRatingBadge('card')}</View>
+              <Text style={styles.cardStockPipe}> • </Text>
               <Text style={styles.cardSoldInline}>
                 {safeGetString(product.soldCount, '0')} sold
               </Text>
             </View>
 
             {/* Shipping Info */}
-            {product.shippingInfo && (
-              <View style={styles.cardShippingInfo}>
-                <Text style={styles.cardShippingLocation}>{product.shippingInfo.location}</Text>
-              </View>
-            )}
+            <View style={styles.cardShippingInfo}>
+              <Truck size={12} color={deliveryTimeLabel ? '#10b981' : '#9CA3AF'} />
+              <Text style={[styles.cardShippingTime, !deliveryTimeLabel && styles.cardShippingNotProvided]}>
+                {deliveryTimeDisplay}
+              </Text>
+              <Text style={styles.cardShippingDot}>•</Text>
+              <MapPin size={12} color="#9CA3AF" />
+              <Text style={[styles.cardShippingLocation, !safeGetString(product.shippingInfo?.location, '').trim() && styles.cardShippingNotProvided]}>
+                {safeGetString(product.shippingInfo?.location, '').trim() || 'Not provided'}
+              </Text>
+            </View>
 
           </View>
         </TouchableOpacity>
@@ -1365,7 +1384,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#EF4444',
+    backgroundColor: '#FEE2E2',
     paddingHorizontal: 6,
     paddingVertical: 4,
     borderRadius: 4,
@@ -1375,12 +1394,12 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   cardDiscountTagText: {
-    color: 'white',
+    color: '#DC2626',
     fontSize: 10,
     fontWeight: 'bold',
   },
   cardBrandTagText: {
-    color: 'white',
+    color: '#DC2626',
     fontSize: 8,
     fontWeight: '600',
   },
@@ -1450,16 +1469,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+  cardRatingInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   cardRatingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 2,
     borderRadius: 4,
     borderWidth: 1,
     borderColor: '#FDE68A',
     backgroundColor: '#FFFBEB',
+    marginBottom: 4,
   },
   cardRatingBadgeText: {
     fontSize: 12,
@@ -1470,7 +1494,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'flex-start',
     gap: 2,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   cardPrice: {
     fontSize: 14,
@@ -1486,10 +1510,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     marginBottom: 4,
-  },
-  cardStockStatus: {
-    fontSize: 12,
-    fontWeight: '500',
   },
   cardStockPipe: {
     fontSize: 12,
@@ -1516,6 +1536,24 @@ const styles = StyleSheet.create({
     left: 8,
     zIndex: 10,
   },
+  cardPromotionInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: '#F3E8FF',
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+  },
+  cardPromotionInlineText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9333EA',
+    flexShrink: 1,
+  },
   cardPromotionBadgeText: {
     color: '#9333EA',
     fontSize: 9,
@@ -1524,12 +1562,26 @@ const styles = StyleSheet.create({
   cardShippingInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 3,
     marginBottom: 4,
   },
   cardShippingLocation: {
     fontSize: 11,
     color: '#9CA3AF',
+  },
+  cardShippingDot: {
+    fontSize: 11,
+    color: '#D1D5DB',
+    fontWeight: '600',
+  },
+  cardShippingNotProvided: {
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  cardShippingTime: {
+    fontSize: 11,
+    color: '#10b981',
+    fontWeight: '600',
   },
   cardAddToCartButton: {
     flexDirection: 'row',
