@@ -12,7 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Search as SearchIcon, X } from 'lucide-react-native';
+import { ArrowLeft, Filter, Search as SearchIcon, X, ChevronDown } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
 import { useDataStore } from '../stores/dataStore';
 import { useCartStore } from '../stores/cartStore';
@@ -26,9 +26,11 @@ import TopBrands from './components/searchengine/TopBrands';
 import TopDistributors from './components/searchengine/TopDistributors';
 import SearchResults from './components/searchengine/SearchResults';
 import SearchSuggestions from './components/searchengine/SearchSuggestions';
+import SearchFilterSheet, { type SearchFilters, type ShippingOptionKey } from './components/searchengine/SearchFilterSheet';
 import { Product } from '../data/sampleProducts';
 
 export default function SearchScreen() {
+  const HEADER_TOP_PADDING = 33;
   const router = useRouter();
   const params = useLocalSearchParams();
   const token = useAuthStore(s => s.token);
@@ -70,9 +72,76 @@ export default function SearchScreen() {
   // Filter state
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSort, setSelectedSort] = useState('relevance');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [searchRowHeight, setSearchRowHeight] = useState(0);
+  const [filters, setFilters] = useState<SearchFilters>({
+    shippedFrom: 'All',
+    shippingOption: 'All',
+    minPrice: '',
+    maxPrice: '',
+    category: 'All',
+  });
   
   // Available categories from search results
   const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+
+  const shippedFromOptions = useMemo(() => {
+    const locations = Array.from(
+      new Set(
+        searchResults
+          .map((p) => (p.shippingInfo?.location || '').trim())
+          .filter(Boolean)
+      )
+    );
+    locations.sort((a, b) => a.localeCompare(b));
+    return ['All', ...locations];
+  }, [searchResults]);
+
+  const shippingOptions = useMemo(() => {
+    const avail = {
+      selfPickup: searchResults.some((p) => !!p.shipping?.selfPickup?.available),
+      sellerDelivery: searchResults.some((p) => !!p.shipping?.sellerDelivery?.available),
+      buyerCourier: searchResults.some((p) => !!p.shipping?.buyerCourier?.available),
+    };
+
+    const out: Array<{ key: ShippingOptionKey; label: string }> = [];
+    if (avail.selfPickup) out.push({ key: 'selfPickup', label: 'Self Collection' });
+    if (avail.sellerDelivery) out.push({ key: 'sellerDelivery', label: 'Doorstep Delivery' });
+    if (avail.buyerCourier) out.push({ key: 'buyerCourier', label: 'Buyer Courier' });
+    return out;
+  }, [searchResults]);
+
+  const categoryOptions = useMemo(() => {
+    const cats = (availableCategories.length > 0 ? availableCategories : dynamicCategories.map((c) => c.name))
+      .map((c) => (c || '').trim())
+      .filter(Boolean);
+    const uniq = Array.from(new Set(cats));
+    uniq.sort((a, b) => a.localeCompare(b));
+    return ['All', ...uniq];
+  }, [availableCategories, dynamicCategories]);
+
+  const filteredResults = useMemo(() => {
+    const shippedFrom = filters.shippedFrom;
+    const shipOpt = filters.shippingOption;
+    const cat = filters.category;
+    const min = filters.minPrice ? Number(filters.minPrice) : null;
+    const max = filters.maxPrice ? Number(filters.maxPrice) : null;
+
+    return searchResults.filter((p) => {
+      if (cat !== 'All' && (p.category || '').trim() !== cat) return false;
+      if (shippedFrom !== 'All') {
+        const loc = (p.shippingInfo?.location || '').trim();
+        if (loc !== shippedFrom) return false;
+      }
+      if (shipOpt !== 'All') {
+        const key = shipOpt as ShippingOptionKey;
+        if (!p.shipping?.[key]?.available) return false;
+      }
+      if (min !== null && Number.isFinite(min) && p.sellingPrice < min) return false;
+      if (max !== null && Number.isFinite(max) && p.sellingPrice > max) return false;
+      return true;
+    });
+  }, [searchResults, filters]);
 
   // Debounce timer
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -150,10 +219,25 @@ export default function SearchScreen() {
 
       // Sort results based on selected sort option
       let sortedProducts = [...filteredProducts];
+      const parseSoldCount = (sold: unknown): number => {
+        const s = String(sold ?? '').trim().toLowerCase();
+        if (!s) return 0;
+        const m = /^(\d+(?:\.\d+)?)(k|m)?\+?$/.exec(s.replace(/sold\/month|sold/g, '').trim());
+        if (!m) {
+          const n = Number(s.replace(/[^\d.]/g, ''));
+          return Number.isFinite(n) ? n : 0;
+        }
+        const base = Number(m[1]);
+        if (!Number.isFinite(base)) return 0;
+        const mult = m[2] === 'm' ? 1_000_000 : m[2] === 'k' ? 1_000 : 1;
+        return base * mult;
+      };
       if (sort === 'price_low') {
         sortedProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
       } else if (sort === 'price_high') {
         sortedProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
+      } else if (sort === 'top_sales') {
+        sortedProducts.sort((a, b) => parseSoldCount(b.soldCount) - parseSoldCount(a.soldCount));
       } else if (sort === 'newest') {
         sortedProducts.sort((a, b) => {
           // Assuming products have a createdAt or similar field
@@ -352,6 +436,13 @@ export default function SearchScreen() {
     setTotalCount(0);
     setSelectedCategory('All');
     setSelectedSort('relevance');
+    setFilters({
+      shippedFrom: 'All',
+      shippingOption: 'All',
+      minPrice: '',
+      maxPrice: '',
+      category: 'All',
+    });
     // Clear both q and category URL params
     router.setParams({ q: undefined, category: undefined });
     inputRef.current?.focus();
@@ -595,6 +686,8 @@ export default function SearchScreen() {
   const showInitialState = !searchQuery.trim() && !activeQuery && searchResults.length === 0 && !loading;
   const showSuggestions = searchQuery.trim() && !activeQuery && searchResults.length === 0 && !loading;
   const showResults = activeQuery || searchResults.length > 0 || loading;
+  const isPrice = selectedSort === 'price_low' || selectedSort === 'price_high';
+  const priceAsc = selectedSort !== 'price_high';
 
   return (
     <View style={styles.container}>
@@ -602,7 +695,10 @@ export default function SearchScreen() {
         options={{
           header: () => (
             <View style={styles.headerContainer}>
-              <View style={styles.header}>
+              <View
+                style={styles.header}
+                onLayout={(e) => setSearchRowHeight(e.nativeEvent.layout.height + HEADER_TOP_PADDING)}
+              >
                 <Pressable onPress={() => router.back()} style={styles.backButton}>
                   <ArrowLeft color="#0a61d7" size={24} />
                 </Pressable>
@@ -626,7 +722,57 @@ export default function SearchScreen() {
                     </Pressable>
                   ) : null}
                 </View>
+
+                {showResults ? (
+                  <Pressable
+                    onPress={() => setFiltersOpen((v) => !v)}
+                    style={styles.filterButton}
+                    hitSlop={10}
+                  >
+                    <Filter color="#0a61d7" size={20} />
+                  </Pressable>
+                ) : null}
               </View>
+
+              {showResults ? (
+                <View style={styles.filterTabsWrap}>
+                  <View style={styles.filterTabsRow}>
+                    <Pressable onPress={() => handleSortChange('relevance')} style={styles.filterTabBtn} accessibilityRole="button">
+                      <Text style={[styles.filterTabText, selectedSort === 'relevance' && styles.filterTabTextActive]}>Relevance</Text>
+                      {selectedSort === 'relevance' ? <View style={styles.filterUnderlineFull} /> : null}
+                    </Pressable>
+                    <Pressable onPress={() => handleSortChange('newest')} style={styles.filterTabBtn} accessibilityRole="button">
+                      <Text style={[styles.filterTabText, selectedSort === 'newest' && styles.filterTabTextActive]}>Latest</Text>
+                      {selectedSort === 'newest' ? <View style={styles.filterUnderlineFull} /> : null}
+                    </Pressable>
+                    <Pressable onPress={() => handleSortChange('top_sales')} style={styles.filterTabBtn} accessibilityRole="button">
+                      <Text style={[styles.filterTabText, selectedSort === 'top_sales' && styles.filterTabTextActive]}>Top Sales</Text>
+                      {selectedSort === 'top_sales' ? <View style={styles.filterUnderlineFull} /> : null}
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        if (isPrice) {
+                          handleSortChange(priceAsc ? 'price_high' : 'price_low');
+                          return;
+                        }
+                        handleSortChange('price_low');
+                      }}
+                      style={styles.filterTabBtn}
+                      accessibilityRole="button"
+                    >
+                      <View style={styles.filterTabInline}>
+                        <Text style={[styles.filterTabText, isPrice && styles.filterTabTextActive]}>Price</Text>
+                        <ChevronDown
+                          size={14}
+                          color={isPrice ? '#0a61d7' : '#6b7280'}
+                          style={{ transform: [{ rotate: isPrice && !priceAsc ? '180deg' : '0deg' }] }}
+                        />
+                      </View>
+                      {isPrice ? <View style={styles.filterUnderlineFull} /> : null}
+                    </Pressable>
+                  </View>
+                </View>
+              ) : null}
             </View>
           ),
         }}
@@ -684,8 +830,8 @@ export default function SearchScreen() {
       ) : showResults ? (
         <SearchResults
           query={activeQuery}
-          products={searchResults}
-          totalCount={totalCount}
+          products={filteredResults}
+          totalCount={filteredResults.length}
           loading={loading}
           refreshing={refreshing}
           hasMore={hasMore}
@@ -695,14 +841,46 @@ export default function SearchScreen() {
           favorites={likedProducts}
           onRefresh={handleRefresh}
           onLoadMore={handleLoadMore}
-          onCategoryFilter={handleCategoryFilter}
-          onSortChange={handleSortChange}
-          selectedCategory={selectedCategory}
-          selectedSort={selectedSort}
-          availableCategories={availableCategories}
         />
       ) : null}
       </KeyboardAvoidingView>
+
+      <SearchFilterSheet
+        visible={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        initialFilters={filters}
+        shippedFromOptions={shippedFromOptions}
+        shippingOptions={shippingOptions}
+        categoryOptions={categoryOptions}
+        topOffset={searchRowHeight}
+        onReset={() => {
+          setFilters({
+            shippedFrom: 'All',
+            shippingOption: 'All',
+            minPrice: '',
+            maxPrice: '',
+            category: 'All',
+          });
+          setFiltersOpen(false);
+          if (activeQuery) {
+            setSearchResults([]);
+            setTotalCount(0);
+            setLoading(true);
+            performSearch(activeQuery, 'All', selectedSort, 1);
+          }
+        }}
+        onApply={(next) => {
+          setFilters(next);
+          setFiltersOpen(false);
+          // Category affects API results; other filters are client-side.
+          if (activeQuery) {
+            setSearchResults([]);
+            setTotalCount(0);
+            setLoading(true);
+            performSearch(activeQuery, next.category === 'All' ? 'All' : next.category, selectedSort, 1);
+          }
+        }}
+      />
     </View>
   );
 }
@@ -743,6 +921,35 @@ const styles = StyleSheet.create({
     height: 40,
     marginLeft: 4,
   },
+  filterButton: {
+    marginLeft: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  filterTabsWrap: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#eef2f7',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  filterTabsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  filterTabBtn: { paddingVertical: 12, paddingHorizontal: 5, position: 'relative', alignItems: 'center', flex: 1 },
+  filterTabInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  filterTabText: { fontSize: 13, fontWeight: '500', color: '#6b7280' },
+  filterTabTextActive: { color: '#0a61d7' },
+  filterUnderlineFull: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: '#0a61d7' },
   searchInput: {
     flex: 1,
     marginLeft: 8,
