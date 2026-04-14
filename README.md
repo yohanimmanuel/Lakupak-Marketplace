@@ -31,6 +31,7 @@ Laku-Marketplace is the buyer-facing mobile app for Laku. It enables verified re
 - Notifications: Expo Notifications; Secure Storage: Expo Secure Store
 - SVG & Icons: react-native-svg + lucide-react-native
 - Styling: NativeWind (Tailwind for React Native)
+- Search Engine: Meilisearch (Relevance, Typo-safe, UX Scalable)
 
 ## Getting Started
 1) Prerequisites: Node LTS, Git, Android Studio/Xcode (optional for emulators)
