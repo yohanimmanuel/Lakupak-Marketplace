@@ -140,12 +140,23 @@ export default function SearchScreen() {
   }, [searchResults]);
 
   const categoryOptions = useMemo(() => {
-    const cats = (availableCategories.length > 0 ? availableCategories : dynamicCategories.map((c) => c.name))
-      .map((c) => (c || '').trim())
-      .filter(Boolean);
-    const uniq = Array.from(new Set(cats));
-    uniq.sort((a, b) => a.localeCompare(b));
-    return uniq;
+    const catsRaw =
+      availableCategories.length > 0
+        ? availableCategories // preserve server-provided ranking order
+        : dynamicCategories.map((c) => c.name);
+    const cats = catsRaw.map((c) => (c || '').trim()).filter(Boolean);
+
+    // Keep order when coming from server facets; otherwise sort for a stable UX.
+    const seen = new Set<string>();
+    const uniqInOrder: string[] = [];
+    for (const c of cats) {
+      if (seen.has(c)) continue;
+      seen.add(c);
+      uniqInOrder.push(c);
+    }
+
+    if (availableCategories.length > 0) return uniqInOrder;
+    return uniqInOrder.sort((a, b) => a.localeCompare(b));
   }, [availableCategories, dynamicCategories]);
 
   const filteredResults = useMemo(() => {
