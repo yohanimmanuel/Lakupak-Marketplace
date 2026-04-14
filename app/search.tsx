@@ -29,6 +29,33 @@ import SearchSuggestions from './components/searchengine/SearchSuggestions';
 import SearchFilterSheet, { type SearchFilters, type ShippingOptionKey } from './components/searchengine/SearchFilterSheet';
 import { Product } from '../data/sampleProducts';
 
+/** Higher = better match. Weak matches stay included but sink to the bottom. */
+function computeRelevanceScore(query: string, p: MarketplaceProduct): number {
+  const q = query.trim().toLowerCase();
+  if (!q) return 0;
+  const name = String(p.name ?? '').toLowerCase();
+  const desc = String(p.description ?? '').toLowerCase();
+  const brand = String(p.brand ?? '').toLowerCase();
+  const cat = String(p.category ?? '').toLowerCase();
+  const tokens = q.split(/\s+/).filter(Boolean);
+
+  let score = 0;
+  if (name.includes(q)) {
+    score += 220;
+  } else if (tokens.length > 0 && tokens.every((t) => name.includes(t))) {
+    score += 180;
+  } else if (tokens.length > 0) {
+    const hits = tokens.filter((t) => name.includes(t)).length;
+    score += hits * 40;
+  }
+  if (brand && tokens.some((t) => t.length >= 2 && brand.includes(t))) score += 45;
+  if (cat && tokens.some((t) => t.length >= 2 && cat.includes(t))) score += 28;
+  const descHits = tokens.filter((t) => t.length >= 3 && desc.includes(t)).length;
+  score += descHits * 10;
+  if (score < 30 && desc.includes(q)) score += 22;
+  return score;
+}
+
 export default function SearchScreen() {
   const HEADER_TOP_PADDING = 33;
   const router = useRouter();
@@ -75,11 +102,12 @@ export default function SearchScreen() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchRowHeight, setSearchRowHeight] = useState(0);
   const [filters, setFilters] = useState<SearchFilters>({
-    shippedFrom: 'All',
-    shippingOption: 'All',
+    shippedFrom: [],
+    shippingOption: [],
+    salesChannel: [],
     minPrice: '',
     maxPrice: '',
-    category: 'All',
+    category: [],
   });
   
   // Available categories from search results
@@ -94,7 +122,7 @@ export default function SearchScreen() {
       )
     );
     locations.sort((a, b) => a.localeCompare(b));
-    return ['All', ...locations];
+    return locations;
   }, [searchResults]);
 
   const shippingOptions = useMemo(() => {
@@ -117,31 +145,61 @@ export default function SearchScreen() {
       .filter(Boolean);
     const uniq = Array.from(new Set(cats));
     uniq.sort((a, b) => a.localeCompare(b));
-    return ['All', ...uniq];
+    return uniq;
   }, [availableCategories, dynamicCategories]);
 
   const filteredResults = useMemo(() => {
     const shippedFrom = filters.shippedFrom;
     const shipOpt = filters.shippingOption;
+    const salesChannel = filters.salesChannel;
     const cat = filters.category;
     const min = filters.minPrice ? Number(filters.minPrice) : null;
     const max = filters.maxPrice ? Number(filters.maxPrice) : null;
 
     return searchResults.filter((p) => {
-      if (cat !== 'All' && (p.category || '').trim() !== cat) return false;
-      if (shippedFrom !== 'All') {
-        const loc = (p.shippingInfo?.location || '').trim();
-        if (loc !== shippedFrom) return false;
+      if (Array.isArray(cat) && cat.length > 0) {
+        const productType = (p.category || '').trim();
+        if (!cat.includes(productType)) return false;
       }
-      if (shipOpt !== 'All') {
-        const key = shipOpt as ShippingOptionKey;
-        if (!p.shipping?.[key]?.available) return false;
+      if (Array.isArray(shippedFrom) && shippedFrom.length > 0) {
+        const loc = (p.shippingInfo?.location || '').trim();
+        if (!shippedFrom.includes(loc)) return false;
+      }
+      if (Array.isArray(shipOpt) && shipOpt.length > 0) {
+        const anyAvailable = shipOpt.some((key) => !!p.shipping?.[key]?.available);
+        if (!anyAvailable) return false;
+      }
+      if (Array.isArray(salesChannel) && salesChannel.length > 0) {
+        const ch = String((p as unknown as { salesChannel?: string }).salesChannel || '').trim();
+        if (!ch) return false;
+        const matchesChannel =
+          salesChannel.includes(ch) ||
+          (ch === 'Both' &&
+            (salesChannel.includes('Retail') || salesChannel.includes('Wholesale')));
+        if (!matchesChannel) return false;
       }
       if (min !== null && Number.isFinite(min) && p.sellingPrice < min) return false;
       if (max !== null && Number.isFinite(max) && p.sellingPrice > max) return false;
       return true;
     });
   }, [searchResults, filters]);
+
+  /** Relevance first (strong matches on top); other sorts keep API/client order from performSearch. */
+  const displayedResults = useMemo(() => {
+    if (selectedSort !== 'relevance' || !activeQuery.trim()) {
+      return filteredResults;
+    }
+    const q = activeQuery.trim();
+    const ranked = filteredResults.map((p) => ({
+      p,
+      s: computeRelevanceScore(q, p as MarketplaceProduct),
+    }));
+    ranked.sort((a, b) => {
+      if (b.s !== a.s) return b.s - a.s;
+      return String(a.p.name ?? '').localeCompare(String(b.p.name ?? ''));
+    });
+    return ranked.map((x) => x.p);
+  }, [filteredResults, selectedSort, activeQuery]);
 
   // Debounce timer
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -192,7 +250,7 @@ export default function SearchScreen() {
         search: query.trim(),
         category: category !== 'All' ? category : undefined,
         page,
-        limit: 20,
+        limit: 50,
         token: token || undefined,
       });
 
@@ -258,17 +316,20 @@ export default function SearchScreen() {
       setHasMore(matchingDistributor ? false : page < result.pagination.totalPages);
       setActiveQuery(query);
 
-      // Extract unique categories from results
-      const newPageCategories = Array.from(
-        new Set(sortedProducts.map(p => p.category).filter(Boolean))
-      );
-      
-      if (append) {
-        // Merge new categories with existing ones when paginating
-        setAvailableCategories(prev => Array.from(new Set([...prev, ...newPageCategories])));
-      } else {
-        // Replace categories when starting a new search
+      // Shopee-style "category pills": prefer server facets (productType), fallback to local scan.
+      const facetCategories =
+        result.facets?.productTypes?.map((f) => f.value).filter(Boolean) ?? [];
+      const newPageCategories =
+        facetCategories.length > 0
+          ? facetCategories
+          : Array.from(new Set(sortedProducts.map((p) => p.category).filter(Boolean)));
+
+      if (!append) {
+        // Replace categories when starting a new search.
         setAvailableCategories(newPageCategories);
+      } else if (facetCategories.length === 0) {
+        // Only merge on pagination when we're using client-derived categories.
+        setAvailableCategories((prev) => Array.from(new Set([...prev, ...newPageCategories])));
       }
 
       // Save to recent searches (only on first page)
@@ -329,14 +390,29 @@ export default function SearchScreen() {
       return;
     }
     
-    // Handle category parameter (for category filtering)
+    // Handle category parameter (filtering) without overwriting the user's search term.
+    // If there's also a q param, category should ONLY narrow results.
     if (params.category && typeof params.category === 'string') {
       const categoryName = params.category;
       setSelectedCategory(categoryName);
+      setFilters((p) => ({ ...p, category: [categoryName] }));
+
+      if (params.q && typeof params.q === 'string' && params.q.trim()) {
+        if (params.q !== searchQuery || activeQuery !== params.q || selectedCategory !== categoryName) {
+          setSearchQuery(params.q);
+          setActiveQuery(params.q);
+          performSearch(params.q, categoryName, 'relevance', 1);
+        }
+        isDistributorSearchRef.current = false;
+        return;
+      }
+
+      // If no q param exists, treat category param as a category-browse entry point.
       setSearchQuery(categoryName);
       setActiveQuery(categoryName);
       performSearch(categoryName, categoryName, 'relevance', 1);
-      return; // Category param takes precedence
+      isDistributorSearchRef.current = false;
+      return;
     }
     
     // Only process if params.q exists and is different from current query
@@ -437,11 +513,12 @@ export default function SearchScreen() {
     setSelectedCategory('All');
     setSelectedSort('relevance');
     setFilters({
-      shippedFrom: 'All',
-      shippingOption: 'All',
+      shippedFrom: [],
+      shippingOption: [],
+      salesChannel: [],
       minPrice: '',
       maxPrice: '',
-      category: 'All',
+      category: [],
     });
     // Clear both q and category URL params
     router.setParams({ q: undefined, category: undefined });
@@ -515,7 +592,7 @@ export default function SearchScreen() {
       const result = await marketplaceService.getProducts({
         search: distributorName.trim(),
         page: 1,
-        limit: 20,
+        limit: 50,
         token: token || undefined,
       });
 
@@ -830,11 +907,21 @@ export default function SearchScreen() {
       ) : showResults ? (
         <SearchResults
           query={activeQuery}
-          products={filteredResults}
-          totalCount={filteredResults.length}
+          products={displayedResults}
           loading={loading}
           refreshing={refreshing}
           hasMore={hasMore}
+          categoryPills={availableCategories}
+          activeCategory={filters.category}
+          onCategoryPress={(category) => {
+            // Multi-select filter: toggle locally; do not re-run search (keeps pills stable).
+            setFilters((p) => {
+              const next = new Set(p.category);
+              if (next.has(category)) next.delete(category);
+              else next.add(category);
+              return { ...p, category: Array.from(next) };
+            });
+          }}
           onProductPress={handleProductPress}
           onAddToCart={handleAddToCart}
           onToggleFavorite={handleToggleFavorite}
@@ -851,15 +938,17 @@ export default function SearchScreen() {
         initialFilters={filters}
         shippedFromOptions={shippedFromOptions}
         shippingOptions={shippingOptions}
+        salesChannelOptions={['Retail', 'Wholesale']}
         categoryOptions={categoryOptions}
         topOffset={searchRowHeight}
         onReset={() => {
           setFilters({
-            shippedFrom: 'All',
-            shippingOption: 'All',
+            shippedFrom: [],
+            shippingOption: [],
+            salesChannel: [],
             minPrice: '',
             maxPrice: '',
-            category: 'All',
+            category: [],
           });
           setFiltersOpen(false);
           if (activeQuery) {
@@ -872,13 +961,7 @@ export default function SearchScreen() {
         onApply={(next) => {
           setFilters(next);
           setFiltersOpen(false);
-          // Category affects API results; other filters are client-side.
-          if (activeQuery) {
-            setSearchResults([]);
-            setTotalCount(0);
-            setLoading(true);
-            performSearch(activeQuery, next.category === 'All' ? 'All' : next.category, selectedSort, 1);
-          }
+          // All filters are client-side now; no need to re-run the API search.
         }}
       />
     </View>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
 import ProductMarketplace from '../productcatalog/ProductMarketplace';
 import ProductCardSkeleton from './ProductCardSkeleton';
 import { Product } from '../../../data/sampleProducts';
@@ -7,10 +7,12 @@ import { Product } from '../../../data/sampleProducts';
 interface SearchResultsProps {
   query: string;
   products: Product[];
-  totalCount: number;
   loading: boolean;
   refreshing: boolean;
   hasMore: boolean;
+  categoryPills?: string[];
+  activeCategory?: string[];
+  onCategoryPress?: (category: string) => void;
   onProductPress: (product: Product) => void;
   onAddToCart: (product: Product) => void;
   onToggleFavorite: (productId: string) => void;
@@ -22,10 +24,12 @@ interface SearchResultsProps {
 export default function SearchResults({
   query,
   products,
-  totalCount,
   loading,
   refreshing,
   hasMore,
+  categoryPills,
+  activeCategory,
+  onCategoryPress,
   onProductPress,
   onAddToCart,
   onToggleFavorite,
@@ -61,12 +65,29 @@ export default function SearchResults({
         }}
         scrollEventThrottle={400}
       >
-        {/* Result Counter */}
-        <View style={styles.resultCounterContainer}>
-          <Text style={styles.resultCount}>
-            {totalCount} {totalCount === 1 ? 'result' : 'results'} for "{query}"
-          </Text>
-        </View>
+        {categoryPills && categoryPills.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryPillsRow}
+            nestedScrollEnabled
+          >
+            {categoryPills.map((c) => {
+              const active = Array.isArray(activeCategory) ? activeCategory.includes(c) : false;
+              return (
+                <Pressable
+                  key={c}
+                  onPress={() => onCategoryPress?.(c)}
+                  style={[styles.categoryPill, active ? styles.categoryPillActive : null]}
+                >
+                  <Text style={[styles.categoryPillText, active ? styles.categoryPillTextActive : null]}>
+                    {c}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
 
         {loading && products.length === 0 ? (
           <View style={styles.skeletonContainer}>
@@ -138,22 +159,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  resultCounterContainer: {
-    backgroundColor: '#f9fafb',
+  categoryPillsRow: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    paddingTop: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    gap: 8,
   },
-  resultCount: {
-    fontSize: 16,
-    color: '#000000',
-    fontWeight: '700',
+  categoryPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  categoryPillActive: {
+    backgroundColor: '#e8f1ff',
+    borderColor: '#0a61d7',
+  },
+  categoryPillText: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  categoryPillTextActive: {
+    color: '#0a61d7',
   },
   productsSection: {
     flex: 1,
     backgroundColor: '#f9fafb',
   },
   productsScrollContent: {
+    paddingTop: 8,
     paddingBottom: 20,
   },
   productsContainer: {

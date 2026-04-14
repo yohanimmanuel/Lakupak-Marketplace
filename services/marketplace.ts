@@ -86,6 +86,8 @@ export interface MarketplaceProduct {
   images: string[];
   category: string;
   productCategory: string;
+  /** Retail / Wholesale / Both (from distributor; filter UI uses Retail + Wholesale multi-select). */
+  salesChannel?: string;
   brand: string;
   unit: string;
   // Default package for display
@@ -173,6 +175,10 @@ export interface MarketplaceResponse {
     totalCount: number;
     totalPages: number;
   };
+  facets?: {
+    productTypes: Array<{ value: string; count: number }>;
+    productCategories: Array<{ value: string; count: number }>;
+  };
 }
 
 interface GraphQLMarketplaceProduct {
@@ -199,6 +205,7 @@ interface GraphQLMarketplaceProduct {
   images: string[];
   category: string;
   productCategory: string;
+  salesChannel?: string;
   brand?: string;
   unit: string;
   sku: string;
@@ -225,6 +232,10 @@ interface MobileMarketplaceProductsResponse {
       limit: number;
       totalCount: number;
       totalPages: number;
+    };
+    facets: {
+      productTypes: Array<{ value: string; count: number }>;
+      productCategories: Array<{ value: string; count: number }>;
     };
   };
 }
@@ -278,6 +289,7 @@ export const marketplaceService = {
               images
               category
               productCategory
+              salesChannel
               brand
               unit
               sku
@@ -351,6 +363,10 @@ export const marketplaceService = {
         limit
         totalCount
         totalPages
+      }
+      facets {
+        productTypes { value count }
+        productCategories { value count }
       }
     }
   }
@@ -436,6 +452,7 @@ export const marketplaceService = {
       return {
         products: transformedProducts,
         pagination: result.mobileMarketplaceProducts.pagination,
+        facets: result.mobileMarketplaceProducts.facets,
       };
     } catch (error) {
       throw error;
@@ -471,6 +488,7 @@ export const marketplaceService = {
               images
               category
               productCategory
+              salesChannel
               brand
               unit
               sku

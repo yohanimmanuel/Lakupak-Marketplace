@@ -17,11 +17,12 @@ import { ChevronDown } from 'lucide-react-native';
 export type ShippingOptionKey = 'selfPickup' | 'sellerDelivery' | 'buyerCourier';
 
 export type SearchFilters = {
-  shippedFrom: string; // 'All' or location label
-  shippingOption: ShippingOptionKey | 'All';
+  shippedFrom: string[]; // multi-select locations; empty = no filter
+  shippingOption: ShippingOptionKey[]; // multi-select; empty = no filter
+  salesChannel: string[]; // multi-select: Retail / Wholesale; empty = no filter
   minPrice: string; // numeric string
   maxPrice: string; // numeric string
-  category: string; // 'All' or category label
+  category: string[]; // multi-select category labels; empty = no filter
 };
 
 type Props = {
@@ -30,9 +31,10 @@ type Props = {
   onApply: (filters: SearchFilters) => void;
   onReset: () => void;
   initialFilters: SearchFilters;
-  shippedFromOptions: string[]; // include 'All'
+  shippedFromOptions: string[]; // location labels (no 'All' required)
   shippingOptions: Array<{ key: ShippingOptionKey; label: string }>;
-  categoryOptions: string[]; // include 'All'
+  salesChannelOptions: string[]; // e.g. Retail, Wholesale
+  categoryOptions: string[]; // category labels (no 'All' required)
   topOffset: number; // pixels from top (height of search header)
 };
 
@@ -46,6 +48,7 @@ export default function SearchFilterSheet({
   initialFilters,
   shippedFromOptions,
   shippingOptions,
+  salesChannelOptions,
   categoryOptions,
   topOffset,
 }: Props) {
@@ -61,6 +64,9 @@ export default function SearchFilterSheet({
     availableHeight,
     Math.max(0, measuredContentHeight + measuredFooterHeight),
   );
+  // Give the dropdown more presence even when content is short.
+  const minSheetHeight = Math.min(availableHeight, Math.round(availableHeight * 0.61));
+  const desiredSheetHeight = Math.min(availableHeight, Math.max(sheetHeight, minSheetHeight));
   // Smooth native-driver animation (better than animating height).
   const translateAnim = useRef(new Animated.Value(-12)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -126,8 +132,7 @@ export default function SearchFilterSheet({
   };
 
   const shippingOptionButtons = useMemo(() => {
-    const list = [{ key: 'All' as const, label: 'All' }, ...shippingOptions];
-    return list;
+    return shippingOptions;
   }, [shippingOptions]);
 
   const [showMore, setShowMore] = useState({
@@ -218,7 +223,7 @@ export default function SearchFilterSheet({
             styles.sheet,
             {
               top: topOffset,
-              height: sheetHeight || undefined,
+              height: desiredSheetHeight,
               maxHeight: availableHeight,
               opacity: opacityAnim,
               transform: [{ translateY: translateAnim }],
@@ -237,8 +242,15 @@ export default function SearchFilterSheet({
                 <Chip
                   key={opt}
                   label={opt}
-                  selected={local.shippedFrom === opt}
-                  onPress={() => setLocal((p) => ({ ...p, shippedFrom: opt }))}
+                  selected={local.shippedFrom.includes(opt)}
+                  onPress={() =>
+                    setLocal((p) => {
+                      const next = new Set(p.shippedFrom);
+                      if (next.has(opt)) next.delete(opt);
+                      else next.add(opt);
+                      return { ...p, shippedFrom: Array.from(next) };
+                    })
+                  }
                 />
               ))}
             </View>
@@ -255,8 +267,15 @@ export default function SearchFilterSheet({
                 <Chip
                   key={opt.key}
                   label={opt.label}
-                  selected={local.shippingOption === opt.key}
-                  onPress={() => setLocal((p) => ({ ...p, shippingOption: opt.key }))}
+                  selected={local.shippingOption.includes(opt.key)}
+                  onPress={() =>
+                    setLocal((p) => {
+                      const next = new Set(p.shippingOption);
+                      if (next.has(opt.key)) next.delete(opt.key);
+                      else next.add(opt.key);
+                      return { ...p, shippingOption: Array.from(next) };
+                    })
+                  }
                 />
               ))}
             </View>
@@ -266,6 +285,25 @@ export default function SearchFilterSheet({
                 onPress={() => setShowMore((p) => ({ ...p, shippingOption: !p.shippingOption }))}
               />
             ) : null}
+
+            <Text style={styles.sectionTitle}>Sales Channel</Text>
+            <View style={styles.chipGrid}>
+              {salesChannelOptions.map((opt) => (
+                <Chip
+                  key={opt}
+                  label={opt}
+                  selected={local.salesChannel.includes(opt)}
+                  onPress={() =>
+                    setLocal((p) => {
+                      const next = new Set(p.salesChannel);
+                      if (next.has(opt)) next.delete(opt);
+                      else next.add(opt);
+                      return { ...p, salesChannel: Array.from(next) };
+                    })
+                  }
+                />
+              ))}
+            </View>
 
             <Text style={styles.sectionTitle}>Price Range</Text>
             <View style={styles.priceRow}>
@@ -298,9 +336,16 @@ export default function SearchFilterSheet({
               {categoryShown.map((opt) => (
                 <Chip
                   key={opt}
-                  label={opt === 'All' ? 'All Categories' : opt}
-                  selected={local.category === opt}
-                  onPress={() => setLocal((p) => ({ ...p, category: opt }))}
+                  label={opt}
+                  selected={local.category.includes(opt)}
+                  onPress={() =>
+                    setLocal((p) => {
+                      const next = new Set(p.category);
+                      if (next.has(opt)) next.delete(opt);
+                      else next.add(opt);
+                      return { ...p, category: Array.from(next) };
+                    })
+                  }
                 />
               ))}
             </View>
