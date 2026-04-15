@@ -230,6 +230,7 @@ export default function SearchScreen() {
   const isDistributorSearchRef = useRef(false);
   const isClearingRef = useRef(false);
   const isManualEditingRef = useRef(false);
+  const suppressNextParamsEffectRef = useRef(false);
 
   const loadRecentSearches = useCallback(async () => {
     if (!userId) {
@@ -379,6 +380,7 @@ export default function SearchScreen() {
         } else {
           params.category = undefined; // Remove category param
         }
+        suppressNextParamsEffectRef.current = true;
         router.setParams(params);
         // Also update selectedCategory state to match the category param
         if (category && category !== 'All') {
@@ -415,6 +417,11 @@ export default function SearchScreen() {
   useEffect(() => {
     // Don't process if we're in the middle of clearing
     if (isClearingRef.current) {
+      return;
+    }
+
+    if (suppressNextParamsEffectRef.current) {
+      suppressNextParamsEffectRef.current = false;
       return;
     }
     
@@ -1033,14 +1040,19 @@ export default function SearchScreen() {
           hasMore={hasMore}
           didYouMean={didYouMean}
           onDidYouMeanPress={(suggestion) => {
-            // Hide the banner immediately to avoid flicker during re-search.
+            const nextQ = suggestion.trim();
+            if (!nextQ) return;
+            // Shopee-style: navigate to a fresh search page entry for the suggestion.
+            // This avoids state races where the input/pill sometimes doesn't reflect the suggestion.
+            Keyboard.dismiss();
             setDidYouMean(null);
-            setSearchQuery(suggestion);
-            setActiveQuery(suggestion);
-            setSearchResults([]);
-            setTotalCount(0);
-            setLoading(true);
-            performSearch(suggestion, selectedCategory, selectedSort, 1);
+            router.push({
+              pathname: '/search',
+              params: {
+                q: nextQ,
+                category: selectedCategory && selectedCategory !== 'All' ? selectedCategory : undefined,
+              },
+            });
           }}
           onProductPress={handleProductPress}
           onAddToCart={handleAddToCart}
