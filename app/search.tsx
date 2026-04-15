@@ -27,6 +27,7 @@ import TopDistributors from './components/searchengine/TopDistributors';
 import SearchResults from './components/searchengine/SearchResults';
 import SearchSuggestions from './components/searchengine/SearchSuggestions';
 import SearchFilterSheet, { type SearchFilters, type ShippingOptionKey } from './components/searchengine/SearchFilterSheet';
+import QuickFilterPanel, { type QuickFilterSection } from './components/searchengine/QuickFilterPanel';
 import { Product } from '../data/sampleProducts';
 
 /** Higher = better match. Weak matches stay included but sink to the bottom. */
@@ -100,11 +101,16 @@ export default function SearchScreen() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSort, setSelectedSort] = useState('relevance');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [searchRowHeight, setSearchRowHeight] = useState(0);
+  const [filtersSection, setFiltersSection] = useState<import('./components/searchengine/SearchFilterSheet').SearchFilterSection>('all');
+  const [quickFilterSection, setQuickFilterSection] = useState<QuickFilterSection | null>(null);
+  // Used to anchor dropdowns/sheets under specific header rows.
+  const [searchBarOffset, setSearchBarOffset] = useState(HEADER_TOP_PADDING);
+  const [headerOffset, setHeaderOffset] = useState(HEADER_TOP_PADDING);
   const [filters, setFilters] = useState<SearchFilters>({
     shippedFrom: [],
     shippingOption: [],
     salesChannel: [],
+    ratingMin: null,
     minPrice: '',
     maxPrice: '',
     category: [],
@@ -166,6 +172,7 @@ export default function SearchScreen() {
     const cat = filters.category;
     const min = filters.minPrice ? Number(filters.minPrice) : null;
     const max = filters.maxPrice ? Number(filters.maxPrice) : null;
+    const ratingMin = typeof filters.ratingMin === 'number' ? filters.ratingMin : null;
 
     return searchResults.filter((p) => {
       if (Array.isArray(cat) && cat.length > 0) {
@@ -191,6 +198,10 @@ export default function SearchScreen() {
       }
       if (min !== null && Number.isFinite(min) && p.sellingPrice < min) return false;
       if (max !== null && Number.isFinite(max) && p.sellingPrice > max) return false;
+      if (ratingMin !== null) {
+        const shopRating = Number((p as any)?.seller?.rating ?? 0);
+        if (!Number.isFinite(shopRating) || shopRating < ratingMin) return false;
+      }
       return true;
     });
   }, [searchResults, filters]);
@@ -264,7 +275,6 @@ export default function SearchScreen() {
         limit: 50,
         token: token || undefined,
       });
-
       // Filter results by company/distributor name if query matches a distributor name
       let filteredProducts = result.products;
       const queryLower = query.trim().toLowerCase();
@@ -326,6 +336,7 @@ export default function SearchScreen() {
       setCurrentPage(page);
       setHasMore(matchingDistributor ? false : page < result.pagination.totalPages);
       setActiveQuery(query);
+
 
       // Shopee-style "category pills": prefer server facets (productType), fallback to local scan.
       const facetCategories =
@@ -527,6 +538,7 @@ export default function SearchScreen() {
       shippedFrom: [],
       shippingOption: [],
       salesChannel: [],
+      ratingMin: null,
       minPrice: '',
       maxPrice: '',
       category: [],
@@ -777,15 +789,31 @@ export default function SearchScreen() {
   const isPrice = selectedSort === 'price_low' || selectedSort === 'price_high';
   const priceAsc = selectedSort !== 'price_high';
 
+  const quickFilterLabel = useMemo(() => {
+    const ship = filters.shippingOption?.length ? `${filters.shippingOption.length} option` : 'Shipping Option';
+    const ch = filters.salesChannel?.length ? filters.salesChannel.join(', ') : 'Sales Channel';
+    const rating = typeof filters.ratingMin === 'number' ? `Rating ${filters.ratingMin}+` : 'Rating';
+    const price =
+      filters.minPrice || filters.maxPrice
+        ? `${filters.minPrice ? `Min ${filters.minPrice}` : 'Min'} - ${filters.maxPrice ? `Max ${filters.maxPrice}` : 'Max'}`
+        : 'Price Range';
+    const cat = filters.category?.length
+      ? filters.category.length === 1
+        ? filters.category[0]
+        : `Category (${filters.category.length})`
+      : 'Category';
+    return { ship, ch, rating, price, cat };
+  }, [filters]);
+
   return (
     <View style={styles.container}>
       <Stack.Screen
         options={{
           header: () => (
-            <View style={styles.headerContainer}>
+            <View style={styles.headerContainer} onLayout={(e) => setHeaderOffset(e.nativeEvent.layout.height)}>
               <View
                 style={styles.header}
-                onLayout={(e) => setSearchRowHeight(e.nativeEvent.layout.height + HEADER_TOP_PADDING)}
+                onLayout={(e) => setSearchBarOffset(e.nativeEvent.layout.height + HEADER_TOP_PADDING)}
               >
                 <Pressable onPress={() => router.back()} style={styles.backButton}>
                   <ArrowLeft color="#0a61d7" size={24} />
@@ -813,7 +841,11 @@ export default function SearchScreen() {
 
                 {showResults ? (
                   <Pressable
-                    onPress={() => setFiltersOpen((v) => !v)}
+                    onPress={() => {
+                      setFiltersSection('all');
+                      setQuickFilterSection(null);
+                      setFiltersOpen((v) => !v);
+                    }}
                     style={styles.filterButton}
                     hitSlop={10}
                   >
@@ -859,11 +891,76 @@ export default function SearchScreen() {
                       {isPrice ? <View style={styles.filterUnderlineFull} /> : null}
                     </Pressable>
                   </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.quickFiltersRow}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    <Pressable
+                      onPress={() => {
+                        setQuickFilterSection((prev) => (prev === 'salesChannel' ? null : 'salesChannel'));
+                      }}
+                      style={styles.quickFilterChip}
+                    >
+                      <Text style={styles.quickFilterText}>{quickFilterLabel.ch}</Text>
+                      <ChevronDown size={14} color="#6b7280" />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        setQuickFilterSection((prev) => (prev === 'shippingOption' ? null : 'shippingOption'));
+                      }}
+                      style={styles.quickFilterChip}
+                    >
+                      <Text style={styles.quickFilterText}>{quickFilterLabel.ship}</Text>
+                      <ChevronDown size={14} color="#6b7280" />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        setQuickFilterSection((prev) => (prev === 'rating' ? null : 'rating'));
+                      }}
+                      style={styles.quickFilterChip}
+                    >
+                      <Text style={styles.quickFilterText}>{quickFilterLabel.rating}</Text>
+                      <ChevronDown size={14} color="#6b7280" />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        setQuickFilterSection((prev) => (prev === 'price' ? null : 'price'));
+                      }}
+                      style={styles.quickFilterChip}
+                    >
+                      <Text style={styles.quickFilterText}>{quickFilterLabel.price}</Text>
+                      <ChevronDown size={14} color="#6b7280" />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        setQuickFilterSection((prev) => (prev === 'category' ? null : 'category'));
+                      }}
+                      style={styles.quickFilterChip}
+                    >
+                      <Text style={styles.quickFilterText}>{quickFilterLabel.cat}</Text>
+                      <ChevronDown size={14} color="#6b7280" />
+                    </Pressable>
+                  </ScrollView>
+
                 </View>
               ) : null}
             </View>
           ),
         }}
+      />
+
+      <QuickFilterPanel
+        visible={!!quickFilterSection}
+        section={quickFilterSection ?? 'shippingOption'}
+        filters={filters}
+        onChange={(next) => setFilters(next)}
+        onClose={() => setQuickFilterSection(null)}
+        shippingOptions={shippingOptions}
+        salesChannelOptions={['Retail', 'Wholesale']}
+        categoryOptions={categoryOptions}
+        topOffset={headerOffset}
       />
 
       {/* Content */}
@@ -922,17 +1019,6 @@ export default function SearchScreen() {
           loading={loading}
           refreshing={refreshing}
           hasMore={hasMore}
-          categoryPills={availableCategories}
-          activeCategory={filters.category}
-          onCategoryPress={(category) => {
-            // Multi-select filter: toggle locally; do not re-run search (keeps pills stable).
-            setFilters((p) => {
-              const next = new Set(p.category);
-              if (next.has(category)) next.delete(category);
-              else next.add(category);
-              return { ...p, category: Array.from(next) };
-            });
-          }}
           onProductPress={handleProductPress}
           onAddToCart={handleAddToCart}
           onToggleFavorite={handleToggleFavorite}
@@ -951,12 +1037,14 @@ export default function SearchScreen() {
         shippingOptions={shippingOptions}
         salesChannelOptions={['Retail', 'Wholesale']}
         categoryOptions={categoryOptions}
-        topOffset={searchRowHeight}
+        topOffset={searchBarOffset}
+        section={filtersSection}
         onReset={() => {
           setFilters({
             shippedFrom: [],
             shippingOption: [],
             salesChannel: [],
+            ratingMin: null,
             minPrice: '',
             maxPrice: '',
             category: [],
@@ -1038,12 +1126,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eef2f7',
   },
   filterTabBtn: { paddingVertical: 12, paddingHorizontal: 5, position: 'relative', alignItems: 'center', flex: 1 },
   filterTabInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   filterTabText: { fontSize: 13, fontWeight: '500', color: '#6b7280' },
   filterTabTextActive: { color: '#0a61d7' },
   filterUnderlineFull: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: '#0a61d7' },
+  quickFiltersRow: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
+    gap: 10,
+  },
+  quickFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 6,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  quickFilterText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+  },
   searchInput: {
     flex: 1,
     marginLeft: 8,

@@ -20,10 +20,20 @@ export type SearchFilters = {
   shippedFrom: string[]; // multi-select locations; empty = no filter
   shippingOption: ShippingOptionKey[]; // multi-select; empty = no filter
   salesChannel: string[]; // multi-select: Retail / Wholesale; empty = no filter
+  ratingMin: number | null; // single-select minimum rating (0-5); null = no filter
   minPrice: string; // numeric string
   maxPrice: string; // numeric string
   category: string[]; // multi-select category labels; empty = no filter
 };
+
+export type SearchFilterSection =
+  | 'all'
+  | 'shippedFrom'
+  | 'shippingOption'
+  | 'salesChannel'
+  | 'rating'
+  | 'price'
+  | 'category';
 
 type Props = {
   visible: boolean;
@@ -36,6 +46,7 @@ type Props = {
   salesChannelOptions: string[]; // e.g. Retail, Wholesale
   categoryOptions: string[]; // category labels (no 'All' required)
   topOffset: number; // pixels from top (height of search header)
+  section?: SearchFilterSection; // default: 'all'
 };
 
 const { height: screenHeight } = Dimensions.get('window');
@@ -51,6 +62,7 @@ export default function SearchFilterSheet({
   salesChannelOptions,
   categoryOptions,
   topOffset,
+  section = 'all',
 }: Props) {
   const OPEN_MS = 170;
   const CLOSE_MS = 140;
@@ -67,6 +79,9 @@ export default function SearchFilterSheet({
   // Give the dropdown more presence even when content is short.
   const minSheetHeight = Math.min(availableHeight, Math.round(availableHeight * 0.61));
   const desiredSheetHeight = Math.min(availableHeight, Math.max(sheetHeight, minSheetHeight));
+  // Cap the sheet so it doesn't feel like a full-page takeover.
+  const maxSheetHeight = Math.min(availableHeight, Math.round(availableHeight * 0.82));
+  const finalSheetHeight = Math.min(desiredSheetHeight, maxSheetHeight);
   // Smooth native-driver animation (better than animating height).
   const translateAnim = useRef(new Animated.Value(-12)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -187,16 +202,23 @@ export default function SearchFilterSheet({
     selected: boolean;
     onPress: () => void;
   }) => (
-    <Pressable
-      onPress={onPress}
-      style={[
-        styles.chip,
-        selected ? styles.chipSelected : null,
-      ]}
-    >
-      <Text style={[styles.chipText, selected ? styles.chipTextSelected : null]}>{label}</Text>
-    </Pressable>
+    <View style={styles.chipCell}>
+      <Pressable onPress={onPress} style={[styles.chip, selected ? styles.chipSelected : null]}>
+        <Text style={[styles.chipText, selected ? styles.chipTextSelected : null]} numberOfLines={2}>
+          {label}
+        </Text>
+      </Pressable>
+    </View>
   );
+
+  const show = {
+    shippedFrom: section === 'all' || section === 'shippedFrom',
+    shippingOption: section === 'all' || section === 'shippingOption',
+    salesChannel: section === 'all' || section === 'salesChannel',
+    rating: section === 'all' || section === 'rating',
+    price: section === 'all' || section === 'price',
+    category: section === 'all' || section === 'category',
+  };
 
   return (
     <Modal
@@ -223,8 +245,8 @@ export default function SearchFilterSheet({
             styles.sheet,
             {
               top: topOffset,
-              height: desiredSheetHeight,
-              maxHeight: availableHeight,
+              height: finalSheetHeight,
+              maxHeight: maxSheetHeight,
               opacity: opacityAnim,
               transform: [{ translateY: translateAnim }],
             },
@@ -236,124 +258,160 @@ export default function SearchFilterSheet({
             showsVerticalScrollIndicator={false}
             onContentSizeChange={(_w, h) => setMeasuredContentHeight(h)}
           >
-            <Text style={styles.sectionTitle}>Shipped From</Text>
-            <View style={styles.chipGrid}>
-              {shippedFromShown.map((opt) => (
-                <Chip
-                  key={opt}
-                  label={opt}
-                  selected={local.shippedFrom.includes(opt)}
-                  onPress={() =>
-                    setLocal((p) => {
-                      const next = new Set(p.shippedFrom);
-                      if (next.has(opt)) next.delete(opt);
-                      else next.add(opt);
-                      return { ...p, shippedFrom: Array.from(next) };
-                    })
-                  }
-                />
-              ))}
-            </View>
-            {shippedFromOptions.length > MAX_PILLS_COLLAPSED ? (
-              <ShowMoreButton
-                expanded={showMore.shippedFrom}
-                onPress={() => setShowMore((p) => ({ ...p, shippedFrom: !p.shippedFrom }))}
-              />
+            {show.shippedFrom ? (
+              <>
+                <Text style={styles.sectionTitle}>Shipped From</Text>
+                <View style={styles.chipGrid}>
+                  {shippedFromShown.map((opt) => (
+                    <Chip
+                      key={opt}
+                      label={opt}
+                      selected={local.shippedFrom.includes(opt)}
+                      onPress={() =>
+                        setLocal((p) => {
+                          const next = new Set(p.shippedFrom);
+                          if (next.has(opt)) next.delete(opt);
+                          else next.add(opt);
+                          return { ...p, shippedFrom: Array.from(next) };
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+                {section === 'all' && shippedFromOptions.length > MAX_PILLS_COLLAPSED ? (
+                  <ShowMoreButton
+                    expanded={showMore.shippedFrom}
+                    onPress={() => setShowMore((p) => ({ ...p, shippedFrom: !p.shippedFrom }))}
+                  />
+                ) : null}
+              </>
             ) : null}
 
-            <Text style={styles.sectionTitle}>Shipping Option</Text>
-            <View style={styles.chipGrid}>
-              {shippingOptionShown.map((opt) => (
-                <Chip
-                  key={opt.key}
-                  label={opt.label}
-                  selected={local.shippingOption.includes(opt.key)}
-                  onPress={() =>
-                    setLocal((p) => {
-                      const next = new Set(p.shippingOption);
-                      if (next.has(opt.key)) next.delete(opt.key);
-                      else next.add(opt.key);
-                      return { ...p, shippingOption: Array.from(next) };
-                    })
-                  }
-                />
-              ))}
-            </View>
-            {shippingOptionButtons.length > MAX_PILLS_COLLAPSED ? (
-              <ShowMoreButton
-                expanded={showMore.shippingOption}
-                onPress={() => setShowMore((p) => ({ ...p, shippingOption: !p.shippingOption }))}
-              />
+            {show.shippingOption ? (
+              <>
+                <Text style={styles.sectionTitle}>Shipping Option</Text>
+                <View style={styles.chipGrid}>
+                  {shippingOptionShown.map((opt) => (
+                    <Chip
+                      key={opt.key}
+                      label={opt.label}
+                      selected={local.shippingOption.includes(opt.key)}
+                      onPress={() =>
+                        setLocal((p) => {
+                          const next = new Set(p.shippingOption);
+                          if (next.has(opt.key)) next.delete(opt.key);
+                          else next.add(opt.key);
+                          return { ...p, shippingOption: Array.from(next) };
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+                {section === 'all' && shippingOptionButtons.length > MAX_PILLS_COLLAPSED ? (
+                  <ShowMoreButton
+                    expanded={showMore.shippingOption}
+                    onPress={() => setShowMore((p) => ({ ...p, shippingOption: !p.shippingOption }))}
+                  />
+                ) : null}
+              </>
             ) : null}
 
-            <Text style={styles.sectionTitle}>Sales Channel</Text>
-            <View style={styles.chipGrid}>
-              {salesChannelOptions.map((opt) => (
-                <Chip
-                  key={opt}
-                  label={opt}
-                  selected={local.salesChannel.includes(opt)}
-                  onPress={() =>
-                    setLocal((p) => {
-                      const next = new Set(p.salesChannel);
-                      if (next.has(opt)) next.delete(opt);
-                      else next.add(opt);
-                      return { ...p, salesChannel: Array.from(next) };
-                    })
-                  }
-                />
-              ))}
-            </View>
+            {show.salesChannel ? (
+              <>
+                <Text style={styles.sectionTitle}>Sales Channel</Text>
+                <View style={styles.chipGrid}>
+                  {salesChannelOptions.map((opt) => (
+                    <Chip
+                      key={opt}
+                      label={opt}
+                      selected={local.salesChannel.includes(opt)}
+                      onPress={() =>
+                        setLocal((p) => {
+                          const next = new Set(p.salesChannel);
+                          if (next.has(opt)) next.delete(opt);
+                          else next.add(opt);
+                          return { ...p, salesChannel: Array.from(next) };
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+              </>
+            ) : null}
 
-            <Text style={styles.sectionTitle}>Price Range</Text>
-            <View style={styles.priceRow}>
-              <View style={styles.priceInputWrap}>
-                <Text style={styles.priceLabel}>Min</Text>
-                <TextInput
-                  value={local.minPrice}
-                  onChangeText={(t) => setLocal((p) => ({ ...p, minPrice: t.replace(/[^\d]/g, '') }))}
-                  placeholder="0"
-                  keyboardType="number-pad"
-                  style={styles.priceInput}
-                  placeholderTextColor="#9ca3af"
-                />
-              </View>
-              <View style={styles.priceInputWrap}>
-                <Text style={styles.priceLabel}>Max</Text>
-                <TextInput
-                  value={local.maxPrice}
-                  onChangeText={(t) => setLocal((p) => ({ ...p, maxPrice: t.replace(/[^\d]/g, '') }))}
-                  placeholder="∞"
-                  keyboardType="number-pad"
-                  style={styles.priceInput}
-                  placeholderTextColor="#9ca3af"
-                />
-              </View>
-            </View>
+            {show.rating ? (
+              <>
+                <Text style={styles.sectionTitle}>Shop Rating</Text>
+                <View style={styles.chipGrid}>
+                  {[0, 1, 2, 3, 4, 5].map((n) => (
+                    <Chip
+                      key={n}
+                      label={`${n}+`}
+                      selected={local.ratingMin === n}
+                      onPress={() => setLocal((p) => ({ ...p, ratingMin: p.ratingMin === n ? null : n }))}
+                    />
+                  ))}
+                </View>
+              </>
+            ) : null}
 
-            <Text style={styles.sectionTitle}>Category</Text>
-            <View style={styles.chipGrid}>
-              {categoryShown.map((opt) => (
-                <Chip
-                  key={opt}
-                  label={opt}
-                  selected={local.category.includes(opt)}
-                  onPress={() =>
-                    setLocal((p) => {
-                      const next = new Set(p.category);
-                      if (next.has(opt)) next.delete(opt);
-                      else next.add(opt);
-                      return { ...p, category: Array.from(next) };
-                    })
-                  }
-                />
-              ))}
-            </View>
-            {categoryOptions.length > MAX_PILLS_COLLAPSED ? (
-              <ShowMoreButton
-                expanded={showMore.category}
-                onPress={() => setShowMore((p) => ({ ...p, category: !p.category }))}
-              />
+            {show.price ? (
+              <>
+                <Text style={styles.sectionTitle}>Price Range</Text>
+                <View style={styles.priceRow}>
+                  <View style={styles.priceInputWrap}>
+                    <Text style={styles.priceLabel}>Min</Text>
+                    <TextInput
+                      value={local.minPrice}
+                      onChangeText={(t) => setLocal((p) => ({ ...p, minPrice: t.replace(/[^\d]/g, '') }))}
+                      placeholder="0"
+                      keyboardType="number-pad"
+                      style={styles.priceInput}
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+                  <View style={styles.priceInputWrap}>
+                    <Text style={styles.priceLabel}>Max</Text>
+                    <TextInput
+                      value={local.maxPrice}
+                      onChangeText={(t) => setLocal((p) => ({ ...p, maxPrice: t.replace(/[^\d]/g, '') }))}
+                      placeholder="∞"
+                      keyboardType="number-pad"
+                      style={styles.priceInput}
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+                </View>
+              </>
+            ) : null}
+
+            {show.category ? (
+              <>
+                <Text style={styles.sectionTitle}>Category</Text>
+                <View style={styles.chipGrid}>
+                  {categoryShown.map((opt) => (
+                    <Chip
+                      key={opt}
+                      label={opt}
+                      selected={local.category.includes(opt)}
+                      onPress={() =>
+                        setLocal((p) => {
+                          const next = new Set(p.category);
+                          if (next.has(opt)) next.delete(opt);
+                          else next.add(opt);
+                          return { ...p, category: Array.from(next) };
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+                {section === 'all' && categoryOptions.length > MAX_PILLS_COLLAPSED ? (
+                  <ShowMoreButton
+                    expanded={showMore.category}
+                    onPress={() => setShowMore((p) => ({ ...p, category: !p.category }))}
+                  />
+                ) : null}
+              </>
             ) : null}
 
           </ScrollView>
@@ -426,7 +484,11 @@ const styles = StyleSheet.create({
   chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
+    rowGap: 10,
+  },
+  chipCell: {
+    width: '48%',
   },
   showMoreBtn: {
     marginTop: 8,

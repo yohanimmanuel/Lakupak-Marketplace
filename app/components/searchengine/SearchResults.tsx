@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
 import ProductMarketplace from '../productcatalog/ProductMarketplace';
 import ProductCardSkeleton from './ProductCardSkeleton';
 import { Product } from '../../../data/sampleProducts';
@@ -10,9 +10,6 @@ interface SearchResultsProps {
   loading: boolean;
   refreshing: boolean;
   hasMore: boolean;
-  categoryPills?: string[];
-  activeCategory?: string[];
-  onCategoryPress?: (category: string) => void;
   onProductPress: (product: Product) => void;
   onAddToCart: (product: Product) => void;
   onToggleFavorite: (productId: string) => void;
@@ -27,9 +24,6 @@ export default function SearchResults({
   loading,
   refreshing,
   hasMore,
-  categoryPills,
-  activeCategory,
-  onCategoryPress,
   onProductPress,
   onAddToCart,
   onToggleFavorite,
@@ -65,30 +59,6 @@ export default function SearchResults({
         }}
         scrollEventThrottle={400}
       >
-        {categoryPills && categoryPills.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryPillsRow}
-            nestedScrollEnabled
-          >
-            {categoryPills.map((c) => {
-              const active = Array.isArray(activeCategory) ? activeCategory.includes(c) : false;
-              return (
-                <Pressable
-                  key={c}
-                  onPress={() => onCategoryPress?.(c)}
-                  style={[styles.categoryPill, active ? styles.categoryPillActive : null]}
-                >
-                  <Text style={[styles.categoryPillText, active ? styles.categoryPillTextActive : null]}>
-                    {c}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        ) : null}
-
         {loading && products.length === 0 ? (
           <View style={styles.skeletonContainer}>
             <View style={styles.skeletonRow}>
@@ -158,32 +128,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
-  },
-  categoryPillsRow: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-    gap: 8,
-  },
-  categoryPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  categoryPillActive: {
-    backgroundColor: '#e8f1ff',
-    borderColor: '#0a61d7',
-  },
-  categoryPillText: {
-    fontSize: 13,
-    color: '#111827',
-    fontWeight: '600',
-  },
-  categoryPillTextActive: {
-    color: '#0a61d7',
   },
   productsSection: {
     flex: 1,
