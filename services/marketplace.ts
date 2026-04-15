@@ -179,6 +179,7 @@ export interface MarketplaceResponse {
     productTypes: Array<{ value: string; count: number }>;
     productCategories: Array<{ value: string; count: number }>;
   };
+  didYouMean?: string | null;
 }
 
 interface GraphQLMarketplaceProduct {
@@ -237,6 +238,7 @@ interface MobileMarketplaceProductsResponse {
       productTypes: Array<{ value: string; count: number }>;
       productCategories: Array<{ value: string; count: number }>;
     };
+    didYouMean?: string | null;
   };
 }
 
@@ -368,6 +370,7 @@ export const marketplaceService = {
         productTypes { value count }
         productCategories { value count }
       }
+      didYouMean
     }
   }
 `;
@@ -453,6 +456,7 @@ export const marketplaceService = {
         products: transformedProducts,
         pagination: result.mobileMarketplaceProducts.pagination,
         facets: result.mobileMarketplaceProducts.facets,
+        didYouMean: result.mobileMarketplaceProducts.didYouMean ?? null,
       };
     } catch (error) {
       throw error;

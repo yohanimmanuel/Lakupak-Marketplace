@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
 import ProductMarketplace from '../productcatalog/ProductMarketplace';
 import ProductCardSkeleton from './ProductCardSkeleton';
 import { Product } from '../../../data/sampleProducts';
@@ -10,6 +10,8 @@ interface SearchResultsProps {
   loading: boolean;
   refreshing: boolean;
   hasMore: boolean;
+  didYouMean?: string | null;
+  onDidYouMeanPress?: (suggestion: string) => void;
   onProductPress: (product: Product) => void;
   onAddToCart: (product: Product) => void;
   onToggleFavorite: (productId: string) => void;
@@ -24,6 +26,8 @@ export default function SearchResults({
   loading,
   refreshing,
   hasMore,
+  didYouMean,
+  onDidYouMeanPress,
   onProductPress,
   onAddToCart,
   onToggleFavorite,
@@ -59,6 +63,17 @@ export default function SearchResults({
         }}
         scrollEventThrottle={400}
       >
+        {didYouMean ? (
+          <Pressable
+            onPress={() => onDidYouMeanPress?.(didYouMean)}
+            style={styles.didYouMeanRow}
+          >
+            <Text style={styles.didYouMeanText}>
+              Did you mean <Text style={styles.didYouMeanLink}>{didYouMean}</Text>?
+            </Text>
+          </Pressable>
+        ) : null}
+
         {loading && products.length === 0 ? (
           <View style={styles.skeletonContainer}>
             <View style={styles.skeletonRow}>
@@ -136,6 +151,25 @@ const styles = StyleSheet.create({
   productsScrollContent: {
     paddingTop: 8,
     paddingBottom: 20,
+  },
+  didYouMeanRow: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e6e6e6',
+  },
+  didYouMeanText: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  didYouMeanLink: {
+    color: '#0a61d7',
+    fontWeight: '700',
   },
   productsContainer: {
     flexDirection: 'row',

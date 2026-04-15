@@ -96,6 +96,7 @@ export default function SearchScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [didYouMean, setDidYouMean] = useState<string | null>(null);
   
   // Filter state
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -260,6 +261,7 @@ export default function SearchScreen() {
       setSearchResults([]);
       setTotalCount(0);
       setActiveQuery('');
+      setDidYouMean(null);
       return;
     }
 
@@ -333,6 +335,14 @@ export default function SearchScreen() {
       // Use filtered count if we filtered by distributor
       const finalTotalCount = matchingDistributor ? sortedProducts.length : result.pagination.totalCount;
       setTotalCount(finalTotalCount);
+      if (!append && !matchingDistributor) {
+        const suggestion = typeof result.didYouMean === 'string' ? result.didYouMean.trim() : '';
+        if (suggestion && suggestion.toLowerCase() !== query.trim().toLowerCase()) {
+          setDidYouMean(suggestion);
+        } else {
+          setDidYouMean(null);
+        }
+      }
       setCurrentPage(page);
       setHasMore(matchingDistributor ? false : page < result.pagination.totalPages);
       setActiveQuery(query);
@@ -380,6 +390,7 @@ export default function SearchScreen() {
     } catch (error) {
       setSearchResults([]);
       setTotalCount(0);
+      setDidYouMean(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -460,6 +471,7 @@ export default function SearchScreen() {
       setActiveQuery('');
       setSearchResults([]);
       setTotalCount(0);
+      setDidYouMean(null);
       setLoading(false);
     }
   };
@@ -1019,6 +1031,17 @@ export default function SearchScreen() {
           loading={loading}
           refreshing={refreshing}
           hasMore={hasMore}
+          didYouMean={didYouMean}
+          onDidYouMeanPress={(suggestion) => {
+            // Hide the banner immediately to avoid flicker during re-search.
+            setDidYouMean(null);
+            setSearchQuery(suggestion);
+            setActiveQuery(suggestion);
+            setSearchResults([]);
+            setTotalCount(0);
+            setLoading(true);
+            performSearch(suggestion, selectedCategory, selectedSort, 1);
+          }}
           onProductPress={handleProductPress}
           onAddToCart={handleAddToCart}
           onToggleFavorite={handleToggleFavorite}
