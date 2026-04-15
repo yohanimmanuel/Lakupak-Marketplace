@@ -231,6 +231,7 @@ export default function SearchScreen() {
   const isClearingRef = useRef(false);
   const isManualEditingRef = useRef(false);
   const suppressNextParamsEffectRef = useRef(false);
+  const lastDidYouMeanAppliedFromQueryRef = useRef<string>('');
 
   const loadRecentSearches = useCallback(async () => {
     if (!userId) {
@@ -338,7 +339,11 @@ export default function SearchScreen() {
       setTotalCount(finalTotalCount);
       if (!append && !matchingDistributor) {
         const suggestion = typeof result.didYouMean === 'string' ? result.didYouMean.trim() : '';
-        if (suggestion && suggestion.toLowerCase() !== query.trim().toLowerCase()) {
+        const prevQ = String(lastDidYouMeanAppliedFromQueryRef.current || '').trim().toLowerCase();
+        const curQ = query.trim().toLowerCase();
+        const sugQ = suggestion.trim().toLowerCase();
+        // Suppress "reverse" suggestions (after applying didYouMean, don't suggest the original typo back).
+        if (suggestion && sugQ !== curQ && (!prevQ || sugQ !== prevQ)) {
           setDidYouMean(suggestion);
         } else {
           setDidYouMean(null);
@@ -1046,6 +1051,7 @@ export default function SearchScreen() {
             // This avoids state races where the input/pill sometimes doesn't reflect the suggestion.
             Keyboard.dismiss();
             setDidYouMean(null);
+            lastDidYouMeanAppliedFromQueryRef.current = (activeQuery || searchQuery || '').trim();
             router.push({
               pathname: '/search',
               params: {
