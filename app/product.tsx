@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Share, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { ArrowLeft } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
 import ProductMarketplace from './components/productcatalog/ProductMarketplace';
 import BuyNowModal from './components/productcatalog/BuyNowModal';
 import { useDataStore } from '../stores/dataStore';
@@ -61,8 +60,22 @@ export default function ProductModal() {
     // Chat seller functionality
   };
 
-  const handleShare = () => {
-    // Share functionality
+  const handleShare = async () => {
+    try {
+      const productName = product.name || 'Product';
+      const unitPrice = product.sellingPrice || 0;
+      const deepLink = Linking.createURL('/product', {
+        queryParams: { productId: product.id },
+      });
+
+      const message = unitPrice
+        ? `Check out "${productName}" on Laku Marketplace.\nPrice: Rp${unitPrice.toLocaleString()}\n${deepLink}`
+        : `Check out "${productName}" on Laku Marketplace.\n${deepLink}`;
+
+      await Share.share({ message });
+    } catch {
+      // no-op: user cancelled or sharing unavailable
+    }
   };
 
   const handleToggleFavorite = async (productId: string) => {
