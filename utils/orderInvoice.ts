@@ -162,7 +162,7 @@ export function buildOrderInvoiceHtml(order: OrderLike, options?: BuildInvoiceHt
     (options?.logoUri && options.logoUri.trim()) ||
     '';
   const logoBlock = logoSrc
-    ? `<div class="logo-row"><img src="${htmlImgSrcAttr(logoSrc)}" alt="Laku" width="120" height="80" style="max-width:140px;height:auto;object-fit:contain;"/></div>`
+    ? `<div class="logo-row"><img src="${htmlImgSrcAttr(logoSrc)}" alt="Laku" width="104" height="56" style="max-width:124px;height:auto;object-fit:contain;"/></div>`
     : '';
   const rows =
     s.lines.length > 0

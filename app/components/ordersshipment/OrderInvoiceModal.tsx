@@ -1,6 +1,7 @@
 import React, { useRef, useMemo, useState, useCallback, useEffect } from 'react';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as FS from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View,
@@ -38,14 +39,51 @@ type Props = {
   order: OrderLike | null;
 };
 
+async function saveToDeviceAndroidSaf(args: { uri: string; filename: string; mimeType: string }) {
+  const SAF = (FS as any).StorageAccessFramework as
+    | undefined
+    | {
+        requestDirectoryPermissionsAsync: () => Promise<{ granted: boolean; directoryUri: string }>;
+        createFileAsync: (directoryUri: string, filename: string, mimeType: string) => Promise<string>;
+      };
+  if (!SAF) return null;
+
+  const perm = await SAF.requestDirectoryPermissionsAsync();
+  if (!perm.granted) {
+    throw new Error('Permission denied. Please allow access to save the file.');
+  }
+  const destUri = await SAF.createFileAsync(perm.directoryUri, args.filename, args.mimeType);
+  const b64 = await FS.readAsStringAsync(args.uri, { encoding: 'base64' as any });
+  await FS.writeAsStringAsync(destUri, b64, { encoding: 'base64' as any });
+  return destUri;
+}
+
+async function ensureNamedCacheFile(args: { srcUri: string; filename: string }): Promise<string> {
+  const base = (FS as any).cacheDirectory as string | undefined;
+  if (!base) return args.srcUri;
+  const safeName = args.filename.replace(/[^\w.\-() ]+/g, '_');
+  const dst = `${base}${safeName}`;
+  try {
+    await FS.deleteAsync(dst, { idempotent: true } as any);
+  } catch {
+    // ignore
+  }
+  try {
+    await FS.copyAsync({ from: args.srcUri, to: dst });
+    return dst;
+  } catch {
+    return args.srcUri;
+  }
+}
+
 function InvoiceRasterBody({ order }: { order: OrderLike }) {
   const s = buildInvoiceSnapshot(order);
   return (
     <View style={rasterStyles.sheet} collapsable={false}>
       <View style={rasterStyles.logoWrap}>
         <Image
-          source={require('../../../assets/images/LakuLakuMobileIcon.png')}
-          style={{ width: 0, height: 0 }}
+          source={require('../../../assets/images/LakuMobile.png')}
+          style={rasterStyles.logo}
           resizeMode="contain"
         />
       </View>
@@ -109,11 +147,12 @@ const rasterStyles = StyleSheet.create({
   sheet: {
     width: Math.min(360, screenWidth - 32),
     backgroundColor: '#ffffff',
-    padding: 16,
+    padding: 20,
   },
   logoWrap: { alignItems: 'flex-start', marginBottom: 10 },
-  brand: { fontSize: 18, fontWeight: '800', color: '#0a61d7', textAlign: 'center' },
-  sub: { fontSize: 12, color: '#6b7280', marginBottom: 10, textAlign: 'center' },
+  logo: { width: 104, height: 56 },
+  brand: { fontSize: 20, fontWeight: '800', color: '#0a61d7', textAlign: 'left', marginBottom: 4 },
+  sub: { fontSize: 13, color: '#6b7280', marginBottom: 10, textAlign: 'left' },
   line: { fontSize: 12, color: '#111827', marginBottom: 4 },
   bold: { fontWeight: '700' },
   box: {
@@ -175,7 +214,7 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
 
   const logoUri = useMemo(
     () =>
-      Image.resolveAssetSource(require('../../../assets/images/LakuLakuMobileIcon.png'))?.uri ?? null,
+      Image.resolveAssetSource(require('../../../assets/images/LakuMobile.png'))?.uri ?? null,
     []
   );
 
@@ -183,7 +222,7 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
     let cancelled = false;
     (async () => {
       try {
-        const asset = Asset.fromModule(require('../../../assets/images/LakuLakuMobileIcon.png'));
+        const asset = Asset.fromModule(require('../../../assets/images/LakuMobile.png'));
         await asset.downloadAsync();
         if (!asset.localUri || cancelled) return;
         const b64 = await FileSystem.readAsStringAsync(asset.localUri, {
@@ -212,15 +251,41 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
         html: buildOrderInvoiceHtml(order, { logoUri, logoDataUri }),
         base64: false,
       });
-      const can = await Sharing.isAvailableAsync();
-      if (can) {
-        await Sharing.shareAsync(uri, {
+      const filename = `invoice_${order.orderId}.pdf`;
+      const namedUri = await ensureNamedCacheFile({ srcUri: uri, filename });
+      if (Platform.OS === 'android') {
+        const savedUri = await saveToDeviceAndroidSaf({
+          uri: namedUri,
+          filename,
           mimeType: 'application/pdf',
-          dialogTitle: 'Invoice PDF',
-          UTI: 'com.adobe.pdf',
         });
+        if (savedUri) {
+          Alert.alert('Saved', 'Invoice PDF saved to your selected folder.');
+        } else {
+          // Fallback: some runtimes don't expose StorageAccessFramework. Use system sheet so user can "Save to Files".
+          const can = await Sharing.isAvailableAsync();
+          if (can) {
+            await Sharing.shareAsync(namedUri, {
+              mimeType: 'application/pdf',
+              dialogTitle: 'Save Invoice PDF',
+              UTI: 'com.adobe.pdf',
+            });
+          } else {
+            Alert.alert('Save unavailable', 'Could not open the system file saver on this device.');
+          }
+        }
       } else {
-        Alert.alert('Sharing unavailable', 'Could not open the share sheet on this device.');
+        // iOS: "Save to Files" lives in the share sheet.
+        const can = await Sharing.isAvailableAsync();
+        if (can) {
+          await Sharing.shareAsync(namedUri, {
+            mimeType: 'application/pdf',
+            dialogTitle: 'Save Invoice PDF',
+            UTI: 'com.adobe.pdf',
+          });
+        } else {
+          Alert.alert('Save unavailable', 'Could not open the system file saver on this device.');
+        }
       }
     } catch (e) {
       Alert.alert('PDF', e instanceof Error ? e.message : 'Could not create PDF');
@@ -238,15 +303,41 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
       await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
       const uri = await shot.capture();
       if (!uri) throw new Error('Capture failed');
-      const can = await Sharing.isAvailableAsync();
-      if (can) {
-        await Sharing.shareAsync(uri, {
+      const filename = `invoice_${order.orderId}.png`;
+      const namedUri = await ensureNamedCacheFile({ srcUri: uri, filename });
+      if (Platform.OS === 'android') {
+        const savedUri = await saveToDeviceAndroidSaf({
+          uri: namedUri,
+          filename,
           mimeType: 'image/png',
-          dialogTitle: 'Invoice image',
-          UTI: 'public.png',
         });
+        if (savedUri) {
+          Alert.alert('Saved', 'Invoice image saved to your selected folder.');
+        } else {
+          // Fallback: some runtimes don't expose StorageAccessFramework. Use system sheet so user can "Save".
+          const can = await Sharing.isAvailableAsync();
+          if (can) {
+            await Sharing.shareAsync(namedUri, {
+              mimeType: 'image/png',
+              dialogTitle: 'Save Invoice Image',
+              UTI: 'public.png',
+            });
+          } else {
+            Alert.alert('Save unavailable', 'Could not open the system file saver on this device.');
+          }
+        }
       } else {
-        Alert.alert('Sharing unavailable', 'Could not open the share sheet.');
+        // iOS: "Save Image" / "Save to Files" lives in the share sheet.
+        const can = await Sharing.isAvailableAsync();
+        if (can) {
+          await Sharing.shareAsync(namedUri, {
+            mimeType: 'image/png',
+            dialogTitle: 'Save Invoice Image',
+            UTI: 'public.png',
+          });
+        } else {
+          Alert.alert('Save unavailable', 'Could not open the system file saver on this device.');
+        }
       }
     } catch (e) {
       Alert.alert('Image', e instanceof Error ? e.message : 'Could not export image');
