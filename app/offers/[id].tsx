@@ -93,7 +93,7 @@ export default function HomeOfferDetailScreen() {
           ),
         }}
       />
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={primaryBlue} />
@@ -104,38 +104,63 @@ export default function HomeOfferDetailScreen() {
         </View>
       ) : item ? (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          {item.customBannerImageUrl ? (
-            <>
-              <View style={styles.customBannerTop}>
-                <Image
-                  source={{ uri: item.customBannerImageUrl }}
-                  style={styles.customBannerTopImage}
-                  resizeMode="cover"
-                />
-              </View>
-              <View style={styles.infoBlock}>
-                <Text style={styles.infoTitle}>{item.title}</Text>
-                {item.subtitle ? <Text style={styles.infoSub}>{item.subtitle}</Text> : null}
-                <View style={styles.metaRow}>
-                  {item.discountText ? (
-                    <View style={styles.pill}>
-                      <Text style={styles.pillText}>{item.discountText}</Text>
-                    </View>
-                  ) : null}
-                  {item.endDateText ? <Text style={styles.infoUrgency}>{item.endDateText}</Text> : null}
+          <View style={styles.contentCard}>
+            {item.customBannerImageUrl ? (
+              <>
+                <View style={styles.customBannerTop}>
+                  <Image
+                    source={{ uri: item.customBannerImageUrl }}
+                    style={styles.customBannerTopImage}
+                    resizeMode="cover"
+                  />
                 </View>
-              </View>
-            </>
-          ) : item.bannerImageUrl ? (
-            <ImageBackground
-              source={{ uri: item.bannerImageUrl }}
-              style={styles.heroImage}
-              imageStyle={styles.heroImageRadius}
-            >
-              <View
-                style={[styles.heroTint, { backgroundColor: overlayTintFromHex(item.backgroundColor, 0.88) }]}
-              />
-              <View style={styles.heroInner}>
+                <View style={styles.infoBlock}>
+                  <Text style={styles.infoTitle}>{item.title}</Text>
+                  {item.subtitle ? <Text style={styles.infoSub}>{item.subtitle}</Text> : null}
+                  <View style={styles.metaRow}>
+                    {item.discountText ? (
+                      <View style={styles.pill}>
+                        <Text style={styles.pillText}>{item.discountText}</Text>
+                      </View>
+                    ) : null}
+                    {item.endDateText ? <Text style={styles.infoUrgency}>{item.endDateText}</Text> : null}
+                  </View>
+                </View>
+              </>
+            ) : item.bannerImageUrl ? (
+              <ImageBackground source={{ uri: item.bannerImageUrl }} style={styles.heroImage}>
+                <View
+                  style={[styles.heroTint, { backgroundColor: overlayTintFromHex(item.backgroundColor, 0.88) }]}
+                />
+                <View style={styles.heroInner}>
+                  <Text style={[styles.heroTitle, { color: item.textColor }]}>{item.title}</Text>
+                  {item.subtitle ? (
+                    <Text style={[styles.heroSub, { color: item.textColor }]}>{item.subtitle}</Text>
+                  ) : null}
+                  <View style={styles.metaRow}>
+                    {item.discountText ? (
+                      <Text
+                        style={[
+                          styles.badge,
+                          {
+                            color: item.backgroundColor,
+                            backgroundColor: item.textColor,
+                            marginRight: 10,
+                            marginBottom: 4,
+                          },
+                        ]}
+                      >
+                        {item.discountText}
+                      </Text>
+                    ) : null}
+                    {item.endDateText ? (
+                      <Text style={[styles.endHint, { color: item.textColor }]}>{item.endDateText}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              </ImageBackground>
+            ) : (
+              <View style={[styles.hero, { backgroundColor: item.backgroundColor }]}>
                 <Text style={[styles.heroTitle, { color: item.textColor }]}>{item.title}</Text>
                 {item.subtitle ? (
                   <Text style={[styles.heroSub, { color: item.textColor }]}>{item.subtitle}</Text>
@@ -161,37 +186,10 @@ export default function HomeOfferDetailScreen() {
                   ) : null}
                 </View>
               </View>
-            </ImageBackground>
-          ) : (
-            <View style={[styles.hero, { backgroundColor: item.backgroundColor }]}>
-              <Text style={[styles.heroTitle, { color: item.textColor }]}>{item.title}</Text>
-              {item.subtitle ? (
-                <Text style={[styles.heroSub, { color: item.textColor }]}>{item.subtitle}</Text>
-              ) : null}
-              <View style={styles.metaRow}>
-                {item.discountText ? (
-                  <Text
-                    style={[
-                      styles.badge,
-                      {
-                        color: item.backgroundColor,
-                        backgroundColor: item.textColor,
-                        marginRight: 10,
-                        marginBottom: 4,
-                      },
-                    ]}
-                  >
-                    {item.discountText}
-                  </Text>
-                ) : null}
-                {item.endDateText ? (
-                  <Text style={[styles.endHint, { color: item.textColor }]}>{item.endDateText}</Text>
-                ) : null}
-              </View>
+            )}
+            <View style={styles.body}>
+              <Text style={styles.bodyText}>{item.detailsBody?.trim() || 'No additional details for this offer.'}</Text>
             </View>
-          )}
-          <View style={styles.body}>
-            <Text style={styles.bodyText}>{item.detailsBody?.trim() || 'No additional details for this offer.'}</Text>
           </View>
         </ScrollView>
       ) : null}
@@ -202,7 +200,7 @@ export default function HomeOfferDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#F5F5F5',
   },
   headerContainer: {
     backgroundColor: '#ffffff',
@@ -235,7 +233,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   scroll: {
-    paddingBottom: 32,
+    paddingHorizontal: 8,
+    paddingTop: 12,
+    paddingBottom: 56,
+  },
+  contentCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   customBannerTop: {
     width: '100%',
@@ -249,7 +254,6 @@ const styles = StyleSheet.create({
   infoBlock: {
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
   },
@@ -285,24 +289,14 @@ const styles = StyleSheet.create({
   hero: {
     paddingHorizontal: 20,
     paddingVertical: 24,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
   },
   heroImage: {
     width: '100%',
     minHeight: 160,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
     overflow: 'hidden',
-  },
-  heroImageRadius: {
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
   },
   heroTint: {
     ...StyleSheet.absoluteFillObject,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
   },
   heroInner: {
     paddingHorizontal: 20,
@@ -340,6 +334,7 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: 20,
     paddingTop: 20,
+    paddingBottom: 28,
   },
   bodyText: {
     fontSize: 15,

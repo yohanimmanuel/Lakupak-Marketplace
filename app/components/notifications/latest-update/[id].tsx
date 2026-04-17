@@ -108,36 +108,38 @@ export default function LatestUpdateDetailScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.title}>{item.title}</Text>
-          {(() => {
-            const rawDate = item.publishedAt ?? item.createdAt;
-            if (!rawDate) return null;
-            const d = new Date(rawDate);
-            if (!Number.isFinite(d.getTime())) return null;
-            return (
-              <Text style={styles.meta}>
-                {d.toLocaleString('en-GB', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </Text>
-            );
-          })()}
-          <View style={styles.categoryPill}>
-            <Text style={styles.categoryText}>{item.category}</Text>
+          <View style={styles.contentCard}>
+            <Text style={styles.title}>{item.title}</Text>
+            {(() => {
+              const rawDate = item.publishedAt ?? item.createdAt;
+              if (!rawDate) return null;
+              const d = new Date(rawDate);
+              if (!Number.isFinite(d.getTime())) return null;
+              return (
+                <Text style={styles.meta}>
+                  {d.toLocaleString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              );
+            })()}
+            <View style={styles.categoryPill}>
+              <Text style={styles.categoryText}>{item.category}</Text>
+            </View>
+            <Text style={styles.body}>{item.body}</Text>
+            {item.imageUrl ? (
+              <Image source={{ uri: item.imageUrl }} style={styles.hero} resizeMode="cover" />
+            ) : null}
+            {item.linkUrl ? (
+              <TouchableOpacity style={styles.linkBtn} onPress={openLink} activeOpacity={0.85}>
+                <Text style={styles.linkBtnText}>Open link</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
-          <Text style={styles.body}>{item.body}</Text>
-          {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.hero} resizeMode="cover" />
-          ) : null}
-          {item.linkUrl ? (
-            <TouchableOpacity style={styles.linkBtn} onPress={openLink} activeOpacity={0.85}>
-              <Text style={styles.linkBtnText}>Open link</Text>
-            </TouchableOpacity>
-          ) : null}
         </ScrollView>
       )}
     </View>
@@ -180,8 +182,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   scroll: {
+    paddingHorizontal: 8,
+    paddingTop: 12,
+    paddingBottom: 56,
+  },
+  contentCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 28,
   },
   title: {
     fontSize: 22,
