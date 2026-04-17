@@ -37,6 +37,13 @@ export async function graphqlRequest<T>(
   variables?: Record<string, unknown>,
   token?: string
 ): Promise<T> {
+  const shouldHandleSuspensionForToken = () => {
+    // If logout already cleared/rotated the token, ignore late responses from in-flight requests.
+    const currentToken = useAuthStore.getState().token;
+    if (!token) return false;
+    return currentToken === token;
+  };
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -64,7 +71,9 @@ export async function graphqlRequest<T>(
     } catch {
       // If the body isn't JSON but indicates suspension, still trigger the UI flow.
       if (txt.includes('ACCOUNT_SUSPENDED')) {
-        useAuthStore.getState().setSuspension(true, null);
+        if (shouldHandleSuspensionForToken()) {
+          useAuthStore.getState().setSuspension(true, null);
+        }
         const err = new Error('ACCOUNT_SUSPENDED') as Error & { code?: string; reason?: string | null };
         err.code = 'ACCOUNT_SUSPENDED';
         err.reason = null;
@@ -83,7 +92,9 @@ export async function graphqlRequest<T>(
       result.errors.find((e) => e.message.includes('ACCOUNT_SUSPENDED'));
     if (suspensionErr) {
       const reason = suspensionErr.extensions?.reason ?? null;
-      useAuthStore.getState().setSuspension(true, reason);
+      if (shouldHandleSuspensionForToken()) {
+        useAuthStore.getState().setSuspension(true, reason);
+      }
       const err = new Error('ACCOUNT_SUSPENDED') as Error & { code?: string; reason?: string | null };
       err.code = 'ACCOUNT_SUSPENDED';
       err.reason = reason;
@@ -99,7 +110,9 @@ export async function graphqlRequest<T>(
         result.errors.find((e) => e.extensions?.code === 'ACCOUNT_SUSPENDED')?.extensions?.reason ??
         null;
       // Trigger UI flow: 60s notice then redirect (handled globally)
-      useAuthStore.getState().setSuspension(true, reason)
+      if (shouldHandleSuspensionForToken()) {
+        useAuthStore.getState().setSuspension(true, reason);
+      }
       const err = new Error('ACCOUNT_SUSPENDED') as Error & { code?: string; reason?: string | null }
       err.code = 'ACCOUNT_SUSPENDED'
       err.reason = reason

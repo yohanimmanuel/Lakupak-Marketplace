@@ -35,7 +35,8 @@ export default function SuspendedAccountModal() {
 
     // Auto-redirect after countdown
     (async () => {
-      await logout();
+      // Clear auth state first (sync), then navigate. Avoid re-triggering suspension from in-flight requests.
+      logout().catch(() => {});
       setSuspension(false);
       router.replace('/useraccounts/welcome');
     })();
@@ -44,7 +45,8 @@ export default function SuspendedAccountModal() {
   const goToLoginNow = async () => {
     if (isRedirectingRef.current) return;
     isRedirectingRef.current = true;
-    await logout();
+    // Clear auth state first (sync), then navigate. Avoid re-triggering suspension from in-flight requests.
+    logout().catch(() => {});
     setSuspension(false);
     router.replace('/useraccounts/welcome');
   };
