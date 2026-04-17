@@ -14,19 +14,20 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     // If account is suspended, keep the current screen so the modal can block and countdown.
-    if (suspension?.active) {
+    if (suspension.active) {
       return;
     }
     const isAuthenticated = !!token && !!user;
     const isAuthRoute = segments[0] === 'useraccounts';
+    const authEntryScreens = new Set(['welcome', 'loginsignup']);
+    const isAuthEntryScreen = isAuthRoute && authEntryScreens.has(String(segments[1] ?? ''));
 
     if (!isAuthenticated && !isAuthRoute) {
       router.replace('/useraccounts/welcome');
-    } else if (isAuthenticated && isAuthRoute && segments[0] !== 'useraccounts') {
+    } else if (isAuthenticated && isAuthEntryScreen) {
       router.replace('/(tabs)/home');
     }
   }, [isLoading, token, user, suspension.active, segments, router]);
-
   if (isLoading && !hasHydrated) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff' }}>

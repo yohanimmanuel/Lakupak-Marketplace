@@ -1,16 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
 
 const SUSPENSION_NOTICE_SECONDS = 60;
 
 export default function SuspendedAccountModal() {
-  const router = useRouter();
   const suspension = useAuthStore((s) => s.suspension);
   const setSuspension = useAuthStore((s) => s.setSuspension);
   const logout = useAuthStore((s) => s.logout);
-  const isRedirectingRef = useRef(false);
 
   const startedAt = suspension.startedAt ?? null;
   const [now, setNow] = useState(Date.now());
@@ -30,25 +27,18 @@ export default function SuspendedAccountModal() {
   useEffect(() => {
     if (!suspension.active) return;
     if (secondsLeft > 0) return;
-    if (isRedirectingRef.current) return;
-    isRedirectingRef.current = true;
-
     // Auto-redirect after countdown
-    (async () => {
-      // Clear auth state first (sync), then navigate. Avoid re-triggering suspension from in-flight requests.
-      logout().catch(() => {});
-      setSuspension(false);
-      router.replace('/useraccounts/welcome');
-    })();
-  }, [secondsLeft, suspension.active, logout, router, setSuspension]);
+    // Clear auth state; AuthGuard will redirect to /useraccounts/welcome.
+    logout()
+      .catch((err) => console.error('Logout failed:', err))
+      .finally(() => setSuspension(false));
+  }, [secondsLeft, suspension.active, logout, setSuspension]);
 
-  const goToLoginNow = async () => {
-    if (isRedirectingRef.current) return;
-    isRedirectingRef.current = true;
-    // Clear auth state first (sync), then navigate. Avoid re-triggering suspension from in-flight requests.
-    logout().catch(() => {});
-    setSuspension(false);
-    router.replace('/useraccounts/welcome');
+  const goToLoginNow = () => {
+    // Clear auth state; AuthGuard will redirect to /useraccounts/welcome.
+    logout()
+      .catch((err) => console.error('Logout failed:', err))
+      .finally(() => setSuspension(false));
   };
 
   const reason = (suspension.reason ?? '').trim();
