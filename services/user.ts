@@ -1,5 +1,6 @@
 import { trackAsync, logError } from './monitoring'
 import { graphqlRequest, decodeToken } from './graphql'
+import { useAuthStore } from '../stores/authStore'
 
 export type MobileUser = {
   id: number
@@ -136,6 +137,17 @@ export async function getMe(token: string, userId?: number) {
       return result.marketplaceUser;
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Failed to fetch user';
+      const code = error instanceof Error ? (error as Error & { code?: string }).code : undefined;
+      if (code === 'ACCOUNT_SUSPENDED' || msg.includes('ACCOUNT_SUSPENDED')) {
+        const reason =
+          (error instanceof Error ? (error as Error & { reason?: string | null }).reason : null) ?? null;
+        // Do not overwrite the reason with the code; prefer backend-provided suspension reason.
+        useAuthStore.getState().setSuspension(true, reason);
+        const err = new Error('ACCOUNT_SUSPENDED') as Error & { code?: string; reason?: string | null };
+        err.code = 'ACCOUNT_SUSPENDED';
+        err.reason = reason;
+        throw err;
+      }
       logError('Failed to fetch user profile', { error: msg });
       throw new Error(msg);
     }

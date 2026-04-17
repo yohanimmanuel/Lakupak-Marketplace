@@ -47,7 +47,7 @@ export async function verifyOtp(params: {
     try {
       const errorData = await res.json()
       errorMessage = errorData.error || errorMessage
-    } catch (parseError) {
+    } catch {
       // Use default error message
     }
     throw new Error(errorMessage)
@@ -68,8 +68,14 @@ export async function loginWithCredentials(username: string, password: string): 
     let errorMessage = 'Login failed. Please try again.'
     try {
       const errorData = await res.json()
-      errorMessage = errorData.message || errorMessage
-    } catch (parseError) {
+      if (res.status === 403 && (errorData?.error === 'ACCOUNT_SUSPENDED' || errorData?.message?.includes('suspend'))) {
+        errorMessage = 'Your account has been suspended for a moment.'
+        const err = new Error(errorMessage)
+        ;(err as Error & { code?: string }).code = 'ACCOUNT_SUSPENDED'
+        throw err
+      }
+      errorMessage = errorData.error || errorData.message || errorMessage
+    } catch {
       if (res.status === 401) {
         errorMessage = 'Invalid username or password.'
       } else if (res.status === 404) {

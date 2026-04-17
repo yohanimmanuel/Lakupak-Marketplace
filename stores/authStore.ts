@@ -8,10 +8,28 @@ type AuthState = {
   token: string | null
   user: User | null
   isLoading: boolean
+  hasHydrated: boolean
+  suspension: { active: boolean; reason?: string | null; startedAt?: number | null }
   setToken: (t: string | null) => Promise<void>
   setUser: (u: User | null) => Promise<void>
+  setSuspension: (active: boolean, reason?: string | null) => void
   hydrateFromStorage: () => Promise<void>
   logout: () => Promise<void>
+}
+
+function isSuspensionError(error: unknown): boolean {
+  if (!error) return false
+  if (error instanceof Error) {
+    const code = (error as Error & { code?: string }).code
+    if (code === 'ACCOUNT_SUSPENDED') return true
+    if (error.message.includes('ACCOUNT_SUSPENDED')) return true
+  }
+  if (typeof error === 'object') {
+    const maybe = error as { code?: unknown; message?: unknown }
+    if (maybe.code === 'ACCOUNT_SUSPENDED') return true
+    if (typeof maybe.message === 'string' && maybe.message.includes('ACCOUNT_SUSPENDED')) return true
+  }
+  return false
 }
 
 async function clearUserScopedStores() {
@@ -51,6 +69,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   user: null,
   isLoading: true,
+  hasHydrated: false,
+  suspension: { active: false, reason: null, startedAt: null },
   setToken: async (t) => {
     if (t) {
       await SecureStore.setItemAsync('auth_token', t)
@@ -80,25 +100,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     }
   },
+  setSuspension: (active, reason) => {
+    if (!active) {
+      set({ suspension: { active: false, reason: null, startedAt: null } })
+      return
+    }
+    set({ suspension: { active: true, reason: reason ?? null, startedAt: Date.now() } })
+  },
   hydrateFromStorage: async () => {
-    set({ isLoading: true })
+    // Only block UI on the very first hydration.
+    if (!get().hasHydrated) {
+      set({ isLoading: true })
+    }
     const t = await SecureStore.getItemAsync('auth_token')
     if (t) {
       set({ token: t })
       try {
         const me = await getMe(t)
         set({ user: me })
-      } catch {
-        // If we can't get user, clear token
-        await SecureStore.deleteItemAsync('auth_token')
-        set({ token: null })
+      } catch (error) {
+        // If we can't get user, clear token unless the error is a suspension error.
+        // (Suspension is handled by a blocking modal + countdown.)
+        const suspensionActive = get().suspension.active
+        const preserveToken = isSuspensionError(error) || suspensionActive
+        if (!preserveToken) {
+          await SecureStore.deleteItemAsync('auth_token')
+          set({ token: null })
+        }
       }
     }
-    set({ isLoading: false })
+    set({ isLoading: false, hasHydrated: true })
   },
   logout: async () => {
     // Clear state immediately for instant UI response
-    set({ token: null, user: null })
+    set({ token: null, user: null, suspension: { active: false, reason: null, startedAt: null } })
     
     await clearUserScopedStores();
     

@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -7,12 +7,13 @@ import React, { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
-import { useColorScheme } from './components/useColorScheme';
 import { useAuthStore } from '../stores/authStore';
 import { useDataStore } from '../stores/dataStore';
 import { useCartStore } from '../stores/cartStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { pushNotificationService } from '../services/pushNotifications';
+import SuspendedAccountModal from '../components/SuspendedAccountModal';
+import AuthGuard from '../components/AuthGuard';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -52,7 +53,6 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
   const router = useRouter();
   const { hydrateFromStorage, token, user } = useAuthStore();
   const { refreshAllData, startAutoRefresh, stopAutoRefresh } = useDataStore();
@@ -106,7 +106,7 @@ function RootLayoutNav() {
             if (pushToken) {
               await pushNotificationService.savePushTokenToServer(currentUser.id, pushToken, currentToken);
             }
-          } catch (error) {
+          } catch {
             // Silently handle errors - will retry on next foreground
           }
         }
@@ -211,7 +211,7 @@ function RootLayoutNav() {
         if (AppState.currentState === 'active') {
           startAutoRefresh(token);
         }
-      } catch (error) {
+      } catch {
         // Silently handle errors
       }
     };
@@ -221,7 +221,9 @@ function RootLayoutNav() {
 
   return (
     <ThemeProvider value={DefaultTheme}>
-      <Stack>
+      <SuspendedAccountModal />
+      <AuthGuard>
+        <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: '#f9fafb' } }} />
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="useraccounts/welcome" options={{ headerShown: false }} />
@@ -571,7 +573,8 @@ function RootLayoutNav() {
           }} 
         />
         
-      </Stack>
+        </Stack>
+      </AuthGuard>
     </ThemeProvider>
   );
 }

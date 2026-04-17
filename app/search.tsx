@@ -200,7 +200,9 @@ export default function SearchScreen() {
       if (min !== null && Number.isFinite(min) && p.sellingPrice < min) return false;
       if (max !== null && Number.isFinite(max) && p.sellingPrice > max) return false;
       if (ratingMin !== null) {
-        const shopRating = Number((p as any)?.seller?.rating ?? 0);
+        const shopRating = Number(
+          (p as unknown as { seller?: { rating?: unknown } })?.seller?.rating ?? 0,
+        );
         if (!Number.isFinite(shopRating) || shopRating < ratingMin) return false;
       }
       return true;

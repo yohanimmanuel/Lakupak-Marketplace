@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Image, Animated, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform, Keyboard, StatusBar } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, Pressable, Image, Animated, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { loginWithCredentials } from '../../../services/auth';
@@ -19,19 +19,10 @@ export default function LoginModal() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
 
-  // Keyboard visibility listeners to collapse non-essential sections
-  useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
+  // (Keyboard listeners removed — state wasn't used)
 
   const openMenu = () => {
     setMenuOpen(true);
@@ -200,12 +191,16 @@ export default function LoginModal() {
                       
                       // Start auto-refresh
                       dataStore.startAutoRefresh(result.token);
-                    } catch (err) {
+                    } catch {
                       // Silently handle background loading errors
                     }
                   }, 200);
                 } catch (error: unknown) {
                   setIsLoggingIn(false);
+                  if (error instanceof Error && (error as Error & { code?: string }).code === 'ACCOUNT_SUSPENDED') {
+                    Alert.alert('Account Suspended', 'Your account has been suspended. Please contact support for assistance.');
+                    return;
+                  }
                   if (error instanceof Error && (error.message.includes('User not found') || error.message.includes('Please sign up first'))) {
                     Alert.alert(
                       'Account Not Found', 

@@ -525,9 +525,10 @@ export default function ProductMarketplace({
 
   const renderCardView = () => {
     const formatDeliveryTime = (): string | null => {
-      // Some call sites provide a narrower `shipping` shape; guard via `any`.
-      const min = safeGetNumber((product.shipping as any)?.leadTimeMinDays);
-      const max = safeGetNumber((product.shipping as any)?.leadTimeMaxDays);
+      // Some call sites provide a narrower `shipping` shape; guard via an unknown-safe shape.
+      const shipping = product.shipping as unknown as { leadTimeMinDays?: unknown; leadTimeMaxDays?: unknown } | null | undefined;
+      const min = safeGetNumber(shipping?.leadTimeMinDays);
+      const max = safeGetNumber(shipping?.leadTimeMaxDays);
       if (min > 0 && max > 0) return min === max ? `${min} days` : `${min}-${max} days`;
       if (min > 0) return `${min}+ days`;
       const infoDays = safeGetString(product.shippingInfo?.days, '').trim();

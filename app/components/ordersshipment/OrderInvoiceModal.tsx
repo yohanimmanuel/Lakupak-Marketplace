@@ -40,12 +40,12 @@ type Props = {
 };
 
 async function saveToDeviceAndroidSaf(args: { uri: string; filename: string; mimeType: string }) {
-  const SAF = (FS as any).StorageAccessFramework as
-    | undefined
-    | {
-        requestDirectoryPermissionsAsync: () => Promise<{ granted: boolean; directoryUri: string }>;
-        createFileAsync: (directoryUri: string, filename: string, mimeType: string) => Promise<string>;
-      };
+  const SAF = (FS as unknown as {
+    StorageAccessFramework?: {
+      requestDirectoryPermissionsAsync: () => Promise<{ granted: boolean; directoryUri: string }>;
+      createFileAsync: (directoryUri: string, filename: string, mimeType: string) => Promise<string>;
+    };
+  }).StorageAccessFramework;
   if (!SAF) return null;
 
   const perm = await SAF.requestDirectoryPermissionsAsync();
@@ -53,18 +53,18 @@ async function saveToDeviceAndroidSaf(args: { uri: string; filename: string; mim
     throw new Error('Permission denied. Please allow access to save the file.');
   }
   const destUri = await SAF.createFileAsync(perm.directoryUri, args.filename, args.mimeType);
-  const b64 = await FS.readAsStringAsync(args.uri, { encoding: 'base64' as any });
-  await FS.writeAsStringAsync(destUri, b64, { encoding: 'base64' as any });
+  const b64 = await FS.readAsStringAsync(args.uri, { encoding: FileSystem.EncodingType.Base64 });
+  await FS.writeAsStringAsync(destUri, b64, { encoding: FileSystem.EncodingType.Base64 });
   return destUri;
 }
 
 async function ensureNamedCacheFile(args: { srcUri: string; filename: string }): Promise<string> {
-  const base = (FS as any).cacheDirectory as string | undefined;
+  const base = FileSystem.cacheDirectory ?? undefined;
   if (!base) return args.srcUri;
   const safeName = args.filename.replace(/[^\w.\-() ]+/g, '_');
   const dst = `${base}${safeName}`;
   try {
-    await FS.deleteAsync(dst, { idempotent: true } as any);
+    await FS.deleteAsync(dst, { idempotent: true });
   } catch {
     // ignore
   }
