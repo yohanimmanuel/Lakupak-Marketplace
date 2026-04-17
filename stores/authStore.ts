@@ -10,6 +10,7 @@ type AuthState = {
   isLoading: boolean
   hasHydrated: boolean
   suspension: { active: boolean; reason?: string | null; startedAt?: number | null }
+  blockSuspensionUntilNextToken: boolean
   setToken: (t: string | null) => Promise<void>
   setUser: (u: User | null) => Promise<void>
   setSuspension: (active: boolean, reason?: string | null) => void
@@ -71,13 +72,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
   hasHydrated: false,
   suspension: { active: false, reason: null, startedAt: null },
+  blockSuspensionUntilNextToken: false,
   setToken: async (t) => {
     if (t) {
       await SecureStore.setItemAsync('auth_token', t)
     } else {
       await SecureStore.deleteItemAsync('auth_token')
     }
-    set({ token: t })
+    // Once a new token is set, allow suspension UI again.
+    set({ token: t, blockSuspensionUntilNextToken: t ? false : get().blockSuspensionUntilNextToken })
   },
   setUser: async (u) => {
     // If setting a new user (different from current), clear previous user's data
@@ -105,6 +108,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ suspension: { active: false, reason: null, startedAt: null } })
       return
     }
+    // If logout/navigation has started, ignore late ACCOUNT_SUSPENDED responses from in-flight requests.
+    if (get().blockSuspensionUntilNextToken) return
     set({ suspension: { active: true, reason: reason ?? null, startedAt: Date.now() } })
   },
   hydrateFromStorage: async () => {
@@ -133,7 +138,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   logout: async () => {
     // Clear state immediately for instant UI response
-    set({ token: null, user: null, suspension: { active: false, reason: null, startedAt: null } })
+    set({
+      token: null,
+      user: null,
+      suspension: { active: false, reason: null, startedAt: null },
+      blockSuspensionUntilNextToken: true,
+    })
     
     await clearUserScopedStores();
     
