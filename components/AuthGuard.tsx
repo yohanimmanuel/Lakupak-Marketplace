@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../stores/authStore';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { token, user, isLoading, hasHydrated, suspension } = useAuthStore();
+  const { token, user, isLoading, suspension } = useAuthStore();
   const router = useRouter();
   const segments = useSegments();
 
@@ -28,14 +27,6 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
       router.replace('/(tabs)/home');
     }
   }, [isLoading, token, user, suspension.active, segments, router]);
-  if (isLoading && !hasHydrated) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff' }}>
-        <ActivityIndicator size="large" color="#ec4899" />
-      </View>
-    );
-  }
 
   return <>{children}</>;
 }
-
