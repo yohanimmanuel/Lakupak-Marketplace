@@ -3,9 +3,10 @@ import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { API_BASE_URL } from '../services/config';
 
 import { useAuthStore } from '../stores/authStore';
 import { useDataStore } from '../stores/dataStore';
@@ -60,6 +61,59 @@ function RootLayoutNav() {
   const { loadUserActivities } = useUserActivityStore();
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
+  const sessionStartedAt = useRef<string | null>(null);
+  const sessionFlushId = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const sendSessionSample = useCallback(async (startedAt: string, endedAt: string) => {
+    const durationSec = Math.floor((Date.parse(endedAt) - Date.parse(startedAt)) / 1000);
+    if (!Number.isFinite(durationSec) || durationSec <= 2) return;
+    const t = useAuthStore.getState().token;
+    if (!t) return;
+    try {
+      await fetch(`${API_BASE_URL.replace(/\/$/, '')}/api/mobile/telemetry/session`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${t}`,
+        },
+        body: JSON.stringify({ startedAt, endedAt, durationSec }),
+      });
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const startFlushTimer = useCallback(() => {
+    if (sessionFlushId.current) return;
+    sessionFlushId.current = setInterval(() => {
+      if (AppState.currentState !== 'active') return;
+      const startedAt = sessionStartedAt.current;
+      if (!startedAt) return;
+      const endedAt = new Date().toISOString();
+      sessionStartedAt.current = endedAt;
+      void sendSessionSample(startedAt, endedAt);
+    }, 60_000);
+  }, [sendSessionSample]);
+
+  const stopFlushTimer = useCallback(() => {
+    if (!sessionFlushId.current) return;
+    clearInterval(sessionFlushId.current);
+    sessionFlushId.current = null;
+  }, []);
+
+  const startSessionIfNeeded = useCallback(() => {
+    if (!sessionStartedAt.current) sessionStartedAt.current = new Date().toISOString();
+    startFlushTimer();
+  }, [startFlushTimer]);
+
+  const stopSessionAndFlush = useCallback(() => {
+    stopFlushTimer();
+    const startedAt = sessionStartedAt.current;
+    sessionStartedAt.current = null;
+    if (startedAt) {
+      void sendSessionSample(startedAt, new Date().toISOString());
+    }
+  }, [sendSessionSample, stopFlushTimer]);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -80,11 +134,6 @@ function RootLayoutNav() {
       
       // Preload all data immediately
       await refreshAllData(currentToken || undefined);
-      
-      // Start WebSocket with token after everything is loaded
-      if (AppState.currentState === 'active') {
-        startAutoRefresh(currentToken || undefined);
-      }
     };
     
     initializeApp();
@@ -92,8 +141,15 @@ function RootLayoutNav() {
 
   // Handle app state changes to pause/resume auto-refresh
   useEffect(() => {
+    // Handle initial state (no transition event fired on mount)
+    if (AppState.currentState === 'active') {
+      startSessionIfNeeded();
+      startAutoRefresh(useAuthStore.getState().token || undefined);
+    }
+
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {
       if (nextAppState === 'active') {
+        startSessionIfNeeded();
         // App is in foreground - start auto-refresh with WebSocket + polling fallback
         const currentToken = useAuthStore.getState().token;
         const currentUser = useAuthStore.getState().user;
@@ -111,6 +167,7 @@ function RootLayoutNav() {
           }
         }
       } else if (nextAppState === 'background' || nextAppState === 'inactive') {
+        stopSessionAndFlush();
         stopAutoRefresh();
       }
     };
@@ -119,16 +176,18 @@ function RootLayoutNav() {
 
     return () => {
       subscription.remove();
+      stopSessionAndFlush();
       stopAutoRefresh();
     };
-  }, [startAutoRefresh, stopAutoRefresh]);
+  }, [startAutoRefresh, startSessionIfNeeded, stopAutoRefresh, stopSessionAndFlush]);
 
   // Reconnect WebSocket when token becomes available
   useEffect(() => {
     if (token) {
+      if (AppState.currentState === 'active') startSessionIfNeeded();
       startAutoRefresh(token);
     }
-  }, [token, startAutoRefresh]);
+  }, [token, startAutoRefresh, startSessionIfNeeded]);
 
   // Initialize push notifications
   useEffect(() => {
