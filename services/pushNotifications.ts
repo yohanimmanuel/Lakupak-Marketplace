@@ -16,9 +16,18 @@ Notifications.setNotificationHandler({
     const trigger = notification.request.trigger;
     const isRemoteNotification = trigger && 'type' in trigger && trigger.type === 'push';
     
-    // If it's a remote push and app is in foreground, don't show (WebSocket will handle it)
-    // If it's a local notification (WebSocket), always show
-    const shouldShow = !isRemoteNotification || !isAppInForeground;
+    // If it's a remote push and app is in foreground:
+    // - Platform announcements: show (these may arrive in bursts; WebSocket also updates the in-app list)
+    // - Everything else: don't show (WebSocket/in-app handlers will handle it)
+    const data = notification.request.content.data as { type?: unknown } | undefined;
+    const dataType = typeof data?.type === 'string' ? data.type : undefined;
+    const allowRemoteInForeground = dataType === 'platform_announcement';
+
+    // If it's a local notification (WebSocket), always show.
+    const shouldShow =
+      !isRemoteNotification ||
+      !isAppInForeground ||
+      (isRemoteNotification && isAppInForeground && allowRemoteInForeground);
     
     return {
       shouldPlaySound: shouldShow,

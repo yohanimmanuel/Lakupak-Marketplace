@@ -6,6 +6,7 @@ import { marketplaceService, MarketplaceProduct, type MarketplaceHomeOfferPayloa
 import { getMe, MobileUser } from '../services/user'
 import { websocketService } from '../services/websocket'
 import { ordersService } from '../services/orders'
+import { AppState } from 'react-native'
 import { useAuthStore } from './authStore'
 import { pushNotificationService } from '../services/pushNotifications'
 import { supabaseRealtimeService } from '../services/supabaseRealtime'
@@ -441,13 +442,17 @@ export const useDataStore = create<DataState>()(
                 publishedAt: a.publishedAt,
                 createdAt: a.createdAt,
               })
-              const preview =
-                a.body && a.body.length > 120 ? `${a.body.slice(0, 117)}…` : (a.body ?? '')
-              pushNotificationService.scheduleLocalNotification(
-                a.title,
-                preview || a.title || 'New update from Laku',
-                { type: 'platform_announcement', announcementId: String(a.id) }
-              )
+              // Foreground: prefer remote push for announcement banners to avoid duplicates (push + WebSocket).
+              // Background: WebSocket is typically disconnected anyway, but keep local as a best-effort fallback.
+              if (AppState.currentState !== 'active') {
+                const preview =
+                  a.body && a.body.length > 120 ? `${a.body.slice(0, 117)}…` : (a.body ?? '')
+                pushNotificationService.scheduleLocalNotification(
+                  a.title,
+                  preview || a.title || 'New update from Laku',
+                  { type: 'platform_announcement', announcementId: String(a.id) }
+                )
+              }
             }
 
             if (message.type === 'platform_announcement_unpublished' && typeof message.announcementId === 'number') {
