@@ -29,7 +29,8 @@ import {
   ChevronRight,
   Calendar,
   X,
-  Gift
+  Gift,
+  Banknote,
 } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Product } from '../../../data/sampleProducts';
@@ -168,13 +169,13 @@ const resolveDistributorId = (product?: MarketplaceProduct): string => {
   
 const distributorGroups = useMemo(
   () => (isCartCheckout ? groupByDistributor(selectedCartItems) : {}),
-  [isCartCheckout, selectedCartItems]
+  [isCartCheckout, selectedCartItems, products]
 );
   
 
   // State
   const [selectedAddress, setSelectedAddress] = useState('default');
-  const [selectedPayment, setSelectedPayment] = useState('credit_card');
+  const [selectedPayment, setSelectedPayment] = useState<'bank_transfer' | 'cod'>('bank_transfer');
   const [selectedShipping, setSelectedShipping] = useState('');
   // Per-distributor shipping selection for cart checkout
   const [selectedShippingByDistributor, setSelectedShippingByDistributor] = useState<Record<string, string>>({});
@@ -222,7 +223,7 @@ const distributorGroups = useMemo(
       email: company?.businessEmail,
     };
   };
-  
+
   // Get distributor information for display
   const getDistributorsInfo = () => {
     if (isCartCheckout && selectedCartItems.length > 0) {
@@ -243,7 +244,7 @@ const distributorGroups = useMemo(
     return [];
   };
 
-const distributorsInfo = useMemo(() => getDistributorsInfo(), [isCartCheckout, selectedCartItems, product]);
+const distributorsInfo = useMemo(() => getDistributorsInfo(), [isCartCheckout, selectedCartItems, product, products]);
 
 const distributorsInfoMap = useMemo(() => {
   return distributorsInfo.reduce<Record<string, DistributorInfo>>((acc, info) => {
@@ -269,29 +270,31 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     }
   ];
 
-  const paymentMethods = [
-    {
-      id: 'credit_card',
-      name: 'Credit Card',
-      icon: 'CreditCard',
-      description: 'Visa, Mastercard, American Express',
-      isAvailable: true
-    },
+  const paymentMethods: Array<{
+    id: 'bank_transfer' | 'cod';
+    name: string;
+    icon: 'Building2' | 'Banknote';
+    description: string;
+    isAvailable: boolean;
+  }> = [
     {
       id: 'bank_transfer',
       name: 'Bank Transfer',
       icon: 'Building2',
-      description: 'BCA, Mandiri, BNI, BRI',
-      isAvailable: true
+      description: 'Transfer to the distributor bank account shown below',
+      isAvailable: true,
     },
     {
-      id: 'virtual_account',
-      name: 'Virtual Account',
-      icon: 'Shield',
-      description: 'Secure payment via virtual account',
-      isAvailable: true
-    }
+      id: 'cod',
+      name: 'Cash on Delivery (COD)',
+      icon: 'Banknote',
+      description: 'Pay the distributor when you receive the goods',
+      isAvailable: true,
+    },
   ];
+
+  const paymentTermsForOrder =
+    selectedPayment === 'cod' ? 'Cash on Delivery' : 'Bank Transfer';
 
   // Format min/max for "Estimated delivery: X" line (real data from distributor) – all as business days
   const formatDeliveryDuration = (minDays?: number | null, maxDays?: number | null): string => {
@@ -690,7 +693,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
           unitPrice = selectedVariant.sellingPrice || 0;
         } else {
           // Fallback to product-level pricing
-          unitPrice = (item.product as { price?: number }).price || item.product.sellingPrice || 0;
+          unitPrice = marketplaceProduct.sellingPrice || 0;
         }
         
         // Get piecesPerPackage from product level (piece-based system)
@@ -953,7 +956,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                       estimatedDeliveryMaxDays: null,
                       orderStatus: 'Pending',
                       paymentStatus: 'Unpaid',
-                      paymentTerms: 'Cash on Delivery',
+                      paymentTerms: paymentTermsForOrder,
                       userId: authUser?.id || null
                     };
                     
@@ -1040,7 +1043,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                     estimatedDeliveryMaxDays: null,
                     orderStatus: 'Pending',
                     paymentStatus: 'Unpaid',
-                    paymentTerms: 'Cash on Delivery',
+                    paymentTerms: paymentTermsForOrder,
                     userId: authUser?.id || null
                   };
                   
@@ -1171,6 +1174,16 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                     </Text>
                   ))}
                 </View>
+              )}
+
+              {selectedPayment === 'cod' && (
+                <>
+                  <View style={styles.businessDivider} />
+                  <Text style={styles.bankSectionTitle}>Payment</Text>
+                  <Text style={styles.bankMissing}>
+                    You selected Cash on Delivery. Arrange payment directly with the distributor when you receive the goods.
+                  </Text>
+                </>
               )}
             </View>
           </View>
@@ -2195,6 +2208,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 2,
+  },
+  businessDivider: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  bankSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 10,
+  },
+  bankMissing: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
   },
   addressCard: {
     backgroundColor: '#FFFFFF',

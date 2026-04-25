@@ -210,13 +210,24 @@ function RootLayoutNav() {
       const isRemote = trigger && trigger.type === 'push';
       if (!isRemote) return;
       const content = notification.request.content;
-      const data = content.data as { type?: string; orderId?: string; orderStatus?: string } | undefined;
+      const data = content.data as { type?: string; orderId?: string; orderStatus?: string; paymentStatus?: string } | undefined;
       if (data?.type === 'order' && data?.orderId) {
         pushNotificationService.showOrderNotificationInApp(
           String(data.orderId),
           data.orderStatus ?? '',
           content.title ?? undefined,
           content.body ?? undefined
+        );
+        return;
+      }
+
+      // Payment notifications (e.g. "Your payment has been confirmed") should also show in foreground.
+      if (data?.type === 'payment') {
+        void pushNotificationService.scheduleLocalNotification(
+          content.title ?? 'Payment Update',
+          content.body ?? '',
+          data as Record<string, unknown>,
+          'orders'
         );
       }
     });
@@ -228,6 +239,12 @@ function RootLayoutNav() {
         
         // Navigate based on notification type
         if (data?.type === 'order' && data?.orderId) {
+          router.push({
+            pathname: '/components/ordersshipment/OrderDetails',
+            params: { orderId: String(data.orderId) },
+          });
+        }
+        if (data?.type === 'payment' && data?.orderId) {
           router.push({
             pathname: '/components/ordersshipment/OrderDetails',
             params: { orderId: String(data.orderId) },
@@ -630,6 +647,24 @@ function RootLayoutNav() {
               fontWeight: '600',
             },
           }} 
+        />
+
+        <Stack.Screen
+          name="components/ordersshipment/PayOrder"
+          options={{
+            presentation: 'modal',
+            headerShown: true,
+            title: 'Pay Order',
+            headerStyle: {
+              backgroundColor: '#ffffff',
+            },
+            headerTintColor: '#0a61d7',
+            headerTitleStyle: {
+              color: '#111827',
+              fontWeight: '600',
+            },
+            contentStyle: { backgroundColor: '#f9fafb' },
+          }}
         />
         
         </Stack>

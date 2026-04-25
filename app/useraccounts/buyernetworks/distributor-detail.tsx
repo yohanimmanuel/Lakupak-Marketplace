@@ -182,7 +182,7 @@ export default function DistributorDetailScreen() {
         description: sellerCompany?.businessDescription || distributorUser?.company?.businessDescription,
         industryType: sellerCompany?.industryType || distributorUser?.company?.industryType,
         yearsInOperation: sellerCompany?.yearsInOperation || distributorUser?.company?.yearsInOperation,
-        verified: !!(sellerCompany?.name || distributorUser?.company?.name)
+        verified: !!(sellerCompany?.name || distributorUser?.company?.name),
       };
 
       setDistributor(distributorData);
@@ -427,6 +427,7 @@ export default function DistributorDetailScreen() {
                 <Text style={styles.contactText}>{distributor.email}</Text>
               </View>
             ) : null}
+
           </View>
         </View>
 

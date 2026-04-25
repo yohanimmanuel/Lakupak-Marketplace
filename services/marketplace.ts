@@ -667,6 +667,43 @@ export const marketplaceService = {
     const j = (await r.json()) as { offer?: Partial<MarketplaceHomeOfferPayload> };
     return normalizeHomeOffer(j.offer);
   },
+
+  async getSellerBankDetails(
+    sellerUserId: number,
+    token: string,
+    opts?: { fullAccountNumber?: boolean }
+  ): Promise<{
+    sellerUserId: number;
+    companyName: string;
+    billingBankName: string | null;
+    billingBankAccountName: string | null;
+    billingBankAccountNumber: string | null;
+  }> {
+    const url = new URL(
+      `${API_BASE_URL}/api/mobile/checkout/seller-bank/${encodeURIComponent(String(sellerUserId))}`
+    );
+    if (opts?.fullAccountNumber) {
+      url.searchParams.set('full', '1');
+    }
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const json: unknown = await res.json().catch(() => null);
+    if (!res.ok || !json || typeof json !== 'object') {
+      throw new Error('Failed to load seller bank details');
+    }
+    const obj = json as Record<string, unknown>;
+    return {
+      sellerUserId,
+      companyName: typeof obj.companyName === 'string' ? obj.companyName : '',
+      billingBankName: typeof obj.billingBankName === 'string' ? obj.billingBankName : null,
+      billingBankAccountName: typeof obj.billingBankAccountName === 'string' ? obj.billingBankAccountName : null,
+      billingBankAccountNumber: typeof obj.billingBankAccountNumber === 'string' ? obj.billingBankAccountNumber : null,
+    };
+  },
 };
 
 function normalizeHomeOffer(

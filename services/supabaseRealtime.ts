@@ -14,6 +14,7 @@ const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 interface OrderChange {
   orderId: string;
   orderStatus: string;
+  paymentStatus?: string | null;
   buyerId: string | null;
   storeName: string | null;
   totalAmount: number;
@@ -84,6 +85,7 @@ class SupabaseRealtimeService {
             const orderChange: OrderChange = {
               orderId: String(newRecord.orderId || ''),
               orderStatus: String(newRecord.orderStatus || ''),
+              paymentStatus: newRecord.paymentStatus ? String(newRecord.paymentStatus) : null,
               buyerId,
               storeName: newRecord.storeName ? String(newRecord.storeName) : null,
               totalAmount: Number(newRecord.totalAmount || 0),
@@ -97,6 +99,15 @@ class SupabaseRealtimeService {
                 console.error('Error in order change callback:', error);
               }
             });
+
+            // If only paymentStatus changed upstream (common when distributors manage payments),
+            // do NOT emit "Order Update" local notifications from Supabase realtime.
+            // Payment notifications are handled via push/WebSocket 'payment' notifications.
+            const oldPayment = oldRecord.paymentStatus ? String(oldRecord.paymentStatus) : null;
+            const newPayment = newRecord.paymentStatus ? String(newRecord.paymentStatus) : null;
+            if (oldPayment !== newPayment) {
+              return;
+            }
 
             // Show phone notification AND add to in-app notification list
             this.showOrderNotification(orderChange).catch((err) =>

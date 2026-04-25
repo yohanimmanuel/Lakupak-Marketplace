@@ -994,6 +994,7 @@ export default function OrderDetailsModal() {
               </Text>
             </View>
           )}
+
         </View>
       </View>
     );
@@ -1198,7 +1199,7 @@ export default function OrderDetailsModal() {
   };
 
   const handlePayOrder = () => {
-    Alert.alert('Pay Order', 'Payment functionality coming soon!');
+    router.push(`/components/ordersshipment/PayOrder?orderId=${encodeURIComponent(orderData.orderId)}`);
   };
 
   const handleCancelOrder = () => {
