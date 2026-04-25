@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Laku",
-    "slug": "laku-marketplace",
+    "slug": "Laku-Laku",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/LakuLakuMobile.png",
@@ -69,7 +69,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9b6b4fe3-0ab7-438b-aaed-477f75fb82e0"
+        "projectId": "af69d157-1a15-41d7-90bd-26c05d9fc474"
       }
     }
   }
