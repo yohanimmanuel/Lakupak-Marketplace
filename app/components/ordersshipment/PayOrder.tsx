@@ -6,6 +6,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { marketplaceService } from '../../../services/marketplace';
 import { websocketService } from '../../../services/websocket';
+import * as ScreenCapture from 'expo-screen-capture';
 import { ArrowLeft, Building2, FileText } from 'lucide-react-native';
 
 type SellerBankDetails = {
@@ -18,6 +19,7 @@ type SellerBankDetails = {
 type OrderDetails = {
   id: string;
   orderId: string;
+  paymentTerms?: string | null;
   userId?: number | null;
   sellerId?: number | null;
   distributorId?: number | null;
@@ -60,6 +62,13 @@ export default function PayOrder() {
     const o = await fetchOrder(orderId);
     setOrder(o);
 
+    const terms = (o?.paymentTerms ?? '').toString().toLowerCase();
+    const cod = terms.includes('cod') || terms.includes('cash');
+    if (cod) {
+      setBank(null);
+      return;
+    }
+
     const sellerUserIdRaw =
       o?.userId ??
       o?.sellerId ??
@@ -80,6 +89,33 @@ export default function PayOrder() {
     }
   }, [fetchOrder, token]);
 
+  const isCod = useMemo(() => {
+    const terms = (order?.paymentTerms ?? '').toString().toLowerCase();
+    return terms.includes('cod') || terms.includes('cash');
+  }, [order?.paymentTerms]);
+
+  // Prevent screenshots / screen recording while bank details are visible.
+  useEffect(() => {
+    if (loading) return;
+    if (isCod) return;
+    (async () => {
+      try {
+        await ScreenCapture.preventScreenCaptureAsync();
+      } catch {
+        // best-effort
+      }
+    })();
+    return () => {
+      (async () => {
+        try {
+          await ScreenCapture.allowScreenCaptureAsync();
+        } catch {
+          // best-effort
+        }
+      })();
+    };
+  }, [isCod, loading]);
+
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -92,6 +128,14 @@ export default function PayOrder() {
         if (cancelled) return;
         // Use reload() but avoid extra fetchOrder call
         setOrder(o);
+
+        const terms = (o?.paymentTerms ?? '').toString().toLowerCase();
+        const cod = terms.includes('cod') || terms.includes('cash');
+        if (cod) {
+          setBank(null);
+          return;
+        }
+
         const sellerUserIdRaw =
           o?.userId ??
           o?.sellerId ??
@@ -285,12 +329,31 @@ export default function PayOrder() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.productCard}>
-            <View style={styles.sectionTitleContainer}>
-              <FileText size={20} color={primaryBlue} />
-              <Text style={styles.sectionTitle}>Bank account (manual transfer)</Text>
+        {isCod ? (
+          <View style={styles.section}>
+            <View style={styles.productCard}>
+              <View style={styles.sectionTitleContainer}>
+                <FileText size={20} color={primaryBlue} />
+                <Text style={styles.sectionTitle}>Payment</Text>
+              </View>
+
+              <View style={styles.infoRowTopAligned}>
+                <Text style={styles.infoLabel}>Method:</Text>
+                <Text style={[styles.infoValueMultiline, styles.infoValueWide]}>Cash on Delivery (COD)</Text>
+              </View>
+
+              <Text style={styles.hintText}>
+                COD orders do not require bank transfer. Bank account details are hidden to reduce exposure.
+              </Text>
             </View>
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <View style={styles.productCard}>
+              <View style={styles.sectionTitleContainer}>
+                <FileText size={20} color={primaryBlue} />
+                <Text style={styles.sectionTitle}>Bank account (manual transfer)</Text>
+              </View>
 
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Bank:</Text>
@@ -313,24 +376,33 @@ export default function PayOrder() {
               </Text>
             </View>
 
-            <Text style={styles.hintText}>
-              Only share this info during payment. It’s hidden from public distributor pages and checkout.
-            </Text>
+              <Text style={styles.hintText}>
+                Only share this info during payment. It’s hidden from public distributor pages and checkout.
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 18) }]}>
-        <TouchableOpacity
-          style={[styles.payButton, submitting ? styles.disabledButton : null]}
-          disabled={submitting}
-          onPress={handlePay}
-        >
-          <Text style={[styles.payButtonText, submitting ? styles.disabledButtonText : null]}>
-            {submitting ? 'Sending...' : 'Pay'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {isCod ? (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 18) }]}>
+          <TouchableOpacity style={styles.payButton} onPress={() => router.back()}>
+            <Text style={styles.payButtonText}>Back</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 18) }]}>
+          <TouchableOpacity
+            style={[styles.payButton, submitting ? styles.disabledButton : null]}
+            disabled={submitting}
+            onPress={handlePay}
+          >
+            <Text style={[styles.payButtonText, submitting ? styles.disabledButtonText : null]}>
+              {submitting ? 'Sending...' : 'Pay'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
