@@ -343,7 +343,7 @@ export default function PayOrder() {
               </View>
 
               <Text style={styles.hintText}>
-                COD orders do not require bank transfer. Bank account details are hidden to reduce exposure.
+                COD orders are paid directly to the distributor, whether through cash, direct digital bank app transfer, or other method. The payment receiver will confirm your payment and update the payment status once it is received.
               </Text>
             </View>
           </View>

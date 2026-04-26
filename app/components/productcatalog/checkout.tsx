@@ -188,6 +188,7 @@ const distributorGroups = useMemo(
   const [selectedTime, setSelectedTime] = useState('09:00');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [scheduledDateTime, setScheduledDateTime] = useState<Date | null>(null);
   const [pickupDateTime, setPickupDateTime] = useState<Date | null>(null);
 
@@ -730,6 +731,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
   }, [isCartCheckout, selectedShipping, selectedShippingByDistributor, sellerDeliveryMode, buyerCourierMode, sellerDeliveryModeByDist, buyerCourierModeByDist, selectedCartItems]);
 
   const handlePlaceOrder = async () => {
+    if (isPlacingOrder) return;
     try {
       // Show loading state
     Alert.alert(
@@ -741,6 +743,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
           text: 'Place Order', 
           style: 'default',
             onPress: async () => {
+              if (isPlacingOrder) return;
+              setIsPlacingOrder(true);
               try {
                 // Generate required fields using marketplace user data
     const buyerId = `LKB-${authUser?.id?.toString().padStart(8, '0') || Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
@@ -1115,6 +1119,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
               } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Failed to place order. Please try again.';
                 Alert.alert('Error', errorMessage);
+              } finally {
+                setIsPlacingOrder(false);
               }
           }
         }
@@ -1778,11 +1784,14 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
           <Text style={styles.bottomTotalValue}>{formatCurrency(total)}</Text>
         </View>
         <TouchableOpacity
-          style={[styles.placeOrderButton, !isOrderReady && { backgroundColor: '#9CA3AF' }]}
+          style={[
+            styles.placeOrderButton,
+            (!isOrderReady || isPlacingOrder) && { backgroundColor: '#9CA3AF' }
+          ]}
           onPress={handlePlaceOrder}
-          disabled={!isOrderReady}
+          disabled={!isOrderReady || isPlacingOrder}
         >
-          <Text style={styles.placeOrderText}>Place Order</Text>
+          <Text style={styles.placeOrderText}>{isPlacingOrder ? 'Placing...' : 'Place Order'}</Text>
         </TouchableOpacity>
       </View>
 
