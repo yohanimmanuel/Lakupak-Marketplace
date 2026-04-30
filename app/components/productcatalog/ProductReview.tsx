@@ -18,6 +18,7 @@ import { ArrowLeft, Star, MessageSquare, Package, ImagePlus, X } from 'lucide-re
 import { API_BASE_URL } from '../../../services/config';
 import { pickMultipleImages } from '../../../services/imagePicker';
 import { useAuthStore } from '../../../stores/authStore';
+import { useTranslation } from 'react-i18next';
 
 export interface OrderReviewItem {
   productId: string;
@@ -62,6 +63,7 @@ export default function ProductReviewScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const token = useAuthStore((s) => s.token);
+  const { t } = useTranslation();
   const { orderId, productId, productName, image, itemsJson } = params as ProductReviewParams;
 
   const items = useMemo((): OrderReviewItem[] => {
@@ -117,28 +119,28 @@ export default function ProductReviewScreen() {
   const handleSubmit = async () => {
     if (uploadingPhotoIndex !== null) {
       Alert.alert(
-        'Please wait',
-        'Photos are still uploading. You can submit your review once the upload finishes.'
+        t('productReview.alerts.pleaseWaitTitle'),
+        t('productReview.alerts.pleaseWaitBody')
       );
       return;
     }
     if (!allProductRatingsFilled) {
       Alert.alert(
-        'Rating Required',
+        t('productReview.alerts.ratingRequiredTitle'),
         items.length > 1
-          ? 'Please rate every product before submitting.'
-          : 'Please select a product rating before submitting.'
+          ? t('productReview.alerts.ratingRequiredAllProducts')
+          : t('productReview.alerts.ratingRequiredSingle')
       );
       return;
     }
 
     if (!orderId || typeof orderId !== 'string' || orderId.trim() === '') {
-      Alert.alert('Error', 'Order information is missing. Cannot submit review.');
+      Alert.alert(t('productReview.alerts.errorTitle'), t('productReview.alerts.missingOrder'));
       return;
     }
 
     if (!token) {
-      Alert.alert('Sign in required', 'Please sign in to submit a review.');
+      Alert.alert(t('productReview.alerts.signInRequiredTitle'), t('productReview.alerts.signInRequiredBody'));
       return;
     }
 
@@ -176,15 +178,15 @@ export default function ProductReviewScreen() {
         throw new Error(message);
       }
 
-      Alert.alert('Thank You', 'Your review has been submitted.', [
+      Alert.alert(t('productReview.alerts.thankYouTitle'), t('productReview.alerts.submittedBody'), [
         {
-          text: 'OK',
+          text: t('productReview.alerts.ok'),
           onPress: () => router.back(),
         },
       ]);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to submit review. Please try again.';
-      Alert.alert('Error', message, [{ text: 'OK' }]);
+      const message = error instanceof Error ? error.message : t('productReview.alerts.failedGeneric');
+      Alert.alert(t('productReview.alerts.errorTitle'), message, [{ text: t('productReview.alerts.ok') }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -236,7 +238,10 @@ export default function ProductReviewScreen() {
         updateProductReview(productIndex, 'images', combined);
       }
     } catch (e) {
-      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Could not add photos.');
+      Alert.alert(
+        t('productReview.alerts.uploadFailedTitle'),
+        e instanceof Error ? e.message : t('productReview.alerts.uploadFailedBody')
+      );
     } finally {
       setUploadingPhotoIndex(null);
     }
@@ -273,7 +278,7 @@ export default function ProductReviewScreen() {
                   <TouchableOpacity
                     onPress={() => router.back()}
                     hitSlop={10}
-                    accessibilityLabel="Back"
+                    accessibilityLabel={t('productReview.a11y.back')}
                     accessibilityRole="button"
                   >
                     <ArrowLeft color={primaryBlue} size={24} />
@@ -288,7 +293,7 @@ export default function ProductReviewScreen() {
                       marginLeft: 35,
                     }}
                   >
-                    Rate Order
+                    {t('productReview.titles.rateOrder')}
                   </Text>
                 </View>
               </View>
@@ -297,7 +302,7 @@ export default function ProductReviewScreen() {
         />
         <View style={styles.emptyState}>
           <Package color={iconGray} size={48} />
-          <Text style={styles.emptyStateText}>No products to review.</Text>
+          <Text style={styles.emptyStateText}>{t('productReview.empty.noProducts')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -328,7 +333,7 @@ export default function ProductReviewScreen() {
                 <TouchableOpacity
                   onPress={() => router.back()}
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('productReview.a11y.goBack')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
@@ -343,7 +348,7 @@ export default function ProductReviewScreen() {
                     marginLeft: 35,
                   }}
                 >
-                  {items.length > 1 ? 'Rate order' : 'Rate product'}
+                  {items.length > 1 ? t('productReview.titles.rateOrderLower') : t('productReview.titles.rateProduct')}
                 </Text>
               </View>
             </View>
@@ -365,7 +370,7 @@ export default function ProductReviewScreen() {
         <View style={styles.contentCard}>
           {orderId ? (
             <View style={styles.orderIdRow}>
-              <Text style={styles.orderIdLabel}>Order</Text>
+              <Text style={styles.orderIdLabel}>{t('productReview.order.label')}</Text>
               <Text style={styles.orderIdValue}>{orderId}</Text>
             </View>
           ) : null}
@@ -378,7 +383,7 @@ export default function ProductReviewScreen() {
               <View key={`${item.productId}-${index}`} style={styles.productBlock}>
                 {isMulti && (
                   <Text style={styles.productBlockLabel}>
-                    Product {index + 1} of {items.length}
+                    {t('productReview.order.productXofY', { index: index + 1, total: items.length })}
                   </Text>
                 )}
                 <View style={styles.headerSection}>
@@ -399,20 +404,20 @@ export default function ProductReviewScreen() {
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>How do you like this product?</Text>
+                  <Text style={styles.sectionTitle}>{t('productReview.sections.productLikeTitle')}</Text>
                   <Text style={styles.sectionSubtitle}>
-                    Tap to rate the quality and overall experience.
+                    {t('productReview.sections.productLikeSubtitle')}
                   </Text>
                   {renderStars(review.rating, (val) => updateProductReview(index, 'rating', val))}
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.inputLabel}>Review title (optional)</Text>
+                  <Text style={styles.inputLabel}>{t('productReview.sections.reviewTitleLabel')}</Text>
                   <TextInput
                     style={styles.textInput}
                     value={review.title}
                     onChangeText={(t) => updateProductReview(index, 'title', t)}
-                    placeholder="e.g. Great quality and fast delivery"
+                    placeholder={t('productReview.sections.reviewTitlePlaceholder')}
                     placeholderTextColor="#9ca3af"
                   />
                 </View>
@@ -421,17 +426,17 @@ export default function ProductReviewScreen() {
                   <View style={styles.sectionHeaderRow}>
                     <MessageSquare color={iconGray} size={18} />
                     <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>
-                      Write your detailed product review
+                      {t('productReview.sections.detailedTitle')}
                     </Text>
                   </View>
                   <Text style={styles.sectionSubtitle}>
-                    Share what you liked, what could be better, and whether you would recommend it.
+                    {t('productReview.sections.detailedSubtitle')}
                   </Text>
                   <TextInput
                     style={styles.textArea}
                     value={review.comment}
                     onChangeText={(c) => updateProductReview(index, 'comment', c)}
-                    placeholder="Write your review here..."
+                    placeholder={t('productReview.sections.detailedPlaceholder')}
                     placeholderTextColor="#9ca3af"
                     multiline
                     numberOfLines={4}
@@ -440,9 +445,11 @@ export default function ProductReviewScreen() {
                 </View>
 
                 <View style={styles.section}>
-                  <Text style={styles.inputLabel}>Review photos (optional, max {MAX_PHOTOS_PER_PRODUCT})</Text>
+                  <Text style={styles.inputLabel}>
+                    {t('productReview.sections.photosLabel', { max: MAX_PHOTOS_PER_PRODUCT })}
+                  </Text>
                   <Text style={styles.sectionSubtitle}>
-                    Add clear photos of the product. You can select multiple at once.
+                    {t('productReview.sections.photosSubtitle')}
                   </Text>
                   <View style={styles.photoRow}>
                     {(review.images ?? []).map((uri, imgIdx) => (
@@ -451,7 +458,7 @@ export default function ProductReviewScreen() {
                         <TouchableOpacity
                           style={styles.photoRemove}
                           onPress={() => removeReviewPhoto(index, imgIdx)}
-                          accessibilityLabel="Remove photo"
+                          accessibilityLabel={t('productReview.a11y.removePhoto')}
                           accessibilityRole="button"
                         >
                           <X size={14} color="#fff" />
@@ -463,7 +470,7 @@ export default function ProductReviewScreen() {
                         style={styles.photoAdd}
                         onPress={() => addReviewPhotos(index)}
                         disabled={uploadingPhotoIndex === index}
-                        accessibilityLabel="Add photos"
+                        accessibilityLabel={t('productReview.a11y.addPhotos')}
                         accessibilityRole="button"
                       >
                         {uploadingPhotoIndex === index ? (
@@ -472,7 +479,9 @@ export default function ProductReviewScreen() {
                           <ImagePlus size={24} color={iconGray} />
                         )}
                         <Text style={styles.photoAddText}>
-                          Add {(review.images?.length ?? 0) > 0 ? 'more' : 'photos'}
+                          {(review.images?.length ?? 0) > 0
+                            ? t('productReview.photos.addMore')
+                            : t('productReview.photos.addPhotos')}
                         </Text>
                       </TouchableOpacity>
                     )}
@@ -483,9 +492,9 @@ export default function ProductReviewScreen() {
           })}
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>How was the delivery experience?</Text>
+            <Text style={styles.sectionTitle}>{t('productReview.sections.deliveryTitle')}</Text>
             <Text style={styles.sectionSubtitle}>
-              Rate the shipping, delivery time, and condition of the package.
+              {t('productReview.sections.deliverySubtitle')}
             </Text>
             {renderStars(deliveryRating, setDeliveryRating)}
           </View>
@@ -494,17 +503,17 @@ export default function ProductReviewScreen() {
             <View style={styles.sectionHeaderRow}>
               <MessageSquare color={iconGray} size={18} />
               <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>
-                Delivery feedback (optional)
+                {t('productReview.sections.deliveryFeedbackTitle')}
               </Text>
             </View>
             <Text style={styles.sectionSubtitle}>
-              Tell us about the courier, delivery time, and overall experience receiving your order.
+              {t('productReview.sections.deliverySubtitle')}
             </Text>
             <TextInput
               style={styles.textArea}
               value={deliveryComment}
               onChangeText={setDeliveryComment}
-              placeholder="Write about the delivery here..."
+              placeholder={t('productReview.sections.deliveryFeedbackPlaceholder')}
               placeholderTextColor="#9ca3af"
               multiline
               numberOfLines={4}
@@ -524,7 +533,7 @@ export default function ProductReviewScreen() {
             style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
             onPress={handleSubmit}
             disabled={!canSubmit}
-            accessibilityLabel={isSubmitting ? 'Submitting review' : 'Submit review'}
+            accessibilityLabel={isSubmitting ? t('productReview.submit.submittingA11y') : t('productReview.submit.submitA11y')}
             accessibilityRole="button"
             accessibilityState={{ disabled: !canSubmit }}
           >
@@ -534,7 +543,7 @@ export default function ProductReviewScreen() {
                 !canSubmit && styles.submitButtonTextDisabled,
               ]}
             >
-              {isSubmitting ? 'Submitting...' : 'Submit review'}
+              {isSubmitting ? t('productReview.submit.submitting') : t('productReview.submit.submit')}
             </Text>
           </TouchableOpacity>
         </View>

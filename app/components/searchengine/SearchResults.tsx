@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'r
 import ProductMarketplace from '../productcatalog/ProductMarketplace';
 import ProductCardSkeleton from './ProductCardSkeleton';
 import { Product } from '../../../data/sampleProducts';
+import { useTranslation } from 'react-i18next';
 
 interface SearchResultsProps {
   query: string;
@@ -35,6 +36,7 @@ export default function SearchResults({
   onRefresh,
   onLoadMore,
 }: SearchResultsProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       {/* Product Grid */}
@@ -69,7 +71,9 @@ export default function SearchResults({
             style={styles.didYouMeanRow}
           >
             <Text style={styles.didYouMeanText}>
-              Did you mean <Text style={styles.didYouMeanLink}>{didYouMean}</Text>?
+              {t('search.results.didYouMeanPrefix')}
+              <Text style={styles.didYouMeanLink}>{didYouMean}</Text>
+              {t('search.results.didYouMeanSuffix')}
             </Text>
           </Pressable>
         ) : null}
@@ -91,9 +95,9 @@ export default function SearchResults({
           </View>
         ) : products.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>No results found</Text>
+            <Text style={styles.emptyTitle}>{t('search.results.emptyTitle')}</Text>
             <Text style={styles.emptySubtitle}>
-              Try adjusting your search or filters
+              {t('search.results.emptySubtitle')}
             </Text>
           </View>
         ) : (

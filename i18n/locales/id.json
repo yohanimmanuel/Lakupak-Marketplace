@@ -1,0 +1,1305 @@
+{
+  "common": {
+    "loading": "Memuat…",
+    "error": "Terjadi kesalahan",
+    "tryAgain": "Coba lagi",
+    "close": "Tutup",
+    "save": "Simpan",
+    "edit": "Ubah",
+    "cancel": "Batal",
+    "confirm": "Konfirmasi"
+  },
+  "tabs": {
+    "home": "Beranda",
+    "categories": "Kategori",
+    "orders": "Pesanan",
+    "notifications": "Notifikasi",
+    "account": "Akun"
+  },
+  "header": {
+    "searchProducts": "Cari produk…",
+    "orders": "Pesanan",
+    "notifications": "Notifikasi",
+    "myStore": "Toko Saya",
+    "setAddress": "Atur alamat"
+  },
+  "nav": {
+    "welcomeToLaku": "Selamat datang di Laku!",
+    "myNetworks": "Jaringan Saya",
+    "distributorDetails": "Detail Distributor",
+    "sellerInformation": "Informasi Penjual",
+    "distributor": "Distributor",
+    "myPurchases": "Pembelian Saya",
+    "myWallet": "Dompet Saya",
+    "bonuses": "Bonus",
+    "discounts": "Diskon",
+    "lakupay": "LakuPay",
+    "favourites": "Favorit",
+    "recentlyViewed": "Terakhir Dilihat",
+    "buyAgain": "Beli Lagi",
+    "getVouchers": "Ambil Voucher",
+    "profile": "Profil",
+    "editUsername": "Ubah Username",
+    "editName": "Ubah Nama",
+    "editBio": "Ubah Bio",
+    "editPhone": "Ubah Nomor HP",
+    "editEmail": "Ubah Email",
+    "myAddresses": "Alamat Saya",
+    "newAddress": "Alamat Baru",
+    "editCountry": "Ubah Negara",
+    "editStoreName": "Ubah Nama Toko",
+    "followers": "Pengikut",
+    "following": "Mengikuti",
+    "helpCenter": "Pusat Bantuan",
+    "securityPrivacy": "Keamanan & Privasi",
+    "communityRules": "Aturan Komunitas",
+    "checkout": "Checkout",
+    "paymentSuccess": "Pembayaran Berhasil",
+    "latestUpdates": "Update Terbaru",
+    "orderDetails": "Detail Pesanan",
+    "deliveryInformation": "Informasi Pengiriman",
+    "cancelOrder": "Batalkan Pesanan",
+    "returnRefund": "Retur / Refund",
+    "payOrder": "Bayar Pesanan"
+  },
+  "settings": {
+    "title": "Pengaturan",
+    "sections": {
+      "myAccount": "Akun Saya",
+      "settings": "Pengaturan",
+      "support": "Bantuan"
+    },
+    "rows": {
+      "accountSecurity": "Akun & Keamanan",
+      "myAddresses": "Alamat Saya",
+      "linkedPayments": "Metode Pembayaran Tertaut",
+      "notificationSettings": "Pengaturan Notifikasi",
+      "languageSettings": "Pengaturan Bahasa",
+      "helpCenter": "Pusat Bantuan",
+      "communityRules": "Aturan Komunitas",
+      "policies": "Kebijakan"
+    },
+    "logout": "Keluar",
+    "modals": {
+      "language": {
+        "title": "Bahasa",
+        "subtitle": "Pilih bahasa aplikasi"
+      },
+      "notifications": {
+        "title": "Notifikasi",
+        "push": {
+          "label": "Notifikasi push",
+          "description": "Aktifkan untuk menerima update pesanan & info penting"
+        },
+        "systemNote": "Catatan: Anda mungkin masih menerima notifikasi dari pengaturan sistem perangkat."
+      }
+    },
+    "pages": {
+      "language": {
+        "title": "Bahasa",
+        "subtitle": "Pilih bahasa aplikasi"
+      },
+      "notifications": {
+        "title": "Notifikasi",
+        "push": {
+          "label": "Notifikasi push",
+          "description": "Aktifkan untuk menerima update pesanan & info penting"
+        },
+        "systemNote": "Catatan: Anda mungkin masih menerima notifikasi dari pengaturan sistem perangkat."
+      }
+    },
+    "languages": {
+      "id": "Bahasa Indonesia",
+      "en": "English"
+    }
+  }
+  ,
+  "auth": {
+    "welcome": {
+      "slides": {
+        "1": {
+          "title": "Terhubung dengan Distributor",
+          "description": "Jelajahi ribuan produk dari penjual terverifikasi. Chat langsung, negosiasi harga, dan bangun relasi bisnis jangka panjang."
+        },
+        "2": {
+          "title": "Pengiriman Cepat & Andal",
+          "description": "Pesanan Anda dikirim cepat dan aman. Marketplace kami menghubungkan Anda dengan penjual yang memastikan pengiriman cepat dan kemasan aman."
+        },
+        "3": {
+          "title": "Marketplace Terpercaya",
+          "description": "Belanja dengan tenang dari penjual terverifikasi. Transaksi aman, produk berkualitas, dan dukungan pelanggan yang responsif."
+        }
+      },
+      "login": "Masuk",
+      "register": "Daftar"
+    },
+    "login": {
+      "title": "Selamat datang kembali",
+      "subtitle": "Masukkan email dan kata sandi Anda untuk masuk",
+      "emailLabel": "Email Anda",
+      "emailPlaceholder": "contoh@gmail.com",
+      "passwordLabel": "Kata sandi",
+      "passwordPlaceholder": "Kata sandi",
+      "forgotPassword": "Lupa kata sandi?",
+      "button": {
+        "idle": "Masuk",
+        "loading": "Sedang masuk…"
+      },
+      "alerts": {
+        "missingTitle": "Data belum lengkap",
+        "missingBody": "Mohon isi email dan kata sandi.",
+        "suspendedTitle": "Akun Ditangguhkan",
+        "suspendedBody": "Akun Anda ditangguhkan. Silakan hubungi dukungan untuk bantuan.",
+        "notFoundTitle": "Akun Tidak Ditemukan",
+        "notFoundBody": "Tidak ada akun dengan email ini. Silakan daftar terlebih dahulu.",
+        "ok": "OK",
+        "signUp": "Daftar",
+        "invalidTitle": "Kredensial Tidak Valid",
+        "invalidBody": "Email atau kata sandi salah. Silakan coba lagi.",
+        "failedTitle": "Gagal Masuk",
+        "genericBody": "Terjadi kesalahan. Silakan coba lagi."
+      },
+      "menu": {
+        "securityPrivacy": "Keamanan & Privasi",
+        "helpCenter": "Pusat Bantuan",
+        "close": "Tutup"
+      },
+      "createAccount": "Buat Akun"
+    },
+    "signup": {
+      "title": "Buat Akun",
+      "subtitle": "Bergabung di Laku Marketplace dan mulai perjalanan Anda",
+      "ctaCreateAccount": "Buat Akun",
+      "alreadyHaveAccount": "Sudah punya akun? Masuk",
+      "steps": {
+        "fullName": "Nama Lengkap",
+        "fullNamePlaceholder": "Masukkan nama lengkap",
+        "email": "Alamat Email",
+        "storeName": "Nama Toko",
+        "storeNamePlaceholder": "Masukkan nama toko",
+        "bioOptional": "Bio (Opsional)",
+        "bioPlaceholder": "Ceritakan tentang toko Anda",
+        "username": "Username",
+        "usernamePlaceholder": "Buat username",
+        "password": "Kata sandi",
+        "passwordPlaceholder": "Buat kata sandi",
+        "confirmPassword": "Konfirmasi kata sandi",
+        "confirmPasswordPlaceholder": "Ulangi kata sandi",
+        "continue": "Lanjut"
+      },
+      "alerts": {
+        "missingTitle": "Data belum lengkap",
+        "missingNameEmail": "Mohon isi nama dan email.",
+        "missingStoreName": "Mohon isi nama toko.",
+        "missingAllFields": "Mohon lengkapi semua field.",
+        "passwordMismatchTitle": "Kata sandi tidak cocok",
+        "passwordMismatchBody": "Kata sandi tidak sama.",
+        "weakPasswordTitle": "Kata sandi lemah",
+        "weakPasswordBody": "Kata sandi minimal 6 karakter.",
+        "failedTitle": "Pendaftaran Gagal",
+        "genericBody": "Terjadi kesalahan"
+      },
+      "accountCreatedTitle": "Akun Berhasil Dibuat!",
+      "accountCreatedBody": "Akun Anda berhasil dibuat.",
+      "footer": {
+        "byRegistering": "Dengan mendaftar, Anda menyetujui ",
+        "securityPrivacy": "Keamanan & Privasi",
+        "dot": "."
+      },
+      "menu": {
+        "securityPrivacy": "Keamanan & Privasi",
+        "helpCenter": "Pusat Bantuan",
+        "close": "Tutup"
+      }
+    }
+  }
+  ,
+  "tabsHome": {
+    "searchPlaceholder": "Cari produk…",
+    "specialOffers": "Penawaran Spesial",
+    "seeAll": "Lihat Semua",
+    "categories": "Kategori",
+    "featuredProducts": "Produk Unggulan",
+    "offerFallback": "Promo",
+    "errors": {
+      "refreshFailed": "Gagal memuat ulang data"
+    },
+    "retry": "Coba lagi",
+    "endMessage": "Anda sudah mencapai akhir daftar produk.",
+    "noProducts": "Belum ada produk tersedia",
+    "storeFallback": "Toko Saya",
+    "addressFallback": "Atur alamat"
+  }
+  ,
+  "tabsCategories": {
+    "exploreByCategory": "Jelajahi berdasarkan kategori",
+    "newThisWeek": "Baru Minggu Ini",
+    "seeAll": "Lihat semua",
+    "retry": "Coba lagi",
+    "errors": {
+      "refreshFailed": "Gagal memuat ulang data"
+    },
+    "endMessage": "Anda sudah mencapai akhir daftar produk.",
+    "noProducts": "Belum ada produk tersedia"
+  }
+  ,
+  "tabsOrders": {
+    "loginPrompt": {
+      "title": "Buat akun untuk dapat manfaat pesanan pertama!",
+      "login": "Masuk",
+      "signup": "Daftar"
+    },
+    "loading": "Memuat pesanan Anda…",
+    "items": {
+      "products": "{{count}} produk",
+      "noProducts": "Tidak ada produk"
+    },
+    "orderDateLabel": "Tanggal pesanan:",
+    "distributorFallback": "Distributor",
+    "unknownStatus": "Tidak diketahui",
+    "empty": {
+      "title": "Belum Ada Pesanan",
+      "description": "Setelah Anda membuat pesanan pertama, Anda akan melihat update detail di sini seperti konfirmasi pesanan, status pengemasan, informasi pengiriman, dan notifikasi penerimaan. Kami akan memberi informasi di setiap langkah.",
+      "featuresTitle": "Yang akan Anda lihat di sini:",
+      "features": {
+        "realtimeStatus": "Update status pesanan real-time",
+        "shippingNotifications": "Notifikasi pengiriman & penerimaan",
+        "historyTracking": "Riwayat & pelacakan pesanan",
+        "importantComms": "Informasi penting terkait pesanan"
+      },
+      "cta": "Siap mulai belanja? Jelajahi produk kami dan buat pesanan pertama Anda."
+    }
+  }
+  ,
+  "tabsNotifications": {
+    "errors": {
+      "loadFailed": "Gagal memuat notifikasi. Tarik untuk memuat ulang atau coba lagi nanti.",
+      "latestUpdatesFailed": "Tidak dapat memuat update terbaru."
+    },
+    "orderUpdates": {
+      "title": "Update pesanan",
+      "viewAll": "Lihat semua",
+      "empty": "Belum ada pesanan"
+    },
+    "latestUpdates": {
+      "title": "Update terbaru",
+      "readAll": "Tandai semua dibaca",
+      "loading": "Memuat update…",
+      "empty": "Belum ada update",
+      "emptyCategory": "Belum ada update di kategori ini."
+    },
+    "tabs": {
+      "all": "Semua",
+      "update": "Update",
+      "promotion": "Promo",
+      "maintenance": "Perawatan",
+      "policy": "Kebijakan"
+    }
+  }
+  ,
+  "tabsAccount": {
+    "loginPrompt": {
+      "title": "Buat akun untuk dapat manfaat pesanan pertama!",
+      "login": "Masuk",
+      "signup": "Daftar"
+    },
+    "sections": {
+      "myPurchases": "Pembelian Saya",
+      "myNetworks": "Jaringan Saya",
+      "myWallet": "Dompet Saya",
+      "moreServices": "Layanan Lainnya"
+    },
+    "purchaseStatus": {
+      "toPay": "Belum bayar",
+      "toShip": "Dikemas",
+      "toReceive": "Dalam pengiriman",
+      "toRate": "Beri penilaian"
+    },
+    "actions": {
+      "viewPurchaseHistory": "Lihat riwayat pembelian",
+      "viewAllNetworks": "Lihat semua jaringan",
+      "viewAllFollowings": "Lihat semua yang diikuti",
+      "manageWallet": "Kelola dompet"
+    },
+    "networks": {
+      "noNetworksYet": "Belum ada jaringan",
+      "distributor": "Distributor",
+      "ordersCount": "{{count}} pesanan"
+    },
+    "wallet": {
+      "bonuses": "Bonus",
+      "discounts": "Diskon",
+      "lakupay": "LakuPay"
+    },
+    "services": {
+      "favourites": "Favorit",
+      "recentlyViewed": "Terakhir Dilihat",
+      "buyAgain": "Beli Lagi",
+      "getVouchers": "Ambil Voucher"
+    }
+  }
+  ,
+  "search": {
+    "placeholder": "Cari produk…",
+    "all": "Semua",
+    "sort": {
+      "relevance": "Relevansi",
+      "latest": "Terbaru",
+      "topSales": "Terlaris",
+      "price": "Harga"
+    },
+    "chips": {
+      "shippingOption": "Opsi pengiriman",
+      "salesChannel": "Jenis penjualan",
+      "rating": "Rating",
+      "priceRange": "Rentang harga",
+      "category": "Kategori",
+      "optionCount": "{{count}} opsi"
+    },
+    "salesChannel": {
+      "retail": "Ritel",
+      "wholesale": "Grosir"
+    },
+    "shippingOption": {
+      "selfPickup": "Ambil sendiri",
+      "sellerDelivery": "Antar ke alamat",
+      "buyerCourier": "Kurir dari pembeli"
+    },
+    "filterSheet": {
+      "showMore": "Tampilkan lebih banyak",
+      "showLess": "Tampilkan lebih sedikit",
+      "sections": {
+        "shippedFrom": "Dikirim dari",
+        "shippingOption": "Opsi pengiriman",
+        "salesChannel": "Jenis penjualan",
+        "rating": "Rating toko",
+        "price": "Rentang harga",
+        "category": "Kategori"
+      },
+      "price": {
+        "min": "Min",
+        "max": "Max"
+      },
+      "actions": {
+        "reset": "Reset",
+        "apply": "Terapkan"
+      }
+    },
+    "quickFilter": {
+      "price": {
+        "minPlaceholder": "0",
+        "maxPlaceholder": "∞"
+      }
+    },
+    "recentSearches": {
+      "title": "Pencarian terbaru",
+      "clearAll": "Hapus semua"
+    },
+    "suggestions": {
+      "title": "Saran"
+    },
+    "sections": {
+      "popularCategories": "Kategori populer",
+      "topBrands": "Merek teratas",
+      "topDistributors": "Distributor teratas"
+    },
+    "results": {
+      "didYouMeanPrefix": "Maksud Anda ",
+      "didYouMeanSuffix": "?",
+      "emptyTitle": "Tidak ada hasil",
+      "emptySubtitle": "Coba ubah kata kunci atau filter"
+    }
+  }
+  ,
+  "product": {
+    "labels": {
+      "discount": "Diskon",
+      "promotion": "Promo",
+      "allOffers": "Semua promo",
+      "notProvided": "Belum tersedia",
+      "unknownProduct": "Produk tidak diketahui",
+      "unknownCompany": "Perusahaan tidak diketahui",
+      "unknown": "Tidak diketahui",
+      "general": "Umum",
+      "noDescription": "Belum ada deskripsi"
+    },
+    "promo": {
+      "buyXGetY": "Beli {{buy}} Gratis {{free}}"
+    },
+    "sections": {
+      "description": "Deskripsi",
+      "customerReviews": "Ulasan pelanggan",
+      "productAssurance": "Jaminan produk"
+    },
+    "stock": {
+      "inStock": "Tersedia",
+      "lowStock": "Stok menipis",
+      "outOfStock": "Stok habis"
+    },
+    "reviews": {
+      "review": "ulasan",
+      "reviews": "ulasan"
+    },
+    "states": {
+      "loadingReviews": "Memuat ulasan…",
+      "noReviewsYet": "Belum ada ulasan"
+    },
+    "badges": {
+      "preferred": "Pilihan",
+      "bestSeller": "Terlaris",
+      "officialStore": "TOKO RESMI"
+    },
+    "shipping": {
+      "costNote": "Biaya pengiriman disepakati antara pembeli dan penjual",
+      "days": "{{count}} hari",
+      "daysRange": "{{min}}-{{max}} hari",
+      "daysPlus": "{{min}}+ hari"
+    },
+    "stockLabel": "Status stok:",
+    "soldLabel": "{{count}} terjual",
+    "sellerInformation": "Informasi penjual",
+    "sellerRating": "{{rating}} ({{count}}+ rating)",
+    "youMayAlsoLike": "Mungkin Anda suka",
+    "assurance": {
+      "halalCertified": "Bersertifikat Halal",
+      "bpomApproved": "Disetujui BPOM",
+      "returnDays": "Retur {{count}} hari",
+      "originalProduct": "Produk original"
+    },
+    "actions": {
+      "chatNow": "Chat sekarang",
+      "addToCart": "Keranjang",
+      "buyNow": "Beli sekarang"
+    },
+    "details": {
+      "brand": "Merek:",
+      "type": "Tipe:",
+      "category": "Kategori:",
+      "title": "Detail produk"
+    },
+    "a11y": {
+      "openDistributorProducts": "Buka produk distributor"
+    },
+    "moreInCategory": "Produk lain di {{category}}",
+    "relativeTime": {
+      "today": "Hari ini",
+      "yesterday": "Kemarin",
+      "daysAgo": "{{count}} hari lalu",
+      "weekAgo": "1 minggu lalu",
+      "weeksAgo": "{{count}} minggu lalu",
+      "recently": "Baru-baru ini"
+    }
+  },
+  "cart": {
+    "title": "Keranjang",
+    "empty": {
+      "title": "Oops, keranjang Anda masih kosong",
+      "subtitle": "Yuk, cari promo menarik sekarang!"
+    },
+    "selectAll": "Semua",
+    "saved": "Hemat {{amount}}",
+    "loginPrompt": {
+      "title": "Buat akun untuk dapat manfaat pesanan pertama!",
+      "login": "Masuk",
+      "signup": "Daftar"
+    },
+    "alerts": {
+      "moqTitle": "Minimal pembelian belum terpenuhi",
+      "moqBody": "Beberapa item di keranjang belum memenuhi minimal pembelian:\n\n{{items}}\n\nSilakan tambah jumlah untuk melanjutkan.",
+      "moqItem": "• {{name}}: minimal {{moq}} pcs (Anda punya {{have}})",
+      "ok": "OK"
+    },
+    "checkout": {
+      "moqNotMet": "Minimal pembelian belum terpenuhi",
+      "cta": "Checkout ({{count}})"
+    }
+  },
+  "buyNow": {
+    "labels": {
+      "noImage": "Tidak ada gambar",
+      "stock": "Stok",
+      "quantity": "Jumlah",
+      "freeItems": "+ {{count}} bonus item",
+      "minimumOrder": "Minimal pembelian: {{count}} pcs",
+      "total": "Total"
+    },
+    "cta": {
+      "buyNow": "Beli sekarang",
+      "addToCart": "Tambah ke keranjang"
+    }
+  }
+  ,
+  "buyerNetworks": {
+    "distributorInformation": {
+      "title": "Toko Distributor",
+      "a11y": {
+        "back": "Kembali",
+        "moreOptions": "Opsi lainnya",
+        "chooseCategory": "Pilih filter kategori",
+        "closeCategoryPicker": "Tutup pemilih kategori",
+        "closeMenu": "Tutup menu"
+      },
+      "fallbackDistributor": "Distributor",
+      "followers": "{{count}} pengikut",
+      "follow": {
+        "follow": "+ Ikuti",
+        "following": "Mengikuti",
+        "followA11y": "Ikuti distributor",
+        "unfollowA11y": "Berhenti mengikuti distributor"
+      },
+      "view": {
+        "label": "Lihat",
+        "a11y": "Lihat informasi penjual"
+      },
+      "sort": {
+        "popular": "Populer",
+        "latest": "Terbaru",
+        "topSales": "Terlaris",
+        "price": "Harga"
+      },
+      "category": {
+        "label": "Kategori",
+        "sheetTitle": "Kategori",
+        "all": "Semua"
+      },
+      "errors": {
+        "invalidDistributor": "Distributor tidak valid",
+        "loadProductsFailed": "Gagal memuat produk",
+        "unableToLoadUpdates": "Tidak dapat memuat update",
+        "retry": "Coba lagi"
+      },
+      "empty": {
+        "noProducts": "Tidak ada produk."
+      },
+      "share": {
+        "message": "Lihat {{name}} di Laku Marketplace.",
+        "title": "Bagikan",
+        "failed": "Tidak dapat membuka dialog berbagi saat ini."
+      },
+      "help": {
+        "title": "Butuh bantuan?",
+        "body": "Silakan hubungi dukungan Laku melalui Pusat Bantuan."
+      },
+      "menu": {
+        "share": "Bagikan",
+        "reportDistributor": "Laporkan distributor",
+        "needHelp": "Butuh bantuan"
+      }
+    }
+    ,
+    "sellerInformation": {
+      "a11y": {
+        "back": "Kembali"
+      },
+      "title": "Informasi Penjual",
+      "errors": {
+        "invalidSeller": "Penjual tidak valid",
+        "failedToLoad": "Gagal memuat informasi penjual"
+      },
+      "states": {
+        "loading": "Memuat…",
+        "sellerNotFound": "Penjual tidak ditemukan",
+        "sellerMayNotExist": "Penjual ini mungkin tidak tersedia."
+      },
+      "labels": {
+        "recently": "Baru-baru ini",
+        "companyInformation": "Informasi Perusahaan",
+        "companyName": "Nama Perusahaan *",
+        "businessRegistrationNumber": "Nomor Induk Berusaha",
+        "industry": "Industri",
+        "businessDescription": "Deskripsi usaha",
+        "shippingDeliveryPreferences": "Preferensi Pengiriman & Pengantaran",
+        "shippingOptions": "Opsi pengiriman",
+        "pickupAddress": "Alamat pickup",
+        "preferredDeliveryTimeSlots": "Preferensi waktu pengantaran",
+        "preferredDeliveryDays": "Preferensi hari pengantaran",
+        "reviewsRating": "Ulasan & Rating",
+        "review": "ulasan",
+        "reviews": "ulasan",
+        "wouldOrderAgain": "Akan pesan lagi",
+        "noReviewsYet": "Belum ada ulasan"
+      },
+      "shippingOptions": {
+        "selfPickup": "Ambil sendiri (pembeli mengambil)",
+        "sellerDelivery": "Antar dari penjual / distributor",
+        "buyerCourier": "Kurir diatur pembeli"
+      },
+      "deliveryTimeSlots": {
+        "morning": "Pagi (08.00 - 12.00)",
+        "afternoon": "Siang (12.00 - 17.00)",
+        "evening": "Sore/Malam (17.00 - 20.00)",
+        "flexible": "Fleksibel"
+      },
+      "days": {
+        "monday": "Senin",
+        "tuesday": "Selasa",
+        "wednesday": "Rabu",
+        "thursday": "Kamis",
+        "friday": "Jumat",
+        "saturday": "Sabtu",
+        "sunday": "Minggu"
+      }
+    }
+  }
+  ,
+  "productReview": {
+    "a11y": {
+      "back": "Kembali",
+      "goBack": "Kembali",
+      "removePhoto": "Hapus foto",
+      "addPhotos": "Tambah foto"
+    },
+    "titles": {
+      "rateOrder": "Beri rating pesanan",
+      "rateOrderLower": "Beri rating pesanan",
+      "rateProduct": "Beri rating produk"
+    },
+    "empty": {
+      "noProducts": "Tidak ada produk untuk diulas."
+    },
+    "order": {
+      "label": "Pesanan",
+      "productXofY": "Produk {{index}} dari {{total}}"
+    },
+    "sections": {
+      "productLikeTitle": "Bagaimana penilaian Anda untuk produk ini?",
+      "productLikeSubtitle": "Ketuk untuk memberi rating kualitas dan pengalaman keseluruhan.",
+      "reviewTitleLabel": "Judul ulasan (opsional)",
+      "reviewTitlePlaceholder": "mis. Kualitas bagus dan pengiriman cepat",
+      "detailedTitle": "Tulis ulasan produk secara detail",
+      "detailedSubtitle": "Ceritakan apa yang Anda suka, apa yang bisa diperbaiki, dan apakah Anda merekomendasikannya.",
+      "detailedPlaceholder": "Tulis ulasan Anda di sini…",
+      "photosLabel": "Foto ulasan (opsional, maks {{max}})",
+      "photosSubtitle": "Tambahkan foto produk yang jelas. Anda bisa memilih beberapa sekaligus.",
+      "deliveryTitle": "Bagaimana pengalaman pengiriman?",
+      "deliverySubtitle": "Beri rating pengiriman, waktu sampai, dan kondisi paket.",
+      "deliveryFeedbackTitle": "Masukan pengiriman (opsional)",
+      "deliveryFeedbackPlaceholder": "Tulis tentang pengiriman di sini…"
+    },
+    "photos": {
+      "addPhotos": "Tambah foto",
+      "addMore": "Tambah lagi"
+    },
+    "alerts": {
+      "pleaseWaitTitle": "Mohon tunggu",
+      "pleaseWaitBody": "Foto masih diunggah. Anda bisa mengirim ulasan setelah unggahan selesai.",
+      "ratingRequiredTitle": "Rating wajib diisi",
+      "ratingRequiredAllProducts": "Mohon beri rating untuk setiap produk sebelum mengirim.",
+      "ratingRequiredSingle": "Mohon pilih rating produk sebelum mengirim.",
+      "errorTitle": "Error",
+      "missingOrder": "Informasi pesanan tidak ada. Tidak bisa mengirim ulasan.",
+      "signInRequiredTitle": "Perlu masuk",
+      "signInRequiredBody": "Silakan masuk untuk mengirim ulasan.",
+      "thankYouTitle": "Terima kasih",
+      "submittedBody": "Ulasan Anda berhasil dikirim.",
+      "failedGeneric": "Gagal mengirim ulasan. Silakan coba lagi.",
+      "ok": "OK",
+      "uploadFailedTitle": "Unggah gagal",
+      "uploadFailedBody": "Tidak dapat menambahkan foto."
+    },
+    "submit": {
+      "submit": "Kirim ulasan",
+      "submitting": "Mengirim…",
+      "submitA11y": "Kirim ulasan",
+      "submittingA11y": "Sedang mengirim ulasan"
+    }
+  }
+  ,
+  "support": {
+    "helpCenter": {
+      "title": "Pusat Bantuan",
+      "faqTitle": "Pertanyaan yang Sering Ditanyakan",
+      "done": "Selesai",
+      "faqs": {
+        "verifyPhone": {
+          "q": "Bagaimana cara memverifikasi nomor HP?",
+          "a": "Pilih WhatsApp atau SMS saat daftar, pilih kode negara, masukkan nomor Anda, lalu ketuk \"Kirim kode\". Masukkan kode verifikasi untuk menyelesaikan."
+        },
+        "googleLogin": {
+          "q": "Saya tidak bisa masuk dengan Google",
+          "a": "Di web, Anda bisa memilih akun yang berbeda setiap kali. Jika masih melihat sesi lama, keluar terlebih dulu lalu coba lagi."
+        },
+        "whereIsMyOrder": {
+          "q": "Di mana pesanan saya?",
+          "a": "Buka Akun → Pembelian Saya untuk melihat status: Menunggu bayar, Dikemas, Dalam pengiriman, Selesai, Retur/Refund, atau Dibatalkan."
+        },
+        "walletRefunds": {
+          "q": "Dompet dan refund",
+          "a": "Refund dikembalikan ke metode pembayaran awal atau LakuPay tergantung channel dan kelayakan."
+        },
+        "contactSupport": {
+          "q": "Hubungi dukungan",
+          "a": "Untuk masalah yang belum terselesaikan, hubungi kami via support@laku.com. Sertakan ID pesanan dan deskripsi singkat."
+        }
+      }
+    },
+    "returnRefundInfo": {
+      "title": "Info Retur & Refund",
+      "cards": {
+        "basicsTitle": "Dasar retur & refund",
+        "basicsBody": "Anda dapat mengajukan retur untuk item yang memenuhi syarat dan mendapatkan refund setelah pengajuan disetujui dan, bila diperlukan, item diterima kembali dalam kondisi baik.",
+        "policyTitle": "Kebijakan berasal dari data produk",
+        "policyBody1": "Setiap produk memiliki kebijakan retur tersendiri yang tersimpan di data produk. Kebijakan ini menentukan apakah produk dapat diretur, berapa hari setelah diterima Anda bisa mengajukan retur, serta syarat khusus lainnya.",
+        "policyBody2": "Laku akan mengecek setiap pengajuan retur/refund terhadap kebijakan ini. Item yang berbeda dalam satu pesanan bisa memiliki kelayakan dan nominal refund yang berbeda.",
+        "policyStrong": "Persetujuan dan nominal refund selalu bergantung pada hari retur dan aturan yang tersimpan di masing-masing produk, bukan hanya pada status pesanan.",
+        "quickFlowTitle": "Alur singkat",
+        "steps": {
+          "1": "Cek kebijakan retur produk dan batas waktunya sebelum membeli.",
+          "2": "Retur dan refund hanya tersedia setelah produk dikirim dan diterima.",
+          "3": "Mulai pengajuan retur/refund dari detail pesanan.",
+          "4": "Ikuti instruksi untuk mengirim kembali item dengan bukti yang kuat.",
+          "5": "Tunggu proses review dan refund ke metode pembayaran atau dompet Anda."
+        }
+      }
+    },
+    "orderHelpCenter": {
+      "title": "Pusat Bantuan Pesanan",
+      "overviewTitle": "Ringkasan bantuan pesanan",
+      "overviewBody": "Halaman ini memberi panduan singkat untuk melacak pesanan dan siapa yang harus dihubungi. Aksi seperti batal, beri rating, atau ajukan retur/refund dilakukan di halaman detail pesanan.",
+      "orderId": "ID Pesanan",
+      "sections": {
+        "deliveryStatusTitle": "Lihat status pengiriman",
+        "deliveryStatusBody": "Buka halaman detail pesanan untuk melihat status terbaru, partner pengiriman, nomor resi, dan catatan pengiriman.",
+        "statusBasicsTitle": "Dasar status pesanan",
+        "statusBasicsNote": "Beberapa opsi (seperti beri rating atau ajukan retur/refund) hanya muncul setelah status tertentu untuk perlindungan pembeli dan penjual.",
+        "contactSellerTitle": "Hubungi penjual",
+        "contactSellerBody": "Gunakan \"Hubungi penjual\" dari detail pesanan jika pengiriman terlihat terlambat, detail produk tidak jelas, atau paket yang diterima tidak sesuai.",
+        "contactSupportTitle": "Hubungi dukungan Laku",
+        "contactSupportBody": "Hubungi dukungan Laku melalui Pusat Bantuan jika Anda tidak bisa menghubungi penjual, ada masalah pembayaran/refund, status macet terlalu lama, atau Anda mencurigai penipuan/penyalahgunaan kebijakan."
+      },
+      "statusBullets": {
+        "pendingConfirmedDesc": "penjual sedang menyiapkan pesanan",
+        "packedShippedDesc": "paket sedang dibawa partner logistik",
+        "deliveredDesc": "paket sampai di alamat tujuan",
+        "receivedDesc": "Anda mengonfirmasi pesanan diterima dengan baik"
+      }
+    }
+  }
+  ,
+  "ordersFlow": {
+    "common": {
+      "a11y": {
+        "goBack": "Kembali"
+      },
+      "buttons": {
+        "ok": "OK",
+        "cancel": "Batal",
+        "done": "Selesai"
+      },
+      "errors": {
+        "errorTitle": "Error",
+        "sessionExpiredTitle": "Sesi berakhir",
+        "sessionExpiredBody": "Silakan masuk lagi."
+      }
+    },
+    "cancel": {
+      "title": "Batalkan Pesanan",
+      "reasonsTitle": "Pilih alasan pembatalan",
+      "customReasonLabel": "Alasan lainnya",
+      "customReasonPlaceholder": "Tulis alasan Anda…",
+      "submit": "Batalkan pesanan",
+      "submitting": "Membatalkan…",
+      "alerts": {
+        "selectReasonTitle": "Pilih alasan",
+        "selectReasonBody": "Silakan pilih alasan pembatalan.",
+        "provideReasonTitle": "Isi alasan",
+        "provideReasonBody": "Silakan isi alasan pembatalan Anda.",
+        "confirmTitle": "Konfirmasi pembatalan",
+        "confirmBody": "Anda yakin ingin membatalkan pesanan ini? Tindakan ini tidak bisa dibatalkan.",
+        "no": "Tidak",
+        "yesCancel": "Ya, batalkan pesanan",
+        "successTitle": "Pesanan dibatalkan",
+        "successBody": "Pesanan Anda berhasil dibatalkan.",
+        "failedBody": "Gagal membatalkan pesanan. Silakan coba lagi."
+      },
+      "reasons": {
+        "changed_mind": {
+          "label": "Berubah pikiran",
+          "description": "Saya sudah tidak ingin item ini"
+        },
+        "found_cheaper": {
+          "label": "Menemukan harga lebih murah",
+          "description": "Saya menemukan item yang sama lebih murah di tempat lain"
+        },
+        "wrong_item": {
+          "label": "Salah pesan barang",
+          "description": "Saya salah memilih produk saat memesan"
+        },
+        "delivery_issues": {
+          "label": "Kendala pengiriman",
+          "description": "Khawatir soal waktu atau lokasi pengiriman"
+        },
+        "payment_issues": {
+          "label": "Masalah pembayaran",
+          "description": "Mengalami kendala pada metode pembayaran"
+        },
+        "seller_issues": {
+          "label": "Kendala penjual",
+          "description": "Ada masalah dengan penjual atau toko"
+        },
+        "other": {
+          "label": "Alasan lainnya",
+          "description": "Silakan jelaskan alasan Anda di bawah"
+        }
+      }
+    },
+    "returnRefund": {
+      "title": "Retur / Refund",
+      "warning": "Pilih alasan retur atau refund Anda. Refund biasanya diproses dalam 5–7 hari kerja setelah kami menerima dan memeriksa item.",
+      "orderId": "ID Pesanan",
+      "whyTitle": "Mengapa Anda ingin retur atau refund?",
+      "detailsLabel": "Detail (opsional)",
+      "detailsPlaceholder": "Tulis detailnya…",
+      "photosLabel": "Foto bukti (opsional, maks {{max}})",
+      "photosHint": "Disarankan untuk alasan rusak, cacat, tidak sesuai deskripsi, atau alasan lainnya.",
+      "addPhotos": "Tambah foto",
+      "addMore": "Tambah lagi",
+      "policyText": "Kami akan meninjau pengajuan Anda dan dapat mengirim email berisi instruksi retur atau langkah berikutnya. Refund dikirim ke metode pembayaran awal Anda.",
+      "submit": "Kirim pengajuan",
+      "submitting": "Mengirim…",
+      "a11y": {
+        "removePhoto": "Hapus foto",
+        "addPhotos": "Tambah foto"
+      },
+      "alerts": {
+        "pleaseWaitTitle": "Mohon tunggu",
+        "pleaseWaitBody": "Kami masih mengunggah foto Anda. Anda bisa mengirim setelah selesai.",
+        "selectReasonTitle": "Pilih alasan",
+        "selectReasonBody": "Silakan pilih alasan retur atau refund.",
+        "provideDetailsTitle": "Isi detail",
+        "provideDetailsBody": "Silakan isi detail alasan Anda.",
+        "missingOrderIdBody": "ID pesanan tidak ada.",
+        "uploadFailedTitle": "Unggah gagal",
+        "uploadFailedBody": "Tidak dapat mengunggah foto. Silakan coba lagi.",
+        "submittedTitle": "Pengajuan terkirim",
+        "submittedBody": "Pengajuan retur/refund Anda sudah terkirim. Kami akan memprosesnya dan menghubungi Anda bila diperlukan.",
+        "failedBody": "Gagal mengirim pengajuan. Silakan coba lagi."
+      },
+      "reasons": {
+        "wrong_item": {
+          "label": "Barang yang diterima tidak sesuai",
+          "description": "Saya menerima produk yang berbeda dari yang dipesan"
+        },
+        "defective": {
+          "label": "Cacat atau rusak",
+          "description": "Barang datang dalam kondisi rusak atau tidak berfungsi"
+        },
+        "not_as_described": {
+          "label": "Tidak sesuai deskripsi",
+          "description": "Produk tidak sesuai dengan informasi di listing"
+        },
+        "changed_mind": {
+          "label": "Berubah pikiran",
+          "description": "Saya sudah tidak ingin item ini"
+        },
+        "late_delivery": {
+          "label": "Pengiriman terlambat",
+          "description": "Pengiriman terlambat cukup lama"
+        },
+        "other": {
+          "label": "Alasan lainnya",
+          "description": "Silakan jelaskan di bawah"
+        }
+      }
+    }
+    ,
+    "payOrder": {
+      "title": "Bayar Pesanan",
+      "loading": "Memuat detail pembayaran…",
+      "alerts": {
+        "paymentSentTitle": "Pembayaran terkirim",
+        "paymentSentBody": "Kami sudah memberi tahu distributor. Silakan selesaikan transfer manual menggunakan detail bank di atas.",
+        "failedTitle": "Gagal",
+        "failedBody": "Tidak bisa mengirim notifikasi pembayaran. Silakan coba lagi.",
+        "unavailableTitle": "Tidak tersedia",
+        "unavailableBody": "Detail distributor tidak tersedia untuk pesanan ini."
+      },
+      "buttons": {
+        "viewDistributorDetails": "Lihat detail distributor",
+        "view": "Lihat",
+        "pay": "Bayar",
+        "sending": "Mengirim…",
+        "back": "Kembali"
+      },
+      "sections": {
+        "distributorInfoTitle": "Informasi distributor",
+        "paymentTitle": "Pembayaran",
+        "codTitle": "Cash on Delivery (COD)",
+        "codBody": "Pesanan COD dibayar langsung ke distributor, baik melalui tunai, transfer via aplikasi bank digital, atau metode lain. Penerima pembayaran akan mengonfirmasi pembayaran Anda dan memperbarui status pembayaran setelah diterima.",
+        "bankTransferTitle": "Rekening bank (transfer manual)"
+      },
+      "labels": {
+        "company": "Perusahaan",
+        "description": "Deskripsi",
+        "address": "Alamat",
+        "method": "Metode",
+        "bank": "Bank",
+        "accountName": "Nama rekening",
+        "accountNumber": "Nomor rekening"
+      },
+      "hints": {
+        "bankPrivacy": "Bagikan info ini hanya saat pembayaran. Info ini disembunyikan dari halaman distributor publik dan checkout."
+      }
+    }
+    ,
+    "deliveryInfo": {
+      "title": "Informasi Pengiriman",
+      "loading": "Memuat…",
+      "notFound": "Pesanan tidak ditemukan",
+      "progress": {
+        "deliveredOn": "Terkirim pada {{date}}",
+        "deliveryProgress": "Progres pengiriman",
+        "steps": {
+          "placed": "Dibuat",
+          "shipped": "Dikirim",
+          "outForDelivery": "Dalam pengantaran",
+          "delivered": "Terkirim"
+        }
+      },
+      "timeline": {
+        "title": "Timeline pengiriman",
+        "viewPod": "Lihat bukti pengiriman",
+        "statuses": {
+          "placed": "Pesanan dibuat",
+          "preparing": "Penjual sedang menyiapkan pengiriman paket Anda",
+          "pickedUp": "Paket Anda sudah dijemput partner logistik",
+          "sorting": "Paket Anda sudah sampai di pusat sortir",
+          "outForDelivery": "[{{logistics}}] Paket Anda sedang diantar",
+          "delivered": "Paket Anda sudah terkirim"
+        }
+      },
+      "details": {
+        "preferredDeliveryTime": "Waktu pengiriman pilihan",
+        "notSpecified": "Belum ditentukan",
+        "assignedLogistics": "Logistik yang ditugaskan",
+        "notAssigned": "Belum ditugaskan",
+        "trackingNumber": "Nomor resi",
+        "notAvailable": "Tidak tersedia",
+        "deliveryNote": "Catatan pengiriman",
+        "noInstructions": "Tidak ada instruksi khusus"
+      },
+      "summary": {
+        "orderId": "ID Pesanan",
+        "na": "N/A",
+        "deliveryMethod": "Metode pengiriman",
+        "returnRefundStatus": "Status retur/refund",
+        "pendingReview": "Menunggu ditinjau"
+      }
+    }
+    ,
+    "orderDetails": {
+      "title": "Detail Pesanan",
+      "loading": "Memuat detail pesanan…",
+      "notFound": "Pesanan tidak ditemukan",
+      "alerts": {
+        "successTitle": "Berhasil",
+        "receivedBody": "Pesanan berhasil ditandai sebagai diterima!",
+        "updateFailedBody": "Gagal memperbarui status pesanan",
+        "copiedTitle": "Tersalin",
+        "copiedBody": "ID pesanan disalin ke clipboard",
+        "unavailableTitle": "Tidak tersedia",
+        "unavailableDistributorBody": "Detail distributor tidak tersedia untuk pesanan ini.",
+        "contactSupportTitle": "Hubungi dukungan",
+        "contactSupportBody": "Fitur dukungan akan segera hadir!"
+      },
+      "sections": {
+        "distributorInfo": "Informasi distributor",
+        "supportCenter": "Pusat Bantuan"
+      },
+      "support": {
+        "returnRefundInfo": "Info Retur/Refund",
+        "requestReturnRefund": "Ajukan Retur/Refund",
+        "contactSeller": "Hubungi penjual",
+        "helpCenter": "Pusat bantuan",
+        "returnRefundStatusLabel": "Status retur/refund",
+        "pendingReview": "Menunggu ditinjau"
+      },
+      "distributor": {
+        "view": "Lihat",
+        "viewDistributorDetailsA11y": "Lihat detail distributor",
+        "labels": {
+          "company": "Perusahaan",
+          "name": "Nama",
+          "industry": "Industri",
+          "contact": "Kontak",
+          "phone": "Telepon",
+          "email": "Email",
+          "address": "Alamat"
+        }
+      },
+      "info": {
+        "orderId": "ID Pesanan",
+        "paidBy": "Dibayar dengan",
+        "invoice": "Faktur",
+        "viewInvoiceA11y": "Lihat faktur",
+        "viewDownload": "Lihat & unduh",
+        "orderTime": "Waktu pesanan",
+        "paymentTime": "Waktu pembayaran",
+        "shipTime": "Waktu pengiriman",
+        "completedTime": "Waktu selesai"
+      },
+      "actions": {
+        "cancelOrder": "Batalkan pesanan",
+        "payOrder": "Bayar pesanan",
+        "returnRefund": "Retur/Refund",
+        "contactSupport": "Hubungi dukungan",
+        "orderReceived": "Pesanan diterima"
+      },
+      "statusText": {
+        "delivered": "Pesanan Anda sudah terkirim",
+        "received": "Pesanan Anda selesai",
+        "shipped": "Pesanan Anda sedang dikirim",
+        "confirmed": "Pesanan Anda sudah dikonfirmasi",
+        "packed": "Pesanan Anda sudah dikemas",
+        "cancelled": "Pesanan Anda dibatalkan",
+        "returned": "Pesanan Anda diretur",
+        "failed": "Pengiriman gagal",
+        "pending": "Pesanan Anda menunggu diproses",
+        "processing": "Pesanan Anda sedang diproses"
+      },
+      "statusDescriptions": {
+        "delivered": "Paket Anda telah dikirim",
+        "received": "Pesanan Anda selesai dan diterima",
+        "shipped": "Paket Anda sedang dalam perjalanan",
+        "confirmed": "Pesanan Anda sedang disiapkan untuk pengiriman",
+        "packed": "Pesanan Anda sudah dikemas dan siap dikirim",
+        "cancelled": "Pesanan Anda telah dibatalkan",
+        "returned": "Pesanan Anda sedang diproses untuk retur",
+        "failed": "Pengiriman tidak dapat diselesaikan",
+        "processing": "Pesanan Anda sedang diproses"
+      },
+      "returnRequest": {
+        "pending": "Anda telah mengajukan retur. Mohon tunggu konfirmasi dari distributor.",
+        "accepted": "Pengajuan retur Anda diterima. Kami sedang memproses retur/refund Anda.",
+        "rejected": "Pengajuan retur Anda ditolak. Jika butuh bantuan, silakan hubungi dukungan."
+      },
+      "shippingSchedule": {
+        "pickupScheduled": "Pengambilan terjadwal: {{dateTime}}",
+        "courierPickup": "Penjemputan kurir: {{dateTime}}",
+        "deliveryScheduled": "Pengiriman terjadwal: {{dateTime}}",
+        "noPickupDate": "Tidak ada tanggal pengambilan yang ditetapkan",
+        "noSpecificBuyer": "Tidak ada tanggal khusus, dikelola pembeli",
+        "noSpecificDistributor": "Tidak ada tanggal khusus, distributor mengatur jadwal",
+        "noSpecific": "Tidak ada tanggal khusus yang ditetapkan"
+      },
+      "totals": {
+        "orderTotal": "Total pesanan: {{amount}}"
+      },
+      "payment": {
+        "methodNotSpecified": "Metode belum ditentukan"
+      },
+      "orderIdInfo": {
+        "title": "Informasi ID Pesanan",
+        "viewMore": "Lihat lebih banyak",
+        "viewLess": "Lihat lebih sedikit"
+      },
+      "product": {
+        "freePieces": "{{count}} pcs gratis"
+      },
+      "fields": {
+        "assignedLogistics": "Logistik yang ditugaskan",
+        "recipient": "Penerima",
+        "phone": "Telepon",
+        "address": "Alamat",
+        "deliveryInstruction": "Instruksi pengiriman"
+      },
+      "sections2": {
+        "productInformation": "Informasi produk",
+        "productTotal": "Total produk",
+        "shipping": "Pengiriman"
+      },
+      "misc": {
+        "costAgreedSeparately": "Biaya disepakati terpisah"
+      }
+    }
+    ,
+    "invoice": {
+      "title": "Faktur",
+      "closeA11y": "Tutup",
+      "tools": {
+        "pdfA11y": "Unduh PDF",
+        "imageA11y": "Simpan sebagai gambar",
+        "pdf": "PDF",
+        "image": "Gambar",
+        "share": "Bagikan",
+        "more": "Lainnya"
+      },
+      "raster": {
+        "subtitle": "Faktur pajak / Kwitansi",
+        "orderId": "ID Pesanan",
+        "date": "Tanggal",
+        "status": "Status",
+        "payment": "Pembayaran",
+        "billTo": "Tagihkan ke",
+        "shipTo": "Kirim ke",
+        "subtotal": "Subtotal",
+        "discounts": "Diskon",
+        "shipping": "Pengiriman",
+        "total": "Total"
+      },
+      "alerts": {
+        "savedTitle": "Tersimpan",
+        "savedPdfBody": "PDF faktur disimpan ke folder yang Anda pilih.",
+        "savedImageBody": "Gambar faktur disimpan ke folder yang Anda pilih.",
+        "saveUnavailableTitle": "Tidak bisa menyimpan",
+        "saveUnavailableBody": "Tidak dapat membuka penyimpan file sistem di perangkat ini.",
+        "pdfTitle": "PDF",
+        "pdfFailedBody": "Tidak bisa membuat PDF",
+        "imageTitle": "Gambar",
+        "imageFailedBody": "Tidak bisa mengekspor gambar",
+        "printTitle": "Cetak",
+        "printFailedBody": "Cetak gagal",
+        "moreOptionsTitle": "Opsi lainnya",
+        "shareTextSummary": "Bagikan ringkasan teks",
+        "print": "Cetak"
+      },
+      "share": {
+        "title": "Faktur {{orderId}}"
+      }
+    }
+    ,
+    "checkout": {
+      "title": "Checkout",
+      "defaults": {
+        "product": "Produk",
+        "box": "Dus",
+        "unknown": "Tidak diketahui"
+      },
+      "alerts": {
+        "orderConfirmationTitle": "Konfirmasi pesanan",
+        "orderConfirmationBody": "Pastikan alamat, pengiriman, dan pembayaran sudah benar sebelum membuat pesanan.",
+        "orderConfirmationAmount": "Anda yakin ingin membuat pesanan ini sebesar {{amount}}?",
+        "cancel": "Batal",
+        "placeOrder": "Buat pesanan",
+        "errorTitle": "Error",
+        "placeOrderFailed": "Gagal membuat pesanan. Silakan coba lagi.",
+        "genericError": "Terjadi kesalahan. Silakan coba lagi."
+      },
+      "sections": {
+        "payment": "Pembayaran",
+        "deliveryAddress": "Alamat pengiriman"
+      },
+      "payment": {
+        "bankTransfer": "Transfer bank",
+        "bankTransferDesc": "Transfer ke rekening bank distributor yang ditampilkan di bawah",
+        "cod": "Cash on Delivery (COD)",
+        "codShort": "Cash on Delivery",
+        "codDesc": "Bayar distributor saat Anda menerima barang",
+        "codNote": "Anda memilih Cash on Delivery. Atur pembayaran langsung dengan distributor saat Anda menerima barang."
+      },
+      "address": {
+        "defaultAddress": "Alamat utama",
+        "yourName": "Nama Anda",
+        "yourCompany": "Perusahaan Anda",
+        "yourAddress": "Alamat Anda",
+        "yourCity": "Kota Anda",
+        "yourPhone": "Telepon Anda"
+      },
+      "shippingOptions": {
+        "selfPickup": {
+          "name": "Ambil sendiri",
+          "desc": "Koordinasikan pengambilan langsung di lokasi penjual",
+          "eta": "Koordinasi dengan penjual"
+        },
+        "sellerDelivery": {
+          "name": "Pengiriman penjual/distributor",
+          "desc": "Penjual mengatur pengiriman ke alamat Anda",
+          "eta": "Sesuai kesepakatan dengan penjual"
+        },
+        "buyerCourier": {
+          "name": "Kurir diatur pembeli",
+          "desc": "Anda memesan dan mengatur kurir sendiri",
+          "eta": "Sesuai pemesanan kurir Anda"
+        }
+      }
+      ,
+      "businessDays": {
+        "one": "1 hari kerja",
+        "many": "{{count}} hari kerja",
+        "range": "{{min}}-{{max}} hari kerja",
+        "minPlus": "{{min}}+ hari kerja",
+        "upTo": "Maks. {{max}} hari kerja"
+      },
+      "business": {
+        "title": "Informasi bisnis",
+        "andMore": "dan {{count}} lainnya",
+        "industryLabel": "Industri",
+        "contactLabel": "Kontak",
+        "otherDistributors": "Distributor lainnya"
+      },
+      "productsFrom": "Produk dari {{name}}",
+      "edit": "Ubah",
+      "distributorDefaults": {
+        "company": "Perusahaan distributor",
+        "notSpecified": "Belum ditentukan",
+        "notProvided": "Tidak tersedia",
+        "addressNotAvailable": "Alamat tidak tersedia"
+      },
+      "shipping": {
+        "title": "Opsi pengiriman",
+        "costNote": "Biaya pengiriman disepakati antara pembeli dan distributor — tidak ditagihkan saat checkout.",
+        "costNoteShort": "Biaya pengiriman disepakati antara pembeli dan distributor (tidak termasuk di sini).",
+        "tapSchedulePickup": "Ketuk untuk mengatur tanggal & waktu pengambilan",
+        "pickupPrefix": "Pickup",
+        "scheduledPrefix": "Terjadwal",
+        "courierPrefix": "Kurir",
+        "distributorManaged": "Distributor mengatur jadwal",
+        "buyerSelfManaged": "Saya akan mengatur kurir sendiri",
+        "tapSetPreference": "Ketuk untuk mengatur preferensi jadwal"
+      },
+      "orderDetailsShippingTitle": "Detail pesanan & pengiriman",
+      "productSpecs": "{{count}} pcs per {{package}}",
+      "perPiece": "per pcs",
+      "free": "Gratis",
+      "paymentMethodTitle": "Metode pembayaran",
+      "summary": {
+        "title": "Ringkasan pesanan",
+        "subtotal": "Subtotal",
+        "totalPayment": "Total pembayaran",
+        "total": "Total"
+      },
+      "terms": "Dengan membuat pesanan ini, Anda menyetujui Syarat Layanan dan Kebijakan Privasi kami. Ini adalah transaksi B2B yang tunduk pada syarat dan ketentuan bisnis.",
+      "cta": {
+        "placing": "Memproses…",
+        "placeOrder": "Buat pesanan"
+      },
+      "notifications": {
+        "orderPlacedTitle": "Pesanan dibuat",
+        "orderPlacedBodySingle": "Pesanan #{{orderId}} berhasil dibuat dan menunggu konfirmasi.",
+        "orderPlacedBodyMultiple": "{{count}} pesanan Anda berhasil dibuat dan menunggu konfirmasi."
+      },
+      "scheduleModal": {
+        "sellerDeliveryTitle": "Pengiriman penjual",
+        "courierScheduleTitle": "Jadwal kurir",
+        "subtitleStep1": "Bagaimana Anda ingin mengatur jadwal?",
+        "optionBuyerScheduledSeller": "Saya akan menjadwalkan pengiriman",
+        "optionBuyerScheduledCourier": "Jadwalkan penjemputan kurir",
+        "optionBuyerScheduledDetail": "Pilih tanggal & waktu yang Anda inginkan",
+        "optionManagedSeller": "Distributor mengatur jadwal",
+        "optionManagedCourier": "Saya mengatur kurir sendiri",
+        "managedDetailSeller": "Tanpa tanggal khusus, distributor akan menghubungi Anda",
+        "managedDetailCourier": "Tanpa tanggal khusus, Anda akan mengatur sendiri",
+        "cancel": "Batal",
+        "next": "Lanjut",
+        "confirm": "Konfirmasi",
+        "setDeliveryTime": "Atur waktu pengiriman",
+        "setCourierTime": "Atur waktu kurir",
+        "subtitleStep2": "Pilih tanggal dan waktu yang Anda inginkan",
+        "deliveryDate": "Tanggal pengiriman",
+        "courierDate": "Tanggal kurir",
+        "deliveryTime": "Waktu pengiriman",
+        "courierTime": "Waktu kurir",
+        "selectTime": "Pilih waktu"
+      },
+      "pickupModal": {
+        "title": "Jadwalkan pengambilan",
+        "subtitle": "Pilih tanggal dan waktu pengambilan yang Anda inginkan",
+        "locationLabel": "Lokasi pengambilan",
+        "pickupDate": "Tanggal pengambilan",
+        "pickupTime": "Waktu pengambilan",
+        "confirmPickup": "Konfirmasi pengambilan"
+      }
+    }
+  }
+}
+

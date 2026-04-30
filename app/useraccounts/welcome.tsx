@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, Pressable, Image, StyleSheet, ScrollView, Dimensions, type NativeSyntheticEvent, type NativeScrollEvent } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SvgXml } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -12,28 +13,29 @@ interface Slide {
   description: string;
 }
 
-const slides: Slide[] = [
-  {
-    image: require('../../assets/images/teamonlinework.jpg'),
-    title: 'Connect with Distributors',
-    description: 'Browse thousands of products from verified sellers. Chat directly with sellers, negotiate prices, and build lasting business relationships.',
-  },
-  {
-    image: require('../../assets/images/transitwarehouse.jpg'),
-    title: 'Fast & Reliable Delivery',
-    description: 'Get your orders delivered quickly and safely. Our marketplace connects you with sellers who ensure fast shipping and secure packaging.',
-  },
-  {
-    image: require('../../assets/images/marketplace.jpg'),
-    title: 'Trusted Marketplace',
-    description: 'Shop with confidence from our verified sellers. Our marketplace provides secure transactions, quality products, and excellent customer support.',
-  },
-];
-
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const slides: Slide[] = [
+    {
+      image: require('../../assets/images/teamonlinework.jpg'),
+      title: t('auth.welcome.slides.1.title'),
+      description: t('auth.welcome.slides.1.description'),
+    },
+    {
+      image: require('../../assets/images/transitwarehouse.jpg'),
+      title: t('auth.welcome.slides.2.title'),
+      description: t('auth.welcome.slides.2.description'),
+    },
+    {
+      image: require('../../assets/images/marketplace.jpg'),
+      title: t('auth.welcome.slides.3.title'),
+      description: t('auth.welcome.slides.3.description'),
+    },
+  ];
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const slideSize = SCREEN_WIDTH;
@@ -107,14 +109,14 @@ export default function WelcomeScreen() {
             onPress={() => router.push('/useraccounts/loginsignup/loginmodal')}
             style={[styles.button, styles.loginButton]}
           >
-            <Text style={styles.loginButtonText}>Login</Text>
+            <Text style={styles.loginButtonText}>{t('auth.welcome.login')}</Text>
           </Pressable>
           
           <Pressable
             onPress={() => router.push('/useraccounts/loginsignup/signupmodal')}
             style={[styles.button, styles.registerButton]}
           >
-            <Text style={styles.registerButtonText}>Register</Text>
+            <Text style={styles.registerButtonText}>{t('auth.welcome.register')}</Text>
           </Pressable>
         </View>
       </View>

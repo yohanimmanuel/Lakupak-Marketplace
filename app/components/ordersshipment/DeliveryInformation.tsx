@@ -28,6 +28,7 @@ import { useDataStore, MarketplaceOrder } from '../../../stores/dataStore';
 import MapComponent from './MapComponent';
 import { geocodeAddress, GeocodeResult, getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
 import ProductImageModal from '../productcatalog/ProductImageModal';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
@@ -94,6 +95,7 @@ export default function DeliveryInformation() {
   const orders = useDataStore(state => state.orders);
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
+  const { t } = useTranslation();
   const [order, setOrder] = useState<DeliveryOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [geocodeResult, setGeocodeResult] = useState<GeocodeResult | null>(null);
@@ -223,7 +225,7 @@ export default function DeliveryInformation() {
       <View style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Loading...</Text>
+          <Text style={styles.errorText}>{t('ordersFlow.deliveryInfo.loading')}</Text>
         </View>
       </View>
     );
@@ -234,7 +236,7 @@ export default function DeliveryInformation() {
       <View style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Order not found</Text>
+          <Text style={styles.errorText}>{t('ordersFlow.deliveryInfo.notFound')}</Text>
         </View>
       </View>
     );
@@ -247,16 +249,16 @@ export default function DeliveryInformation() {
     // Order placed - always show
     timeline.push({
       id: 'placed',
-      date: new Date(order.createdAt).toLocaleDateString('en-GB', {
+      date: new Date(order.createdAt).toLocaleDateString('id-ID', {
         day: '2-digit',
         month: 'short',
       }),
-      time: new Date(order.createdAt).toLocaleTimeString('en-GB', {
+      time: new Date(order.createdAt).toLocaleTimeString('id-ID', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
       }),
-      status: 'Order is placed',
+      status: t('ordersFlow.deliveryInfo.timeline.statuses.placed'),
       isActive: status === 'pending',
       isPassed: !['pending'].includes(status),
     });
@@ -265,16 +267,16 @@ export default function DeliveryInformation() {
     if (['confirmed', 'packed', 'shipped', 'delivered', 'received'].includes(status)) {
       timeline.push({
         id: 'preparing',
-        date: new Date(order.updatedAt).toLocaleDateString('en-GB', {
+        date: new Date(order.updatedAt).toLocaleDateString('id-ID', {
           day: '2-digit',
           month: 'short',
         }),
-        time: new Date(order.updatedAt).toLocaleTimeString('en-GB', {
+        time: new Date(order.updatedAt).toLocaleTimeString('id-ID', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
         }),
-        status: 'Seller is preparing to ship your parcel',
+        status: t('ordersFlow.deliveryInfo.timeline.statuses.preparing'),
         isActive: status === 'confirmed',
         isPassed: !['pending', 'confirmed'].includes(status),
       });
@@ -284,16 +286,16 @@ export default function DeliveryInformation() {
     if (['packed', 'shipped', 'delivered', 'received'].includes(status)) {
       timeline.push({
         id: 'pickedup',
-        date: new Date(order.updatedAt).toLocaleDateString('en-GB', {
+        date: new Date(order.updatedAt).toLocaleDateString('id-ID', {
           day: '2-digit',
           month: 'short',
         }),
-        time: new Date(order.updatedAt).toLocaleTimeString('en-GB', {
+        time: new Date(order.updatedAt).toLocaleTimeString('id-ID', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
         }),
-        status: 'Your parcel has been picked up by our logistics partner',
+        status: t('ordersFlow.deliveryInfo.timeline.statuses.pickedUp'),
         isActive: status === 'packed',
         isPassed: !['pending', 'confirmed', 'packed'].includes(status),
       });
@@ -303,16 +305,16 @@ export default function DeliveryInformation() {
     if (['shipped', 'delivered', 'received'].includes(status)) {
       timeline.push({
         id: 'sorting',
-        date: new Date(order.updatedAt).toLocaleDateString('en-GB', {
+        date: new Date(order.updatedAt).toLocaleDateString('id-ID', {
           day: '2-digit',
           month: 'short',
         }),
-        time: new Date(order.updatedAt).toLocaleTimeString('en-GB', {
+        time: new Date(order.updatedAt).toLocaleTimeString('id-ID', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
         }),
-        status: 'Your parcel has arrived at sorting facility',
+        status: t('ordersFlow.deliveryInfo.timeline.statuses.sorting'),
         isActive: status === 'shipped',
         isPassed: !['pending', 'confirmed', 'packed', 'shipped'].includes(status),
       });
@@ -322,16 +324,18 @@ export default function DeliveryInformation() {
     if (['shipped', 'delivered', 'received'].includes(status)) {
       timeline.push({
         id: 'outfordelivery',
-        date: new Date(order.updatedAt).toLocaleDateString('en-GB', {
+        date: new Date(order.updatedAt).toLocaleDateString('id-ID', {
           day: '2-digit',
           month: 'short',
         }),
-        time: new Date(order.updatedAt).toLocaleTimeString('en-GB', {
+        time: new Date(order.updatedAt).toLocaleTimeString('id-ID', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
         }),
-        status: `[${order.assignedLogistics || 'Logistics Partner'}] Your parcel is out for delivery`,
+        status: t('ordersFlow.deliveryInfo.timeline.statuses.outForDelivery', {
+          logistics: order.assignedLogistics || 'Logistics Partner',
+        }),
         isActive: status === 'shipped',
         isPassed: !['pending', 'confirmed', 'packed', 'shipped'].includes(status),
       });
@@ -341,16 +345,16 @@ export default function DeliveryInformation() {
     if (['delivered', 'received'].includes(status)) {
       timeline.push({
         id: 'delivered',
-        date: new Date(order.updatedAt).toLocaleDateString('en-GB', {
+        date: new Date(order.updatedAt).toLocaleDateString('id-ID', {
           day: '2-digit',
           month: 'short',
         }),
-        time: new Date(order.updatedAt).toLocaleTimeString('en-GB', {
+        time: new Date(order.updatedAt).toLocaleTimeString('id-ID', {
           hour: '2-digit',
           minute: '2-digit',
           hour12: false,
         }),
-        status: 'Your parcel has been delivered',
+        status: t('ordersFlow.deliveryInfo.timeline.statuses.delivered'),
         isActive: status === 'delivered' || status === 'received',
         isPassed: false,
         isLatest: true,
@@ -365,22 +369,22 @@ export default function DeliveryInformation() {
     return [
       {
         id: 'placed',
-        label: 'Placed',
+        label: t('ordersFlow.deliveryInfo.progress.steps.placed'),
         completed: ['pending', 'confirmed', 'packed', 'shipped', 'delivered', 'received', 'cancelled', 'returned'].includes(status),
       },
       {
         id: 'shipped',
-        label: 'Shipped',
+        label: t('ordersFlow.deliveryInfo.progress.steps.shipped'),
         completed: ['packed', 'shipped', 'delivered', 'received', 'cancelled', 'returned'].includes(status),
       },
       {
         id: 'outfordelivery',
-        label: 'Out for Delivery',
+        label: t('ordersFlow.deliveryInfo.progress.steps.outForDelivery'),
         completed: ['shipped', 'delivered', 'received', 'cancelled', 'returned'].includes(status),
       },
       {
         id: 'delivered',
-        label: 'Delivered',
+        label: t('ordersFlow.deliveryInfo.progress.steps.delivered'),
         completed: ['delivered', 'received', 'cancelled', 'returned'].includes(status),
       },
     ];
@@ -394,11 +398,10 @@ export default function DeliveryInformation() {
         <View style={styles.progressHeader}>
           <Text style={styles.progressTitle}>
             {order.orderStatus === 'Delivered' || order.orderStatus === 'Received' 
-              ? `Delivered on ${new Date(order.updatedAt).toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: 'short',
-                })}`
-              : 'Delivery Progress'
+              ? t('ordersFlow.deliveryInfo.progress.deliveredOn', {
+                  date: new Date(order.updatedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
+                })
+              : t('ordersFlow.deliveryInfo.progress.deliveryProgress')
             }
           </Text>
         </View>
@@ -441,7 +444,7 @@ export default function DeliveryInformation() {
 
     return (
       <View style={styles.timelineContainer}>
-        <Text style={styles.timelineTitle}>Delivery Timeline</Text>
+        <Text style={styles.timelineTitle}>{t('ordersFlow.deliveryInfo.timeline.title')}</Text>
         
         {timeline.map((item, index) => (
           <View key={item.id} style={styles.timelineItem}>
@@ -480,7 +483,7 @@ export default function DeliveryInformation() {
                       style={styles.proofButton}
                       onPress={() => setShowPodModal(true)}
                     >
-                      <Text style={styles.proofButtonText}>View Proof of Delivery</Text>
+                      <Text style={styles.proofButtonText}>{t('ordersFlow.deliveryInfo.timeline.viewPod')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -503,12 +506,12 @@ export default function DeliveryInformation() {
                 <TouchableOpacity
                   onPress={() => router.back()}
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('ordersFlow.common.a11y.goBack')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Delivery Information</Text>
+                <Text style={styles.headerTitle}>{t('ordersFlow.deliveryInfo.title')}</Text>
               </View>
             </View>
           ),
@@ -562,8 +565,9 @@ export default function DeliveryInformation() {
               <Clock size={16} color="#6B7280" />
               <View style={styles.deliveryInfoContent}>
                 <Text style={styles.deliveryInfoLabel}>Preferred Delivery Time</Text>
+                <Text style={styles.deliveryInfoLabel}>{t('ordersFlow.deliveryInfo.details.preferredDeliveryTime')}</Text>
                 <Text style={styles.deliveryInfoValue}>
-                  {order.preferredDeliveryTime || 'Not specified'}
+                  {order.preferredDeliveryTime || t('ordersFlow.deliveryInfo.details.notSpecified')}
                 </Text>
               </View>
             </View>
@@ -571,9 +575,9 @@ export default function DeliveryInformation() {
             <View style={styles.deliveryInfoRow}>
               <Truck size={16} color="#6B7280" />
               <View style={styles.deliveryInfoContent}>
-                <Text style={styles.deliveryInfoLabel}>Assigned Logistics</Text>
+                <Text style={styles.deliveryInfoLabel}>{t('ordersFlow.deliveryInfo.details.assignedLogistics')}</Text>
                 <Text style={styles.deliveryInfoValue}>
-                  {order.assignedLogistics || 'Not assigned'}
+                  {order.assignedLogistics || t('ordersFlow.deliveryInfo.details.notAssigned')}
                 </Text>
               </View>
             </View>
@@ -581,9 +585,9 @@ export default function DeliveryInformation() {
             <View style={styles.deliveryInfoRow}>
               <Package size={16} color="#6B7280" />
               <View style={styles.deliveryInfoContent}>
-                <Text style={styles.deliveryInfoLabel}>Tracking Number</Text>
+                <Text style={styles.deliveryInfoLabel}>{t('ordersFlow.deliveryInfo.details.trackingNumber')}</Text>
                 <Text style={styles.deliveryInfoValue}>
-                  {order.trackingNumber || 'Not available'}
+                  {order.trackingNumber || t('ordersFlow.deliveryInfo.details.notAvailable')}
                 </Text>
               </View>
             </View>
@@ -591,9 +595,9 @@ export default function DeliveryInformation() {
             <View style={styles.deliveryInfoRow}>
               <MapPin size={16} color="#6B7280" />
               <View style={styles.deliveryInfoContent}>
-                <Text style={styles.deliveryInfoLabel}>Delivery Note</Text>
+                <Text style={styles.deliveryInfoLabel}>{t('ordersFlow.deliveryInfo.details.deliveryNote')}</Text>
                 <Text style={styles.deliveryInfoValue}>
-                  {order.deliveryNote || 'No special instructions'}
+                  {order.deliveryNote || t('ordersFlow.deliveryInfo.details.noInstructions')}
                 </Text>
               </View>
             </View>
@@ -620,14 +624,14 @@ export default function DeliveryInformation() {
               </View>
               <View style={styles.orderSummaryInfo}>
                 <Text style={styles.orderId}>
-                  Order ID: {order.orderId || 'N/A'}
+                  {t('ordersFlow.deliveryInfo.summary.orderId')}: {order.orderId || t('ordersFlow.deliveryInfo.summary.na')}
                 </Text>
                 <Text style={styles.trackingID}>
-                  Delivery Method: {order.deliveryMethod}
+                  {t('ordersFlow.deliveryInfo.summary.deliveryMethod')}: {order.deliveryMethod}
                 </Text>
                 {order.orderStatus === 'Returned' && (
                   <Text style={styles.trackingID}>
-                    Return/refund status:{' '}
+                    {t('ordersFlow.deliveryInfo.summary.returnRefundStatus')}:{' '}
                     <Text
                       style={{
                         fontWeight: '600',
@@ -639,7 +643,7 @@ export default function DeliveryInformation() {
                             : '#f59e0b',
                       }}
                     >
-                      {order.returnStatus || 'Pending review'}
+                      {order.returnStatus || t('ordersFlow.deliveryInfo.summary.pendingReview')}
                     </Text>
                   </Text>
                 )}

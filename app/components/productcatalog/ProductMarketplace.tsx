@@ -23,6 +23,7 @@ import { useUserActivityStore } from '../../../stores/userActivityStore';
 import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
 import { API_BASE_URL } from '../../../services/config';
+import { useTranslation } from 'react-i18next';
 // Removed theme color imports - using explicit colors
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -94,6 +95,7 @@ export default function ProductMarketplace({
   onBackPress,
 }: ProductMarketplaceProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const addViewedProduct = useUserActivityStore(state => state.addViewedProduct);
   const likedProducts = useUserActivityStore(state => state.likedProducts);
   const { user } = useAuthStore();
@@ -443,7 +445,7 @@ export default function ProductMarketplace({
     const currentPrice = getSellingPrice();
     
     // Calculate discount display based on type
-    let discountDisplay = 'Discount';
+    let discountDisplay = t('product.labels.discount');
     if (product.discountType === 'fixed' && product.discountValue) {
       // Show fixed discount amount
       discountDisplay = `Rp${product.discountValue.toLocaleString()} OFF`;
@@ -536,7 +538,7 @@ export default function ProductMarketplace({
     };
 
     const deliveryTimeLabel = formatDeliveryTime();
-    const deliveryTimeDisplay = deliveryTimeLabel || 'Not provided';
+    const deliveryTimeDisplay = deliveryTimeLabel || t('product.labels.notProvided');
     const showBuyXGetY =
       getHasActiveOffer() &&
       (getOfferBadge() === 'Promotion' || getOfferBadge() === 'All Offers') &&
@@ -571,7 +573,7 @@ export default function ProductMarketplace({
               numberOfLines={2}
               ellipsizeMode="tail"
             >
-              {safeGetString(product.name, 'Unknown Product')}
+              {safeGetString(product.name, t('product.labels.unknownProduct'))}
             </Text>
 
             {/* Price */}
@@ -592,7 +594,10 @@ export default function ProductMarketplace({
               <View style={styles.cardPromotionInline}>
                 <Gift size={10} color="#9333EA" />
                 <Text style={styles.cardPromotionInlineText} numberOfLines={1} ellipsizeMode="tail">
-                  Buy {product.promotionDetails.minQuantity} Get {product.promotionDetails.freeQuantity}
+                  {t('product.promo.buyXGetY', {
+                    buy: product.promotionDetails.minQuantity,
+                    free: product.promotionDetails.freeQuantity,
+                  })}
                 </Text>
               </View>
             ) : null}
@@ -602,7 +607,7 @@ export default function ProductMarketplace({
               <View style={styles.cardRatingInline}>{renderRatingBadge('card')}</View>
               <Text style={styles.cardStockPipe}> • </Text>
               <Text style={styles.cardSoldInline}>
-                {safeGetString(product.soldCount, '0')} sold
+                {t('product.soldLabel', { count: safeGetString(product.soldCount, '0') })}
               </Text>
             </View>
 
@@ -615,7 +620,7 @@ export default function ProductMarketplace({
               <Text style={styles.cardShippingDot}>•</Text>
               <MapPin size={12} color="#9CA3AF" />
               <Text style={[styles.cardShippingLocation, !safeGetString(product.shippingInfo?.location, '').trim() && styles.cardShippingNotProvided]}>
-                {safeGetString(product.shippingInfo?.location, '').trim() || 'Not provided'}
+                {safeGetString(product.shippingInfo?.location, '').trim() || t('product.labels.notProvided')}
               </Text>
             </View>
 
@@ -701,7 +706,7 @@ export default function ProductMarketplace({
             ) : (
               <View style={styles.imagePlaceholder}>
                 <ImageIcon size={60} color="#9CA3AF" />
-                <Text style={styles.noImageText}>No Image Available</Text>
+                <Text style={styles.noImageText}>{t('buyNow.labels.noImage')}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -724,10 +729,10 @@ export default function ProductMarketplace({
       {/* Product Name & Badge */}
       <View style={styles.productHeader}>
         <Text style={[styles.productName, { color: textColor }]}>
-          {safeGetString(product.name, 'Unknown Product')}
+          {safeGetString(product.name, t('product.labels.unknownProduct'))}
         </Text>
         <View style={styles.bestSellerBadge}>
-          <Text style={styles.badgeText}>BEST SELLER</Text>
+          <Text style={styles.badgeText}>{t('product.badges.bestSeller')}</Text>
         </View>
       </View>
 
@@ -735,7 +740,8 @@ export default function ProductMarketplace({
       <View style={styles.ratingContainer}>
         {renderRatingBadge('full')}
         <Text style={styles.reviewCount}>
-          ({productReviewsData ? productReviewsData.totalReviews : safeGetNumber(product.reviewCount)} reviews)
+          ({productReviewsData ? productReviewsData.totalReviews : safeGetNumber(product.reviewCount)}{' '}
+          {t('product.reviews.reviews')})
         </Text>
       </View>
 
@@ -759,7 +765,7 @@ export default function ProductMarketplace({
             const currentPrice = getSellingPrice();
             
             // Calculate discount display based on type
-            let discountDisplay = 'Discount';
+            let discountDisplay = t('product.labels.discount');
             if (product.discountType === 'fixed' && product.discountValue) {
               // Show fixed discount amount
               discountDisplay = `Rp${product.discountValue.toLocaleString()} OFF`;
@@ -787,8 +793,8 @@ export default function ProductMarketplace({
                     <Gift size={10} color="#9333EA" />
                     <Text style={[styles.discountText, { color: '#9333EA' }]}>
                       {product?.promotionDetails 
-                        ? `Buy ${product.promotionDetails.minQuantity} Get ${product.promotionDetails.freeQuantity}`
-                        : 'Promotion'}
+                        ? t('product.promo.buyXGetY', { buy: product.promotionDetails.minQuantity, free: product.promotionDetails.freeQuantity })
+                        : t('product.labels.promotion')}
                     </Text>
                   </View>
                 </View>
@@ -811,7 +817,7 @@ export default function ProductMarketplace({
                   {getOfferBadge() === 'Discount' 
                     ? discountDisplay
                     : getOfferBadge() === 'Promotion' && product?.promotionDetails
-                      ? `Buy ${product.promotionDetails.minQuantity} Get ${product.promotionDetails.freeQuantity}`
+                      ? t('product.promo.buyXGetY', { buy: product.promotionDetails.minQuantity, free: product.promotionDetails.freeQuantity })
                       : getOfferBadge()}
                 </Text>
               </View>
@@ -820,14 +826,12 @@ export default function ProductMarketplace({
             </View>
           </View>
         </View>
-        <Text style={styles.shippingNote}>
-          Shipping cost agreed between buyer and seller
-        </Text>
+        <Text style={styles.shippingNote}>{t('product.shipping.costNote')}</Text>
       </View>
 
       {/* Stock status + sold */}
       <View style={styles.stockContainer}>
-        <Text style={styles.stockLabel}>Stock status:</Text>
+        <Text style={styles.stockLabel}>{t('product.stockLabel')}</Text>
         <View style={styles.stockRightRow}>
           <Text
             style={[
@@ -835,11 +839,17 @@ export default function ProductMarketplace({
               { color: getStockStatusColor(safeGetString(product.stockStatus, 'In Stock')) },
             ]}
           >
-            {safeGetString(product.stockStatus, 'In Stock')}
+            {(() => {
+              const raw = safeGetString(product.stockStatus, 'In Stock');
+              if (raw === 'Out of Stock') return t('product.stock.outOfStock');
+              if (raw === 'Low Stock') return t('product.stock.lowStock');
+              if (raw === 'In Stock') return t('product.stock.inStock');
+              return raw;
+            })()}
           </Text>
           <Text style={styles.stockPipe}> | </Text>
           <Text style={styles.stockSoldInline}>
-            {safeGetString(product.soldCount, '0')} sold
+            {t('product.soldLabel', { count: safeGetString(product.soldCount, '0') })}
           </Text>
         </View>
       </View>
@@ -855,9 +865,7 @@ export default function ProductMarketplace({
 
     const content = (
       <>
-        <Text style={[styles.sectionTitle, { color: textColor }]}>
-          Seller Information
-        </Text>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>{t('product.sellerInformation')}</Text>
         <View style={styles.sellerHeader}>
           <View style={styles.sellerAvatar}>
             {companyLogo ? (
@@ -871,18 +879,21 @@ export default function ProductMarketplace({
           <View style={styles.sellerInfo}>
             <View style={styles.sellerNameRow}>
               <Text style={[styles.sellerName, { color: textColor }]}>
-                {safeGetString(product.seller?.name, 'Unknown Company')}
+                {safeGetString(product.seller?.name, t('product.labels.unknownCompany'))}
               </Text>
               {Boolean(product.seller?.isOfficial) && (
                 <View style={styles.officialBadge}>
-                  <Text style={styles.officialText}>OFFICIAL STORE</Text>
+                  <Text style={styles.officialText}>{t('product.badges.officialStore')}</Text>
                 </View>
               )}
             </View>
             <View style={styles.sellerRating}>
               {renderStars(safeGetNumber(product.seller?.rating), 12)}
               <Text style={styles.sellerRatingText}>
-                {safeGetNumber(product.seller?.rating)} ({safeGetNumber(product.seller?.reviewCount)}+ ratings)
+                {t('product.sellerRating', {
+                  rating: safeGetNumber(product.seller?.rating),
+                  count: safeGetNumber(product.seller?.reviewCount),
+                })}
               </Text>
             </View>
           </View>
@@ -901,7 +912,7 @@ export default function ProductMarketplace({
             });
           }}
           activeOpacity={0.8}
-          accessibilityLabel="Open distributor products"
+          accessibilityLabel={t('product.a11y.openDistributorProducts')}
           accessibilityRole="button"
         >
           {content}
@@ -925,11 +936,11 @@ export default function ProductMarketplace({
       <View style={[styles.section, styles.youMayAlsoLikeSection]}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: textColor }]}>
-            You may also like
+            {t('product.youMayAlsoLike')}
           </Text>
         </View>
         <Text style={[styles.sectionSubtitle, { color: '#6B7280' }]}>
-          More products in {safeGetString(product.category, 'General')}
+          {t('product.moreInCategory', { category: safeGetString(product.category, t('product.labels.general')) })}
         </Text>
         
         {/* Product Grid Layout like home.tsx */}
@@ -988,24 +999,24 @@ export default function ProductMarketplace({
   const renderProductDetails = () => (
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, { color: textColor }]}>
-        Product Details
+        {t('product.details.title')}
       </Text>
       
       <View style={styles.detailsList}>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Brand:</Text>
+          <Text style={styles.detailLabel}>{t('product.details.brand')}</Text>
           <Text style={[styles.detailValue, { color: textColor }]}>
-            {safeGetString(product.brand, 'Unknown')}
+            {safeGetString(product.brand, t('product.labels.unknown'))}
           </Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Type:</Text>
+          <Text style={styles.detailLabel}>{t('product.details.type')}</Text>
           <Text style={[styles.detailValue, { color: textColor }]}>
-            {safeGetString(product.category, 'General')}
+            {safeGetString(product.category, t('product.labels.general'))}
           </Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Category:</Text>
+          <Text style={styles.detailLabel}>{t('product.details.category')}</Text>
           <Text style={[styles.detailValue, { color: textColor }]}>
             {safeGetString(product.productCategory, 'Piece')}
           </Text>
@@ -1014,10 +1025,10 @@ export default function ProductMarketplace({
 
       <View style={styles.descriptionContainer}>
         <Text style={[styles.descriptionTitle, { color: textColor }]}>
-          Description
+          {t('product.sections.description')}
         </Text>
         <Text style={[styles.description, { color: textColor }]}>
-          {safeGetString(product.description, 'No description available')}
+          {safeGetString(product.description, t('product.labels.noDescription'))}
         </Text>
       </View>
     </View>
@@ -1029,16 +1040,18 @@ export default function ProductMarketplace({
       const now = new Date();
       const diffMs = now.getTime() - d.getTime();
       const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-      if (diffDays === 0) return 'Today';
-      if (diffDays === 1) return 'Yesterday';
-      if (diffDays < 7) return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+      if (diffDays === 0) return t('product.relativeTime.today');
+      if (diffDays === 1) return t('product.relativeTime.yesterday');
+      if (diffDays < 7) return t('product.relativeTime.daysAgo', { count: diffDays });
       if (diffDays < 30) {
         const weeks = Math.floor(diffDays / 7);
-        return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+        return weeks === 1
+          ? t('product.relativeTime.weekAgo')
+          : t('product.relativeTime.weeksAgo', { count: weeks });
       }
       return d.toLocaleDateString();
     } catch {
-      return 'Recently';
+      return t('product.relativeTime.recently');
     }
   };
 
@@ -1051,24 +1064,25 @@ export default function ProductMarketplace({
     <View style={styles.section}>
       <View style={styles.reviewsHeader}>
         <Text style={[styles.sectionTitle, { color: textColor }]}>
-          Customer Reviews
+          {t('product.sections.customerReviews')}
         </Text>
         {totalReviewsFromApi > 0 && (
           <Text style={[styles.viewAllText, { color: primaryColor }]}>
-            {totalReviewsFromApi} {totalReviewsFromApi === 1 ? 'review' : 'reviews'}
+            {totalReviewsFromApi}{' '}
+            {totalReviewsFromApi === 1 ? t('product.reviews.review') : t('product.reviews.reviews')}
           </Text>
         )}
       </View>
 
       {reviewsLoading ? (
         <View style={styles.noReviewsContainer}>
-          <Text style={[styles.noReviewsTitle, { color: textColor }]}>Loading reviews...</Text>
+          <Text style={[styles.noReviewsTitle, { color: textColor }]}>{t('product.states.loadingReviews')}</Text>
         </View>
       ) : totalReviewsFromApi === 0 ? (
         <View style={styles.noReviewsContainer}>
           <Ionicons name="chatbubbles-outline" size={30} color="#9CA3AF" />
           <Text style={[styles.noReviewsTitle, { color: textColor }]}>
-            No Reviews Yet
+            {t('product.states.noReviewsYet')}
           </Text>
         </View>
       ) : (
@@ -1080,7 +1094,7 @@ export default function ProductMarketplace({
               </Text>
               {renderStars(overallRatingFromApi, 16)}
               <Text style={styles.totalReviews}>
-                {totalReviewsFromApi} reviews
+                {totalReviewsFromApi} {t('product.reviews.reviews')}
               </Text>
             </View>
             <View style={styles.ratingBars}>
@@ -1192,32 +1206,32 @@ export default function ProductMarketplace({
   const renderAssurance = () => (
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, { color: textColor }]}>
-        Product Assurance
+        {t('product.sections.productAssurance')}
       </Text>
       
       <View style={styles.assuranceGrid}>
         {Boolean(product.assurance?.halalCertified) && (
           <View style={[styles.assuranceItem, styles.halalAssurance]}>
             <Ionicons name="checkmark-circle" size={16} color="#059c2d" />
-            <Text style={styles.assuranceText}>Halal Certified</Text>
+            <Text style={styles.assuranceText}>{t('product.assurance.halalCertified')}</Text>
           </View>
         )}
         {Boolean(product.assurance?.bpomApproved) && (
           <View style={[styles.assuranceItem, styles.bpomAssurance]}>
             <Ionicons name="shield-checkmark" size={16} color="#3B82F6" />
-            <Text style={styles.assuranceText}>BPOM Approved</Text>
+            <Text style={styles.assuranceText}>{t('product.assurance.bpomApproved')}</Text>
           </View>
         )}
         <View style={[styles.assuranceItem, styles.returnAssurance]}>
           <Ionicons name="lock-closed" size={16} color="#8B5CF6" />
           <Text style={styles.assuranceText}>
-            {safeGetNumber(product.assurance?.returnPolicyDays, 7)}-Day Return
+            {t('product.assurance.returnDays', { count: safeGetNumber(product.assurance?.returnPolicyDays, 7) })}
           </Text>
         </View>
         {Boolean(product.assurance?.originalProduct) && (
           <View style={[styles.assuranceItem, styles.originalAssurance]}>
             <Ionicons name="cube" size={16} color="#F59E0B" />
-            <Text style={styles.assuranceText}>Original Product</Text>
+            <Text style={styles.assuranceText}>{t('product.assurance.originalProduct')}</Text>
           </View>
         )}
       </View>
@@ -1231,7 +1245,7 @@ export default function ProductMarketplace({
         onPress={onChatSeller}
       >
         <Ionicons name="chatbubble-outline" size={20} color="#111827" />
-        <Text style={styles.chatText}>Chat Now</Text>
+        <Text style={styles.chatText}>{t('product.actions.chatNow')}</Text>
       </TouchableOpacity>
       
       <TouchableOpacity
@@ -1239,7 +1253,7 @@ export default function ProductMarketplace({
         onPress={() => setShowAddToCartModal(true)}
       >
         <Ionicons name="cart-outline" size={20} color="white" />
-        <Text style={styles.addToCartText}>Add to Cart</Text>
+        <Text style={styles.addToCartText}>{t('product.actions.addToCart')}</Text>
       </TouchableOpacity>
       
       <TouchableOpacity
@@ -1247,7 +1261,7 @@ export default function ProductMarketplace({
         onPress={handleBuyNowPress}
       >
         <Text style={styles.buyNowText}>
-          Buy Now
+          {t('product.actions.buyNow')}
         </Text>
       </TouchableOpacity>
     </View>

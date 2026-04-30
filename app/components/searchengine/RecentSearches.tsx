@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { Clock, X } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 interface RecentSearchesProps {
   searches: string[];
@@ -17,12 +18,13 @@ export default function RecentSearches({
   onClearAll,
   isLoading = false,
 }: RecentSearchesProps) {
+  const { t } = useTranslation();
   // Show loading indicator while fetching search history
   if (isLoading) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Recent Searches</Text>
+          <Text style={styles.title}>{t('search.recentSearches.title')}</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="small" color="#0a61d7" />
@@ -38,9 +40,9 @@ export default function RecentSearches({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Recent Searches</Text>
+        <Text style={styles.title}>{t('search.recentSearches.title')}</Text>
         <Pressable onPress={onClearAll} style={styles.clearButton}>
-          <Text style={styles.clearButtonText}>Clear All</Text>
+          <Text style={styles.clearButtonText}>{t('search.recentSearches.clearAll')}</Text>
         </Pressable>
       </View>
 

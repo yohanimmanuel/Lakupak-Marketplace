@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { API_BASE_URL } from '../../services/config';
 import type { MarketplaceProduct } from '../../services/marketplace';
 import { useDataStore } from '../../stores/dataStore';
+import { useTranslation } from 'react-i18next';
 
 // Normalize relative image paths to absolute URLs
 const normalizeUrl = (url?: string | null): string | undefined => {
@@ -39,6 +40,7 @@ interface Order {
 
 export default function AccountScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const primaryBlue = '#0a61d7';
   const iconGray = '#6B7280';
   const token = useAuthStore(s => s.token);
@@ -122,17 +124,17 @@ export default function AccountScreen() {
         <UserIcon color={primaryBlue} size={28} />
       </View>
       <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', textAlign: 'center', marginBottom: 20 }}>
-        Create an account to win first-order benefits!
+        {t('tabsAccount.loginPrompt.title')}
       </Text>
       <View style={{ flexDirection: 'row', gap: 12 }}>
         <Link href="/useraccounts/loginsignup/loginmodal" asChild>
           <Pressable style={{ backgroundColor: primaryBlue, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8, flex: 1 }}>
-            <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600', textAlign: 'center' }}>Login</Text>
+            <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600', textAlign: 'center' }}>{t('tabsAccount.loginPrompt.login')}</Text>
           </Pressable>
         </Link>
         <Link href="/useraccounts/loginsignup/signupmodal" asChild>
           <Pressable style={{ backgroundColor: '#ffffff', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8, borderWidth: 1, borderColor: primaryBlue, flex: 1 }}>
-            <Text style={{ color: primaryBlue, fontSize: 16, fontWeight: '600', textAlign: 'center' }}>Sign Up</Text>
+            <Text style={{ color: primaryBlue, fontSize: 16, fontWeight: '600', textAlign: 'center' }}>{t('tabsAccount.loginPrompt.signup')}</Text>
           </Pressable>
         </Link>
       </View>
@@ -179,32 +181,32 @@ export default function AccountScreen() {
 
       {/* Section 2: Purchase History (full width) */}
       <View style={{ backgroundColor: '#ffffff', padding: 16, marginBottom: 10, opacity: isAuthenticated ? 1 : 0.6 }}>
-        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 16 }}>My Purchases</Text>
+        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 16 }}>{t('tabsAccount.sections.myPurchases')}</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 3, marginBottom: 6 }}>
           {isAuthenticated ? (
             <>
               <Link href="/useraccounts/purchases/mypurchases?tab=to-pay" asChild>
                 <Pressable style={{ alignItems: 'center', padding: 8 }}>
                   <WalletMinimal color={iconGray} size={22} />
-                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>To Pay</Text>
+                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toPay')}</Text>
                 </Pressable>
               </Link>
               <Link href="/useraccounts/purchases/mypurchases?tab=to-ship" asChild>
                 <Pressable style={{ alignItems: 'center', padding: 8 }}>
                   <Truck color={iconGray} size={22} />
-                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>To Ship</Text>
+                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toShip')}</Text>
                 </Pressable>
               </Link>
               <Link href="/useraccounts/purchases/mypurchases?tab=to-receive" asChild>
                 <Pressable style={{ alignItems: 'center', padding: 8 }}>
                   <PackageCheck color={iconGray} size={22} />
-                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>To Receive</Text>
+                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toReceive')}</Text>
                 </Pressable>
               </Link>
               <Link href="/useraccounts/purchases/mypurchases?tab=to-rate" asChild>
                 <Pressable style={{ alignItems: 'center', padding: 8 }}>
                   <Star color={iconGray} size={22} />
-                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>To Rate</Text>
+                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toRate')}</Text>
                 </Pressable>
               </Link>
             </>
@@ -212,19 +214,19 @@ export default function AccountScreen() {
             <>
               <View style={{ alignItems: 'center', padding: 8 }}>
                 <WalletMinimal color={iconGray} size={22} />
-                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>To Pay</Text>
+                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toPay')}</Text>
               </View>
               <View style={{ alignItems: 'center', padding: 8 }}>
                 <Truck color={iconGray} size={22} />
-                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>To Ship</Text>
+                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toShip')}</Text>
               </View>
               <View style={{ alignItems: 'center', padding: 8 }}>
                 <PackageCheck color={iconGray} size={22} />
-                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>To Receive</Text>
+                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toReceive')}</Text>
               </View>
               <View style={{ alignItems: 'center', padding: 8 }}>
                 <Star color={iconGray} size={22} />
-                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>To Rate</Text>
+                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toRate')}</Text>
               </View>
             </>
           )}
@@ -232,13 +234,13 @@ export default function AccountScreen() {
         {isAuthenticated ? (
           <Link href="/useraccounts/purchases/mypurchases" asChild>
             <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
-              <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>View Purchases History</Text>
+              <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.viewPurchaseHistory')}</Text>
               <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
             </Pressable>
           </Link>
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
-            <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>View Purchases History</Text>
+            <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.viewPurchaseHistory')}</Text>
             <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
           </View>
         )}
@@ -246,7 +248,7 @@ export default function AccountScreen() {
 
       {/* Section 2.5: My Networks */}
       <View style={{ backgroundColor: '#ffffff', padding: 16, marginBottom: 10, opacity: isAuthenticated ? 1 : 0.6 }}>
-        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 16 }}>My Networks</Text>
+        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 16 }}>{t('tabsAccount.sections.myNetworks')}</Text>
         {isAuthenticated ? (
           <>
             {recentDistributors.length > 0 ? (
@@ -268,7 +270,7 @@ export default function AccountScreen() {
                       {distributor.name}
                     </Text>
                     <Text style={{ color: '#6b7280', fontSize: 12 }}>
-                      {distributor.totalOrders} {distributor.totalOrders === 1 ? 'order' : 'orders'}
+                      {t('tabsAccount.networks.ordersCount', { count: distributor.totalOrders })}
                     </Text>
                   </Pressable>
                 ))}
@@ -279,20 +281,20 @@ export default function AccountScreen() {
                   <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
                     <Users color={iconGray} size={24} />
                   </View>
-                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>No networks yet</Text>
+                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>{t('tabsAccount.networks.noNetworksYet')}</Text>
                   <Text style={{ color: '#6b7280', fontSize: 12 }}>--</Text>
                 </View>
               </View>
             )}
             <Link href="/useraccounts/buyernetworks/mynetworks" asChild>
               <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
-                <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>View All Networks</Text>
+                <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.viewAllNetworks')}</Text>
                 <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
               </Pressable>
             </Link>
             <Link href="/useraccounts/buyernetworks/followings" asChild>
               <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6', marginTop: 14 }}>
-                <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>View All Followings</Text>
+                <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.viewAllFollowings')}</Text>
                 <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
               </Pressable>
             </Link>
@@ -304,19 +306,19 @@ export default function AccountScreen() {
                 <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
                   <Users color={iconGray} size={24} />
                 </View>
-                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>Distributor</Text>
+                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>{t('tabsAccount.networks.distributor')}</Text>
                 <Text style={{ color: '#6b7280', fontSize: 12 }}>--</Text>
               </View>
               <View style={{ width: '47%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', opacity: 0.5 }}>
                 <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
                   <Users color={iconGray} size={24} />
                 </View>
-                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>Distributor</Text>
+                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>{t('tabsAccount.networks.distributor')}</Text>
                 <Text style={{ color: '#6b7280', fontSize: 12 }}>--</Text>
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
-              <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>View All Networks</Text>
+              <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.viewAllNetworks')}</Text>
               <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
             </View>
           </>
@@ -325,28 +327,28 @@ export default function AccountScreen() {
 
       {/* Section 3: My Wallet */}
       <View style={{ backgroundColor: '#ffffff', padding: 16, marginBottom: 10, opacity: isAuthenticated ? 1 : 0.6 }}>
-        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 26 }}>My Wallet</Text>
+        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 26 }}>{t('tabsAccount.sections.myWallet')}</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 }}>
           {isAuthenticated ? (
             <>
               <Link href="/useraccounts/wallet/bonuses" asChild>
                 <Pressable style={{ alignItems: 'center', flex: 1, padding: 8 }}>
                   <Gift color={iconGray} size={24} />
-                  <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>Bonuses</Text>
+                  <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>{t('tabsAccount.wallet.bonuses')}</Text>
                   <Text style={{ marginTop: 4, color: primaryBlue, fontSize: 14, fontWeight: '600' }}>$45.00</Text>
                 </Pressable>
               </Link>
               <Link href="/useraccounts/wallet/discounts" asChild>
                 <Pressable style={{ alignItems: 'center', flex: 1, padding: 8 }}>
                   <Tag color={iconGray} size={24} />
-                  <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>Discounts</Text>
+                  <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>{t('tabsAccount.wallet.discounts')}</Text>
                   <Text style={{ marginTop: 4, color: primaryBlue, fontSize: 14, fontWeight: '600' }}>$12.50</Text>
                 </Pressable>
               </Link>
               <Link href="/useraccounts/wallet/lakupay" asChild>
                 <Pressable style={{ alignItems: 'center', flex: 1, padding: 8 }}>
                   <DollarSign color={iconGray} size={24} />
-                  <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>LakuPay</Text>
+                  <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>{t('tabsAccount.wallet.lakupay')}</Text>
                   <Text style={{ marginTop: 4, color: primaryBlue, fontSize: 14, fontWeight: '600' }}>$230.75</Text>
                 </Pressable>
               </Link>
@@ -355,17 +357,17 @@ export default function AccountScreen() {
             <>
               <View style={{ alignItems: 'center', flex: 1, padding: 8 }}>
                 <Gift color={iconGray} size={24} />
-                <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>Bonuses</Text>
+                <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>{t('tabsAccount.wallet.bonuses')}</Text>
                 <Text style={{ marginTop: 4, color: '#9CA3AF', fontSize: 14, fontWeight: '600' }}>--</Text>
               </View>
               <View style={{ alignItems: 'center', flex: 1, padding: 8 }}>
                 <Tag color={iconGray} size={24} />
-                <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>Discounts</Text>
+                <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>{t('tabsAccount.wallet.discounts')}</Text>
                 <Text style={{ marginTop: 4, color: '#9CA3AF', fontSize: 14, fontWeight: '600' }}>--</Text>
               </View>
               <View style={{ alignItems: 'center', flex: 1, padding: 8 }}>
                 <DollarSign color={iconGray} size={24} />
-                <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>LakuPay</Text>
+                <Text style={{ marginTop: 8, color: '#111827', fontSize: 12, textAlign: 'center' }}>{t('tabsAccount.wallet.lakupay')}</Text>
                 <Text style={{ marginTop: 4, color: '#9CA3AF', fontSize: 14, fontWeight: '600' }}>--</Text>
               </View>
             </>
@@ -374,13 +376,13 @@ export default function AccountScreen() {
         {isAuthenticated ? (
           <Link href="/useraccounts/wallet/mywallet" asChild>
             <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
-              <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>Manage your wallet</Text>
+              <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.manageWallet')}</Text>
               <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
             </Pressable>
           </Link>
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
-            <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>Manage your wallet</Text>
+            <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.manageWallet')}</Text>
             <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
           </View>
         )}
@@ -388,7 +390,7 @@ export default function AccountScreen() {
 
       {/* Section 4: More Services */}
       <View style={{ backgroundColor: '#ffffff', padding: 16, marginBottom: 10, opacity: isAuthenticated ? 1 : 0.6 }}>
-        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 16 }}>More Services</Text>
+        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 16 }}>{t('tabsAccount.sections.moreServices')}</Text>
         
         {isAuthenticated ? (
           <>
@@ -396,7 +398,7 @@ export default function AccountScreen() {
               <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, marginBottom: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                   <Heart color="#ef4444" size={20} />
-                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>Favourites</Text>
+                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>{t('tabsAccount.services.favourites')}</Text>
                 </View>
                 <ChevronRight color={iconGray} size={18} />
               </Pressable>
@@ -406,7 +408,7 @@ export default function AccountScreen() {
               <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, marginBottom: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                   <Clock color="#f97316" size={20} />
-                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>Recently Viewed</Text>
+                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>{t('tabsAccount.services.recentlyViewed')}</Text>
                 </View>
                 <ChevronRight color={iconGray} size={18} />
               </Pressable>
@@ -416,7 +418,7 @@ export default function AccountScreen() {
               <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, marginBottom: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                   <RotateCw color="#22c55e" size={20} />
-                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>Buy Again</Text>
+                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>{t('tabsAccount.services.buyAgain')}</Text>
                 </View>
                 <ChevronRight color={iconGray} size={18} />
               </Pressable>
@@ -426,7 +428,7 @@ export default function AccountScreen() {
               <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                   <Ticket color={primaryBlue} size={20} />
-                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>Get Vouchers</Text>
+                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>{t('tabsAccount.services.getVouchers')}</Text>
                 </View>
                 <ChevronRight color={iconGray} size={18} />
               </Pressable>
@@ -437,7 +439,7 @@ export default function AccountScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, marginBottom: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <Heart color="#ef4444" size={20} />
-                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>Favourites</Text>
+                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>{t('tabsAccount.services.favourites')}</Text>
               </View>
               <ChevronRight color={iconGray} size={18} />
             </View>
@@ -445,7 +447,7 @@ export default function AccountScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, marginBottom: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <Clock color="#f97316" size={20} />
-                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>Recently Viewed</Text>
+                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>{t('tabsAccount.services.recentlyViewed')}</Text>
               </View>
               <ChevronRight color={iconGray} size={18} />
             </View>
@@ -453,7 +455,7 @@ export default function AccountScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, marginBottom: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <RotateCw color="#22c55e" size={20} />
-                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>Buy Again</Text>
+                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>{t('tabsAccount.services.buyAgain')}</Text>
               </View>
               <ChevronRight color={iconGray} size={18} />
             </View>
@@ -461,7 +463,7 @@ export default function AccountScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <Ticket color={primaryBlue} size={20} />
-                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>Get Vouchers</Text>
+                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>{t('tabsAccount.services.getVouchers')}</Text>
               </View>
               <ChevronRight color={iconGray} size={18} />
             </View>

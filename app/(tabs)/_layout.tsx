@@ -1,11 +1,12 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { Link, Tabs, usePathname, useRouter } from 'expo-router';
 import { Pressable, View, TextInput, Animated, Text, StatusBar } from 'react-native';
-import { Home as HomeIcon, Boxes, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquare, MessageSquareText } from 'lucide-react-native';
+import { Home as HomeIcon, Boxes, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquareText } from 'lucide-react-native';
 import { Settings } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { useHeaderScrollStore } from '../../stores/headerScrollStore';
 import CartBadge from '../components/CartBadge';
+import { useTranslation } from 'react-i18next';
 
 // Constants for header animation
 const MAX_HEADER_HEIGHT = 170;
@@ -19,6 +20,7 @@ export default function TabLayout() {
   const inactiveGrey = '#6B7280';
   const { user, isLoading } = useAuthStore();
   const { scrollY } = useHeaderScrollStore();
+  const { t } = useTranslation();
 
   // Interpolate header translation based on scroll position
   const headerContentTranslateY = scrollY.interpolate({
@@ -31,13 +33,6 @@ export default function TabLayout() {
   const addressOpacity = scrollY.interpolate({
     inputRange: [0, SCROLL_DISTANCE],
     outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
-  // Cover slides UP from bottom to create shrinking effect
-  const coverTranslateY = scrollY.interpolate({
-    inputRange: [0, SCROLL_DISTANCE],
-    outputRange: [SCROLL_DISTANCE, 0],
     extrapolate: 'clamp',
   });
 
@@ -66,7 +61,7 @@ export default function TabLayout() {
       <Text
         style={{ flex: 1, marginLeft: 8, color: '#6B7280', fontSize: 14 }}
       >
-        Search for products...
+        {t('header.searchProducts')}
       </Text>
     </Pressable>
   );
@@ -119,10 +114,10 @@ export default function TabLayout() {
               <Store color="#ffffff" size={24} />
               <View style={{ marginLeft: 10, flex: 1, minWidth: 0 }}>
                 <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '700' }} numberOfLines={1} ellipsizeMode="tail">
-                  {isLoading ? 'Loading...' : user?.storeName || 'My Store'}
+                  {isLoading ? t('common.loading') : user?.storeName || t('header.myStore')}
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }} numberOfLines={1} ellipsizeMode="tail">
-                  {isLoading ? 'Loading...' : user?.chosenAddress || 'Set your address'}
+                  {isLoading ? t('common.loading') : user?.chosenAddress || t('header.setAddress')}
                 </Text>
               </View>
             </View>
@@ -150,7 +145,7 @@ export default function TabLayout() {
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 22, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: '#e5e7eb' }}>
               <Search color="#6B7280" size={20} />
-              <TextInput placeholder="Search for products..." style={{ flex: 1, marginLeft: 8, color: '#111827', paddingVertical: 0 }} placeholderTextColor="#6B7280" />
+              <TextInput placeholder={t('header.searchProducts')} style={{ flex: 1, marginLeft: 8, color: '#111827', paddingVertical: 0 }} placeholderTextColor="#6B7280" />
             </View>
           </View>
         </Animated.View>
@@ -159,14 +154,14 @@ export default function TabLayout() {
     if (pathname?.endsWith('/orders') || pathname === '/orders') {
       return (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingHorizontal: 20, paddingVertical: 16 }}>
-          <Text style={{ color: '#111827', fontSize: 18, fontWeight: '600' }}>Orders</Text>
+          <Text style={{ color: '#111827', fontSize: 18, fontWeight: '600' }}>{t('header.orders')}</Text>
         </View>
       );
     }
     if (pathname?.endsWith('/notifications') || pathname === '/notifications') {
       return (
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingHorizontal: 20, paddingVertical: 16 }}>
-          <Text style={{ color: '#111827', fontSize: 18, fontWeight: '600' }}>Notifications</Text>
+          <Text style={{ color: '#111827', fontSize: 18, fontWeight: '600' }}>{t('header.notifications')}</Text>
         </View>
       );
     }
@@ -264,11 +259,11 @@ export default function TabLayout() {
         tabBarButton: (props) => <TabButton {...props} />,
       }}
     >
-      <Tabs.Screen name="home" options={{ title: 'Home', headerShown: false, tabBarIcon: ({ color }) => <HomeIcon color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Home</Text> }} />
-      <Tabs.Screen name="categories" options={{ title: 'Categories', tabBarIcon: ({ color }) => <Boxes color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Categories</Text> }} />
-      <Tabs.Screen name="orders" options={{ title: 'Orders', tabBarIcon: ({ color }) => <FileText color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Orders</Text> }} />
-      <Tabs.Screen name="notifications" options={{ title: 'Notifications', tabBarIcon: ({ color }) => <Bell color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Notifications</Text> }} />
-      <Tabs.Screen name="account" options={{ title: 'Account', tabBarIcon: ({ color }) => <User color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>Account</Text> }} />
+      <Tabs.Screen name="home" options={{ title: t('tabs.home'), headerShown: false, tabBarIcon: ({ color }) => <HomeIcon color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.home')}</Text> }} />
+      <Tabs.Screen name="categories" options={{ title: t('tabs.categories'), tabBarIcon: ({ color }) => <Boxes color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.categories')}</Text> }} />
+      <Tabs.Screen name="orders" options={{ title: t('tabs.orders'), tabBarIcon: ({ color }) => <FileText color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.orders')}</Text> }} />
+      <Tabs.Screen name="notifications" options={{ title: t('tabs.notifications'), tabBarIcon: ({ color }) => <Bell color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.notifications')}</Text> }} />
+      <Tabs.Screen name="account" options={{ title: t('tabs.account'), tabBarIcon: ({ color }) => <User color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.account')}</Text> }} />
     </Tabs>
     </>
   );

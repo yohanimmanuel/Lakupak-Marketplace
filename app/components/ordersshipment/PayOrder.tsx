@@ -8,6 +8,7 @@ import { marketplaceService } from '../../../services/marketplace';
 import { websocketService } from '../../../services/websocket';
 import * as ScreenCapture from 'expo-screen-capture';
 import { ArrowLeft, Building2, FileText } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 type SellerBankDetails = {
   companyName: string;
@@ -39,6 +40,7 @@ export default function PayOrder() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ orderId?: string }>();
   const token = useAuthStore((s) => s.token);
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -209,12 +211,12 @@ export default function PayOrder() {
         <TouchableOpacity
           onPress={() => router.back()}
           hitSlop={10}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('ordersFlow.common.a11y.goBack')}
           accessibilityRole="button"
         >
           <ArrowLeft color={primaryBlue} size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Pay Order</Text>
+        <Text style={styles.headerTitle}>{t('ordersFlow.payOrder.title')}</Text>
       </View>
     </View>
   );
@@ -243,12 +245,12 @@ export default function PayOrder() {
       }
 
       Alert.alert(
-        'Payment sent',
-        'We notified the distributor. Please complete your manual transfer using the bank details above.'
+        t('ordersFlow.payOrder.alerts.paymentSentTitle'),
+        t('ordersFlow.payOrder.alerts.paymentSentBody')
       );
       router.back();
     } catch (e) {
-      Alert.alert('Failed', 'Could not send payment notification. Please try again.');
+      Alert.alert(t('ordersFlow.payOrder.alerts.failedTitle'), t('ordersFlow.payOrder.alerts.failedBody'));
     } finally {
       setSubmitting(false);
     }
@@ -260,7 +262,7 @@ export default function PayOrder() {
         <Stack.Screen options={payOrderScreenOptions} />
         <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading payment details...</Text>
+          <Text style={styles.loadingText}>{t('ordersFlow.payOrder.loading')}</Text>
         </View>
       </View>
     );
@@ -280,11 +282,11 @@ export default function PayOrder() {
           <View style={styles.productCard}>
             <View style={styles.sectionTitleContainer}>
               <Building2 size={20} color={primaryBlue} />
-              <Text style={styles.sectionTitle}>Distributor Information</Text>
+              <Text style={styles.sectionTitle}>{t('ordersFlow.payOrder.sections.distributorInfoTitle')}</Text>
               <TouchableOpacity
                 onPress={() => {
                   if (!distributorId) {
-                    Alert.alert('Unavailable', 'Distributor details are not available for this order.');
+                    Alert.alert(t('ordersFlow.payOrder.alerts.unavailableTitle'), t('ordersFlow.payOrder.alerts.unavailableBody'));
                     return;
                   }
                   router.push({
@@ -293,7 +295,7 @@ export default function PayOrder() {
                   });
                 }}
                 accessibilityRole="button"
-                accessibilityLabel="View distributor details"
+                accessibilityLabel={t('ordersFlow.payOrder.buttons.viewDistributorDetails')}
                 style={[
                   styles.viewDistributorButton,
                   !distributorId && styles.viewDistributorButtonDisabled,
@@ -301,27 +303,27 @@ export default function PayOrder() {
                 disabled={!distributorId}
               >
                 <Text style={[styles.viewDistributorButtonText, !distributorId && styles.viewDistributorButtonTextDisabled]}>
-                  View
+                  {t('ordersFlow.payOrder.buttons.view')}
                 </Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Company:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.payOrder.labels.company')}:</Text>
               <Text style={[styles.infoValue, styles.infoValueWide]}>
                 {bank?.companyName || order?.storeName || '-'}
               </Text>
             </View>
 
             <View style={styles.infoRowTopAligned}>
-              <Text style={styles.infoLabel}>Description:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.payOrder.labels.description')}:</Text>
               <Text style={[styles.infoValueMultiline, styles.infoValueWide]}>
                 {distributorDescription?.trim() ? distributorDescription : '-'}
               </Text>
             </View>
 
             <View style={styles.infoRowTopAligned}>
-              <Text style={styles.infoLabel}>Address:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.payOrder.labels.address')}:</Text>
               <Text style={[styles.infoValueMultiline, styles.infoValueWide]}>
                 {distributorAddress?.trim() ? distributorAddress : '-'}
               </Text>
@@ -334,16 +336,16 @@ export default function PayOrder() {
             <View style={styles.productCard}>
               <View style={styles.sectionTitleContainer}>
                 <FileText size={20} color={primaryBlue} />
-                <Text style={styles.sectionTitle}>Payment</Text>
+                <Text style={styles.sectionTitle}>{t('ordersFlow.payOrder.sections.paymentTitle')}</Text>
               </View>
 
               <View style={styles.infoRowTopAligned}>
-                <Text style={styles.infoLabel}>Method:</Text>
-                <Text style={[styles.infoValueMultiline, styles.infoValueWide]}>Cash on Delivery (COD)</Text>
+                <Text style={styles.infoLabel}>{t('ordersFlow.payOrder.labels.method')}:</Text>
+                <Text style={[styles.infoValueMultiline, styles.infoValueWide]}>{t('ordersFlow.payOrder.sections.codTitle')}</Text>
               </View>
 
               <Text style={styles.hintText}>
-                COD orders are paid directly to the distributor, whether through cash, direct digital bank app transfer, or other method. The payment receiver will confirm your payment and update the payment status once it is received.
+                {t('ordersFlow.payOrder.sections.codBody')}
               </Text>
             </View>
           </View>
@@ -352,32 +354,32 @@ export default function PayOrder() {
             <View style={styles.productCard}>
               <View style={styles.sectionTitleContainer}>
                 <FileText size={20} color={primaryBlue} />
-                <Text style={styles.sectionTitle}>Bank account (manual transfer)</Text>
+                <Text style={styles.sectionTitle}>{t('ordersFlow.payOrder.sections.bankTransferTitle')}</Text>
               </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Bank:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.payOrder.labels.bank')}:</Text>
               <Text style={[styles.infoValue, styles.infoValueWide]}>
                 {bank?.billingBankName || '-'}
               </Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Account name:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.payOrder.labels.accountName')}:</Text>
               <Text style={[styles.infoValue, styles.infoValueWide]}>
                 {bank?.billingBankAccountName || '-'}
               </Text>
             </View>
 
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Account number:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.payOrder.labels.accountNumber')}:</Text>
               <Text style={[styles.infoValue, styles.infoValueWide]}>
                 {bank?.billingBankAccountNumber || '-'}
               </Text>
             </View>
 
               <Text style={styles.hintText}>
-                Only share this info during payment. It’s hidden from public distributor pages and checkout.
+                {t('ordersFlow.payOrder.hints.bankPrivacy')}
               </Text>
             </View>
           </View>
@@ -387,7 +389,7 @@ export default function PayOrder() {
       {isCod ? (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 18) }]}>
           <TouchableOpacity style={styles.payButton} onPress={() => router.back()}>
-            <Text style={styles.payButtonText}>Back</Text>
+            <Text style={styles.payButtonText}>{t('ordersFlow.payOrder.buttons.back')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -398,7 +400,7 @@ export default function PayOrder() {
             onPress={handlePay}
           >
             <Text style={[styles.payButtonText, submitting ? styles.disabledButtonText : null]}>
-              {submitting ? 'Sending...' : 'Pay'}
+              {submitting ? t('ordersFlow.payOrder.buttons.sending') : t('ordersFlow.payOrder.buttons.pay')}
             </Text>
           </TouchableOpacity>
         </View>

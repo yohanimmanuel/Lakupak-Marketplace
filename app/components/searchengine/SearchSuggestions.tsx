@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, Image } from 'react-native';
 import { Search, Clock } from 'lucide-react-native';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { API_BASE_URL } from '../../../services/config';
+import { useTranslation } from 'react-i18next';
 
 interface SearchSuggestionsProps {
   query: string;
@@ -26,6 +27,7 @@ export default function SearchSuggestions({
   products,
   onSuggestionPress,
 }: SearchSuggestionsProps) {
+  const { t } = useTranslation();
   const queryLower = query.trim().toLowerCase();
 
   const suggestions = useMemo(() => {
@@ -119,7 +121,7 @@ export default function SearchSuggestions({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Suggestions</Text>
+      <Text style={styles.title}>{t('search.suggestions.title')}</Text>
       <View style={styles.suggestionsList}>
         {suggestions.map((suggestion, index) => (
           <Pressable

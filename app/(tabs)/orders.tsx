@@ -36,11 +36,13 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore, type MarketplaceOrder, type MarketplaceOrderItem } from '../../stores/dataStore';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const token = useAuthStore(s => s.token);
   const authUser = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
@@ -111,7 +113,7 @@ export default function OrdersScreen() {
     const d = new Date(src);
     return Number.isNaN(d.getTime())
       ? ''
-      : d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      : d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
   const getOrderStatusColor = (status?: string) => {
@@ -171,17 +173,17 @@ export default function OrdersScreen() {
         <UserIcon color="#0a61d7" size={28} />
       </View>
       <Text style={styles.loginPromptTitle}>
-        Create an account to win first-order benefits!
+        {t('tabsOrders.loginPrompt.title')}
       </Text>
       <View style={styles.loginPromptButtons}>
         <Link href="/useraccounts/loginsignup/loginmodal" asChild>
           <Pressable style={styles.loginButton}>
-            <Text style={styles.loginButtonText}>Login</Text>
+            <Text style={styles.loginButtonText}>{t('tabsOrders.loginPrompt.login')}</Text>
           </Pressable>
         </Link>
         <Link href="/useraccounts/loginsignup/signupmodal" asChild>
           <Pressable style={styles.signupButton}>
-            <Text style={styles.signupButtonText}>Sign Up</Text>
+            <Text style={styles.signupButtonText}>{t('tabsOrders.loginPrompt.signup')}</Text>
           </Pressable>
         </Link>
       </View>
@@ -197,7 +199,7 @@ export default function OrdersScreen() {
         {isAuthenticated ? (
           isOrdersLoading ? (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading your orders...</Text>
+              <Text style={styles.loadingText}>{t('tabsOrders.loading')}</Text>
             </View>
           ) : orders.length > 0 ? (
             orders.map((order: MarketplaceOrder) => {
@@ -207,8 +209,8 @@ export default function OrdersScreen() {
                   : 0;
               const itemsLabel =
                 totalProducts > 0
-                  ? `${totalProducts} product${totalProducts > 1 ? 's' : ''}`
-                  : 'No products';
+                  ? t('tabsOrders.items.products', { count: totalProducts })
+                  : t('tabsOrders.items.noProducts');
 
               const dateLabel = formatOrderDate(order);
               const statusBadgeStyle = getOrderStatusBadgeStyle(order.orderStatus);
@@ -263,7 +265,7 @@ export default function OrdersScreen() {
                       </View>
                       {dateLabel ? (
                         <View style={styles.orderDateRow}>
-                          <Text style={styles.orderDateLabel}>Order Date:</Text>
+                          <Text style={styles.orderDateLabel}>{t('tabsOrders.orderDateLabel')}</Text>
                           <Text style={styles.orderDateText}>{dateLabel}</Text>
                         </View>
                       ) : null}
@@ -272,7 +274,7 @@ export default function OrdersScreen() {
                     <View style={styles.orderCardRight}>
                       <View style={[styles.orderStatusPill, statusBadgeStyle]}>
                         <Text style={[styles.orderStatusPillText, { color: statusBadgeStyle.color }]}>
-                          {order.orderStatus || 'Unknown'}
+                          {order.orderStatus || t('tabsOrders.unknownStatus')}
                         </Text>
                       </View>
                       <View style={styles.orderCardChevron}>
@@ -288,20 +290,16 @@ export default function OrdersScreen() {
               <View style={styles.noOrdersIconContainer}>
                 <ShoppingBag size={48} color="#d1d5db" />
               </View>
-              <Text style={styles.noOrdersTitle}>No Orders Yet</Text>
-              <Text style={styles.noOrdersSubDescription}>
-                Once you place your first order, you'll see detailed updates here including order confirmation, packing status, shipping information, and delivery notifications. We'll keep you informed every step of the way!
-              </Text>
+              <Text style={styles.noOrdersTitle}>{t('tabsOrders.empty.title')}</Text>
+              <Text style={styles.noOrdersSubDescription}>{t('tabsOrders.empty.description')}</Text>
               <View style={styles.noOrdersFeatures}>
-                <Text style={styles.noOrdersFeatureTitle}>What you'll see here:</Text>
-                <Text style={styles.noOrdersFeatureItem}>• Real-time order status updates</Text>
-                <Text style={styles.noOrdersFeatureItem}>• Shipping and delivery notifications</Text>
-                <Text style={styles.noOrdersFeatureItem}>• Order history and tracking</Text>
-                <Text style={styles.noOrdersFeatureItem}>• Important order communications</Text>
+                <Text style={styles.noOrdersFeatureTitle}>{t('tabsOrders.empty.featuresTitle')}</Text>
+                <Text style={styles.noOrdersFeatureItem}>• {t('tabsOrders.empty.features.realtimeStatus')}</Text>
+                <Text style={styles.noOrdersFeatureItem}>• {t('tabsOrders.empty.features.shippingNotifications')}</Text>
+                <Text style={styles.noOrdersFeatureItem}>• {t('tabsOrders.empty.features.historyTracking')}</Text>
+                <Text style={styles.noOrdersFeatureItem}>• {t('tabsOrders.empty.features.importantComms')}</Text>
               </View>
-              <Text style={styles.noOrdersCTA}>
-                Ready to start shopping? Browse our amazing products and place your first order to see the magic happen!
-              </Text>
+              <Text style={styles.noOrdersCTA}>{t('tabsOrders.empty.cta')}</Text>
             </View>
           )
         ) : (

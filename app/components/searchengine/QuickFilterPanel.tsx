@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Animated, Dimensions, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { SearchFilters, ShippingOptionKey } from './SearchFilterSheet';
+import { useTranslation } from 'react-i18next';
 
 export type QuickFilterSection = 'shippingOption' | 'salesChannel' | 'rating' | 'price' | 'category';
 
@@ -51,6 +52,7 @@ export default function QuickFilterPanel({
   categoryOptions,
   topOffset,
 }: Props) {
+  const { t } = useTranslation();
   const [minPrice, setMinPrice] = useState(filters.minPrice);
   const [maxPrice, setMaxPrice] = useState(filters.maxPrice);
 
@@ -94,6 +96,12 @@ export default function QuickFilterPanel({
     onClose();
   };
 
+  const salesChannelLabel = (opt: string) => {
+    if (opt === 'Retail') return t('search.salesChannel.retail');
+    if (opt === 'Wholesale') return t('search.salesChannel.wholesale');
+    return opt;
+  };
+
   return (
     <Modal
       visible={visible}
@@ -120,7 +128,7 @@ export default function QuickFilterPanel({
             <View style={styles.priceBody}>
           <View style={styles.priceRow}>
             <View style={styles.priceInputWrap}>
-              <Text style={styles.priceLabel}>Min</Text>
+              <Text style={styles.priceLabel}>{t('search.filterSheet.price.min')}</Text>
               <TextInput
                 value={minPrice}
                 onChangeText={(t) => {
@@ -128,14 +136,14 @@ export default function QuickFilterPanel({
                   setMinPrice(v);
                   onChange({ ...filters, minPrice: v, maxPrice });
                 }}
-                placeholder="0"
+                placeholder={t('search.quickFilter.price.minPlaceholder')}
                 keyboardType="number-pad"
                 style={styles.priceInput}
                 placeholderTextColor="#9ca3af"
               />
             </View>
             <View style={styles.priceInputWrap}>
-              <Text style={styles.priceLabel}>Max</Text>
+              <Text style={styles.priceLabel}>{t('search.filterSheet.price.max')}</Text>
               <TextInput
                 value={maxPrice}
                 onChangeText={(t) => {
@@ -143,7 +151,7 @@ export default function QuickFilterPanel({
                   setMaxPrice(v);
                   onChange({ ...filters, minPrice, maxPrice: v });
                 }}
-                placeholder="∞"
+                placeholder={t('search.quickFilter.price.maxPlaceholder')}
                 keyboardType="number-pad"
                 style={styles.priceInput}
                 placeholderTextColor="#9ca3af"
@@ -177,7 +185,7 @@ export default function QuickFilterPanel({
                     ? salesChannelOptions.map((opt) => (
                         <Chip
                           key={opt}
-                          label={opt}
+                          label={salesChannelLabel(opt)}
                           selected={filters.salesChannel.includes(opt)}
                           onPress={() => {
                             const next = new Set(filters.salesChannel);

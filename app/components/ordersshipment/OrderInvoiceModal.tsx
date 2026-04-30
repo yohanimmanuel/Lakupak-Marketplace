@@ -23,6 +23,7 @@ import ViewShot from 'react-native-view-shot';
 import { X, FileDown, Image as ImageIcon, Share2, MoreHorizontal } from 'lucide-react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { useTranslation } from 'react-i18next';
 import {
   buildOrderInvoiceHtml,
   buildOrderInvoicePlainText,
@@ -76,7 +77,7 @@ async function ensureNamedCacheFile(args: { srcUri: string; filename: string }):
   }
 }
 
-function InvoiceRasterBody({ order }: { order: OrderLike }) {
+function InvoiceRasterBody({ order, t }: { order: OrderLike; t: (key: string, opts?: any) => string }) {
   const s = buildInvoiceSnapshot(order);
   return (
     <View style={rasterStyles.sheet} collapsable={false}>
@@ -88,24 +89,24 @@ function InvoiceRasterBody({ order }: { order: OrderLike }) {
         />
       </View>
       <Text style={rasterStyles.brand}>{s.storeName}</Text>
-      <Text style={rasterStyles.sub}>Tax invoice / Receipt</Text>
+      <Text style={rasterStyles.sub}>{t('ordersFlow.invoice.raster.subtitle')}</Text>
       <Text style={rasterStyles.line}>
-        <Text style={rasterStyles.bold}>Order ID</Text> · {s.orderId}
+        <Text style={rasterStyles.bold}>{t('ordersFlow.invoice.raster.orderId')}</Text> · {s.orderId}
       </Text>
       <Text style={rasterStyles.line}>
-        <Text style={rasterStyles.bold}>Date</Text> · {s.issuedAt}
+        <Text style={rasterStyles.bold}>{t('ordersFlow.invoice.raster.date')}</Text> · {s.issuedAt}
       </Text>
       <Text style={rasterStyles.line}>
-        <Text style={rasterStyles.bold}>Status</Text> · {s.orderStatus}
+        <Text style={rasterStyles.bold}>{t('ordersFlow.invoice.raster.status')}</Text> · {s.orderStatus}
       </Text>
       <Text style={rasterStyles.line}>
-        <Text style={rasterStyles.bold}>Payment</Text> · {s.paymentStatus}
+        <Text style={rasterStyles.bold}>{t('ordersFlow.invoice.raster.payment')}</Text> · {s.paymentStatus}
       </Text>
       <View style={rasterStyles.box}>
         <Text style={rasterStyles.line}>
-          <Text style={rasterStyles.bold}>Bill to</Text> · {s.billToName} · {s.billToPhone}
+          <Text style={rasterStyles.bold}>{t('ordersFlow.invoice.raster.billTo')}</Text> · {s.billToName} · {s.billToPhone}
         </Text>
-        <Text style={[rasterStyles.bold, { marginTop: 8 }]}>Ship to</Text>
+        <Text style={[rasterStyles.bold, { marginTop: 8 }]}>{t('ordersFlow.invoice.raster.shipTo')}</Text>
         <Text style={rasterStyles.ship}>{s.shipTo}</Text>
       </View>
       {s.lines.map((l, i) => (
@@ -122,19 +123,19 @@ function InvoiceRasterBody({ order }: { order: OrderLike }) {
       ))}
       <View style={rasterStyles.totals}>
         <View style={rasterStyles.totRow}>
-          <Text style={rasterStyles.totText}>Subtotal</Text>
+          <Text style={rasterStyles.totText}>{t('ordersFlow.invoice.raster.subtotal')}</Text>
           <Text style={rasterStyles.totText}>{s.subtotal}</Text>
         </View>
         <View style={rasterStyles.totRow}>
-          <Text style={rasterStyles.totText}>Discounts</Text>
+          <Text style={rasterStyles.totText}>{t('ordersFlow.invoice.raster.discounts')}</Text>
           <Text style={rasterStyles.totText}>− {s.discounts}</Text>
         </View>
         <View style={rasterStyles.totRow}>
-          <Text style={rasterStyles.totText}>Shipping</Text>
+          <Text style={rasterStyles.totText}>{t('ordersFlow.invoice.raster.shipping')}</Text>
           <Text style={rasterStyles.totText}>{s.shipping}</Text>
         </View>
         <View style={[rasterStyles.totRow, rasterStyles.grand]}>
-          <Text style={rasterStyles.grandText}>Total</Text>
+          <Text style={rasterStyles.grandText}>{t('ordersFlow.invoice.raster.total')}</Text>
           <Text style={rasterStyles.grandText}>{s.total}</Text>
         </View>
       </View>
@@ -211,6 +212,7 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
   const [busy, setBusy] = useState(false);
   const [logoDataUri, setLogoDataUri] = useState<string | null>(null);
   const rasterRef = useRef<ViewShot>(null);
+  const { t } = useTranslation();
 
   const logoUri = useMemo(
     () =>
@@ -260,18 +262,18 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
           mimeType: 'application/pdf',
         });
         if (savedUri) {
-          Alert.alert('Saved', 'Invoice PDF saved to your selected folder.');
+          Alert.alert(t('ordersFlow.invoice.alerts.savedTitle'), t('ordersFlow.invoice.alerts.savedPdfBody'));
         } else {
           // Fallback: some runtimes don't expose StorageAccessFramework. Use system sheet so user can "Save to Files".
           const can = await Sharing.isAvailableAsync();
           if (can) {
             await Sharing.shareAsync(namedUri, {
               mimeType: 'application/pdf',
-              dialogTitle: 'Save Invoice PDF',
+              dialogTitle: t('ordersFlow.invoice.title'),
               UTI: 'com.adobe.pdf',
             });
           } else {
-            Alert.alert('Save unavailable', 'Could not open the system file saver on this device.');
+            Alert.alert(t('ordersFlow.invoice.alerts.saveUnavailableTitle'), t('ordersFlow.invoice.alerts.saveUnavailableBody'));
           }
         }
       } else {
@@ -280,19 +282,19 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
         if (can) {
           await Sharing.shareAsync(namedUri, {
             mimeType: 'application/pdf',
-            dialogTitle: 'Save Invoice PDF',
+            dialogTitle: t('ordersFlow.invoice.title'),
             UTI: 'com.adobe.pdf',
           });
         } else {
-          Alert.alert('Save unavailable', 'Could not open the system file saver on this device.');
+          Alert.alert(t('ordersFlow.invoice.alerts.saveUnavailableTitle'), t('ordersFlow.invoice.alerts.saveUnavailableBody'));
         }
       }
     } catch (e) {
-      Alert.alert('PDF', e instanceof Error ? e.message : 'Could not create PDF');
+      Alert.alert(t('ordersFlow.invoice.alerts.pdfTitle'), e instanceof Error ? e.message : t('ordersFlow.invoice.alerts.pdfFailedBody'));
     } finally {
       setBusy(false);
     }
-  }, [order, logoUri, logoDataUri]);
+  }, [order, logoUri, logoDataUri, t]);
 
   const runImage = useCallback(async () => {
     if (!order) return;
@@ -312,18 +314,18 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
           mimeType: 'image/png',
         });
         if (savedUri) {
-          Alert.alert('Saved', 'Invoice image saved to your selected folder.');
+          Alert.alert(t('ordersFlow.invoice.alerts.savedTitle'), t('ordersFlow.invoice.alerts.savedImageBody'));
         } else {
           // Fallback: some runtimes don't expose StorageAccessFramework. Use system sheet so user can "Save".
           const can = await Sharing.isAvailableAsync();
           if (can) {
             await Sharing.shareAsync(namedUri, {
               mimeType: 'image/png',
-              dialogTitle: 'Save Invoice Image',
+              dialogTitle: t('ordersFlow.invoice.title'),
               UTI: 'public.png',
             });
           } else {
-            Alert.alert('Save unavailable', 'Could not open the system file saver on this device.');
+            Alert.alert(t('ordersFlow.invoice.alerts.saveUnavailableTitle'), t('ordersFlow.invoice.alerts.saveUnavailableBody'));
           }
         }
       } else {
@@ -332,32 +334,32 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
         if (can) {
           await Sharing.shareAsync(namedUri, {
             mimeType: 'image/png',
-            dialogTitle: 'Save Invoice Image',
+            dialogTitle: t('ordersFlow.invoice.title'),
             UTI: 'public.png',
           });
         } else {
-          Alert.alert('Save unavailable', 'Could not open the system file saver on this device.');
+          Alert.alert(t('ordersFlow.invoice.alerts.saveUnavailableTitle'), t('ordersFlow.invoice.alerts.saveUnavailableBody'));
         }
       }
     } catch (e) {
-      Alert.alert('Image', e instanceof Error ? e.message : 'Could not export image');
+      Alert.alert(t('ordersFlow.invoice.alerts.imageTitle'), e instanceof Error ? e.message : t('ordersFlow.invoice.alerts.imageFailedBody'));
     } finally {
       setBusy(false);
     }
-  }, [order]);
+  }, [order, t]);
 
   const runShareText = useCallback(async () => {
     if (!order) return;
     const body = buildOrderInvoicePlainText(order);
     try {
       await Share.share({
-        title: `Invoice ${order.orderId}`,
+        title: t('ordersFlow.invoice.share.title', { orderId: order.orderId }),
         message: body,
       });
     } catch {
       /* dismissed */
     }
-  }, [order]);
+  }, [order, t]);
 
   const runPrint = useCallback(async () => {
     if (!order) return;
@@ -365,19 +367,19 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
     try {
       await Print.printAsync({ html: buildOrderInvoiceHtml(order, { logoUri, logoDataUri }) });
     } catch (e) {
-      Alert.alert('Print', e instanceof Error ? e.message : 'Print failed');
+      Alert.alert(t('ordersFlow.invoice.alerts.printTitle'), e instanceof Error ? e.message : t('ordersFlow.invoice.alerts.printFailedBody'));
     } finally {
       setBusy(false);
     }
-  }, [order, logoUri, logoDataUri]);
+  }, [order, logoUri, logoDataUri, t]);
 
   const showMore = useCallback(() => {
-    Alert.alert('More options', undefined, [
-      { text: 'Print (system)', onPress: () => void runPrint() },
-      { text: 'Share text summary', onPress: () => void runShareText() },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('ordersFlow.invoice.alerts.moreOptionsTitle'), undefined, [
+      { text: t('ordersFlow.invoice.alerts.print'), onPress: () => void runPrint() },
+      { text: t('ordersFlow.invoice.alerts.shareTextSummary'), onPress: () => void runShareText() },
+      { text: t('ordersFlow.common.buttons.cancel'), style: 'cancel' },
     ]);
-  }, [runPrint, runShareText]);
+  }, [runPrint, runShareText, t]);
 
   if (!visible || !order) {
     return null;
@@ -400,10 +402,10 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
       <View style={[styles.container, { backgroundColor }]}>
         {/* Same chrome as ProductImageModal */}
         <View style={[styles.header, { borderBottomColor: borderColor, paddingTop: Math.max(insets.top, 50) }]}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityRole="button" accessibilityLabel="Close">
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityRole="button" accessibilityLabel={t('ordersFlow.invoice.closeA11y')}>
             <X size={24} color={iconColor} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: textColor }]}>Invoice</Text>
+          <Text style={[styles.headerTitle, { color: textColor }]}>{t('ordersFlow.invoice.title')}</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -426,7 +428,7 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
             options={{ format: 'png', quality: 0.92, result: 'tmpfile' }}
             style={styles.viewShotWrap}
           >
-            <InvoiceRasterBody order={order} />
+            <InvoiceRasterBody order={order} t={t} />
           </ViewShot>
         </View>
 
@@ -437,27 +439,27 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
               style={styles.toolBtn}
               onPress={runPdf}
               disabled={busy}
-              accessibilityLabel="Download PDF"
+              accessibilityLabel={t('ordersFlow.invoice.tools.pdfA11y')}
             >
               {busy ? <ActivityIndicator color="#0a61d7" /> : <FileDown size={22} color="#0a61d7" />}
-              <Text style={styles.toolLabel}>PDF</Text>
+              <Text style={styles.toolLabel}>{t('ordersFlow.invoice.tools.pdf')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.toolBtn}
               onPress={runImage}
               disabled={busy}
-              accessibilityLabel="Save as image"
+              accessibilityLabel={t('ordersFlow.invoice.tools.imageA11y')}
             >
               <ImageIcon size={22} color="#0a61d7" />
-              <Text style={styles.toolLabel}>Image</Text>
+              <Text style={styles.toolLabel}>{t('ordersFlow.invoice.tools.image')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.toolBtn} onPress={runShareText} disabled={busy}>
               <Share2 size={22} color="#0a61d7" />
-              <Text style={styles.toolLabel}>Share</Text>
+              <Text style={styles.toolLabel}>{t('ordersFlow.invoice.tools.share')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.toolBtn} onPress={showMore} disabled={busy}>
               <MoreHorizontal size={22} color="#0a61d7" />
-              <Text style={styles.toolLabel}>More</Text>
+              <Text style={styles.toolLabel}>{t('ordersFlow.invoice.tools.more')}</Text>
             </TouchableOpacity>
           </View>
         </View>

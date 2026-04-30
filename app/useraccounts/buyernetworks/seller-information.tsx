@@ -21,6 +21,7 @@ import {
   MapPin,
 } from 'lucide-react-native';
 import { API_BASE_URL } from '../../../services/config';
+import { useTranslation } from 'react-i18next';
 
 const primaryBlue = '#0a61d7';
 const iconGray = '#6B7280';
@@ -73,6 +74,7 @@ export default function SellerInformationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const id = params.id;
 
   const [profile, setProfile] = useState<DistributorProfile | null>(null);
@@ -85,7 +87,7 @@ export default function SellerInformationScreen() {
   useEffect(() => {
     if (!id || !Number.isFinite(distributorId)) {
       setLoading(false);
-      setError('Invalid seller');
+      setError(t('buyerNetworks.sellerInformation.errors.invalidSeller'));
       return;
     }
 
@@ -103,7 +105,7 @@ export default function SellerInformationScreen() {
         if (cancelled) return;
 
         if (!profileRes.ok) {
-          setError('Failed to load seller information');
+          setError(t('buyerNetworks.sellerInformation.errors.failedToLoad'));
           setProfile(null);
           return;
         }
@@ -119,7 +121,7 @@ export default function SellerInformationScreen() {
         }
       } catch {
         if (!cancelled) {
-          setError('Failed to load seller information');
+          setError(t('buyerNetworks.sellerInformation.errors.failedToLoad'));
           setProfile(null);
         }
       } finally {
@@ -146,12 +148,12 @@ export default function SellerInformationScreen() {
   const formatReviewDate = (iso: string) => {
     const d = new Date(iso);
     if (isNaN(d.getTime())) {
-      return 'Recently';
+      return t('buyerNetworks.sellerInformation.labels.recently');
     }
     try {
       return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     } catch {
-      return 'Recently';
+      return t('buyerNetworks.sellerInformation.labels.recently');
     }
   };
 
@@ -160,7 +162,7 @@ export default function SellerInformationScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.centered}>
-          <Text style={styles.muted}>Loading...</Text>
+          <Text style={styles.muted}>{t('buyerNetworks.sellerInformation.states.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -171,8 +173,8 @@ export default function SellerInformationScreen() {
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.centeredPadded}>
           <Store color={iconGray} size={48} />
-          <Text style={styles.notFoundTitle}>Seller not found</Text>
-          <Text style={styles.notFoundText}>{error || 'This seller may not exist.'}</Text>
+          <Text style={styles.notFoundTitle}>{t('buyerNetworks.sellerInformation.states.sellerNotFound')}</Text>
+          <Text style={styles.notFoundText}>{error || t('buyerNetworks.sellerInformation.states.sellerMayNotExist')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -193,10 +195,17 @@ export default function SellerInformationScreen() {
           header: () => (
             <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
-                <Pressable onPress={() => router.back()} hitSlop={10} accessibilityLabel="Back" accessibilityRole="button">
+                <Pressable
+                  onPress={() => router.back()}
+                  hitSlop={10}
+                  accessibilityLabel={t('buyerNetworks.sellerInformation.a11y.back')}
+                  accessibilityRole="button"
+                >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 }}>Seller Information</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 }}>
+                  {t('buyerNetworks.sellerInformation.title')}
+                </Text>
               </View>
             </View>
           ),
@@ -208,7 +217,7 @@ export default function SellerInformationScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Building2 color={iconGray} size={20} />
-            <Text style={styles.sectionTitle}>Company Information</Text>
+            <Text style={styles.sectionTitle}>{t('buyerNetworks.sellerInformation.labels.companyInformation')}</Text>
           </View>
 
           {/* Logo */}
@@ -233,25 +242,25 @@ export default function SellerInformationScreen() {
 
           {/* Company Name */}
           <View style={styles.fieldBlock}>
-            <Text style={styles.fieldLabel}>Company Name *</Text>
+            <Text style={styles.fieldLabel}>{t('buyerNetworks.sellerInformation.labels.companyName')}</Text>
             <Text style={styles.fieldValue}>{displayName || '—'}</Text>
           </View>
 
           {/* Business Registration Number */}
           <View style={styles.fieldBlock}>
-            <Text style={styles.fieldLabel}>Business Registration Number</Text>
+            <Text style={styles.fieldLabel}>{t('buyerNetworks.sellerInformation.labels.businessRegistrationNumber')}</Text>
             <Text style={styles.fieldValue}>{profile.businessRegistrationNumber || '—'}</Text>
           </View>
 
           {profile.industryType ? (
             <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>Industry</Text>
+              <Text style={styles.fieldLabel}>{t('buyerNetworks.sellerInformation.labels.industry')}</Text>
               <Text style={styles.fieldValue}>{profile.industryType}</Text>
             </View>
           ) : null}
           {profile.businessDescription ? (
             <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>Business Description</Text>
+              <Text style={styles.fieldLabel}>{t('buyerNetworks.sellerInformation.labels.businessDescription')}</Text>
               <Text style={[styles.fieldValue]}>{profile.businessDescription}</Text>
             </View>
           ) : null}
@@ -261,16 +270,18 @@ export default function SellerInformationScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Truck color={iconGray} size={20} />
-            <Text style={styles.sectionTitle}>Shipping & Delivery Preferences</Text>
+            <Text style={styles.sectionTitle}>
+              {t('buyerNetworks.sellerInformation.labels.shippingDeliveryPreferences')}
+            </Text>
           </View>
 
           {/* Shipping options */}
-          <Text style={styles.subsectionLabel}>Shipping options</Text>
+          <Text style={styles.subsectionLabel}>{t('buyerNetworks.sellerInformation.labels.shippingOptions')}</Text>
           {(() => {
             const shippingOptions: { key: string; label: string }[] = [
-              { key: 'Self Pickup', label: 'Self Pickup (Buyer collects)' },
-              { key: 'Seller/Distributor Delivery', label: 'Seller / Distributor Delivery' },
-              { key: 'Buyer-arranged Courier', label: 'Buyer-arranged Courier' },
+              { key: 'Self Pickup', label: t('buyerNetworks.sellerInformation.shippingOptions.selfPickup') },
+              { key: 'Seller/Distributor Delivery', label: t('buyerNetworks.sellerInformation.shippingOptions.sellerDelivery') },
+              { key: 'Buyer-arranged Courier', label: t('buyerNetworks.sellerInformation.shippingOptions.buyerCourier') },
             ];
             const prefs = profile.shippingPreferences ?? [];
             return (
@@ -290,7 +301,9 @@ export default function SellerInformationScreen() {
 
           {profile.pickupAddress ? (
             <>
-              <Text style={[styles.subsectionLabel, { marginTop: 16 }]}>Pickup address</Text>
+              <Text style={[styles.subsectionLabel, { marginTop: 16 }]}>
+                {t('buyerNetworks.sellerInformation.labels.pickupAddress')}
+              </Text>
               <View style={styles.pickupAddressBlock}>
                 <MapPin color={iconGray} size={16} style={{ marginTop: 2 }} />
                 <Text style={styles.pickupAddressText}>{profile.pickupAddress}</Text>
@@ -300,12 +313,19 @@ export default function SellerInformationScreen() {
 
           {(profile.deliveryTimeSlots?.length ?? 0) > 0 && (
             <>
-              <Text style={[styles.subsectionLabel, { marginTop: 16 }]}>Preferred delivery time slots</Text>
+              <Text style={[styles.subsectionLabel, { marginTop: 16 }]}>
+                {t('buyerNetworks.sellerInformation.labels.preferredDeliveryTimeSlots')}
+              </Text>
               <View style={styles.checkList}>
-                {['Morning (8:00 AM - 12:00 PM)', 'Afternoon (12:00 PM - 5:00 PM)', 'Evening (5:00 PM - 8:00 PM)', 'Flexible'].map((label) => {
-                  const enabled = (profile.deliveryTimeSlots ?? []).some((s) => s === label || label.startsWith(s));
+                {[
+                  { raw: 'Morning (8:00 AM - 12:00 PM)', label: t('buyerNetworks.sellerInformation.deliveryTimeSlots.morning') },
+                  { raw: 'Afternoon (12:00 PM - 5:00 PM)', label: t('buyerNetworks.sellerInformation.deliveryTimeSlots.afternoon') },
+                  { raw: 'Evening (5:00 PM - 8:00 PM)', label: t('buyerNetworks.sellerInformation.deliveryTimeSlots.evening') },
+                  { raw: 'Flexible', label: t('buyerNetworks.sellerInformation.deliveryTimeSlots.flexible') },
+                ].map(({ raw, label }) => {
+                  const enabled = (profile.deliveryTimeSlots ?? []).some((s) => s === raw || raw.startsWith(s));
                   return (
-                    <View key={label} style={styles.checkRow}>
+                    <View key={raw} style={styles.checkRow}>
                       {enabled ? <Check size={18} color={primaryBlue} strokeWidth={2.5} /> : <View style={styles.checkEmpty} />}
                       <Text style={[styles.checkLabel, !enabled && styles.checkLabelMuted]}>{label}</Text>
                     </View>
@@ -317,14 +337,24 @@ export default function SellerInformationScreen() {
 
           {(profile.preferredDeliveryDays?.length ?? 0) > 0 && (
             <>
-              <Text style={[styles.subsectionLabel, { marginTop: 16 }]}>Preferred delivery days</Text>
+              <Text style={[styles.subsectionLabel, { marginTop: 16 }]}>
+                {t('buyerNetworks.sellerInformation.labels.preferredDeliveryDays')}
+              </Text>
               <View style={styles.checkList}>
-                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
-                  const enabled = (profile.preferredDeliveryDays ?? []).some((d) => d.toLowerCase() === day.toLowerCase());
+                {[
+                  { raw: 'Monday', label: t('buyerNetworks.sellerInformation.days.monday') },
+                  { raw: 'Tuesday', label: t('buyerNetworks.sellerInformation.days.tuesday') },
+                  { raw: 'Wednesday', label: t('buyerNetworks.sellerInformation.days.wednesday') },
+                  { raw: 'Thursday', label: t('buyerNetworks.sellerInformation.days.thursday') },
+                  { raw: 'Friday', label: t('buyerNetworks.sellerInformation.days.friday') },
+                  { raw: 'Saturday', label: t('buyerNetworks.sellerInformation.days.saturday') },
+                  { raw: 'Sunday', label: t('buyerNetworks.sellerInformation.days.sunday') },
+                ].map(({ raw, label }) => {
+                  const enabled = (profile.preferredDeliveryDays ?? []).some((d) => d.toLowerCase() === raw.toLowerCase());
                   return (
-                    <View key={day} style={styles.checkRow}>
+                    <View key={raw} style={styles.checkRow}>
                       {enabled ? <Check size={18} color={primaryBlue} strokeWidth={2.5} /> : <View style={styles.checkEmpty} />}
-                      <Text style={[styles.checkLabel, !enabled && styles.checkLabelMuted]}>{day}</Text>
+                      <Text style={[styles.checkLabel, !enabled && styles.checkLabelMuted]}>{label}</Text>
                     </View>
                   );
                 })}
@@ -338,7 +368,7 @@ export default function SellerInformationScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MessageSquare color={iconGray} size={20} />
-            <Text style={styles.sectionTitle}>Reviews & Rating</Text>
+            <Text style={styles.sectionTitle}>{t('buyerNetworks.sellerInformation.labels.reviewsRating')}</Text>
           </View>
 
           {totalReviews > 0 ? (
@@ -346,7 +376,9 @@ export default function SellerInformationScreen() {
               <View style={styles.ratingSummary}>
                 <Text style={styles.overallRatingNumber}>{overallRating}</Text>
                 {renderStars(Math.round(overallRating), 20)}
-                <Text style={styles.totalReviewsText}>{totalReviews} {totalReviews === 1 ? 'review' : 'reviews'}</Text>
+                <Text style={styles.totalReviewsText}>
+                  {totalReviews} {totalReviews === 1 ? t('buyerNetworks.sellerInformation.labels.review') : t('buyerNetworks.sellerInformation.labels.reviews')}
+                </Text>
               </View>
 
               {reviewsList.map((review) => (
@@ -372,7 +404,9 @@ export default function SellerInformationScreen() {
                       </View>
                       <Text style={styles.reviewDate}>{formatReviewDate(review.createdAt)}</Text>
                       {review.wouldOrderAgain ? (
-                        <Text style={styles.wouldOrderAgain}>Would order again: {review.wouldOrderAgain}</Text>
+                        <Text style={styles.wouldOrderAgain}>
+                          {t('buyerNetworks.sellerInformation.labels.wouldOrderAgain')}: {review.wouldOrderAgain}
+                        </Text>
                       ) : null}
                     </View>
                   </View>
@@ -385,7 +419,7 @@ export default function SellerInformationScreen() {
           ) : (
             <View style={styles.noReviews}>
               <MessageSquare color={iconGray} size={48} />
-              <Text style={styles.noReviewsText}>No reviews yet</Text>
+              <Text style={styles.noReviewsText}>{t('buyerNetworks.sellerInformation.labels.noReviewsYet')}</Text>
             </View>
           )}
         </View>

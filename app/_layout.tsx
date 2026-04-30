@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { API_BASE_URL } from '../services/config';
+import { useTranslation } from 'react-i18next';
 
 import { useAuthStore } from '../stores/authStore';
 import { useDataStore } from '../stores/dataStore';
@@ -15,6 +16,8 @@ import { useUserActivityStore } from '../stores/userActivityStore';
 import { pushNotificationService } from '../services/pushNotifications';
 import SuspendedAccountModal from '../components/SuspendedAccountModal';
 import AuthGuard from '../components/AuthGuard';
+
+import '../i18n';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -55,6 +58,7 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { hydrateFromStorage, token, user } = useAuthStore();
   const { refreshAllData, startAutoRefresh, stopAutoRefresh } = useDataStore();
   const { initializeCart } = useCartStore();
@@ -119,6 +123,9 @@ function RootLayoutNav() {
     const initializeApp = async () => {
       // Hydrate auth state first
       await hydrateFromStorage();
+
+      // Hydrate app-level preferences (e.g., push notifications toggle)
+      await pushNotificationService.hydrateEnabled();
       
       // Get token and user after hydration
       const currentToken = useAuthStore.getState().token;
@@ -307,7 +314,7 @@ function RootLayoutNav() {
           name="useraccounts/startdistributing"
           options={{
             presentation: 'modal',
-            title: 'Welcome to Laku!',
+            title: t('nav.welcomeToLaku'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -319,7 +326,7 @@ function RootLayoutNav() {
           options={{
             presentation: 'modal',
             headerShown: true,
-            title: 'My Networks',
+            title: t('nav.myNetworks'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827', fontWeight: '600' },
             headerTintColor: '#0a61d7',
@@ -331,7 +338,7 @@ function RootLayoutNav() {
           options={{
             presentation: 'modal',
             headerShown: true,
-            title: 'Distributor Details',
+            title: t('nav.distributorDetails'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827', fontWeight: '600' },
             headerTintColor: '#0a61d7',
@@ -343,7 +350,7 @@ function RootLayoutNav() {
           options={{
             presentation: 'modal',
             headerShown: true,
-            title: 'Seller Information',
+            title: t('nav.sellerInformation'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827', fontWeight: '600' },
             headerTintColor: '#0a61d7',
@@ -354,7 +361,7 @@ function RootLayoutNav() {
           options={{
             presentation: 'modal',
             headerShown: true,
-            title: 'Distributor',
+            title: t('nav.distributor'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827', fontWeight: '600' },
             headerTintColor: '#0a61d7',
@@ -371,7 +378,7 @@ function RootLayoutNav() {
           name="useraccounts/wallet/mywallet"
           options={{
             presentation: 'modal',
-            title: 'My Wallet',
+            title: t('nav.myWallet'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -381,7 +388,7 @@ function RootLayoutNav() {
           name="useraccounts/wallet/bonuses"
           options={{
             presentation: 'modal',
-            title: 'Bonuses',
+            title: t('nav.bonuses'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -391,7 +398,7 @@ function RootLayoutNav() {
           name="useraccounts/wallet/discounts"
           options={{
             presentation: 'modal',
-            title: 'Discounts',
+            title: t('nav.discounts'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -401,7 +408,7 @@ function RootLayoutNav() {
           name="useraccounts/wallet/lakupay"
           options={{
             presentation: 'modal',
-            title: 'LakuPay',
+            title: t('nav.lakupay'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -411,7 +418,7 @@ function RootLayoutNav() {
           name="useraccounts/moreservice/favourites"
           options={{
             presentation: 'modal',
-            title: 'Favourites',
+            title: t('nav.favourites'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -421,7 +428,7 @@ function RootLayoutNav() {
           name="useraccounts/moreservice/recentlyviewed"
           options={{
             presentation: 'modal',
-            title: 'Recently Viewed',
+            title: t('nav.recentlyViewed'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -431,7 +438,7 @@ function RootLayoutNav() {
           name="useraccounts/moreservice/buyagain"
           options={{
             presentation: 'modal',
-            title: 'Buy Again',
+            title: t('nav.buyAgain'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -441,7 +448,7 @@ function RootLayoutNav() {
           name="useraccounts/moreservice/getvouchers"
           options={{
             presentation: 'modal',
-            title: 'Get Vouchers',
+            title: t('nav.getVouchers'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -472,33 +479,33 @@ function RootLayoutNav() {
           name="useraccounts/userprofile/editprofile"
           options={{
             presentation: 'modal',
-            title: 'Profile',
+            title: t('nav.profile'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
           }}
         />
-        <Stack.Screen name="useraccounts/userprofile/edit-username" options={{ presentation: 'modal', title: 'Edit Username', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/userprofile/edit-name" options={{ presentation: 'modal', title: 'Edit Name', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/userprofile/edit-bio" options={{ presentation: 'modal', title: 'Edit Bio', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/userprofile/edit-phone" options={{ presentation: 'modal', title: 'Edit Phone', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/userprofile/edit-email" options={{ presentation: 'modal', title: 'Edit Email', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/userprofile/addresses" options={{ presentation: 'modal', title: 'My Addresses', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/userprofile/edit-address" options={{ presentation: 'modal', title: 'New Address', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/userprofile/edit-country" options={{ presentation: 'modal', title: 'Edit Country', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/userprofile/edit-store-name" options={{ presentation: 'modal', title: 'Edit Store Name', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/userprofile/followers" options={{ presentation: 'modal', title: 'Followers', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/userprofile/following" options={{ presentation: 'modal', title: 'Following', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/consent/helpcenter" options={{ presentation: 'modal', title: 'Help Center', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/consent/security-privacy" options={{ presentation: 'modal', title: 'Security & Privacy', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
-        <Stack.Screen name="useraccounts/consent/community-rules" options={{ presentation: 'modal', title: 'Community Rules', headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/edit-username" options={{ presentation: 'modal', title: t('nav.editUsername'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/edit-name" options={{ presentation: 'modal', title: t('nav.editName'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/edit-bio" options={{ presentation: 'modal', title: t('nav.editBio'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/edit-phone" options={{ presentation: 'modal', title: t('nav.editPhone'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/edit-email" options={{ presentation: 'modal', title: t('nav.editEmail'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/addresses" options={{ presentation: 'modal', title: t('nav.myAddresses'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/edit-address" options={{ presentation: 'modal', title: t('nav.newAddress'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/edit-country" options={{ presentation: 'modal', title: t('nav.editCountry'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/edit-store-name" options={{ presentation: 'modal', title: t('nav.editStoreName'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/followers" options={{ presentation: 'modal', title: t('nav.followers'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/userprofile/following" options={{ presentation: 'modal', title: t('nav.following'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/consent/helpcenter" options={{ presentation: 'modal', title: t('nav.helpCenter'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/consent/security-privacy" options={{ presentation: 'modal', title: t('nav.securityPrivacy'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
+        <Stack.Screen name="useraccounts/consent/community-rules" options={{ presentation: 'modal', title: t('nav.communityRules'), headerStyle: { backgroundColor: '#ffffff' }, headerTitleStyle: { color: '#111827' }, headerTintColor: '#0a61d7' }} />
         
         {/* Checkout Screen */}
         <Stack.Screen 
           name="components/productcatalog/checkout" 
           options={{ 
             presentation: 'modal',
-            title: 'Checkout',
+            title: t('nav.checkout'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -510,7 +517,7 @@ function RootLayoutNav() {
           name="payment-success" 
           options={{ 
             presentation: 'modal',
-            title: 'Payment Success',
+            title: t('nav.paymentSuccess'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827' },
             headerTintColor: '#0a61d7',
@@ -568,7 +575,7 @@ function RootLayoutNav() {
           options={{
             presentation: 'modal',
             headerShown: true,
-            title: 'Latest updates',
+            title: t('nav.latestUpdates'),
             headerStyle: {
               backgroundColor: '#ffffff',
             },
@@ -587,7 +594,7 @@ function RootLayoutNav() {
           options={{ 
             presentation: 'modal',
             headerShown: true,
-            title: 'Order Details',
+            title: t('nav.orderDetails'),
             headerStyle: {
               backgroundColor: '#ffffff',
             },
@@ -604,7 +611,7 @@ function RootLayoutNav() {
           options={{ 
             presentation: 'modal',
             headerShown: true,
-            title: 'Delivery Information',
+            title: t('nav.deliveryInformation'),
             headerStyle: {
               backgroundColor: '#ffffff',
             },
@@ -621,7 +628,7 @@ function RootLayoutNav() {
           options={{ 
             presentation: 'modal',
             headerShown: true,
-            title: 'Cancel Order',
+            title: t('nav.cancelOrder'),
             headerStyle: {
               backgroundColor: '#ffffff',
             },
@@ -637,7 +644,7 @@ function RootLayoutNav() {
           options={{ 
             presentation: 'modal',
             headerShown: true,
-            title: 'Return / Refund',
+            title: t('nav.returnRefund'),
             headerStyle: {
               backgroundColor: '#ffffff',
             },
@@ -654,7 +661,7 @@ function RootLayoutNav() {
           options={{
             presentation: 'modal',
             headerShown: true,
-            title: 'Pay Order',
+            title: t('nav.payOrder'),
             headerStyle: {
               backgroundColor: '#ffffff',
             },

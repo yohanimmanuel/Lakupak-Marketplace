@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { DynamicCategory } from '../../../utils/categoryUtils';
 import CategoryBadge from '../CategoryBadge';
+import { useTranslation } from 'react-i18next';
 
 interface PopularCategoriesProps {
   categories: DynamicCategory[];
@@ -12,6 +13,7 @@ export default function PopularCategories({
   categories,
   onCategoryPress,
 }: PopularCategoriesProps) {
+  const { t } = useTranslation();
   if (categories.length === 0) {
     return null;
   }
@@ -19,7 +21,7 @@ export default function PopularCategories({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Popular Categories</Text>
+        <Text style={styles.title}>{t('search.sections.popularCategories')}</Text>
       </View>
 
       <ScrollView

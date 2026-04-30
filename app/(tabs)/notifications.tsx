@@ -31,6 +31,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
 import { usePlatformAnnouncementsRealtimeStore } from '../../stores/platformAnnouncementsRealtimeStore';
 import { OrderUpdateRow } from '../components/notifications/OrderUpdateRow';
+import { useTranslation } from 'react-i18next';
 
 const MISSING_ORDER_TIMESTAMP_FALLBACK = '1970-01-01T00:00:00.000Z';
 const warnedOrderIds = new Set<string>();
@@ -39,14 +40,6 @@ const primaryBlue = '#0a61d7';
 
 /** Fixed marketplace “Latest updates” filters (must match admin `PlatformAnnouncement.category` values, case-insensitive). */
 type LatestUpdateTabId = 'all' | 'update' | 'promotion' | 'maintenance' | 'policy';
-
-const LATEST_UPDATE_TABS: { id: LatestUpdateTabId; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'update', label: 'Updates' },
-  { id: 'promotion', label: 'Promotion' },
-  { id: 'maintenance', label: 'Maintenance' },
-  { id: 'policy', label: 'Policy' },
-];
 
 function normalizeAnnouncementCategory(raw: string | null | undefined): string {
   return (raw ?? '').trim().toLowerCase();
@@ -78,9 +71,18 @@ function formatAnnouncementTime(iso: string | null, fallbackIso: string) {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const token = useAuthStore((s) => s.token);
   const authUser = useAuthStore((s) => s.user);
   const hydrate = useAuthStore((s) => s.hydrateFromStorage);
+  const LATEST_UPDATE_TABS: { id: LatestUpdateTabId; label: string }[] = [
+    { id: 'all', label: t('tabsNotifications.tabs.all') },
+    { id: 'update', label: t('tabsNotifications.tabs.update') },
+    { id: 'promotion', label: t('tabsNotifications.tabs.promotion') },
+    { id: 'maintenance', label: t('tabsNotifications.tabs.maintenance') },
+    { id: 'policy', label: t('tabsNotifications.tabs.policy') },
+  ];
+
   const [alerts, setAlerts] = useState<Notification[]>([]);
   const [orderNotifications, setOrderNotifications] = useState<Notification[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -113,13 +115,13 @@ export default function NotificationsScreen() {
         const nonOrderNotifications = storedNotifications.filter((n) => n.type !== 'order');
         setAlerts(nonOrderNotifications);
       } catch {
-        setError('Failed to load notifications. Pull to refresh or try again later.');
+        setError(t('tabsNotifications.errors.loadFailed'));
         setAlerts([]);
       }
     };
 
     loadNotifications();
-  }, [isAuthenticated, authUser?.id]);
+  }, [isAuthenticated, authUser?.id, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,12 +142,12 @@ export default function NotificationsScreen() {
       const list = await fetchPublishedLatestUpdates({ limit: 80 });
       setLatestUpdates(list);
     } catch (e) {
-      setLatestError(e instanceof Error ? e.message : 'Could not load latest updates.');
+      setLatestError(e instanceof Error ? e.message : t('tabsNotifications.errors.latestUpdatesFailed'));
       setLatestUpdates([]);
     } finally {
       setLatestLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadLatestUpdates();
@@ -372,7 +374,7 @@ export default function NotificationsScreen() {
         <View style={[styles.latestSectionWrap, styles.orderUpdatesSectionBelowGap]}>
           <View style={styles.latestSection}>
             <View style={styles.latestSectionHeaderRow}>
-              <Text style={styles.sectionHeaderTitle}>Order updates</Text>
+              <Text style={styles.sectionHeaderTitle}>{t('tabsNotifications.orderUpdates.title')}</Text>
               <TouchableOpacity
                 onPress={() => router.push('/order-notifications')}
                 hitSlop={8}
@@ -385,13 +387,13 @@ export default function NotificationsScreen() {
                     !hasOrderUpdates && styles.sectionHeaderActionDisabled,
                   ]}
                 >
-                  View all
+                  {t('tabsNotifications.orderUpdates.viewAll')}
                 </Text>
               </TouchableOpacity>
             </View>
             <View style={styles.orderUpdatesListBox}>
               {!hasOrderUpdates ? (
-                <Text style={styles.orderUpdatesEmpty}>No orders available yet</Text>
+                <Text style={styles.orderUpdatesEmpty}>{t('tabsNotifications.orderUpdates.empty')}</Text>
               ) : (
                 previewOrders.map((notification, index) => (
                   <OrderUpdateRow
@@ -417,7 +419,7 @@ export default function NotificationsScreen() {
         <View style={styles.latestSectionWrap}>
           <View style={styles.latestSection}>
             <View style={styles.latestSectionHeaderRow}>
-              <Text style={styles.sectionHeaderTitle}>Latest updates</Text>
+              <Text style={styles.sectionHeaderTitle}>{t('tabsNotifications.latestUpdates.title')}</Text>
               <TouchableOpacity
                 onPress={onReadAllLatest}
                 hitSlop={8}
@@ -430,7 +432,7 @@ export default function NotificationsScreen() {
                     filteredLatestUpdates.length === 0 && styles.sectionHeaderActionDisabled,
                   ]}
                 >
-                  Read all
+                  {t('tabsNotifications.latestUpdates.readAll')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -460,7 +462,7 @@ export default function NotificationsScreen() {
             {latestLoading && (
               <View style={styles.latestLoadingRow}>
                 <ActivityIndicator size="small" color={primaryBlue} />
-                <Text style={styles.latestLoadingText}>Loading updates…</Text>
+                <Text style={styles.latestLoadingText}>{t('tabsNotifications.latestUpdates.loading')}</Text>
               </View>
             )}
 
@@ -471,14 +473,14 @@ export default function NotificationsScreen() {
             )}
 
             {!latestLoading && !latestError && latestUpdates.length === 0 && (
-              <Text style={styles.latestEmpty}>No updates</Text>
+              <Text style={styles.latestEmpty}>{t('tabsNotifications.latestUpdates.empty')}</Text>
             )}
 
             {!latestLoading &&
               !latestError &&
               latestUpdates.length > 0 &&
               filteredLatestUpdates.length === 0 && (
-                <Text style={styles.latestEmpty}>No updates in this category.</Text>
+                <Text style={styles.latestEmpty}>{t('tabsNotifications.latestUpdates.emptyCategory')}</Text>
               )}
 
             {!latestLoading &&

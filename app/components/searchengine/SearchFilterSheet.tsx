@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 // no header actions; close via outside press / filter icon toggle
 import { ChevronDown } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 export type ShippingOptionKey = 'selfPickup' | 'sellerDelivery' | 'buyerCourier';
 
@@ -64,6 +65,7 @@ export default function SearchFilterSheet({
   topOffset,
   section = 'all',
 }: Props) {
+  const { t } = useTranslation();
   const OPEN_MS = 170;
   const CLOSE_MS = 140;
   const MAX_PILLS_COLLAPSED = 4;
@@ -184,7 +186,9 @@ export default function SearchFilterSheet({
     onPress: () => void;
   }) => (
     <Pressable onPress={onPress} style={styles.showMoreBtn} accessibilityRole="button">
-      <Text style={styles.showMoreText}>{expanded ? 'Show less' : 'Show more'}</Text>
+      <Text style={styles.showMoreText}>
+        {expanded ? t('search.filterSheet.showLess') : t('search.filterSheet.showMore')}
+      </Text>
       <ChevronDown
         size={16}
         color="#6b7280"
@@ -192,6 +196,12 @@ export default function SearchFilterSheet({
       />
     </Pressable>
   );
+
+  const salesChannelLabel = (opt: string) => {
+    if (opt === 'Retail') return t('search.salesChannel.retail');
+    if (opt === 'Wholesale') return t('search.salesChannel.wholesale');
+    return opt;
+  };
 
   const Chip = ({
     label,
@@ -260,7 +270,7 @@ export default function SearchFilterSheet({
           >
             {show.shippedFrom ? (
               <>
-                <Text style={styles.sectionTitle}>Shipped From</Text>
+                <Text style={styles.sectionTitle}>{t('search.filterSheet.sections.shippedFrom')}</Text>
                 <View style={styles.chipGrid}>
                   {shippedFromShown.map((opt) => (
                     <Chip
@@ -289,7 +299,7 @@ export default function SearchFilterSheet({
 
             {show.shippingOption ? (
               <>
-                <Text style={styles.sectionTitle}>Shipping Option</Text>
+                <Text style={styles.sectionTitle}>{t('search.filterSheet.sections.shippingOption')}</Text>
                 <View style={styles.chipGrid}>
                   {shippingOptionShown.map((opt) => (
                     <Chip
@@ -318,12 +328,12 @@ export default function SearchFilterSheet({
 
             {show.salesChannel ? (
               <>
-                <Text style={styles.sectionTitle}>Sales Channel</Text>
+                <Text style={styles.sectionTitle}>{t('search.filterSheet.sections.salesChannel')}</Text>
                 <View style={styles.chipGrid}>
                   {salesChannelOptions.map((opt) => (
                     <Chip
                       key={opt}
-                      label={opt}
+                      label={salesChannelLabel(opt)}
                       selected={local.salesChannel.includes(opt)}
                       onPress={() =>
                         setLocal((p) => {
@@ -341,7 +351,7 @@ export default function SearchFilterSheet({
 
             {show.rating ? (
               <>
-                <Text style={styles.sectionTitle}>Shop Rating</Text>
+                <Text style={styles.sectionTitle}>{t('search.filterSheet.sections.rating')}</Text>
                 <View style={styles.chipGrid}>
                   {[0, 1, 2, 3, 4, 5].map((n) => (
                     <Chip
@@ -357,10 +367,10 @@ export default function SearchFilterSheet({
 
             {show.price ? (
               <>
-                <Text style={styles.sectionTitle}>Price Range</Text>
+                <Text style={styles.sectionTitle}>{t('search.filterSheet.sections.price')}</Text>
                 <View style={styles.priceRow}>
                   <View style={styles.priceInputWrap}>
-                    <Text style={styles.priceLabel}>Min</Text>
+                    <Text style={styles.priceLabel}>{t('search.filterSheet.price.min')}</Text>
                     <TextInput
                       value={local.minPrice}
                       onChangeText={(t) => setLocal((p) => ({ ...p, minPrice: t.replace(/[^\d]/g, '') }))}
@@ -371,7 +381,7 @@ export default function SearchFilterSheet({
                     />
                   </View>
                   <View style={styles.priceInputWrap}>
-                    <Text style={styles.priceLabel}>Max</Text>
+                    <Text style={styles.priceLabel}>{t('search.filterSheet.price.max')}</Text>
                     <TextInput
                       value={local.maxPrice}
                       onChangeText={(t) => setLocal((p) => ({ ...p, maxPrice: t.replace(/[^\d]/g, '') }))}
@@ -387,7 +397,7 @@ export default function SearchFilterSheet({
 
             {show.category ? (
               <>
-                <Text style={styles.sectionTitle}>Category</Text>
+                <Text style={styles.sectionTitle}>{t('search.filterSheet.sections.category')}</Text>
                 <View style={styles.chipGrid}>
                   {categoryShown.map((opt) => (
                     <Chip
@@ -423,13 +433,13 @@ export default function SearchFilterSheet({
               }}
               style={[styles.footerBtn, styles.resetBtn]}
             >
-              <Text style={[styles.footerBtnText, styles.resetText]}>Reset</Text>
+              <Text style={[styles.footerBtnText, styles.resetText]}>{t('search.filterSheet.actions.reset')}</Text>
             </Pressable>
             <Pressable
               onPress={() => onApply(local)}
               style={[styles.footerBtn, styles.applyBtn]}
             >
-              <Text style={[styles.footerBtnText, styles.applyText]}>Apply</Text>
+              <Text style={[styles.footerBtnText, styles.applyText]}>{t('search.filterSheet.actions.apply')}</Text>
             </Pressable>
           </View>
         </Animated.View>

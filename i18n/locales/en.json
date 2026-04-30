@@ -1,0 +1,1304 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "error": "Error",
+    "tryAgain": "Try again",
+    "close": "Close",
+    "save": "Save",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "tabs": {
+    "home": "Home",
+    "categories": "Categories",
+    "orders": "Orders",
+    "notifications": "Notifications",
+    "account": "Account"
+  },
+  "header": {
+    "searchProducts": "Search for products…",
+    "orders": "Orders",
+    "notifications": "Notifications",
+    "myStore": "My Store",
+    "setAddress": "Set your address"
+  },
+  "nav": {
+    "welcomeToLaku": "Welcome to Laku!",
+    "myNetworks": "My Networks",
+    "distributorDetails": "Distributor Details",
+    "sellerInformation": "Seller Information",
+    "distributor": "Distributor",
+    "myPurchases": "My Purchases",
+    "myWallet": "My Wallet",
+    "bonuses": "Bonuses",
+    "discounts": "Discounts",
+    "lakupay": "LakuPay",
+    "favourites": "Favourites",
+    "recentlyViewed": "Recently Viewed",
+    "buyAgain": "Buy Again",
+    "getVouchers": "Get Vouchers",
+    "profile": "Profile",
+    "editUsername": "Edit Username",
+    "editName": "Edit Name",
+    "editBio": "Edit Bio",
+    "editPhone": "Edit Phone",
+    "editEmail": "Edit Email",
+    "myAddresses": "My Addresses",
+    "newAddress": "New Address",
+    "editCountry": "Edit Country",
+    "editStoreName": "Edit Store Name",
+    "followers": "Followers",
+    "following": "Following",
+    "helpCenter": "Help Center",
+    "securityPrivacy": "Security & Privacy",
+    "communityRules": "Community Rules",
+    "checkout": "Checkout",
+    "paymentSuccess": "Payment Success",
+    "latestUpdates": "Latest updates",
+    "orderDetails": "Order Details",
+    "deliveryInformation": "Delivery Information",
+    "cancelOrder": "Cancel Order",
+    "returnRefund": "Return / Refund",
+    "payOrder": "Pay Order"
+  },
+  "settings": {
+    "title": "Settings",
+    "sections": {
+      "myAccount": "My Account",
+      "settings": "Settings",
+      "support": "Support"
+    },
+    "rows": {
+      "accountSecurity": "Account & Security",
+      "myAddresses": "My Addresses",
+      "linkedPayments": "Linked Payment Methods",
+      "notificationSettings": "Notification Settings",
+      "languageSettings": "Language Settings",
+      "helpCenter": "Help Center",
+      "communityRules": "Community Rules",
+      "policies": "Policies"
+    },
+    "logout": "Log Out",
+    "modals": {
+      "language": {
+        "title": "Language",
+        "subtitle": "Choose your app language"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "push": {
+          "label": "Push notifications",
+          "description": "Enable to receive order updates & important info"
+        },
+        "systemNote": "Note: You may still receive notifications from your device system settings."
+      }
+    },
+    "pages": {
+      "language": {
+        "title": "Language",
+        "subtitle": "Choose your app language"
+      },
+      "notifications": {
+        "title": "Notifications",
+        "push": {
+          "label": "Push notifications",
+          "description": "Enable to receive order updates & important info"
+        },
+        "systemNote": "Note: You may still receive notifications from your device system settings."
+      }
+    },
+    "languages": {
+      "id": "Bahasa Indonesia",
+      "en": "English"
+    }
+  }
+  ,
+  "auth": {
+    "welcome": {
+      "slides": {
+        "1": {
+          "title": "Connect with Distributors",
+          "description": "Browse thousands of products from verified sellers. Chat directly with sellers, negotiate prices, and build lasting business relationships."
+        },
+        "2": {
+          "title": "Fast & Reliable Delivery",
+          "description": "Get your orders delivered quickly and safely. Our marketplace connects you with sellers who ensure fast shipping and secure packaging."
+        },
+        "3": {
+          "title": "Trusted Marketplace",
+          "description": "Shop with confidence from our verified sellers. Our marketplace provides secure transactions, quality products, and excellent customer support."
+        }
+      },
+      "login": "Login",
+      "register": "Register"
+    },
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Please enter your e-mail and password for login",
+      "emailLabel": "Your Email",
+      "emailPlaceholder": "Example@gmail.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "forgotPassword": "Forgot password?",
+      "button": {
+        "idle": "Login",
+        "loading": "Logging in…"
+      },
+      "alerts": {
+        "missingTitle": "Missing Information",
+        "missingBody": "Please enter both email and password.",
+        "suspendedTitle": "Account Suspended",
+        "suspendedBody": "Your account has been suspended. Please contact support for assistance.",
+        "notFoundTitle": "Account Not Found",
+        "notFoundBody": "No account found with this email. Please sign up first.",
+        "ok": "OK",
+        "signUp": "Sign Up",
+        "invalidTitle": "Invalid Credentials",
+        "invalidBody": "The email or password is incorrect. Please try again.",
+        "failedTitle": "Login Failed",
+        "genericBody": "Something went wrong. Please try again."
+      },
+      "menu": {
+        "securityPrivacy": "Security & Privacy",
+        "helpCenter": "Help Center",
+        "close": "Close"
+      },
+      "createAccount": "Create Account"
+    },
+    "signup": {
+      "title": "Create Account",
+      "subtitle": "Join Laku Marketplace and start your journey",
+      "ctaCreateAccount": "Create Account",
+      "alreadyHaveAccount": "Already have an account? Login",
+      "steps": {
+        "fullName": "Full Name",
+        "fullNamePlaceholder": "Enter your full name",
+        "email": "Email Address",
+        "storeName": "Store Name",
+        "storeNamePlaceholder": "Enter your store name",
+        "bioOptional": "Bio (Optional)",
+        "bioPlaceholder": "Tell us about your store",
+        "username": "Username",
+        "usernamePlaceholder": "Choose a username",
+        "password": "Password",
+        "passwordPlaceholder": "Create a password",
+        "confirmPassword": "Confirm Password",
+        "confirmPasswordPlaceholder": "Confirm your password",
+        "continue": "Continue"
+      },
+      "alerts": {
+        "missingTitle": "Missing Information",
+        "missingNameEmail": "Please enter both name and email.",
+        "missingStoreName": "Please enter a store name.",
+        "missingAllFields": "Please fill in all fields.",
+        "passwordMismatchTitle": "Password Mismatch",
+        "passwordMismatchBody": "Passwords do not match.",
+        "weakPasswordTitle": "Weak Password",
+        "weakPasswordBody": "Password must be at least 6 characters long.",
+        "failedTitle": "Signup Failed",
+        "genericBody": "Something went wrong"
+      },
+      "accountCreatedTitle": "Account Created!",
+      "accountCreatedBody": "Your account has been created successfully.",
+      "footer": {
+        "byRegistering": "By registration, you agree to our ",
+        "securityPrivacy": "Security and Privacy",
+        "dot": "."
+      },
+      "menu": {
+        "securityPrivacy": "Security & Privacy",
+        "helpCenter": "Help Center",
+        "close": "Close"
+      }
+    }
+  }
+  ,
+  "tabsHome": {
+    "searchPlaceholder": "Search for products…",
+    "specialOffers": "Special Offers",
+    "seeAll": "See All",
+    "categories": "Categories",
+    "featuredProducts": "Featured Products",
+    "offerFallback": "Offer",
+    "errors": {
+      "refreshFailed": "Failed to refresh data"
+    },
+    "retry": "Retry",
+    "endMessage": "Products displays reached the end.",
+    "noProducts": "No products available",
+    "storeFallback": "My Store",
+    "addressFallback": "Set your address"
+  }
+  ,
+  "tabsCategories": {
+    "exploreByCategory": "Explore by Category",
+    "newThisWeek": "New This Week",
+    "seeAll": "See all",
+    "retry": "Retry",
+    "errors": {
+      "refreshFailed": "Failed to refresh data"
+    },
+    "endMessage": "Products displays reached the end.",
+    "noProducts": "No products available"
+  }
+  ,
+  "tabsOrders": {
+    "loginPrompt": {
+      "title": "Create an account to win first-order benefits!",
+      "login": "Login",
+      "signup": "Sign Up"
+    },
+    "loading": "Loading your orders…",
+    "items": {
+      "products": "{{count}} products",
+      "noProducts": "No products"
+    },
+    "orderDateLabel": "Order Date:",
+    "distributorFallback": "Distributor",
+    "unknownStatus": "Unknown",
+    "empty": {
+      "title": "No Orders Yet",
+      "description": "Once you place your first order, you'll see detailed updates here including order confirmation, packing status, shipping information, and delivery notifications. We'll keep you informed every step of the way!",
+      "featuresTitle": "What you'll see here:",
+      "features": {
+        "realtimeStatus": "Real-time order status updates",
+        "shippingNotifications": "Shipping and delivery notifications",
+        "historyTracking": "Order history and tracking",
+        "importantComms": "Important order communications"
+      },
+      "cta": "Ready to start shopping? Browse our amazing products and place your first order to see the magic happen!"
+    }
+  }
+  ,
+  "tabsNotifications": {
+    "errors": {
+      "loadFailed": "Failed to load notifications. Pull to refresh or try again later.",
+      "latestUpdatesFailed": "Could not load latest updates."
+    },
+    "orderUpdates": {
+      "title": "Order updates",
+      "viewAll": "View all",
+      "empty": "No orders available yet"
+    },
+    "latestUpdates": {
+      "title": "Latest updates",
+      "readAll": "Read all",
+      "loading": "Loading updates…",
+      "empty": "No updates",
+      "emptyCategory": "No updates in this category."
+    },
+    "tabs": {
+      "all": "All",
+      "update": "Updates",
+      "promotion": "Promotion",
+      "maintenance": "Maintenance",
+      "policy": "Policy"
+    }
+  }
+  ,
+  "tabsAccount": {
+    "loginPrompt": {
+      "title": "Create an account to win first-order benefits!",
+      "login": "Login",
+      "signup": "Sign Up"
+    },
+    "sections": {
+      "myPurchases": "My Purchases",
+      "myNetworks": "My Networks",
+      "myWallet": "My Wallet",
+      "moreServices": "More Services"
+    },
+    "purchaseStatus": {
+      "toPay": "To Pay",
+      "toShip": "To Ship",
+      "toReceive": "To Receive",
+      "toRate": "To Rate"
+    },
+    "actions": {
+      "viewPurchaseHistory": "View Purchases History",
+      "viewAllNetworks": "View All Networks",
+      "viewAllFollowings": "View All Followings",
+      "manageWallet": "Manage your wallet"
+    },
+    "networks": {
+      "noNetworksYet": "No networks yet",
+      "distributor": "Distributor",
+      "ordersCount": "{{count}} orders"
+    },
+    "wallet": {
+      "bonuses": "Bonuses",
+      "discounts": "Discounts",
+      "lakupay": "LakuPay"
+    },
+    "services": {
+      "favourites": "Favourites",
+      "recentlyViewed": "Recently Viewed",
+      "buyAgain": "Buy Again",
+      "getVouchers": "Get Vouchers"
+    }
+  }
+  ,
+  "search": {
+    "placeholder": "Search for products…",
+    "all": "All",
+    "sort": {
+      "relevance": "Relevance",
+      "latest": "Latest",
+      "topSales": "Top Sales",
+      "price": "Price"
+    },
+    "chips": {
+      "shippingOption": "Shipping Option",
+      "salesChannel": "Sales Channel",
+      "rating": "Rating",
+      "priceRange": "Price Range",
+      "category": "Category",
+      "optionCount": "{{count}} option"
+    },
+    "salesChannel": {
+      "retail": "Retail",
+      "wholesale": "Wholesale"
+    },
+    "shippingOption": {
+      "selfPickup": "Self Collection",
+      "sellerDelivery": "Doorstep Delivery",
+      "buyerCourier": "Buyer Courier"
+    },
+    "filterSheet": {
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "sections": {
+        "shippedFrom": "Shipped From",
+        "shippingOption": "Shipping Option",
+        "salesChannel": "Sales Channel",
+        "rating": "Shop Rating",
+        "price": "Price Range",
+        "category": "Category"
+      },
+      "price": {
+        "min": "Min",
+        "max": "Max"
+      },
+      "actions": {
+        "reset": "Reset",
+        "apply": "Apply"
+      }
+    },
+    "quickFilter": {
+      "price": {
+        "minPlaceholder": "0",
+        "maxPlaceholder": "∞"
+      }
+    },
+    "recentSearches": {
+      "title": "Recent Searches",
+      "clearAll": "Clear All"
+    },
+    "suggestions": {
+      "title": "Suggestions"
+    },
+    "sections": {
+      "popularCategories": "Popular Categories",
+      "topBrands": "Top Brands",
+      "topDistributors": "Top Distributors"
+    },
+    "results": {
+      "didYouMeanPrefix": "Did you mean ",
+      "didYouMeanSuffix": "?",
+      "emptyTitle": "No results found",
+      "emptySubtitle": "Try adjusting your search or filters"
+    }
+  }
+  ,
+  "product": {
+    "labels": {
+      "discount": "Discount",
+      "promotion": "Promotion",
+      "allOffers": "All Offers",
+      "notProvided": "Not provided",
+      "unknownProduct": "Unknown Product",
+      "unknownCompany": "Unknown Company",
+      "unknown": "Unknown",
+      "general": "General",
+      "noDescription": "No description available"
+    },
+    "promo": {
+      "buyXGetY": "Buy {{buy}} Get {{free}}"
+    },
+    "sections": {
+      "description": "Description",
+      "customerReviews": "Customer Reviews",
+      "productAssurance": "Product Assurance"
+    },
+    "stock": {
+      "inStock": "In Stock",
+      "lowStock": "Low Stock",
+      "outOfStock": "Out of Stock"
+    },
+    "reviews": {
+      "review": "review",
+      "reviews": "reviews"
+    },
+    "states": {
+      "loadingReviews": "Loading reviews…",
+      "noReviewsYet": "No Reviews Yet"
+    },
+    "badges": {
+      "preferred": "Preferred",
+      "bestSeller": "BEST SELLER",
+      "officialStore": "OFFICIAL STORE"
+    },
+    "shipping": {
+      "costNote": "Shipping cost agreed between buyer and seller",
+      "days": "{{count}} days",
+      "daysRange": "{{min}}-{{max}} days",
+      "daysPlus": "{{min}}+ days"
+    },
+    "stockLabel": "Stock status:",
+    "soldLabel": "{{count}} sold",
+    "sellerInformation": "Seller Information",
+    "sellerRating": "{{rating}} ({{count}}+ ratings)",
+    "youMayAlsoLike": "You may also like",
+    "assurance": {
+      "halalCertified": "Halal Certified",
+      "bpomApproved": "BPOM Approved",
+      "returnDays": "{{count}}-Day Return",
+      "originalProduct": "Original Product"
+    },
+    "actions": {
+      "chatNow": "Chat Now",
+      "addToCart": "Add to Cart",
+      "buyNow": "Buy Now"
+    },
+    "details": {
+      "brand": "Brand:",
+      "type": "Type:",
+      "category": "Category:",
+      "title": "Product Details"
+    },
+    "a11y": {
+      "openDistributorProducts": "Open distributor products"
+    },
+    "moreInCategory": "More products in {{category}}",
+    "relativeTime": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "daysAgo": "{{count}} days ago",
+      "weekAgo": "1 week ago",
+      "weeksAgo": "{{count}} weeks ago",
+      "recently": "Recently"
+    }
+  },
+  "cart": {
+    "title": "Shopping Cart",
+    "empty": {
+      "title": "Oops, Your Shopping Cart is Empty",
+      "subtitle": "Browse our awesome deals now!"
+    },
+    "selectAll": "All",
+    "saved": "Saved {{amount}}",
+    "loginPrompt": {
+      "title": "Create an account to win first-order benefits!",
+      "login": "Login",
+      "signup": "Sign Up"
+    },
+    "alerts": {
+      "moqTitle": "Minimum Order Quantity Required",
+      "moqBody": "Some items in your cart don't meet the minimum order quantity:\n\n{{items}}\n\nPlease increase the quantity to proceed.",
+      "moqItem": "• {{name}}: Need {{moq}} pieces (you have {{have}})",
+      "ok": "OK"
+    },
+    "checkout": {
+      "moqNotMet": "MOQ Not Met",
+      "cta": "Check Out ({{count}})"
+    }
+  },
+  "buyNow": {
+    "labels": {
+      "noImage": "No Image",
+      "stock": "Stock",
+      "quantity": "Quantity",
+      "freeItems": "+ {{count}} free items",
+      "minimumOrder": "Minimum order: {{count}} pieces",
+      "total": "Total"
+    },
+    "cta": {
+      "buyNow": "Buy Now",
+      "addToCart": "Add to Cart"
+    }
+  }
+  ,
+  "buyerNetworks": {
+    "distributorInformation": {
+      "title": "Distributor Store",
+      "a11y": {
+        "back": "Back",
+        "moreOptions": "More options",
+        "chooseCategory": "Choose category filter",
+        "closeCategoryPicker": "Close category picker",
+        "closeMenu": "Close menu"
+      },
+      "fallbackDistributor": "Distributor",
+      "followers": "{{count}} Followers",
+      "follow": {
+        "follow": "+ Follow",
+        "following": "Following",
+        "followA11y": "Follow distributor",
+        "unfollowA11y": "Unfollow distributor"
+      },
+      "view": {
+        "label": "View",
+        "a11y": "View seller information"
+      },
+      "sort": {
+        "popular": "Popular",
+        "latest": "Latest",
+        "topSales": "Top Sales",
+        "price": "Price"
+      },
+      "category": {
+        "label": "Category",
+        "sheetTitle": "Categories",
+        "all": "All"
+      },
+      "errors": {
+        "invalidDistributor": "Invalid distributor",
+        "loadProductsFailed": "Failed to load products",
+        "unableToLoadUpdates": "Unable to load updates",
+        "retry": "Retry"
+      },
+      "empty": {
+        "noProducts": "No products found."
+      },
+      "share": {
+        "message": "Check out {{name}} on Laku Marketplace.",
+        "title": "Share",
+        "failed": "Unable to open share dialog right now."
+      },
+      "help": {
+        "title": "Need help?",
+        "body": "Please contact Laku support from the Help Center."
+      },
+      "menu": {
+        "share": "Share",
+        "reportDistributor": "Report distributor",
+        "needHelp": "Need help"
+      }
+    }
+    ,
+    "sellerInformation": {
+      "a11y": {
+        "back": "Back"
+      },
+      "title": "Seller Information",
+      "errors": {
+        "invalidSeller": "Invalid seller",
+        "failedToLoad": "Failed to load seller information"
+      },
+      "states": {
+        "loading": "Loading…",
+        "sellerNotFound": "Seller not found",
+        "sellerMayNotExist": "This seller may not exist."
+      },
+      "labels": {
+        "recently": "Recently",
+        "companyInformation": "Company Information",
+        "companyName": "Company Name *",
+        "businessRegistrationNumber": "Business Registration Number",
+        "industry": "Industry",
+        "businessDescription": "Business Description",
+        "shippingDeliveryPreferences": "Shipping & Delivery Preferences",
+        "shippingOptions": "Shipping options",
+        "pickupAddress": "Pickup address",
+        "preferredDeliveryTimeSlots": "Preferred delivery time slots",
+        "preferredDeliveryDays": "Preferred delivery days",
+        "reviewsRating": "Reviews & Rating",
+        "review": "review",
+        "reviews": "reviews",
+        "wouldOrderAgain": "Would order again",
+        "noReviewsYet": "No reviews yet"
+      },
+      "shippingOptions": {
+        "selfPickup": "Self Pickup (Buyer collects)",
+        "sellerDelivery": "Seller / Distributor Delivery",
+        "buyerCourier": "Buyer-arranged Courier"
+      },
+      "deliveryTimeSlots": {
+        "morning": "Morning (8:00 AM - 12:00 PM)",
+        "afternoon": "Afternoon (12:00 PM - 5:00 PM)",
+        "evening": "Evening (5:00 PM - 8:00 PM)",
+        "flexible": "Flexible"
+      },
+      "days": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      }
+    }
+  }
+  ,
+  "productReview": {
+    "a11y": {
+      "back": "Back",
+      "goBack": "Go back",
+      "removePhoto": "Remove photo",
+      "addPhotos": "Add photos"
+    },
+    "titles": {
+      "rateOrder": "Rate Order",
+      "rateOrderLower": "Rate order",
+      "rateProduct": "Rate product"
+    },
+    "empty": {
+      "noProducts": "No products to review."
+    },
+    "order": {
+      "label": "Order",
+      "productXofY": "Product {{index}} of {{total}}"
+    },
+    "sections": {
+      "productLikeTitle": "How do you like this product?",
+      "productLikeSubtitle": "Tap to rate the quality and overall experience.",
+      "reviewTitleLabel": "Review title (optional)",
+      "reviewTitlePlaceholder": "e.g. Great quality and fast delivery",
+      "detailedTitle": "Write your detailed product review",
+      "detailedSubtitle": "Share what you liked, what could be better, and whether you would recommend it.",
+      "detailedPlaceholder": "Write your review here...",
+      "photosLabel": "Review photos (optional, max {{max}})",
+      "photosSubtitle": "Add clear photos of the product. You can select multiple at once.",
+      "deliveryTitle": "How was the delivery experience?",
+      "deliverySubtitle": "Rate the shipping, delivery time, and condition of the package.",
+      "deliveryFeedbackTitle": "Delivery feedback (optional)",
+      "deliveryFeedbackPlaceholder": "Write about the delivery here..."
+    },
+    "photos": {
+      "addPhotos": "Add photos",
+      "addMore": "Add more"
+    },
+    "alerts": {
+      "pleaseWaitTitle": "Please wait",
+      "pleaseWaitBody": "Photos are still uploading. You can submit your review once the upload finishes.",
+      "ratingRequiredTitle": "Rating Required",
+      "ratingRequiredAllProducts": "Please rate every product before submitting.",
+      "ratingRequiredSingle": "Please select a product rating before submitting.",
+      "errorTitle": "Error",
+      "missingOrder": "Order information is missing. Cannot submit review.",
+      "signInRequiredTitle": "Sign in required",
+      "signInRequiredBody": "Please sign in to submit a review.",
+      "thankYouTitle": "Thank You",
+      "submittedBody": "Your review has been submitted.",
+      "failedGeneric": "Failed to submit review. Please try again.",
+      "ok": "OK",
+      "uploadFailedTitle": "Upload failed",
+      "uploadFailedBody": "Could not add photos."
+    },
+    "submit": {
+      "submit": "Submit review",
+      "submitting": "Submitting…",
+      "submitA11y": "Submit review",
+      "submittingA11y": "Submitting review"
+    }
+  }
+  ,
+  "support": {
+    "helpCenter": {
+      "title": "Help Center",
+      "faqTitle": "Frequently Asked Questions",
+      "done": "Done",
+      "faqs": {
+        "verifyPhone": {
+          "q": "How do I verify my phone?",
+          "a": "Choose WhatsApp or SMS in Sign Up, select your country code, enter your number, then tap \"Send code\". Enter the verification code to complete."
+        },
+        "googleLogin": {
+          "q": "I can’t log in with Google",
+          "a": "On web, you can pick a different account each time. If you still see an old session, sign out first and try again."
+        },
+        "whereIsMyOrder": {
+          "q": "Where is my order?",
+          "a": "Go to Account → My Purchases to view status: To Pay, To Ship, To Receive, Completed, Return/Refund, or Cancelled."
+        },
+        "walletRefunds": {
+          "q": "Wallet and refunds",
+          "a": "Refunds are returned to the original payment method or LakuPay depending on the channel and eligibility."
+        },
+        "contactSupport": {
+          "q": "Contact support",
+          "a": "For unresolved issues, contact us via support@laku.com. Provide your order ID and a brief description."
+        }
+      }
+    },
+    "returnRefundInfo": {
+      "title": "Return & Refund Info",
+      "cards": {
+        "basicsTitle": "Return & refund basics",
+        "basicsBody": "You can request a return for eligible items and get a refund after the request is approved and, when required, the items are received back in good condition.",
+        "policyTitle": "Policy comes from product data",
+        "policyBody1": "Each product has its own return policy stored in the product data. It defines whether it is returnable, how many days after delivery you can request a return, and any specific conditions.",
+        "policyBody2": "Laku checks every return/refund request against this policy. Different items in the same order can therefore have different eligibility and refund amounts.",
+        "policyStrong": "Refund approval and amount always depend on the return days and rules saved on each product, not only on the order status.",
+        "quickFlowTitle": "Quick flow",
+        "steps": {
+          "1": "Check the product's return policy and time limit before buying a product.",
+          "2": "Returns and refunds are only available when products have been delivered and received.",
+          "3": "Start a return/refund request from order details.",
+          "4": "Follow any instructions to send back the item with strong proof and evidence of return request.",
+          "5": "Wait for review and refund to your payment method or wallet."
+        }
+      }
+    },
+    "orderHelpCenter": {
+      "title": "Order Help Center",
+      "overviewTitle": "Order help overview",
+      "overviewBody": "This page gives a short guide for tracking your order and knowing who to contact. Any actions such as cancel, rate, or request return/refund are done in the main order details screen.",
+      "orderId": "Order ID",
+      "sections": {
+        "deliveryStatusTitle": "See delivery status",
+        "deliveryStatusBody": "Open the order details page to see the latest status, delivery partner, tracking number, and any delivery notes for this order.",
+        "statusBasicsTitle": "Order status basics",
+        "statusBasicsNote": "Some options (like rate order or request return/refund) only appear after certain statuses for buyer and seller protection.",
+        "contactSellerTitle": "Contact seller",
+        "contactSellerBody": "Use \"Contact seller\" from the order details when delivery looks late, product details are unclear, or the parcel you receive does not match the order.",
+        "contactSupportTitle": "Contact Laku support",
+        "contactSupportBody": "Contact Laku support through the main Help Center if you cannot reach the seller, see a payment or refund issue, your status is stuck for too long, or you suspect fraud or policy abuse."
+      },
+      "statusBullets": {
+        "pendingConfirmedDesc": "seller is preparing your order",
+        "packedShippedDesc": "parcel is with the logistics partner",
+        "deliveredDesc": "parcel reached the delivery address",
+        "receivedDesc": "you confirmed the order looks good"
+      }
+    }
+  }
+  ,
+  "ordersFlow": {
+    "common": {
+      "a11y": {
+        "goBack": "Go back"
+      },
+      "buttons": {
+        "ok": "OK",
+        "cancel": "Cancel",
+        "done": "Done"
+      },
+      "errors": {
+        "errorTitle": "Error",
+        "sessionExpiredTitle": "Session expired",
+        "sessionExpiredBody": "Please sign in again."
+      }
+    },
+    "cancel": {
+      "title": "Cancel Order",
+      "reasonsTitle": "Select cancellation reason",
+      "customReasonLabel": "Other reason",
+      "customReasonPlaceholder": "Type your reason…",
+      "submit": "Cancel order",
+      "submitting": "Cancelling…",
+      "alerts": {
+        "selectReasonTitle": "Select Reason",
+        "selectReasonBody": "Please select a reason for cancellation.",
+        "provideReasonTitle": "Provide Reason",
+        "provideReasonBody": "Please provide a custom reason for cancellation.",
+        "confirmTitle": "Confirm Cancellation",
+        "confirmBody": "Are you sure you want to cancel this order? This action cannot be undone.",
+        "no": "No",
+        "yesCancel": "Yes, Cancel Order",
+        "successTitle": "Order Cancelled",
+        "successBody": "Your order has been successfully cancelled.",
+        "failedBody": "Failed to cancel order. Please try again."
+      },
+      "reasons": {
+        "changed_mind": {
+          "label": "Changed my mind",
+          "description": "I no longer want this item"
+        },
+        "found_cheaper": {
+          "label": "Found a better price",
+          "description": "Found the same item at a lower price elsewhere"
+        },
+        "wrong_item": {
+          "label": "Ordered wrong item",
+          "description": "I ordered the wrong product by mistake"
+        },
+        "delivery_issues": {
+          "label": "Delivery concerns",
+          "description": "Concerned about delivery time or location"
+        },
+        "payment_issues": {
+          "label": "Payment problems",
+          "description": "Having trouble with payment method"
+        },
+        "seller_issues": {
+          "label": "Seller concerns",
+          "description": "Issues with the seller or store"
+        },
+        "other": {
+          "label": "Other reason",
+          "description": "Please specify your reason below"
+        }
+      }
+    },
+    "returnRefund": {
+      "title": "Return / Refund",
+      "warning": "Select a reason for your return or refund. Refunds are typically processed within 5–7 business days after we receive and inspect the item.",
+      "orderId": "Order ID",
+      "whyTitle": "Why do you want to return or get a refund?",
+      "detailsLabel": "Details (optional)",
+      "detailsPlaceholder": "Type details…",
+      "photosLabel": "Evidence photos (optional, max {{max}})",
+      "photosHint": "Recommended for damaged, defective, not as described, or other reasons.",
+      "addPhotos": "Add photos",
+      "addMore": "Add more",
+      "policyText": "We will review your request and may email you with return instructions or next steps. Refunds are issued to your original payment method.",
+      "submit": "Submit request",
+      "submitting": "Submitting…",
+      "a11y": {
+        "removePhoto": "Remove photo",
+        "addPhotos": "Add photos"
+      },
+      "alerts": {
+        "pleaseWaitTitle": "Please wait",
+        "pleaseWaitBody": "We are still uploading your photos. You can submit once it finishes.",
+        "selectReasonTitle": "Select Reason",
+        "selectReasonBody": "Please select a reason for your return or refund.",
+        "provideDetailsTitle": "Provide Details",
+        "provideDetailsBody": "Please provide details for your reason.",
+        "missingOrderIdBody": "Order ID is missing.",
+        "uploadFailedTitle": "Upload failed",
+        "uploadFailedBody": "Could not upload images. Please try again.",
+        "submittedTitle": "Request Submitted",
+        "submittedBody": "Your return/refund request has been submitted. We will process it and contact you if needed.",
+        "failedBody": "Failed to submit request. Please try again."
+      },
+      "reasons": {
+        "wrong_item": {
+          "label": "Wrong item received",
+          "description": "I received a different product than ordered"
+        },
+        "defective": {
+          "label": "Defective or damaged",
+          "description": "Item arrived damaged or not working"
+        },
+        "not_as_described": {
+          "label": "Not as described",
+          "description": "Product does not match the listing"
+        },
+        "changed_mind": {
+          "label": "Changed my mind",
+          "description": "I no longer want this item"
+        },
+        "late_delivery": {
+          "label": "Late delivery",
+          "description": "Delivery was significantly delayed"
+        },
+        "other": {
+          "label": "Other reason",
+          "description": "Please specify below"
+        }
+      }
+    }
+    ,
+    "payOrder": {
+      "title": "Pay Order",
+      "loading": "Loading payment details…",
+      "alerts": {
+        "paymentSentTitle": "Payment sent",
+        "paymentSentBody": "We notified the distributor. Please complete your manual transfer using the bank details above.",
+        "failedTitle": "Failed",
+        "failedBody": "Could not send payment notification. Please try again.",
+        "unavailableTitle": "Unavailable",
+        "unavailableBody": "Distributor details are not available for this order."
+      },
+      "buttons": {
+        "viewDistributorDetails": "View distributor details",
+        "view": "View",
+        "pay": "Pay",
+        "sending": "Sending…",
+        "back": "Back"
+      },
+      "sections": {
+        "distributorInfoTitle": "Distributor Information",
+        "paymentTitle": "Payment",
+        "codTitle": "Cash on Delivery (COD)",
+        "codBody": "COD orders are paid directly to the distributor, whether through cash, direct digital bank app transfer, or other method. The payment receiver will confirm your payment and update the payment status once it is received.",
+        "bankTransferTitle": "Bank account (manual transfer)"
+      },
+      "labels": {
+        "company": "Company",
+        "description": "Description",
+        "address": "Address",
+        "method": "Method",
+        "bank": "Bank",
+        "accountName": "Account name",
+        "accountNumber": "Account number"
+      },
+      "hints": {
+        "bankPrivacy": "Only share this info during payment. It’s hidden from public distributor pages and checkout."
+      }
+    }
+    ,
+    "deliveryInfo": {
+      "title": "Delivery Information",
+      "loading": "Loading…",
+      "notFound": "Order not found",
+      "progress": {
+        "deliveredOn": "Delivered on {{date}}",
+        "deliveryProgress": "Delivery Progress",
+        "steps": {
+          "placed": "Placed",
+          "shipped": "Shipped",
+          "outForDelivery": "Out for Delivery",
+          "delivered": "Delivered"
+        }
+      },
+      "timeline": {
+        "title": "Delivery Timeline",
+        "viewPod": "View Proof of Delivery",
+        "statuses": {
+          "placed": "Order is placed",
+          "preparing": "Seller is preparing to ship your parcel",
+          "pickedUp": "Your parcel has been picked up by our logistics partner",
+          "sorting": "Your parcel has arrived at sorting facility",
+          "outForDelivery": "[{{logistics}}] Your parcel is out for delivery",
+          "delivered": "Your parcel has been delivered"
+        }
+      },
+      "details": {
+        "preferredDeliveryTime": "Preferred Delivery Time",
+        "notSpecified": "Not specified",
+        "assignedLogistics": "Assigned Logistics",
+        "notAssigned": "Not assigned",
+        "trackingNumber": "Tracking Number",
+        "notAvailable": "Not available",
+        "deliveryNote": "Delivery Note",
+        "noInstructions": "No special instructions"
+      },
+      "summary": {
+        "orderId": "Order ID",
+        "na": "N/A",
+        "deliveryMethod": "Delivery Method",
+        "returnRefundStatus": "Return/refund status",
+        "pendingReview": "Pending review"
+      }
+    }
+    ,
+    "orderDetails": {
+      "title": "Order Details",
+      "loading": "Loading order details…",
+      "notFound": "Order not found",
+      "alerts": {
+        "successTitle": "Success",
+        "receivedBody": "Order marked as received successfully!",
+        "updateFailedBody": "Failed to update order status",
+        "copiedTitle": "Copied",
+        "copiedBody": "Order ID copied to clipboard",
+        "unavailableTitle": "Unavailable",
+        "unavailableDistributorBody": "Distributor details are not available for this order.",
+        "contactSupportTitle": "Contact Support",
+        "contactSupportBody": "Support functionality coming soon!"
+      },
+      "sections": {
+        "distributorInfo": "Distributor Information",
+        "supportCenter": "Support Center"
+      },
+      "support": {
+        "returnRefundInfo": "Return & Refund Info",
+        "requestReturnRefund": "Request for Return/Refund",
+        "contactSeller": "Contact Seller",
+        "helpCenter": "Help Center",
+        "returnRefundStatusLabel": "Return/refund status",
+        "pendingReview": "Pending review"
+      },
+      "distributor": {
+        "view": "View",
+        "viewDistributorDetailsA11y": "View distributor details",
+        "labels": {
+          "company": "Company",
+          "name": "Name",
+          "industry": "Industry",
+          "contact": "Contact",
+          "phone": "Phone",
+          "email": "Email",
+          "address": "Address"
+        }
+      },
+      "info": {
+        "orderId": "Order ID",
+        "paidBy": "Paid by",
+        "invoice": "Invoice",
+        "viewInvoiceA11y": "View invoice",
+        "viewDownload": "View & download",
+        "orderTime": "Order Time",
+        "paymentTime": "Payment Time",
+        "shipTime": "Ship Time",
+        "completedTime": "Completed Time"
+      },
+      "actions": {
+        "cancelOrder": "Cancel Order",
+        "payOrder": "Pay Order",
+        "returnRefund": "Return/Refund",
+        "contactSupport": "Contact support",
+        "orderReceived": "Order Received"
+      },
+      "statusText": {
+        "delivered": "Your Order is Delivered",
+        "received": "Your Order is Completed",
+        "shipped": "Your Order is Shipped",
+        "confirmed": "Your Order is Confirmed",
+        "packed": "Your Order is Packed",
+        "cancelled": "Your Order is Cancelled",
+        "returned": "Your Order is Returned",
+        "failed": "Delivery Failed",
+        "pending": "Your Order is Pending",
+        "processing": "Your order is being processed"
+      },
+      "statusDescriptions": {
+        "delivered": "Your parcel has been delivered",
+        "received": "Your order is completed and received",
+        "shipped": "Your parcel is on the way to you",
+        "confirmed": "Your order is being prepared for shipment",
+        "packed": "Your order is packed and ready to ship",
+        "cancelled": "Your order has been cancelled",
+        "returned": "Your order is being returned",
+        "failed": "Delivery could not be completed",
+        "processing": "Your order is being processed"
+      },
+      "returnRequest": {
+        "pending": "You have requested a return. Please wait for distributor confirmation.",
+        "accepted": "Your return request has been accepted. We are processing your return/refund.",
+        "rejected": "Your return request was rejected. If you need help, please contact support."
+      },
+      "shippingSchedule": {
+        "pickupScheduled": "Pickup scheduled: {{dateTime}}",
+        "courierPickup": "Courier pickup: {{dateTime}}",
+        "deliveryScheduled": "Delivery scheduled: {{dateTime}}",
+        "noPickupDate": "No specific pickup date set",
+        "noSpecificBuyer": "No specific date, managed by buyer",
+        "noSpecificDistributor": "No specific date, distributor manages the schedule",
+        "noSpecific": "No specific date set"
+      },
+      "totals": {
+        "orderTotal": "Order Total: {{amount}}"
+      },
+      "payment": {
+        "methodNotSpecified": "Method not specified"
+      },
+      "orderIdInfo": {
+        "title": "Order ID Information",
+        "viewMore": "View More",
+        "viewLess": "View Less"
+      },
+      "product": {
+        "freePieces": "{{count}} free pieces"
+      },
+      "fields": {
+        "assignedLogistics": "Assigned Logistics",
+        "recipient": "Recipient",
+        "phone": "Phone",
+        "address": "Address",
+        "deliveryInstruction": "Delivery Instruction"
+      },
+      "sections2": {
+        "productInformation": "Product Information",
+        "productTotal": "Product Total",
+        "shipping": "Shipping"
+      },
+      "misc": {
+        "costAgreedSeparately": "Cost agreed separately"
+      }
+    }
+    ,
+    "invoice": {
+      "title": "Invoice",
+      "closeA11y": "Close",
+      "tools": {
+        "pdfA11y": "Download PDF",
+        "imageA11y": "Save as image",
+        "pdf": "PDF",
+        "image": "Image",
+        "share": "Share",
+        "more": "More"
+      },
+      "raster": {
+        "subtitle": "Tax invoice / Receipt",
+        "orderId": "Order ID",
+        "date": "Date",
+        "status": "Status",
+        "payment": "Payment",
+        "billTo": "Bill to",
+        "shipTo": "Ship to",
+        "subtotal": "Subtotal",
+        "discounts": "Discounts",
+        "shipping": "Shipping",
+        "total": "Total"
+      },
+      "alerts": {
+        "savedTitle": "Saved",
+        "savedPdfBody": "Invoice PDF saved to your selected folder.",
+        "savedImageBody": "Invoice image saved to your selected folder.",
+        "saveUnavailableTitle": "Save unavailable",
+        "saveUnavailableBody": "Could not open the system file saver on this device.",
+        "pdfTitle": "PDF",
+        "pdfFailedBody": "Could not create PDF",
+        "imageTitle": "Image",
+        "imageFailedBody": "Could not export image",
+        "printTitle": "Print",
+        "printFailedBody": "Print failed",
+        "moreOptionsTitle": "More options",
+        "shareTextSummary": "Share text summary",
+        "print": "Print"
+      },
+      "share": {
+        "title": "Invoice {{orderId}}"
+      }
+    }
+    ,
+    "checkout": {
+      "title": "Checkout",
+      "defaults": {
+        "product": "Product",
+        "box": "Box",
+        "unknown": "unknown"
+      },
+      "alerts": {
+        "orderConfirmationTitle": "Order Confirmation",
+        "orderConfirmationBody": "Please confirm your address, delivery, and payment before placing the order.",
+        "orderConfirmationAmount": "Are you sure you want to place this order for {{amount}}?",
+        "cancel": "Cancel",
+        "placeOrder": "Place Order",
+        "errorTitle": "Error",
+        "placeOrderFailed": "Failed to place order. Please try again.",
+        "genericError": "Something went wrong. Please try again."
+      },
+      "sections": {
+        "payment": "Payment",
+        "deliveryAddress": "Delivery Address"
+      },
+      "payment": {
+        "bankTransfer": "Bank Transfer",
+        "bankTransferDesc": "Transfer to the distributor bank account shown below",
+        "cod": "Cash on Delivery (COD)",
+        "codShort": "Cash on Delivery",
+        "codDesc": "Pay the distributor when you receive the goods",
+        "codNote": "You selected Cash on Delivery. Arrange payment directly with the distributor when you receive the goods."
+      },
+      "address": {
+        "defaultAddress": "Default Address",
+        "yourName": "Your Name",
+        "yourCompany": "Your Company",
+        "yourAddress": "Your Address",
+        "yourCity": "Your City",
+        "yourPhone": "Your Phone"
+      },
+      "shippingOptions": {
+        "selfPickup": {
+          "name": "Self Pickup",
+          "desc": "Coordinate pickup directly at the seller location",
+          "eta": "Coordinate with seller"
+        },
+        "sellerDelivery": {
+          "name": "Seller/Distributor Delivery",
+          "desc": "Seller arranges delivery to your address",
+          "eta": "As agreed with seller"
+        },
+        "buyerCourier": {
+          "name": "Buyer-arranged Courier",
+          "desc": "You book and manage your own courier",
+          "eta": "Per your courier booking"
+        }
+      }
+      ,
+      "businessDays": {
+        "one": "1 business day",
+        "many": "{{count}} business days",
+        "range": "{{min}}-{{max}} business days",
+        "minPlus": "{{min}}+ business days",
+        "upTo": "Up to {{max}} business days"
+      },
+      "business": {
+        "title": "Business Information",
+        "andMore": "and {{count}} more",
+        "industryLabel": "Industry",
+        "contactLabel": "Contact",
+        "otherDistributors": "Other Distributors"
+      },
+      "productsFrom": "Products from {{name}}",
+      "edit": "Edit",
+      "distributorDefaults": {
+        "company": "Distributor Company",
+        "notSpecified": "Not specified",
+        "notProvided": "Not provided",
+        "addressNotAvailable": "Address not available"
+      },
+      "shipping": {
+        "title": "Shipping Option",
+        "costNote": "Shipping cost is agreed between buyer and distributor — not charged at checkout.",
+        "costNoteShort": "Shipping cost is agreed between buyer and distributor (not included here).",
+        "tapSchedulePickup": "Tap to schedule pickup date & time",
+        "pickupPrefix": "Pickup",
+        "scheduledPrefix": "Scheduled",
+        "courierPrefix": "Courier",
+        "distributorManaged": "Distributor manages the schedule",
+        "buyerSelfManaged": "I'll manage my own courier",
+        "tapSetPreference": "Tap to set scheduling preference"
+      },
+      "orderDetailsShippingTitle": "Order Details & Shipping",
+      "productSpecs": "{{count}} pieces per {{package}}",
+      "perPiece": "per piece",
+      "free": "Free",
+      "paymentMethodTitle": "Payment Method",
+      "summary": {
+        "title": "Order Summary",
+        "subtotal": "Subtotal",
+        "totalPayment": "Total Payment",
+        "total": "Total"
+      },
+      "terms": "By placing this order, you agree to our Terms of Service and Privacy Policy. This is a B2B transaction subject to business terms and conditions.",
+      "cta": {
+        "placing": "Placing…",
+        "placeOrder": "Place Order"
+      },
+      "notifications": {
+        "orderPlacedTitle": "Order Placed",
+        "orderPlacedBodySingle": "Your order #{{orderId}} has been placed and is awaiting confirmation.",
+        "orderPlacedBodyMultiple": "Your {{count}} orders have been placed and are awaiting confirmation."
+      },
+      "scheduleModal": {
+        "sellerDeliveryTitle": "Seller Delivery",
+        "courierScheduleTitle": "Courier Schedule",
+        "subtitleStep1": "How would you like to handle the schedule?",
+        "optionBuyerScheduledSeller": "I will schedule the delivery",
+        "optionBuyerScheduledCourier": "Schedule courier pickup",
+        "optionBuyerScheduledDetail": "Pick a preferred date & time",
+        "optionManagedSeller": "Distributor manages the schedule",
+        "optionManagedCourier": "I'll self-manage the courier",
+        "managedDetailSeller": "No specific date, distributor will contact you",
+        "managedDetailCourier": "No specific date, you will arrange independently",
+        "cancel": "Cancel",
+        "next": "Next",
+        "confirm": "Confirm",
+        "setDeliveryTime": "Set Delivery Time",
+        "setCourierTime": "Set Courier Time",
+        "subtitleStep2": "Choose your preferred date and time",
+        "deliveryDate": "Delivery Date",
+        "courierDate": "Courier Date",
+        "deliveryTime": "Delivery Time",
+        "courierTime": "Courier Time",
+        "selectTime": "Select Time"
+      },
+      "pickupModal": {
+        "title": "Schedule Pickup",
+        "subtitle": "Choose your preferred pickup date and time",
+        "locationLabel": "Pickup Location",
+        "pickupDate": "Pickup Date",
+        "pickupTime": "Pickup Time",
+        "confirmPickup": "Confirm Pickup"
+      }
+    }
+  }
+}

@@ -17,6 +17,7 @@ import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -37,6 +38,7 @@ export default function BuyNowModal({
   onConfirm,
   mode = 'buy',
 }: BuyNowModalProps) {
+  const { t } = useTranslation();
   const { addItem } = useCartStore();
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
@@ -521,7 +523,7 @@ export default function BuyNowModal({
                 />
               ) : (
                 <View style={[styles.productImage, styles.placeholderImage]}>
-                  <Text style={styles.placeholderText}>No Image</Text>
+                  <Text style={styles.placeholderText}>{t('buyNow.labels.noImage')}</Text>
                 </View>
               )}
               <View style={styles.productInfo}>
@@ -532,9 +534,15 @@ export default function BuyNowModal({
                   {formatHeaderPriceDisplay()}
               </Text>
                 <View style={styles.stockContainer}>
-                  <Text style={styles.stock}>Stock: {stock}</Text>
+                  <Text style={styles.stock}>
+                    {t('buyNow.labels.stock')}: {stock}
+                  </Text>
                   <Text style={[styles.stockStatus, { color: stock === 0 ? '#EF4444' : stock <= (currentVariantOption?.lowStockThreshold || 0) ? '#F59E0B' : '#10B981' }]}>
-                    {stock === 0 ? 'Out of Stock' : stock <= (currentVariantOption?.lowStockThreshold || 0) ? 'Low Stock' : 'In Stock'}
+                    {stock === 0
+                      ? t('product.stock.outOfStock')
+                      : stock <= (currentVariantOption?.lowStockThreshold || 0)
+                        ? t('product.stock.lowStock')
+                        : t('product.stock.inStock')}
               </Text>
                 </View>
               </View>
@@ -588,14 +596,14 @@ export default function BuyNowModal({
           {/* Quantity Selector */}
           <View style={styles.quantitySection}>
             <View style={styles.quantityRow}>
-              <Text style={styles.quantityLabel}>Quantity</Text>
+              <Text style={styles.quantityLabel}>{t('buyNow.labels.quantity')}</Text>
               
               <View style={styles.quantityControlsGroup}>
                 {/* Free items display - left side beside selector */}
                 {promotionInfo && promotionInfo > 0 && (
                   <View style={styles.freeItemsContainer}>
                     <Gift size={14} color="#9333EA" />
-                    <Text style={styles.freeItemsText}>+ {promotionInfo} free items</Text>
+                    <Text style={styles.freeItemsText}>{t('buyNow.labels.freeItems', { count: promotionInfo })}</Text>
                   </View>
                 )}
                 
@@ -640,7 +648,7 @@ export default function BuyNowModal({
             {moq && !meetsMOQ && (
               <View style={styles.moqWarning}>
                 <Text style={styles.moqWarningText}>
-                  Minimum order: {moq} pieces
+                  {t('buyNow.labels.minimumOrder', { count: moq })}
                 </Text>
               </View>
             )}
@@ -649,7 +657,7 @@ export default function BuyNowModal({
           {/* Footer */}
           <View style={styles.footer}>
           <View style={styles.totalSection}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalLabel}>{t('buyNow.labels.total')}</Text>
               <Text style={styles.totalPrice}>{formatCurrency(totalPrice)}</Text>
             </View>
           <TouchableOpacity
@@ -658,7 +666,7 @@ export default function BuyNowModal({
             disabled={!isFormValid}
           >
               <Text style={styles.confirmButtonText}>
-                {mode === 'cart' ? 'Add to Cart' : 'Buy Now'}
+                {mode === 'cart' ? t('buyNow.cta.addToCart') : t('buyNow.cta.buyNow')}
             </Text>
           </TouchableOpacity>
           </View>

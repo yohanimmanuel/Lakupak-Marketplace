@@ -25,6 +25,7 @@ import { useDataStore } from '../stores/dataStore';
 import { useAuthStore } from '../stores/authStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { websocketService } from '../services/websocket';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -32,6 +33,7 @@ type ProductType = Product | MarketplaceProduct;
 
 export default function CartScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
   
@@ -255,17 +257,17 @@ export default function CartScreen() {
         <UserIcon color="#0a61d7" size={28} />
       </View>
       <Text style={styles.loginPromptTitle}>
-        Create an account to win first-order benefits!
+        {t('cart.loginPrompt.title')}
       </Text>
       <View style={styles.loginPromptButtons}>
         <Link href="/useraccounts/loginsignup/loginmodal" asChild>
           <Pressable style={styles.loginButton}>
-            <Text style={styles.loginButtonText}>Login</Text>
+            <Text style={styles.loginButtonText}>{t('cart.loginPrompt.login')}</Text>
           </Pressable>
         </Link>
         <Link href="/useraccounts/loginsignup/signupmodal" asChild>
           <Pressable style={styles.signupButton}>
-            <Text style={styles.signupButtonText}>Sign Up</Text>
+            <Text style={styles.signupButtonText}>{t('cart.loginPrompt.signup')}</Text>
           </Pressable>
         </Link>
       </View>
@@ -277,8 +279,8 @@ export default function CartScreen() {
       <View style={styles.emptyCartIcon}>
         <ShoppingBag size={60} color="#0a61d7" />
       </View>
-      <Text style={styles.emptyCartTitle}>Oops, Your Shopping Cart is Empty</Text>
-      <Text style={styles.emptyCartSubtitle}>Browse our awesome deals now!</Text>
+      <Text style={styles.emptyCartTitle}>{t('cart.empty.title')}</Text>
+      <Text style={styles.emptyCartSubtitle}>{t('cart.empty.subtitle')}</Text>
     </View>
   );
 
@@ -585,7 +587,7 @@ export default function CartScreen() {
                   <Pressable onPress={() => router.back()} hitSlop={10}>
                     <ArrowLeft color={primaryBlue} size={24} />
                   </Pressable>
-                  <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Shopping Cart</Text>
+                  <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('cart.title')}</Text>
                   <TouchableOpacity
                     style={{ padding: 8 }}
                     onPress={() => {
@@ -620,7 +622,7 @@ export default function CartScreen() {
                   <Pressable onPress={() => router.back()} hitSlop={10}>
                     <ArrowLeft color={primaryBlue} size={24} />
                   </Pressable>
-                  <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Shopping Cart</Text>
+                  <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('cart.title')}</Text>
                   <TouchableOpacity
                     style={{ padding: 8 }}
                     onPress={() => {
@@ -655,7 +657,7 @@ export default function CartScreen() {
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Shopping Cart</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('cart.title')}</Text>
                 <TouchableOpacity
                   style={{ padding: 8 }}
                   onPress={() => {
@@ -687,12 +689,12 @@ export default function CartScreen() {
                 {selectedItems.length === cartItems.length && cartItems.length > 0 && <Text style={styles.checkmark}>✓</Text>}
               </View>
             </View>
-            <Text style={styles.selectAllText}>All</Text>
+            <Text style={styles.selectAllText}>{t('cart.selectAll')}</Text>
           </TouchableOpacity>
 
           <View style={styles.totalContainer}>
             <Text style={styles.totalPrice}>{formatCurrency(totalPrice)}</Text>
-            <Text style={styles.totalSaved}>Saved {formatCurrency(totalSaved)}</Text>
+            <Text style={styles.totalSaved}>{t('cart.saved', { amount: formatCurrency(totalSaved) })}</Text>
           </View>
 
           <TouchableOpacity 
@@ -704,14 +706,14 @@ export default function CartScreen() {
                 // Show alert with MOQ requirements
                 const itemNames = moqValidation.invalidItems
                   .map(({ item, moq, currentPieces }) => 
-                    `• ${item.product.name}: Need ${moq} pieces (you have ${currentPieces})`
+                    t('cart.alerts.moqItem', { name: item.product.name, moq, have: currentPieces })
                   )
                   .join('\n');
                 
                 Alert.alert(
-                  'Minimum Order Quantity Required',
-                  `Some items in your cart don't meet the minimum order quantity:\n\n${itemNames}\n\nPlease increase the quantity to proceed.`,
-                  [{ text: 'OK' }]
+                  t('cart.alerts.moqTitle'),
+                  t('cart.alerts.moqBody', { items: itemNames }),
+                  [{ text: t('cart.alerts.ok') }]
                 );
               }
             }}
@@ -719,10 +721,10 @@ export default function CartScreen() {
           >
             <Text style={[styles.checkoutButtonText, !canCheckout && styles.checkoutButtonTextDisabled]}>
               {canCheckout 
-                ? `Check Out (${selectedItemCount})` 
+                ? t('cart.checkout.cta', { count: selectedItemCount })
                 : moqValidation.invalidItems.length > 0
-                  ? 'MOQ Not Met'
-                  : 'Check Out (0)'
+                  ? t('cart.checkout.moqNotMet')
+                  : t('cart.checkout.cta', { count: 0 })
               }
             </Text>
           </TouchableOpacity>

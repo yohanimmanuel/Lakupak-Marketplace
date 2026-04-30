@@ -3,11 +3,13 @@ import { View, Text, Pressable, ScrollView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 export default function HelpCenter() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
+  const { t } = useTranslation();
   return (
     <>
       <Stack.Screen
@@ -19,7 +21,9 @@ export default function HelpCenter() {
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Help Center</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>
+                  {t('support.helpCenter.title')}
+                </Text>
               </View>
             </View>
           ),
@@ -27,46 +31,60 @@ export default function HelpCenter() {
       />
       <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
         <ScrollView contentContainerStyle={{ padding: 20 }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 12 }}>Frequently Asked Questions</Text>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 12 }}>
+            {t('support.helpCenter.faqTitle')}
+          </Text>
 
           <View style={{ marginBottom: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>How do I verify my phone?</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>
+              {t('support.helpCenter.faqs.verifyPhone.q')}
+            </Text>
             <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
-              Choose WhatsApp or SMS in Sign Up, select your country code, enter your number, then tap "Send code". Enter the verification code to complete.
+              {t('support.helpCenter.faqs.verifyPhone.a')}
             </Text>
           </View>
 
           <View style={{ marginBottom: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>I can’t log in with Google</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>
+              {t('support.helpCenter.faqs.googleLogin.q')}
+            </Text>
             <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
-              On web, you can pick a different account each time. If you still see an old session, sign out first and try again.
+              {t('support.helpCenter.faqs.googleLogin.a')}
             </Text>
           </View>
 
           <View style={{ marginBottom: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>Where is my order?</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>
+              {t('support.helpCenter.faqs.whereIsMyOrder.q')}
+            </Text>
             <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
-              Go to Account → My Purchases to view status: To Pay, To Ship, To Receive, Completed, Return/Refund, or Cancelled.
+              {t('support.helpCenter.faqs.whereIsMyOrder.a')}
             </Text>
           </View>
 
           <View style={{ marginBottom: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>Wallet and refunds</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>
+              {t('support.helpCenter.faqs.walletRefunds.q')}
+            </Text>
             <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
-              Refunds are returned to the original payment method or LakuPay depending on the channel and eligibility.
+              {t('support.helpCenter.faqs.walletRefunds.a')}
             </Text>
           </View>
 
           <View style={{ marginBottom: 16 }}>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>Contact support</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827', marginBottom: 6 }}>
+              {t('support.helpCenter.faqs.contactSupport.q')}
+            </Text>
             <Text style={{ fontSize: 14, color: '#4b5563', lineHeight: 20 }}>
-              For unresolved issues, contact us via support@laku.com. Provide your order ID and a brief description.
+              {t('support.helpCenter.faqs.contactSupport.a')}
             </Text>
           </View>
         </ScrollView>
         <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
           <Pressable onPress={() => router.back()} style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}>
-            <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Done</Text>
+            <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>
+              {t('support.helpCenter.done')}
+            </Text>
           </Pressable>
         </View>
       </View>

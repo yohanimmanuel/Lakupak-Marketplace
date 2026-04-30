@@ -8,9 +8,11 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore } from '../../../stores/cartStore';
 import { ArrowLeft, Eye, EyeOff, Info, Shield, HelpCircle, X } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginModal() {
   const router = useRouter();
+  const { t } = useTranslation();
   const setToken = useAuthStore(s => s.setToken);
   const setUser = useAuthStore(s => s.setUser);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -84,23 +86,23 @@ export default function LoginModal() {
             {/* Welcome Title */}
             <View style={{ marginBottom: 32 }}>
               <Text style={{ color: '#111827', fontSize: 28, fontWeight: '700', marginBottom: 8 }}>
-                Welcome Back 👋
+                {t('auth.login.title')} 👋
               </Text>
               <Text style={{ color: '#6b7280', fontSize: 14, lineHeight: 20 }}>
-                Please enter your e-mail and password for login
+                {t('auth.login.subtitle')}
               </Text>
             </View>
 
             {/* Email Input */}
             <View style={{ marginBottom: 20 }}>
               <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                Your Email
+                {t('auth.login.emailLabel')}
               </Text>
               <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
                 <TextInput
                   value={username}
                   onChangeText={setUsername}
-                  placeholder="Example@gmail.com"
+                  placeholder={t('auth.login.emailPlaceholder')}
                   placeholderTextColor="#9ca3af"
                   style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
                   keyboardType="email-address"
@@ -113,13 +115,13 @@ export default function LoginModal() {
             {/* Password Input */}
             <View style={{ marginBottom: 12 }}>
               <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                Password
+                {t('auth.login.passwordLabel')}
               </Text>
               <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', flexDirection: 'row', alignItems: 'center' }}>
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Password"
+                  placeholder={t('auth.login.passwordPlaceholder')}
                   placeholderTextColor="#9ca3af"
                   style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827' }}
                   secureTextEntry={!showPassword}
@@ -143,7 +145,7 @@ export default function LoginModal() {
             >
               <Info color='#0a61d7' size={16} style={{ marginRight: 6 }} />
               <Text style={{ color: '#0a61d7', fontSize: 14, fontWeight: '500' }}>
-                Forgot password?
+                {t('auth.login.forgotPassword')}
               </Text>
             </Pressable>
 
@@ -151,7 +153,7 @@ export default function LoginModal() {
             <Pressable
               onPress={async () => {
                 if (!username.trim() || !password.trim()) {
-                  Alert.alert('Missing Information', 'Please enter both email and password.');
+                  Alert.alert(t('auth.login.alerts.missingTitle'), t('auth.login.alerts.missingBody'));
                   return;
                 }
                 
@@ -198,23 +200,24 @@ export default function LoginModal() {
                 } catch (error: unknown) {
                   setIsLoggingIn(false);
                   if (error instanceof Error && (error as Error & { code?: string }).code === 'ACCOUNT_SUSPENDED') {
-                    Alert.alert('Account Suspended', 'Your account has been suspended. Please contact support for assistance.');
+                    Alert.alert(t('auth.login.alerts.suspendedTitle'), t('auth.login.alerts.suspendedBody'));
                     return;
                   }
                   if (error instanceof Error && (error.message.includes('User not found') || error.message.includes('Please sign up first'))) {
                     Alert.alert(
-                      'Account Not Found', 
-                      'No account found with this email. Please sign up first.',
+                      t('auth.login.alerts.notFoundTitle'),
+                      t('auth.login.alerts.notFoundBody'),
                       [
-                        { text: 'OK', style: 'default' },
-                        { text: 'Sign Up', style: 'default', onPress: () => router.push('/useraccounts/loginsignup/signupmodal') }
+                        { text: t('auth.login.alerts.ok'), style: 'default' },
+                        { text: t('auth.login.alerts.signUp'), style: 'default', onPress: () => router.push('/useraccounts/loginsignup/signupmodal') }
                       ]
                     );
                   } else if (error instanceof Error && error.message.includes('Invalid username or password')) {
-                    Alert.alert('Invalid Credentials', 'The email or password is incorrect. Please try again.');
+                    Alert.alert(t('auth.login.alerts.invalidTitle'), t('auth.login.alerts.invalidBody'));
                   } else {
-                    const errorMessage = error instanceof Error ? error.message : 'Something went wrong. Please try again.';
-                    Alert.alert('Login Failed', errorMessage);
+                    const fallback = t('auth.login.alerts.genericBody');
+                    const errorMessage = error instanceof Error ? error.message : fallback;
+                    Alert.alert(t('auth.login.alerts.failedTitle'), errorMessage);
                   }
                 }
               }}
@@ -229,7 +232,7 @@ export default function LoginModal() {
               }}
             >
               <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>
-                {isLoggingIn ? 'Logging in...' : 'Login'}
+                {isLoggingIn ? t('auth.login.button.loading') : t('auth.login.button.idle')}
               </Text>
             </Pressable>
 
@@ -275,7 +278,7 @@ export default function LoginModal() {
             <View style={{ alignItems: 'center' }}>
               <Pressable onPress={() => router.push('/useraccounts/loginsignup/signupmodal')}>
                 <Text style={{ color: '#6b7280', fontSize: 14 }}>
-                  Create Account
+                  {t('auth.login.createAccount')}
                 </Text>
               </Pressable>
             </View>
@@ -299,17 +302,17 @@ export default function LoginModal() {
           >
             <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy'); }} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Shield size={18} color="#111827" />
-              <Text style={{ color: '#111827', fontSize: 14 }}>Security & Privacy</Text>
+              <Text style={{ color: '#111827', fontSize: 14 }}>{t('auth.login.menu.securityPrivacy')}</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
             <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter'); }} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <HelpCircle size={18} color="#111827" />
-              <Text style={{ color: '#111827', fontSize: 14 }}>Help Center</Text>
+              <Text style={{ color: '#111827', fontSize: 14 }}>{t('auth.login.menu.helpCenter')}</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
             <Pressable onPress={closeMenu} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <X size={18} color="#ef4444" />
-              <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Close</Text>
+              <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>{t('auth.login.menu.close')}</Text>
             </Pressable>
           </Animated.View>
         </View>

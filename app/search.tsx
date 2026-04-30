@@ -29,6 +29,7 @@ import SearchSuggestions from './components/searchengine/SearchSuggestions';
 import SearchFilterSheet, { type SearchFilters, type ShippingOptionKey } from './components/searchengine/SearchFilterSheet';
 import QuickFilterPanel, { type QuickFilterSection } from './components/searchengine/QuickFilterPanel';
 import { Product } from '../data/sampleProducts';
+import { useTranslation } from 'react-i18next';
 
 /** Higher = better match. Weak matches stay included but sink to the bottom. */
 function computeRelevanceScore(query: string, p: MarketplaceProduct): number {
@@ -60,6 +61,7 @@ function computeRelevanceScore(query: string, p: MarketplaceProduct): number {
 export default function SearchScreen() {
   const HEADER_TOP_PADDING = 33;
   const router = useRouter();
+  const { t } = useTranslation();
   const params = useLocalSearchParams();
   const token = useAuthStore(s => s.token);
   const user = useAuthStore(s => s.user);
@@ -140,11 +142,11 @@ export default function SearchScreen() {
     };
 
     const out: Array<{ key: ShippingOptionKey; label: string }> = [];
-    if (avail.selfPickup) out.push({ key: 'selfPickup', label: 'Self Collection' });
-    if (avail.sellerDelivery) out.push({ key: 'sellerDelivery', label: 'Doorstep Delivery' });
-    if (avail.buyerCourier) out.push({ key: 'buyerCourier', label: 'Buyer Courier' });
+    if (avail.selfPickup) out.push({ key: 'selfPickup', label: t('search.shippingOption.selfPickup') });
+    if (avail.sellerDelivery) out.push({ key: 'sellerDelivery', label: t('search.shippingOption.sellerDelivery') });
+    if (avail.buyerCourier) out.push({ key: 'buyerCourier', label: t('search.shippingOption.buyerCourier') });
     return out;
-  }, [searchResults]);
+  }, [searchResults, t]);
 
   const categoryOptions = useMemo(() => {
     const catsRaw =
@@ -816,20 +818,35 @@ export default function SearchScreen() {
   const priceAsc = selectedSort !== 'price_high';
 
   const quickFilterLabel = useMemo(() => {
-    const ship = filters.shippingOption?.length ? `${filters.shippingOption.length} option` : 'Shipping Option';
-    const ch = filters.salesChannel?.length ? filters.salesChannel.join(', ') : 'Sales Channel';
-    const rating = typeof filters.ratingMin === 'number' ? `Rating ${filters.ratingMin}+` : 'Rating';
+    const ship = filters.shippingOption?.length
+      ? t('search.chips.optionCount', { count: filters.shippingOption.length })
+      : t('search.chips.shippingOption');
+    const ch = filters.salesChannel?.length
+      ? filters.salesChannel
+          .map((x) =>
+            x === 'Retail'
+              ? t('search.salesChannel.retail')
+              : x === 'Wholesale'
+                ? t('search.salesChannel.wholesale')
+                : x
+          )
+          .join(', ')
+      : t('search.chips.salesChannel');
+    const rating =
+      typeof filters.ratingMin === 'number'
+        ? `${t('search.chips.rating')} ${filters.ratingMin}+`
+        : t('search.chips.rating');
     const price =
       filters.minPrice || filters.maxPrice
-        ? `${filters.minPrice ? `Min ${filters.minPrice}` : 'Min'} - ${filters.maxPrice ? `Max ${filters.maxPrice}` : 'Max'}`
-        : 'Price Range';
+        ? `${t('search.filterSheet.price.min')} ${filters.minPrice || ''} - ${t('search.filterSheet.price.max')} ${filters.maxPrice || ''}`.trim()
+        : t('search.chips.priceRange');
     const cat = filters.category?.length
       ? filters.category.length === 1
         ? filters.category[0]
-        : `Category (${filters.category.length})`
-      : 'Category';
+        : `${t('search.chips.category')} (${filters.category.length})`
+      : t('search.chips.category');
     return { ship, ch, rating, price, cat };
-  }, [filters]);
+  }, [filters, t]);
 
   return (
     <View style={styles.container}>
@@ -853,7 +870,7 @@ export default function SearchScreen() {
                     onChangeText={handleSearchChange}
                     onFocus={handleSearchFocus}
                     onSubmitEditing={handleSearchSubmit}
-                    placeholder="Search for products..."
+                    placeholder={t('search.placeholder')}
                     style={styles.searchInput}
                     placeholderTextColor="#6B7280"
                     returnKeyType="search"
@@ -884,15 +901,21 @@ export default function SearchScreen() {
                 <View style={styles.filterTabsWrap}>
                   <View style={styles.filterTabsRow}>
                     <Pressable onPress={() => handleSortChange('relevance')} style={styles.filterTabBtn} accessibilityRole="button">
-                      <Text style={[styles.filterTabText, selectedSort === 'relevance' && styles.filterTabTextActive]}>Relevance</Text>
+                      <Text style={[styles.filterTabText, selectedSort === 'relevance' && styles.filterTabTextActive]}>
+                        {t('search.sort.relevance')}
+                      </Text>
                       {selectedSort === 'relevance' ? <View style={styles.filterUnderlineFull} /> : null}
                     </Pressable>
                     <Pressable onPress={() => handleSortChange('newest')} style={styles.filterTabBtn} accessibilityRole="button">
-                      <Text style={[styles.filterTabText, selectedSort === 'newest' && styles.filterTabTextActive]}>Latest</Text>
+                      <Text style={[styles.filterTabText, selectedSort === 'newest' && styles.filterTabTextActive]}>
+                        {t('search.sort.latest')}
+                      </Text>
                       {selectedSort === 'newest' ? <View style={styles.filterUnderlineFull} /> : null}
                     </Pressable>
                     <Pressable onPress={() => handleSortChange('top_sales')} style={styles.filterTabBtn} accessibilityRole="button">
-                      <Text style={[styles.filterTabText, selectedSort === 'top_sales' && styles.filterTabTextActive]}>Top Sales</Text>
+                      <Text style={[styles.filterTabText, selectedSort === 'top_sales' && styles.filterTabTextActive]}>
+                        {t('search.sort.topSales')}
+                      </Text>
                       {selectedSort === 'top_sales' ? <View style={styles.filterUnderlineFull} /> : null}
                     </Pressable>
                     <Pressable
@@ -907,7 +930,9 @@ export default function SearchScreen() {
                       accessibilityRole="button"
                     >
                       <View style={styles.filterTabInline}>
-                        <Text style={[styles.filterTabText, isPrice && styles.filterTabTextActive]}>Price</Text>
+                        <Text style={[styles.filterTabText, isPrice && styles.filterTabTextActive]}>
+                          {t('search.sort.price')}
+                        </Text>
                         <ChevronDown
                           size={14}
                           color={isPrice ? '#0a61d7' : '#6b7280'}

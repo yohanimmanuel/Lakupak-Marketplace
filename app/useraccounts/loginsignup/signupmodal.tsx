@@ -6,9 +6,11 @@ import { requestOtp, verifyOtp, signupStep1, signupStep2, signupStep3 } from '..
 import { useAuthStore } from '../../../stores/authStore';
 import { ArrowLeft, Fingerprint, Shield, HelpCircle, X } from 'lucide-react-native';
 import { COUNTRIES, getFlagEmoji } from '../../../constants/countries';
+import { useTranslation } from 'react-i18next';
 
 export default function SignUpModal() {
   const router = useRouter();
+  const { t } = useTranslation();
   const setToken = useAuthStore(s => s.setToken);
   const setUser = useAuthStore(s => s.setUser);
   const [isCountryPickerOpen, setIsCountryPickerOpen] = useState(false);
@@ -164,10 +166,10 @@ export default function SignUpModal() {
                 </View>
                 <View style={{ marginBottom: 32 }}>
                   <Text style={{ color: '#111827', fontSize: 28, fontWeight: '700', marginBottom: 8 }}>
-                    Create Account 👋
+                    {t('auth.signup.title')} 👋
                   </Text>
                   <Text style={{ color: '#6b7280', fontSize: 14, lineHeight: 20 }}>
-                    Join Laku Marketplace and start your journey
+                    {t('auth.signup.subtitle')}
                   </Text>
                 </View>
 
@@ -175,13 +177,13 @@ export default function SignUpModal() {
                   onPress={() => setSignupStep(1)}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 24 }}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Create Account</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t('auth.signup.ctaCreateAccount')}</Text>
                 </Pressable>
 
                 <View style={{ alignItems: 'center' }}>
                   <Pressable onPress={() => router.push('/useraccounts/loginsignup/loginmodal')}>
                     <Text style={{ color: '#6b7280', fontSize: 14 }}>
-                      Already have an account? Login
+                      {t('auth.signup.alreadyHaveAccount')}
                     </Text>
                   </Pressable>
                 </View>
@@ -192,10 +194,10 @@ export default function SignUpModal() {
             {signupStep > 0 && (
               <View style={{ marginBottom: 24 }}>
                 <Text style={{ color: '#111827', fontSize: 28, fontWeight: '700', marginBottom: 8 }}>
-                  Create Account 👋
+                  {t('auth.signup.title')} 👋
                 </Text>
                 <Text style={{ color: '#6b7280', fontSize: 14, lineHeight: 20 }}>
-                  Join Laku Marketplace and start your journey
+                  {t('auth.signup.subtitle')}
                 </Text>
               </View>
             )}
@@ -244,13 +246,13 @@ export default function SignUpModal() {
               <View>
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                    Full Name
+                    {t('auth.signup.steps.fullName')}
                   </Text>
                   <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
                     <TextInput
                       value={signupData.name}
                       onChangeText={(text) => setSignupData(prev => ({ ...prev, name: text }))}
-                      placeholder="Enter your full name"
+                      placeholder={t('auth.signup.steps.fullNamePlaceholder')}
                       placeholderTextColor="#9ca3af"
                       style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
                       autoCapitalize="words"
@@ -259,13 +261,13 @@ export default function SignUpModal() {
                 </View>
                 <View style={{ marginBottom: 24 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                    Email Address
+                    {t('auth.signup.steps.email')}
                   </Text>
                   <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
                     <TextInput
                       value={signupData.email}
                       onChangeText={(text) => setSignupData(prev => ({ ...prev, email: text }))}
-                      placeholder="Example@gmail.com"
+                      placeholder={t('auth.login.emailPlaceholder')}
                       placeholderTextColor="#9ca3af"
                       style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
                       keyboardType="email-address"
@@ -277,7 +279,7 @@ export default function SignUpModal() {
                 <Pressable
                   onPress={async () => {
                     if (!signupData.name.trim() || !signupData.email.trim()) {
-                      Alert.alert('Missing Information', 'Please enter both name and email.');
+                      Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingNameEmail'));
                       return;
                     }
                     
@@ -285,12 +287,12 @@ export default function SignUpModal() {
                       await signupStep1(signupData.name.trim(), signupData.email.trim());
                       setSignupStep(2);
                     } catch (error: unknown) {
-                      Alert.alert('Signup Failed', (error instanceof Error ? error.message : 'Something went wrong'));
+                      Alert.alert(t('auth.signup.alerts.failedTitle'), (error instanceof Error ? error.message : t('auth.signup.alerts.genericBody')));
                     }
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 24 }}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Continue</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t('auth.signup.steps.continue')}</Text>
                 </Pressable>
               </View>
             )}
@@ -300,13 +302,13 @@ export default function SignUpModal() {
               <View>
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                    Store Name
+                    {t('auth.signup.steps.storeName')}
                   </Text>
                   <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
                     <TextInput
                       value={signupData.storeName}
                       onChangeText={(text) => setSignupData(prev => ({ ...prev, storeName: text }))}
-                      placeholder="Enter your store name"
+                      placeholder={t('auth.signup.steps.storeNamePlaceholder')}
                       placeholderTextColor="#9ca3af"
                       style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
                       autoCapitalize="words"
@@ -315,13 +317,13 @@ export default function SignUpModal() {
                 </View>
                 <View style={{ marginBottom: 24 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                    Bio (Optional)
+                    {t('auth.signup.steps.bioOptional')}
                   </Text>
                   <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
                     <TextInput
                       value={signupData.bio}
                       onChangeText={(text) => setSignupData(prev => ({ ...prev, bio: text }))}
-                      placeholder="Tell us about your store"
+                      placeholder={t('auth.signup.steps.bioPlaceholder')}
                       placeholderTextColor="#9ca3af"
                       style={{ paddingVertical: 16, fontSize: 16, color: '#111827', minHeight: 60 }}
                       multiline
@@ -332,7 +334,7 @@ export default function SignUpModal() {
                 <Pressable
                   onPress={async () => {
                     if (!signupData.storeName.trim()) {
-                      Alert.alert('Missing Information', 'Please enter a store name.');
+                      Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingStoreName'));
                       return;
                     }
                     
@@ -340,12 +342,12 @@ export default function SignUpModal() {
                       await signupStep2(signupData.storeName.trim(), signupData.bio.trim());
                       setSignupStep(3);
                     } catch (error: unknown) {
-                      Alert.alert('Signup Failed', (error instanceof Error ? error.message : 'Something went wrong'));
+                      Alert.alert(t('auth.signup.alerts.failedTitle'), (error instanceof Error ? error.message : t('auth.signup.alerts.genericBody')));
                     }
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 24 }}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Continue</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t('auth.signup.steps.continue')}</Text>
                 </Pressable>
               </View>
             )}
@@ -355,13 +357,13 @@ export default function SignUpModal() {
               <View>
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                    Username
+                    {t('auth.signup.steps.username')}
                   </Text>
                   <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
                     <TextInput
                       value={signupData.username}
                       onChangeText={(text) => setSignupData(prev => ({ ...prev, username: text }))}
-                      placeholder="Choose a username"
+                      placeholder={t('auth.signup.steps.usernamePlaceholder')}
                       placeholderTextColor="#9ca3af"
                       style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
                       autoCapitalize="none"
@@ -371,13 +373,13 @@ export default function SignUpModal() {
                 </View>
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                    Password
+                    {t('auth.signup.steps.password')}
                   </Text>
                   <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
                     <TextInput
                       value={signupData.password}
                       onChangeText={(text) => setSignupData(prev => ({ ...prev, password: text }))}
-                      placeholder="Create a password"
+                      placeholder={t('auth.signup.steps.passwordPlaceholder')}
                       placeholderTextColor="#9ca3af"
                       style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
                       secureTextEntry={true}
@@ -388,13 +390,13 @@ export default function SignUpModal() {
                 </View>
                 <View style={{ marginBottom: 24 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                    Confirm Password
+                    {t('auth.signup.steps.confirmPassword')}
                   </Text>
                   <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
                     <TextInput
                       value={signupData.confirmPassword}
                       onChangeText={(text) => setSignupData(prev => ({ ...prev, confirmPassword: text }))}
-                      placeholder="Confirm your password"
+                      placeholder={t('auth.signup.steps.confirmPasswordPlaceholder')}
                       placeholderTextColor="#9ca3af"
                       style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
                       secureTextEntry={true}
@@ -406,17 +408,17 @@ export default function SignUpModal() {
                 <Pressable
                   onPress={async () => {
                     if (!signupData.username.trim() || !signupData.password.trim() || !signupData.confirmPassword.trim()) {
-                      Alert.alert('Missing Information', 'Please fill in all fields.');
+                      Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingAllFields'));
                       return;
                     }
                     
                     if (signupData.password !== signupData.confirmPassword) {
-                      Alert.alert('Password Mismatch', 'Passwords do not match.');
+                      Alert.alert(t('auth.signup.alerts.passwordMismatchTitle'), t('auth.signup.alerts.passwordMismatchBody'));
                       return;
                     }
                     
                     if (signupData.password.length < 6) {
-                      Alert.alert('Weak Password', 'Password must be at least 6 characters long.');
+                      Alert.alert(t('auth.signup.alerts.weakPasswordTitle'), t('auth.signup.alerts.weakPasswordBody'));
                       return;
                     }
                     
@@ -442,15 +444,15 @@ export default function SignUpModal() {
                       
                       await setToken(result.token);
                       setUser(result.user);
-                      Alert.alert('Account Created!', 'Your account has been created successfully.');
+                      Alert.alert(t('auth.signup.accountCreatedTitle'), t('auth.signup.accountCreatedBody'));
                       router.replace('/(tabs)/home');
                     } catch (error: unknown) {
-                      Alert.alert('Signup Failed', (error instanceof Error ? error.message : 'Something went wrong'));
+                      Alert.alert(t('auth.signup.alerts.failedTitle'), (error instanceof Error ? error.message : t('auth.signup.alerts.genericBody')));
                     }
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 12 }}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>Create Account</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t('auth.signup.ctaCreateAccount')}</Text>
                 </Pressable>
 
                 {/* Add Phone Number Button - Commented Out */}
@@ -577,8 +579,11 @@ export default function SignUpModal() {
             {signupStep === 0 && (
               <View style={{ alignItems: 'center', marginTop: 24 }}>
                 <Text style={{ color: '#6b7280', fontSize: 12, textAlign: 'center' }}>
-                  By registration, you agree to our{' '}
-                  <Text onPress={() => router.push('/useraccounts/consent/security-privacy')} style={{ color: '#0a61d7', textDecorationLine: 'underline' }}>Security and Privacy</Text>.
+                  {t('auth.signup.footer.byRegistering')}
+                  <Text onPress={() => router.push('/useraccounts/consent/security-privacy')} style={{ color: '#0a61d7', textDecorationLine: 'underline' }}>
+                    {t('auth.signup.footer.securityPrivacy')}
+                  </Text>
+                  {t('auth.signup.footer.dot')}
                 </Text>
               </View>
             )}
@@ -588,7 +593,7 @@ export default function SignUpModal() {
               <View style={{ alignItems: 'center', marginTop: 24 }}>
                 <Pressable onPress={() => router.push('/useraccounts/loginsignup/loginmodal')}>
                   <Text style={{ color: '#6b7280', fontSize: 14 }}>
-                    Already have an account? Login
+                    {t('auth.signup.alreadyHaveAccount')}
                   </Text>
                 </Pressable>
               </View>
@@ -615,17 +620,17 @@ export default function SignUpModal() {
           >
             <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/security-privacy'); }} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Shield size={18} color="#111827" />
-              <Text style={{ color: '#111827', fontSize: 14 }}>Security & Privacy</Text>
+              <Text style={{ color: '#111827', fontSize: 14 }}>{t('auth.signup.menu.securityPrivacy')}</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
             <Pressable onPress={() => { closeMenu(); router.push('/useraccounts/consent/helpcenter'); }} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <HelpCircle size={18} color="#111827" />
-              <Text style={{ color: '#111827', fontSize: 14 }}>Help Center</Text>
+              <Text style={{ color: '#111827', fontSize: 14 }}>{t('auth.signup.menu.helpCenter')}</Text>
             </Pressable>
             <View style={{ height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 }} />
             <Pressable onPress={closeMenu} style={{ paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <X size={18} color="#ef4444" />
-              <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>Close</Text>
+              <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '600' }}>{t('auth.signup.menu.close')}</Text>
             </Pressable>
           </Animated.View>
         </View>

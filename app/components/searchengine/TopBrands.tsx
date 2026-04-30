@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 interface TopBrand {
   name: string;
@@ -15,6 +16,7 @@ export default function TopBrands({
   brands,
   onBrandPress,
 }: TopBrandsProps) {
+  const { t } = useTranslation();
   if (brands.length === 0) {
     return null;
   }
@@ -25,7 +27,7 @@ export default function TopBrands({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Top Brands</Text>
+        <Text style={styles.title}>{t('search.sections.topBrands')}</Text>
       </View>
 
       <ScrollView

@@ -35,9 +35,11 @@ import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
+import { useTranslation } from 'react-i18next';
 
 export default function CategoriesScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const token = useAuthStore(s => s.token);
   const user = useAuthStore(s => s.user);
   const isAuthenticated = !!token && !!user;
@@ -142,11 +144,11 @@ export default function CategoriesScreen() {
     try {
       await refreshAllData(token || undefined);
     } catch (err) {
-      setError('Failed to refresh data');
+      setError(t('tabsCategories.errors.refreshFailed'));
     } finally {
       setRefreshing(false);
     }
-  }, [refreshAllData, token]);
+  }, [refreshAllData, token, t]);
 
   // Revalidate products when screen gains focus
   useFocusEffect(
@@ -181,11 +183,11 @@ export default function CategoriesScreen() {
       <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: 20 }]}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: textColor }]}>
-            Explore by Category
+            {t('tabsCategories.exploreByCategory')}
           </Text>
           <TouchableOpacity onPress={handleSeeAllPress}>
             <Text style={[styles.seeAllText, { color: primaryColor }]}>
-              See all
+              {t('tabsCategories.seeAll')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -213,11 +215,11 @@ export default function CategoriesScreen() {
       <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: -10 }]}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: textColor }]}>
-            New This Week
+            {t('tabsCategories.newThisWeek')}
           </Text>
           <TouchableOpacity onPress={handleSeeAllPress}>
             <Text style={[styles.seeAllText, { color: primaryColor }]}>
-              See all
+              {t('tabsCategories.seeAll')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -247,7 +249,7 @@ export default function CategoriesScreen() {
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity onPress={() => setError(null)} style={styles.retryButton}>
-              <Text style={styles.retryButtonText}>Retry</Text>
+              <Text style={styles.retryButtonText}>{t('tabsCategories.retry')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -295,14 +297,14 @@ export default function CategoriesScreen() {
         {/* End of Products Message */}
         {!loading && !error && products.length > 0 && (
           <View style={{...styles.endMessageContainer}}>
-            <Text style={styles.endMessage}>Products displays reached the end.</Text>
+            <Text style={styles.endMessage}>{t('tabsCategories.endMessage')}</Text>
           </View>
         )}
 
         {/* No Products Message */}
         {!loading && !error && products.length === 0 && (
           <View style={styles.noProductsContainer}>
-            <Text style={styles.noProductsText}>No products available</Text>
+            <Text style={styles.noProductsText}>{t('tabsCategories.noProducts')}</Text>
           </View>
         )}
       </View>

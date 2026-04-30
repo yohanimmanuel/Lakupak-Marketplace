@@ -17,46 +17,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertCircle, ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
-const CANCELLATION_REASONS = [
-  {
-    id: 'changed_mind',
-    label: 'Changed my mind',
-    description: 'I no longer want this item'
-  },
-  {
-    id: 'found_cheaper',
-    label: 'Found a better price',
-    description: 'Found the same item at a lower price elsewhere'
-  },
-  {
-    id: 'wrong_item',
-    label: 'Ordered wrong item',
-    description: 'I ordered the wrong product by mistake'
-  },
-  {
-    id: 'delivery_issues',
-    label: 'Delivery concerns',
-    description: 'Concerned about delivery time or location'
-  },
-  {
-    id: 'payment_issues',
-    label: 'Payment problems',
-    description: 'Having trouble with payment method'
-  },
-  {
-    id: 'seller_issues',
-    label: 'Seller concerns',
-    description: 'Issues with the seller or store'
-  },
-  {
-    id: 'other',
-    label: 'Other reason',
-    description: 'Please specify your reason below'
-  }
-];
+const CANCELLATION_REASON_IDS = [
+  'changed_mind',
+  'found_cheaper',
+  'wrong_item',
+  'delivery_issues',
+  'payment_issues',
+  'seller_issues',
+  'other',
+] as const;
 
 const primaryBlue = '#0a61d7';
 
@@ -69,6 +42,7 @@ export default function OrderCancelModal() {
   const [customReason, setCustomReason] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const { t } = useTranslation();
 
   const scrollToInput = () => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
@@ -76,25 +50,25 @@ export default function OrderCancelModal() {
 
   const handleCancelOrder = async () => {
     if (!selectedReason) {
-      Alert.alert('Select Reason', 'Please select a reason for cancellation.');
+      Alert.alert(t('ordersFlow.cancel.alerts.selectReasonTitle'), t('ordersFlow.cancel.alerts.selectReasonBody'));
       return;
     }
 
     if (selectedReason === 'other' && !customReason.trim()) {
-      Alert.alert('Provide Reason', 'Please provide a custom reason for cancellation.');
+      Alert.alert(t('ordersFlow.cancel.alerts.provideReasonTitle'), t('ordersFlow.cancel.alerts.provideReasonBody'));
       return;
     }
 
     Alert.alert(
-      'Confirm Cancellation',
-      'Are you sure you want to cancel this order? This action cannot be undone.',
+      t('ordersFlow.cancel.alerts.confirmTitle'),
+      t('ordersFlow.cancel.alerts.confirmBody'),
       [
         {
-          text: 'No',
+          text: t('ordersFlow.cancel.alerts.no'),
           style: 'cancel',
         },
         {
-          text: 'Yes, Cancel Order',
+          text: t('ordersFlow.cancel.alerts.yesCancel'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -102,7 +76,7 @@ export default function OrderCancelModal() {
               
               const reasonText = selectedReason === 'other'
                 ? customReason.trim()
-                : CANCELLATION_REASONS.find(r => r.id === selectedReason)?.label || 'User requested cancellation';
+                : t(`ordersFlow.cancel.reasons.${selectedReason}.label`, { defaultValue: t('ordersFlow.cancel.reasons.other.label') });
 
               const requestBody = {
                 cancel: true,
@@ -142,20 +116,20 @@ export default function OrderCancelModal() {
               
               // Show success message and navigate back
               Alert.alert(
-                'Order Cancelled',
-                result.message || 'Your order has been successfully cancelled.',
+                t('ordersFlow.cancel.alerts.successTitle'),
+                t('ordersFlow.cancel.alerts.successBody'),
                 [
                   {
-                    text: 'OK',
+                    text: t('ordersFlow.common.buttons.ok'),
                     onPress: () => router.back()
                   }
                 ]
               );
             } catch (error) {
               Alert.alert(
-                'Error',
-                error instanceof Error ? error.message : 'Failed to cancel order. Please try again.',
-                [{ text: 'OK' }]
+                t('ordersFlow.common.errors.errorTitle'),
+                error instanceof Error ? error.message : t('ordersFlow.cancel.alerts.failedBody'),
+                [{ text: t('ordersFlow.common.buttons.ok') }]
               );
             } finally {
               setIsLoading(false);
@@ -178,12 +152,12 @@ export default function OrderCancelModal() {
                 <TouchableOpacity 
                   onPress={() => router.back()} 
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('ordersFlow.common.a11y.goBack')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Cancel Order</Text>
+                <Text style={styles.headerTitle}>{t('ordersFlow.cancel.title')}</Text>
               </View>
             </View>
           ),
@@ -208,48 +182,48 @@ export default function OrderCancelModal() {
         <View style={styles.warningContainer}>
           <AlertCircle size={20} color="#f59e0b" />
           <Text style={styles.warningText}>
-            Please select a reason for cancelling this order. This action cannot be undone.
+            {t('ordersFlow.cancel.alerts.confirmBody')}
           </Text>
         </View>
 
         {/* Order ID */}
         <View style={styles.orderInfoContainer}>
-          <Text style={styles.orderIdLabel}>Order ID</Text>
+          <Text style={styles.orderIdLabel}>{t('ordersFlow.returnRefund.orderId')}</Text>
           <Text style={styles.orderIdValue}>{orderId}</Text>
         </View>
 
         {/* Cancellation Reasons */}
         <View style={styles.reasonsContainer}>
-          <Text style={styles.sectionTitle}>Why are you cancelling this order?</Text>
+          <Text style={styles.sectionTitle}>{t('ordersFlow.cancel.reasonsTitle')}</Text>
           
-          {CANCELLATION_REASONS.map((reason) => (
+          {CANCELLATION_REASON_IDS.map((reasonId) => (
             <TouchableOpacity
-              key={reason.id}
+              key={reasonId}
               style={[
                 styles.reasonItem,
-                selectedReason === reason.id && styles.reasonItemSelected
+                selectedReason === reasonId && styles.reasonItemSelected
               ]}
-              onPress={() => setSelectedReason(reason.id)}
+              onPress={() => setSelectedReason(reasonId)}
             >
               <View style={styles.reasonContent}>
                 <Text style={[
                   styles.reasonLabel,
-                  selectedReason === reason.id && styles.reasonLabelSelected
+                  selectedReason === reasonId && styles.reasonLabelSelected
                 ]}>
-                  {reason.label}
+                  {t(`ordersFlow.cancel.reasons.${reasonId}.label`)}
                 </Text>
                 <Text style={[
                   styles.reasonDescription,
-                  selectedReason === reason.id && styles.reasonDescriptionSelected
+                  selectedReason === reasonId && styles.reasonDescriptionSelected
                 ]}>
-                  {reason.description}
+                  {t(`ordersFlow.cancel.reasons.${reasonId}.description`)}
                 </Text>
               </View>
               <View style={[
                 styles.radioButton,
-                selectedReason === reason.id && styles.radioButtonSelected
+                selectedReason === reasonId && styles.radioButtonSelected
               ]}>
-                {selectedReason === reason.id && (
+                {selectedReason === reasonId && (
                   <View style={styles.radioButtonInner} />
                 )}
               </View>
@@ -260,12 +234,12 @@ export default function OrderCancelModal() {
         {/* Custom Reason Input */}
         {selectedReason === 'other' && (
           <View style={styles.customReasonContainer}>
-            <Text style={styles.customReasonLabel}>Please specify your reason:</Text>
+            <Text style={styles.customReasonLabel}>{t('ordersFlow.cancel.customReasonLabel')}</Text>
             <TextInput
               style={styles.customReasonInput}
               value={customReason}
               onChangeText={setCustomReason}
-              placeholder="Enter your reason for cancellation..."
+              placeholder={t('ordersFlow.cancel.customReasonPlaceholder')}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -290,7 +264,7 @@ export default function OrderCancelModal() {
             styles.cancelOrderButtonText,
             (!selectedReason || (selectedReason === 'other' && !customReason.trim())) && styles.cancelOrderButtonTextDisabled
           ]}>
-            {isLoading ? 'Cancelling...' : 'Cancel Order'}
+            {isLoading ? t('ordersFlow.cancel.submitting') : t('ordersFlow.cancel.submit')}
           </Text>
         </TouchableOpacity>
       </View>

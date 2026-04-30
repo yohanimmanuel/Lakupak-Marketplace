@@ -19,15 +19,16 @@ import { AlertCircle, ArrowLeft, ImagePlus, X } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { pickMultipleImages } from '../../../services/imagePicker';
+import { useTranslation } from 'react-i18next';
 
-const RETURN_REASONS = [
-  { id: 'wrong_item', label: 'Wrong item received', description: 'I received a different product than ordered' },
-  { id: 'defective', label: 'Defective or damaged', description: 'Item arrived damaged or not working' },
-  { id: 'not_as_described', label: 'Not as described', description: 'Product does not match the listing' },
-  { id: 'changed_mind', label: 'Changed my mind', description: 'I no longer want this item' },
-  { id: 'late_delivery', label: 'Late delivery', description: 'Delivery was significantly delayed' },
-  { id: 'other', label: 'Other reason', description: 'Please specify below' },
-];
+const RETURN_REASON_IDS = [
+  'wrong_item',
+  'defective',
+  'not_as_described',
+  'changed_mind',
+  'late_delivery',
+  'other',
+] as const;
 
 const primaryBlue = '#0a61d7';
 
@@ -42,6 +43,7 @@ export default function ReturnRefundModal() {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const { t } = useTranslation();
 
   const scrollToInput = () => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
@@ -65,8 +67,8 @@ export default function ReturnRefundModal() {
       }
     } catch (error) {
       Alert.alert(
-        'Upload failed',
-        error instanceof Error ? error.message : 'Could not upload images. Please try again.'
+        t('ordersFlow.returnRefund.alerts.uploadFailedTitle'),
+        error instanceof Error ? error.message : t('ordersFlow.returnRefund.alerts.uploadFailedBody')
       );
     } finally {
       setUploadingPhotos(false);
@@ -79,23 +81,23 @@ export default function ReturnRefundModal() {
 
   const handleSubmit = async () => {
     if (uploadingPhotos) {
-      Alert.alert('Please wait', 'We are still uploading your photos. You can submit once it finishes.');
+      Alert.alert(t('ordersFlow.returnRefund.alerts.pleaseWaitTitle'), t('ordersFlow.returnRefund.alerts.pleaseWaitBody'));
       return;
     }
     if (!selectedReason) {
-      Alert.alert('Select Reason', 'Please select a reason for your return or refund.');
+      Alert.alert(t('ordersFlow.returnRefund.alerts.selectReasonTitle'), t('ordersFlow.returnRefund.alerts.selectReasonBody'));
       return;
     }
     if (selectedReason === 'other' && !reasonDetail.trim()) {
-      Alert.alert('Provide Details', 'Please provide details for your reason.');
+      Alert.alert(t('ordersFlow.returnRefund.alerts.provideDetailsTitle'), t('ordersFlow.returnRefund.alerts.provideDetailsBody'));
       return;
     }
     if (!token) {
-      Alert.alert('Session expired', 'Please sign in again.');
+      Alert.alert(t('ordersFlow.common.errors.sessionExpiredTitle'), t('ordersFlow.common.errors.sessionExpiredBody'));
       return;
     }
     if (!orderId || typeof orderId !== 'string' || !orderId.trim()) {
-      Alert.alert('Error', 'Order ID is missing.');
+      Alert.alert(t('ordersFlow.common.errors.errorTitle'), t('ordersFlow.returnRefund.alerts.missingOrderIdBody'));
       return;
     }
 
@@ -122,15 +124,15 @@ export default function ReturnRefundModal() {
       }
 
       Alert.alert(
-        'Request Submitted',
-        data.message || 'Your return/refund request has been submitted. We will process it and contact you if needed.',
-        [{ text: 'OK', onPress: () => router.back() }]
+        t('ordersFlow.returnRefund.alerts.submittedTitle'),
+        t('ordersFlow.returnRefund.alerts.submittedBody'),
+        [{ text: t('ordersFlow.common.buttons.ok'), onPress: () => router.back() }]
       );
     } catch (error) {
       Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to submit request. Please try again.',
-        [{ text: 'OK' }]
+        t('ordersFlow.common.errors.errorTitle'),
+        error instanceof Error ? error.message : t('ordersFlow.returnRefund.alerts.failedBody'),
+        [{ text: t('ordersFlow.common.buttons.ok') }]
       );
     } finally {
       setIsLoading(false);
@@ -151,12 +153,12 @@ export default function ReturnRefundModal() {
                 <TouchableOpacity
                   onPress={() => router.back()}
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('ordersFlow.common.a11y.goBack')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Return / Refund</Text>
+                <Text style={styles.headerTitle}>{t('ordersFlow.returnRefund.title')}</Text>
               </View>
             </View>
           ),
@@ -180,51 +182,51 @@ export default function ReturnRefundModal() {
           <View style={styles.warningContainer}>
             <AlertCircle size={20} color="#f59e0b" />
             <Text style={styles.warningText}>
-              Select a reason for your return or refund. Refunds are typically processed within 5–7 business days after we receive and inspect the item.
+              {t('ordersFlow.returnRefund.warning')}
             </Text>
           </View>
 
           <View style={styles.orderInfoContainer}>
-            <Text style={styles.orderIdLabel}>Order ID</Text>
+            <Text style={styles.orderIdLabel}>{t('ordersFlow.returnRefund.orderId')}</Text>
             <Text style={styles.orderIdValue}>{orderId}</Text>
           </View>
 
           <View style={styles.reasonsContainer}>
-            <Text style={styles.sectionTitle}>Why do you want to return or get a refund?</Text>
-            {RETURN_REASONS.map((reason) => (
+            <Text style={styles.sectionTitle}>{t('ordersFlow.returnRefund.whyTitle')}</Text>
+            {RETURN_REASON_IDS.map((reasonId) => (
               <TouchableOpacity
-                key={reason.id}
-                style={[styles.reasonItem, selectedReason === reason.id && styles.reasonItemSelected]}
-                onPress={() => setSelectedReason(reason.id)}
+                key={reasonId}
+                style={[styles.reasonItem, selectedReason === reasonId && styles.reasonItemSelected]}
+                onPress={() => setSelectedReason(reasonId)}
                 accessibilityRole="radio"
-                accessibilityState={{ checked: selectedReason === reason.id }}
-                accessibilityLabel={`${reason.label}: ${reason.description}`}
+                accessibilityState={{ checked: selectedReason === reasonId }}
+                accessibilityLabel={`${t(`ordersFlow.returnRefund.reasons.${reasonId}.label`)}: ${t(`ordersFlow.returnRefund.reasons.${reasonId}.description`)}`}
               >
                 <View style={styles.reasonContent}>
                   <Text
                     style={[
                       styles.reasonLabel,
-                      selectedReason === reason.id && styles.reasonLabelSelected,
+                      selectedReason === reasonId && styles.reasonLabelSelected,
                     ]}
                   >
-                    {reason.label}
+                    {t(`ordersFlow.returnRefund.reasons.${reasonId}.label`)}
                   </Text>
                   <Text
                     style={[
                       styles.reasonDescription,
-                      selectedReason === reason.id && styles.reasonDescriptionSelected,
+                      selectedReason === reasonId && styles.reasonDescriptionSelected,
                     ]}
                   >
-                    {reason.description}
+                    {t(`ordersFlow.returnRefund.reasons.${reasonId}.description`)}
                   </Text>
                 </View>
                 <View
                   style={[
                     styles.radioButton,
-                    selectedReason === reason.id && styles.radioButtonSelected,
+                    selectedReason === reasonId && styles.radioButtonSelected,
                   ]}
                 >
-                  {selectedReason === reason.id && <View style={styles.radioButtonInner} />}
+                  {selectedReason === reasonId && <View style={styles.radioButtonInner} />}
                 </View>
               </TouchableOpacity>
             ))}
@@ -232,12 +234,12 @@ export default function ReturnRefundModal() {
 
           {selectedReason === 'other' && (
             <View style={styles.customReasonContainer}>
-              <Text style={styles.customReasonLabel}>Please specify:</Text>
+              <Text style={styles.customReasonLabel}>{t('ordersFlow.returnRefund.detailsLabel')}</Text>
               <TextInput
                 style={styles.customReasonInput}
                 value={reasonDetail}
                 onChangeText={setReasonDetail}
-                placeholder="Enter your reason..."
+                placeholder={t('ordersFlow.returnRefund.detailsPlaceholder')}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -247,9 +249,9 @@ export default function ReturnRefundModal() {
           )}
 
           <View style={styles.photosSection}>
-            <Text style={styles.inputLabel}>Photos (optional, max 5)</Text>
+            <Text style={styles.inputLabel}>{t('ordersFlow.returnRefund.photosLabel', { max: 5 })}</Text>
             <Text style={styles.photosHint}>
-              Recommended for damaged, defective, not as described, or other reasons.
+              {t('ordersFlow.returnRefund.photosHint')}
             </Text>
             <View style={styles.photoRow}>
               {imageUrls.map((uri, index) => (
@@ -258,7 +260,7 @@ export default function ReturnRefundModal() {
                   <TouchableOpacity
                     style={styles.photoRemove}
                     onPress={() => handleRemovePhoto(index)}
-                    accessibilityLabel="Remove photo"
+                    accessibilityLabel={t('ordersFlow.returnRefund.a11y.removePhoto')}
                     accessibilityRole="button"
                   >
                     <X size={14} color="#fff" />
@@ -270,7 +272,7 @@ export default function ReturnRefundModal() {
                   style={styles.photoAdd}
                   onPress={handleAddPhotos}
                   disabled={uploadingPhotos}
-                  accessibilityLabel="Add photos"
+                  accessibilityLabel={t('ordersFlow.returnRefund.a11y.addPhotos')}
                   accessibilityRole="button"
                 >
                   {uploadingPhotos ? (
@@ -279,7 +281,7 @@ export default function ReturnRefundModal() {
                     <ImagePlus size={24} color="#6b7280" />
                   )}
                   <Text style={styles.photoAddText}>
-                    Add {imageUrls.length > 0 ? 'more' : 'photos'}
+                    {imageUrls.length > 0 ? t('ordersFlow.returnRefund.addMore') : t('ordersFlow.returnRefund.addPhotos')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -288,7 +290,7 @@ export default function ReturnRefundModal() {
 
           <View style={styles.policyBlock}>
             <Text style={styles.policyText}>
-              We will review your request and may email you with return instructions or next steps. Refunds are issued to your original payment method.
+              {t('ordersFlow.returnRefund.policyText')}
             </Text>
           </View>
         </ScrollView>
@@ -309,7 +311,7 @@ export default function ReturnRefundModal() {
                 !canSubmit && styles.submitButtonTextDisabled,
               ]}
             >
-              Submit request
+              {isLoading ? t('ordersFlow.returnRefund.submitting') : t('ordersFlow.returnRefund.submit')}
             </Text>
           )}
         </TouchableOpacity>

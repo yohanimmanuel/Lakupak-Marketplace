@@ -43,6 +43,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { NotificationService } from '../../../services/notificationService';
 import { pushNotificationService } from '../../../services/pushNotifications';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -78,6 +79,8 @@ export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<CheckoutParams>();
   const primaryBlue = '#0a61d7';
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
   
   // Get product cache; read auth user directly from auth store (avoids stale user after logout/login)
   const { products } = useDataStore();
@@ -108,11 +111,11 @@ export default function CheckoutScreen() {
   const productId = params.productId || '';
   const quantity = parseInt(params.quantity || '1');
   const totalPrice = parseFloat(params.totalPrice || '0');
-  const productName = params.productName || 'Product';
+  const productName = params.productName || t('ordersFlow.checkout.defaults.product');
   const productImage = params.productImage || '';
   const unitPrice = parseFloat(params.unitPrice || '0');
   const originalPrice = parseFloat(params.originalPrice || '0');
-  const packageType = params.packageType || 'Box';
+  const packageType = params.packageType || t('ordersFlow.checkout.defaults.box');
   const piecesPerPackage = parseInt(params.piecesPerPackage || '1');
 
   // Determine if this is a cart checkout or single product checkout
@@ -215,12 +218,12 @@ const distributorGroups = useMemo(
     const company = product?.seller?.company;
     return {
       id: distributorId,
-      companyName: company?.name || product?.seller?.name || 'Distributor Company',
-      industryType: company?.industryType || 'Not specified',
+      companyName: company?.name || product?.seller?.name || t('ordersFlow.checkout.distributorDefaults.company'),
+      industryType: company?.industryType || t('ordersFlow.checkout.distributorDefaults.notSpecified'),
       pickupAddress: company?.pickupAddress || null,
       businessAddress: company?.businessAddress || null,
-      contactPerson: product?.seller?.name || 'Not provided',
-      phone: company?.businessPhone || 'Not provided',
+      contactPerson: product?.seller?.name || t('ordersFlow.checkout.distributorDefaults.notProvided'),
+      phone: company?.businessPhone || t('ordersFlow.checkout.distributorDefaults.notProvided'),
       email: company?.businessEmail,
     };
   };
@@ -262,11 +265,11 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
   const addresses = [
     {
       id: 'default',
-      name: authUser?.name || 'Your Name',
-      company: authUser?.storeName || 'Your Company',
-      address: authUser?.chosenAddress || 'Your Address',
-      city: authUser?.country || 'Your City',
-      phone: authUser?.phone || 'Your Phone',
+      name: authUser?.name || t('ordersFlow.checkout.address.yourName'),
+      company: authUser?.storeName || t('ordersFlow.checkout.address.yourCompany'),
+      address: authUser?.chosenAddress || t('ordersFlow.checkout.address.yourAddress'),
+      city: authUser?.country || t('ordersFlow.checkout.address.yourCity'),
+      phone: authUser?.phone || t('ordersFlow.checkout.address.yourPhone'),
       isDefault: true
     }
   ];
@@ -280,33 +283,33 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
   }> = [
     {
       id: 'bank_transfer',
-      name: 'Bank Transfer',
+      name: t('ordersFlow.checkout.payment.bankTransfer'),
       icon: 'Building2',
-      description: 'Transfer to the distributor bank account shown below',
+      description: t('ordersFlow.checkout.payment.bankTransferDesc'),
       isAvailable: true,
     },
     {
       id: 'cod',
-      name: 'Cash on Delivery (COD)',
+      name: t('ordersFlow.checkout.payment.cod'),
       icon: 'Banknote',
-      description: 'Pay the distributor when you receive the goods',
+      description: t('ordersFlow.checkout.payment.codDesc'),
       isAvailable: true,
     },
   ];
 
   const paymentTermsForOrder =
-    selectedPayment === 'cod' ? 'Cash on Delivery' : 'Bank Transfer';
+    selectedPayment === 'cod' ? t('ordersFlow.checkout.payment.codShort') : t('ordersFlow.checkout.payment.bankTransfer');
 
   // Format min/max for "Estimated delivery: X" line (real data from distributor) – all as business days
   const formatDeliveryDuration = (minDays?: number | null, maxDays?: number | null): string => {
     const min = minDays != null && !Number.isNaN(minDays) ? minDays : null;
     const max = maxDays != null && !Number.isNaN(maxDays) ? maxDays : null;
     if (min != null && max != null) {
-      if (min === max) return min === 1 ? '1 business day' : `${min} business days`;
-      return `${min}-${max} business days`;
+      if (min === max) return min === 1 ? t('ordersFlow.checkout.businessDays.one') : t('ordersFlow.checkout.businessDays.many', { count: min });
+      return t('ordersFlow.checkout.businessDays.range', { min, max });
     }
-    if (min != null) return `${min}+ business days`;
-    if (max != null) return `Up to ${max} business days`;
+    if (min != null) return t('ordersFlow.checkout.businessDays.minPlus', { min });
+    if (max != null) return t('ordersFlow.checkout.businessDays.upTo', { max });
     return '';
   };
 
@@ -315,11 +318,11 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     const min = minDays != null && !Number.isNaN(minDays) ? minDays : null;
     const max = maxDays != null && !Number.isNaN(maxDays) ? maxDays : null;
     if (min != null && max != null) {
-      if (min === max) return min === 1 ? '1 business day' : `${min} business days`;
-      return `${min}-${max} business days`;
+      if (min === max) return min === 1 ? t('ordersFlow.checkout.businessDays.one') : t('ordersFlow.checkout.businessDays.many', { count: min });
+      return t('ordersFlow.checkout.businessDays.range', { min, max });
     }
-    if (min != null) return `${min}+ business days`;
-    if (max != null) return `Up to ${max} business days`;
+    if (min != null) return t('ordersFlow.checkout.businessDays.minPlus', { min });
+    if (max != null) return t('ordersFlow.checkout.businessDays.upTo', { max });
     return '';
   };
 
@@ -338,27 +341,27 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     const all = [
       {
         id: 'self_pickup',
-        name: 'Self Pickup',
-        description: 'Coordinate pickup directly at the seller location',
-        estimatedDays: 'Coordinate with seller',
+        name: t('ordersFlow.checkout.shippingOptions.selfPickup.name'),
+        description: t('ordersFlow.checkout.shippingOptions.selfPickup.desc'),
+        estimatedDays: t('ordersFlow.checkout.shippingOptions.selfPickup.eta'),
         minDays: null as number | null,
         maxDays: null as number | null,
         available: !hasAvailabilityData || (shipping?.selfPickup?.available ?? true),
       },
       {
         id: 'seller_delivery',
-        name: 'Seller/Distributor Delivery',
-        description: 'Seller arranges delivery to your address',
-        estimatedDays: 'As agreed with seller',
+        name: t('ordersFlow.checkout.shippingOptions.sellerDelivery.name'),
+        description: t('ordersFlow.checkout.shippingOptions.sellerDelivery.desc'),
+        estimatedDays: t('ordersFlow.checkout.shippingOptions.sellerDelivery.eta'),
         minDays: (shipping?.sellerDelivery?.minDays ?? null) as number | null,
         maxDays: (shipping?.sellerDelivery?.maxDays ?? null) as number | null,
         available: !hasAvailabilityData || (shipping?.sellerDelivery?.available ?? true),
       },
       {
         id: 'buyer_courier',
-        name: 'Buyer-arranged Courier',
-        description: 'You book and manage your own courier',
-        estimatedDays: 'Per your courier booking',
+        name: t('ordersFlow.checkout.shippingOptions.buyerCourier.name'),
+        description: t('ordersFlow.checkout.shippingOptions.buyerCourier.desc'),
+        estimatedDays: t('ordersFlow.checkout.shippingOptions.buyerCourier.eta'),
         minDays: null as number | null,
         maxDays: null as number | null,
         available: !hasAvailabilityData || (shipping?.buyerCourier?.available ?? true),
@@ -379,7 +382,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
 
   // Helper functions for date/time formatting
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString(locale, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -391,7 +394,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     const [hours, minutes] = time.split(':');
     const date = new Date();
     date.setHours(parseInt(hours), parseInt(minutes));
-    return date.toLocaleTimeString('en-US', {
+    return date.toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
@@ -402,7 +405,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     const [hours, minutes] = time.split(':');
     const combined = new Date(date);
     combined.setHours(parseInt(hours), parseInt(minutes));
-    return combined.toLocaleString('en-US', {
+    return combined.toLocaleString(locale, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -735,12 +738,12 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
     try {
       // Show loading state
     Alert.alert(
-      'Order Confirmation',
-      `Are you sure you want to place this order for ${formatCurrency(total)}?`,
+      t('ordersFlow.checkout.alerts.orderConfirmationTitle'),
+      t('ordersFlow.checkout.alerts.orderConfirmationAmount', { amount: formatCurrency(total) }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('ordersFlow.checkout.alerts.cancel'), style: 'cancel' },
         { 
-          text: 'Place Order', 
+          text: t('ordersFlow.checkout.alerts.placeOrder'), 
           style: 'default',
             onPress: async () => {
               if (isPlacingOrder) return;
@@ -938,9 +941,10 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                       contactPhone: authUser?.phone || addresses[0].phone,
                       customerEmail: customerEmail,
                       deliveryAddress: addresses[0].address,
-                      deliveryMethod: selectedId === 'self_pickup' ? 'Self Pickup'
-                        : selectedId === 'seller_delivery' ? 'Seller/Distributor Delivery'
-                        : 'Buyer-arranged Courier',
+                    // Keep English values for backend compatibility
+                    deliveryMethod: selectedId === 'self_pickup' ? 'Self Pickup'
+                      : selectedId === 'seller_delivery' ? 'Seller/Distributor Delivery'
+                      : 'Buyer-arranged Courier',
                       deliveryOption: selectedId,
                       preferredDeliveryDate: (selectedId === 'seller_delivery' || selectedId === 'buyer_courier') && scheduledDateTimeByDistributor[distributorId]
                         ? toISODate(scheduledDateTimeByDistributor[distributorId])
@@ -1025,6 +1029,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                     contactPhone: authUser?.phone || addresses[0].phone,
                     customerEmail: customerEmail,
                     deliveryAddress: addresses[0].address,
+                    // Keep English values for backend compatibility
                     deliveryMethod: selectedShipping === 'self_pickup' ? 'Self Pickup'
                       : selectedShipping === 'seller_delivery' ? 'Seller/Distributor Delivery'
                       : 'Buyer-arranged Courier',
@@ -1079,7 +1084,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                   const firstOrder = createdOrders[0];
                   // API returns { order, orders }; orderId can be on root, order.orderId, or orders[0].orderId
                   const o = firstOrder?.order ?? firstOrder?.orders?.[0] ?? firstOrder;
-                  const orderId = (firstOrder?.orderId ?? o?.orderId ?? firstOrder?.order_id) || 'Unknown';
+                  const orderId = (firstOrder?.orderId ?? o?.orderId ?? firstOrder?.order_id) || t('ordersFlow.checkout.defaults.unknown');
                   const orderStatus = firstOrder?.orderStatus ?? o?.orderStatus ?? firstOrder?.order_status ?? o?.order_status ?? 'Pending';
                   
                   // In-app list (AsyncStorage)
@@ -1097,10 +1102,10 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                     await pushNotificationService.showOrderNotification(
                       orderId,
                       'Pending',
-                      'Order Placed',
+                      t('ordersFlow.checkout.notifications.orderPlacedTitle'),
                       createdOrders.length > 1
-                        ? `Your ${createdOrders.length} orders have been placed and are awaiting confirmation.`
-                        : `Your order #${orderId} has been placed and is awaiting confirmation.`
+                        ? t('ordersFlow.checkout.notifications.orderPlacedBodyMultiple', { count: createdOrders.length })
+                        : t('ordersFlow.checkout.notifications.orderPlacedBodySingle', { orderId })
                     );
                   } catch (_) { /* best-effort */ }
 
@@ -1117,8 +1122,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                 }
 
               } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Failed to place order. Please try again.';
-                Alert.alert('Error', errorMessage);
+                const errorMessage = error instanceof Error ? error.message : t('ordersFlow.checkout.alerts.placeOrderFailed');
+                Alert.alert(t('ordersFlow.checkout.alerts.errorTitle'), errorMessage);
               } finally {
                 setIsPlacingOrder(false);
               }
@@ -1127,7 +1132,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
       ]
     );
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      Alert.alert(t('ordersFlow.checkout.alerts.errorTitle'), t('ordersFlow.checkout.alerts.genericError'));
     }
   };
 
@@ -1142,7 +1147,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                 <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </TouchableOpacity>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Checkout</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>
+                  {t('ordersFlow.checkout.title')}
+                </Text>
               </View>
             </View>
           ),
@@ -1159,21 +1166,25 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
             <View style={styles.businessCard}>
               <View style={styles.sectionTitleContainer}>
                 <Building2 size={20} color="#0a61d7" />
-                <Text style={styles.sectionTitle}>Business Information</Text>
+                <Text style={styles.sectionTitle}>{t('ordersFlow.checkout.business.title')}</Text>
               </View>
               
               {/* Show first distributor + "and more" if multiple */}
               <Text style={styles.businessName}>
                 {distributorsInfo[0].companyName}
-                {distributorsInfo.length > 1 && ` and ${distributorsInfo.length - 1} more`}
+                  {distributorsInfo.length > 1 && ` ${t('ordersFlow.checkout.business.andMore', { count: distributorsInfo.length - 1 })}`}
               </Text>
               
-              <Text style={styles.businessType}>Industry: {distributorsInfo[0].industryType}</Text>
-              <Text style={styles.businessDetails}>Contact: {distributorsInfo[0].contactPerson}</Text>
+              <Text style={styles.businessType}>
+                {t('ordersFlow.checkout.business.industryLabel')}: {distributorsInfo[0].industryType}
+              </Text>
+              <Text style={styles.businessDetails}>
+                {t('ordersFlow.checkout.business.contactLabel')}: {distributorsInfo[0].contactPerson}
+              </Text>
               {/* Show additional distributors if more than one */}
               {distributorsInfo.length > 1 && (
                 <View style={styles.additionalDistributors}>
-                  <Text style={styles.additionalDistributorsTitle}>Other Distributors:</Text>
+                  <Text style={styles.additionalDistributorsTitle}>{t('ordersFlow.checkout.business.otherDistributors')}:</Text>
                   {distributorsInfo.slice(1).map((dist, index) => (
                     <Text key={index} style={styles.additionalDistributorItem}>
                       • {dist.companyName} - {dist.industryType}
@@ -1185,9 +1196,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
               {selectedPayment === 'cod' && (
                 <>
                   <View style={styles.businessDivider} />
-                  <Text style={styles.bankSectionTitle}>Payment</Text>
+                  <Text style={styles.bankSectionTitle}>{t('ordersFlow.checkout.sections.payment')}</Text>
                   <Text style={styles.bankMissing}>
-                    You selected Cash on Delivery. Arrange payment directly with the distributor when you receive the goods.
+                    {t('ordersFlow.checkout.payment.codNote')}
                   </Text>
                 </>
               )}
@@ -1200,9 +1211,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
           <View style={styles.addressCard}>
             <View style={styles.sectionTitleContainer}>
               <MapPin size={20} color="#0a61d7" />
-              <Text style={styles.sectionTitle}>Delivery Address</Text>
+              <Text style={styles.sectionTitle}>{t('ordersFlow.checkout.sections.deliveryAddress')}</Text>
               <TouchableOpacity>
-                <Text style={styles.editText}>Edit</Text>
+                <Text style={styles.editText}>{t('ordersFlow.checkout.edit')}</Text>
               </TouchableOpacity>
             </View>
             <Text style={styles.addressName}>{addresses[0].name}</Text>
@@ -1211,7 +1222,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
             <Text style={styles.addressPhone}>{addresses[0].phone}</Text>
             <View style={styles.defaultBadge}>
               <CheckCircle size={16} color="#10b981" />
-              <Text style={styles.defaultText}>Default Address</Text>
+              <Text style={styles.defaultText}>{t('ordersFlow.checkout.address.defaultAddress')}</Text>
             </View>
           </View>
         </View>
@@ -1229,7 +1240,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                 <View style={styles.productCard}>
                   <View style={styles.sectionTitleContainer}>
                     <Package size={20} color="#0a61d7" />
-                    <Text style={styles.sectionTitle}>Products from {distributorInfo.companyName}</Text>
+                    <Text style={styles.sectionTitle}>
+                      {t('ordersFlow.checkout.productsFrom', { name: distributorInfo.companyName })}
+                    </Text>
                   </View>
                   
                   {/* Products from this distributor */}
@@ -1306,7 +1319,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                             const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
                             const packageType = marketplaceProduct.packageType || 'Box';
                             
-                            return `${piecesPerPackage} pieces per ${packageType}`;
+                            return t('ordersFlow.checkout.productSpecs', { count: piecesPerPackage, package: packageType });
                           })()}
                         </Text>
                         <View style={styles.priceRow}>
@@ -1380,17 +1393,17 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                                 return (
                                   <>
                                     <Text style={styles.originalPrice}>
-                                      {formatCurrency(originalPrice)} per piece
+                                      {formatCurrency(originalPrice)} {t('ordersFlow.checkout.perPiece')}
                                     </Text>
                                     <Text style={styles.discountedPrice}>
-                                      {formatCurrency(unitPrice)} per piece
+                                      {formatCurrency(unitPrice)} {t('ordersFlow.checkout.perPiece')}
                                     </Text>
                                   </>
                                 );
                               } else {
                                 return (
                                   <Text style={styles.productPrice}>
-                                    {formatCurrency(unitPrice)} per piece
+                                    {formatCurrency(unitPrice)} {t('ordersFlow.checkout.perPiece')}
                                   </Text>
                                 );
                               }
@@ -1467,7 +1480,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                                   <View style={styles.promotionGiftBadge}>
                                     <Gift size={12} color="#9333EA" />
                                     <Text style={styles.promotionGiftText}>
-                                      +{totalFreeItems} Free
+                                      +{totalFreeItems} {t('ordersFlow.checkout.free')}
                                     </Text>
                                   </View>
                                 );
@@ -1485,10 +1498,10 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                   <View style={styles.shippingSection}>
                     <View style={styles.shippingTitleContainer}>
                       <Truck size={20} color="#0a61d7" />
-                      <Text style={styles.shippingTitle}>Shipping Option</Text>
+                      <Text style={styles.shippingTitle}>{t('ordersFlow.checkout.shipping.title')}</Text>
                     </View>
                     <Text style={{ fontSize: 11, color: '#6B7280', marginBottom: 10 }}>
-                      Shipping cost is agreed between buyer and distributor — not charged at checkout.
+                      {t('ordersFlow.checkout.shipping.costNote')}
                     </Text>
                     {shippingOptions.map((option) => {
                       const selectedOptForDist = selectedShippingByDistributor[distributorId] || '';
@@ -1511,8 +1524,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                                 <Clock size={14} color="#6B7280" />
                                 <Text style={styles.shippingTimeText}>
                                   {selectedOptForDist === 'self_pickup' && pickupDateForDist
-                                    ? `Pickup: ${pickupDateForDist.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
-                                    : 'Tap to schedule pickup date & time'}
+                                    ? `${t('ordersFlow.checkout.shipping.pickupPrefix')}: ${pickupDateForDist.toLocaleString(locale, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                                    : t('ordersFlow.checkout.shipping.tapSchedulePickup')}
                                 </Text>
                               </View>
                             )}
@@ -1521,10 +1534,10 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                                 <Clock size={14} color="#6B7280" />
                                 <Text style={styles.shippingTimeText}>
                                   {sellerModeForDist === 'buyer_scheduled' && scheduledDateForDist
-                                    ? `Scheduled: ${scheduledDateForDist.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                                    ? `${t('ordersFlow.checkout.shipping.scheduledPrefix')}: ${scheduledDateForDist.toLocaleString(locale, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
                                     : sellerModeForDist === 'distributor_managed'
-                                    ? 'Distributor manages the schedule'
-                                    : 'Tap to set scheduling preference'}
+                                    ? t('ordersFlow.checkout.shipping.distributorManaged')
+                                    : t('ordersFlow.checkout.shipping.tapSetPreference')}
                                 </Text>
                               </View>
                             )}
@@ -1533,10 +1546,10 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                                 <Clock size={14} color="#6B7280" />
                                 <Text style={styles.shippingTimeText}>
                                   {courierModeForDist === 'buyer_scheduled' && scheduledDateForDist
-                                    ? `Courier: ${scheduledDateForDist.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                                    ? `${t('ordersFlow.checkout.shipping.courierPrefix')}: ${scheduledDateForDist.toLocaleString(locale, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
                                     : courierModeForDist === 'self_managed'
-                                    ? "I'll manage my own courier"
-                                    : 'Tap to set scheduling preference'}
+                                    ? t('ordersFlow.checkout.shipping.buyerSelfManaged')
+                                    : t('ordersFlow.checkout.shipping.tapSetPreference')}
                                 </Text>
                               </View>
                             )}
@@ -1558,7 +1571,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
             <View style={styles.productCard}>
               <View style={styles.sectionTitleContainer}>
                 <Package size={20} color="#0a61d7" />
-                <Text style={styles.sectionTitle}>Order Details & Shipping</Text>
+                <Text style={styles.sectionTitle}>{t('ordersFlow.checkout.orderDetailsShippingTitle')}</Text>
               </View>
               
               {/* Product Row - Shopee Style */}
@@ -1580,7 +1593,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                     </Text>
                   ) : null}
                   <Text style={styles.productSpecs}>
-                    {piecesPerPackage} pieces per {packageType}
+                    {t('ordersFlow.checkout.productSpecs', { count: piecesPerPackage, package: packageType })}
                   </Text>
                   <View style={styles.priceRow}>
                     <View style={styles.priceContainer}>
@@ -1593,15 +1606,15 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                                  actualProduct.originalSellingPrice > actualProduct.sellingPrice ? (
                             <>
                               <Text style={styles.originalPrice}>
-                                {formatCurrency(actualProduct.originalSellingPrice)} per piece
+                                {formatCurrency(actualProduct.originalSellingPrice)} {t('ordersFlow.checkout.perPiece')}
                               </Text>
                               <Text style={styles.discountedPrice}>
-                                {formatCurrency(actualProduct.sellingPrice)} per piece
+                                {formatCurrency(actualProduct.sellingPrice)} {t('ordersFlow.checkout.perPiece')}
                               </Text>
                             </>
                           ) : (
                             <Text style={styles.productPrice}>
-                              {formatCurrency(actualProduct.sellingPrice)} per piece
+                              {formatCurrency(actualProduct.sellingPrice)} {t('ordersFlow.checkout.perPiece')}
                             </Text>
                           );
                         } else {
@@ -1612,15 +1625,15 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                           return originalPriceValue > 0 && originalPriceValue > unitPriceValue ? (
                             <>
                               <Text style={styles.originalPrice}>
-                                {formatCurrency(originalPriceValue)} per piece
+                                {formatCurrency(originalPriceValue)} {t('ordersFlow.checkout.perPiece')}
                               </Text>
                               <Text style={styles.discountedPrice}>
-                                {formatCurrency(unitPriceValue)} per piece
+                                {formatCurrency(unitPriceValue)} {t('ordersFlow.checkout.perPiece')}
                               </Text>
                             </>
                           ) : (
                             <Text style={styles.productPrice}>
-                              {formatCurrency(unitPriceValue)} per piece
+                              {formatCurrency(unitPriceValue)} {t('ordersFlow.checkout.perPiece')}
                             </Text>
                           );
                         }
@@ -1641,7 +1654,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                             <View style={styles.promotionGiftBadge}>
                               <Gift size={12} color="#9333EA" />
                               <Text style={styles.promotionGiftText}>
-                                +{promotionGift.freeQty} Free
+                                +{promotionGift.freeQty} {t('ordersFlow.checkout.free')}
                               </Text>
                             </View>
                           );
@@ -1658,10 +1671,10 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
               <View style={styles.shippingSection}>
                 <View style={styles.shippingTitleContainer}>
                   <Truck size={20} color="#0a61d7" />
-                  <Text style={styles.shippingTitle}>Shipping Option</Text>
+                  <Text style={styles.shippingTitle}>{t('ordersFlow.checkout.shipping.title')}</Text>
                 </View>
                 <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 10 }}>
-                  Shipping cost is agreed between buyer and distributor, not charged at checkout.
+                  {t('ordersFlow.checkout.shipping.costNote')}
                 </Text>
                 {shippingOptions.map((option) => (
                   <TouchableOpacity
@@ -1677,8 +1690,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                           <Clock size={14} color="#6B7280" />
                           <Text style={styles.shippingTimeText}>
                             {selectedShipping === 'self_pickup' && pickupDateTime
-                              ? `Pickup: ${pickupDateTime.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
-                              : 'Tap to schedule pickup date & time'}
+                              ? `${t('ordersFlow.checkout.shipping.pickupPrefix')}: ${pickupDateTime.toLocaleString(locale, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                              : t('ordersFlow.checkout.shipping.tapSchedulePickup')}
                           </Text>
                         </View>
                       )}
@@ -1687,10 +1700,10 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                           <Clock size={14} color="#6B7280" />
                           <Text style={styles.shippingTimeText}>
                             {sellerDeliveryMode === 'buyer_scheduled' && scheduledDateTime
-                              ? `Scheduled: ${scheduledDateTime.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                              ? `${t('ordersFlow.checkout.shipping.scheduledPrefix')}: ${scheduledDateTime.toLocaleString(locale, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
                               : sellerDeliveryMode === 'distributor_managed'
-                              ? 'Distributor manages the schedule'
-                              : 'Tap to set scheduling preference'}
+                              ? t('ordersFlow.checkout.shipping.distributorManaged')
+                              : t('ordersFlow.checkout.shipping.tapSetPreference')}
                           </Text>
                         </View>
                       )}
@@ -1699,10 +1712,10 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                           <Clock size={14} color="#6B7280" />
                           <Text style={styles.shippingTimeText}>
                             {buyerCourierMode === 'buyer_scheduled' && scheduledDateTime
-                              ? `Courier: ${scheduledDateTime.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
+                              ? `${t('ordersFlow.checkout.shipping.courierPrefix')}: ${scheduledDateTime.toLocaleString(locale, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}`
                               : buyerCourierMode === 'self_managed'
-                              ? "I'll manage my own courier"
-                              : 'Tap to set scheduling preference'}
+                              ? t('ordersFlow.checkout.shipping.buyerSelfManaged')
+                              : t('ordersFlow.checkout.shipping.tapSetPreference')}
                           </Text>
                         </View>
                       )}
@@ -1722,7 +1735,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
           <View style={styles.paymentCard}>
             <View style={styles.sectionTitleContainer}>
               <CreditCard size={20} color="#0a61d7" />
-              <Text style={styles.sectionTitle}>Payment Method</Text>
+              <Text style={styles.sectionTitle}>{t('ordersFlow.checkout.paymentMethodTitle')}</Text>
             </View>
             {paymentMethods.map((method) => (
             <TouchableOpacity
@@ -1750,19 +1763,19 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
           <View style={styles.summaryCard}>
             <View style={styles.sectionTitleContainer}>
               <Package size={20} color="#111827" />
-              <Text style={styles.sectionTitle}>Order Summary</Text>
+              <Text style={styles.sectionTitle}>{t('ordersFlow.checkout.summary.title')}</Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryLabel}>{t('ordersFlow.checkout.summary.subtotal')}</Text>
               <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: '#6B7280', fontSize: 11 }]}>
-                Shipping cost is agreed between buyer and distributor (not included here)
+                {t('ordersFlow.checkout.shipping.costNoteShort')}
               </Text>
             </View>
             <View style={[styles.summaryRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Total Payment</Text>
+              <Text style={styles.totalLabel}>{t('ordersFlow.checkout.summary.totalPayment')}</Text>
               <Text style={styles.totalValue}>{formatCurrency(total)}</Text>
             </View>
           </View>
@@ -1771,8 +1784,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
         {/* Terms and Conditions */}
         <View style={styles.termsSection}>
           <Text style={styles.termsText}>
-            By placing this order, you agree to our Terms of Service and Privacy Policy.
-            This is a B2B transaction subject to business terms and conditions.
+            {t('ordersFlow.checkout.terms')}
           </Text>
         </View>
       </ScrollView>
@@ -1780,7 +1792,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
       {/* Bottom Action Bar - Sticky */}
       <View style={styles.bottomBar}>
         <View style={styles.totalSection}>
-          <Text style={styles.bottomTotalLabel}>Total</Text>
+          <Text style={styles.bottomTotalLabel}>{t('ordersFlow.checkout.summary.total')}</Text>
           <Text style={styles.bottomTotalValue}>{formatCurrency(total)}</Text>
         </View>
         <TouchableOpacity
@@ -1791,7 +1803,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
           onPress={handlePlaceOrder}
           disabled={!isOrderReady || isPlacingOrder}
         >
-          <Text style={styles.placeOrderText}>{isPlacingOrder ? 'Placing...' : 'Place Order'}</Text>
+          <Text style={styles.placeOrderText}>
+            {isPlacingOrder ? t('ordersFlow.checkout.cta.placing') : t('ordersFlow.checkout.cta.placeOrder')}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -1819,7 +1833,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                 <>
                   <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>
-                      {scheduleModalContext === 'seller_delivery' ? 'Seller Delivery' : 'Courier Schedule'}
+                      {scheduleModalContext === 'seller_delivery'
+                        ? t('ordersFlow.checkout.scheduleModal.sellerDeliveryTitle')
+                        : t('ordersFlow.checkout.scheduleModal.courierScheduleTitle')}
                     </Text>
                     <TouchableOpacity onPress={handleDeliveryClose}>
                       <X size={24} color="#6B7280" />
@@ -1827,7 +1843,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                   </View>
 
                   <View style={styles.modalBody}>
-                    <Text style={styles.modalSubtitle}>How would you like to handle the schedule?</Text>
+                    <Text style={styles.modalSubtitle}>{t('ordersFlow.checkout.scheduleModal.subtitleStep1')}</Text>
 
                     <TouchableOpacity
                       style={[styles.scheduleModeOption, scheduleStep1Mode === 'buyer_scheduled' && styles.scheduleModeOptionSelected]}
@@ -1836,9 +1852,11 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                       <Calendar size={20} color={scheduleStep1Mode === 'buyer_scheduled' ? '#0a61d7' : '#6B7280'} />
                       <View style={{ flex: 1, marginLeft: 12 }}>
                         <Text style={[styles.scheduleModeText, scheduleStep1Mode === 'buyer_scheduled' && { color: '#0a61d7' }]}>
-                          {scheduleModalContext === 'seller_delivery' ? 'I will schedule the delivery' : 'Schedule courier pickup'}
+                          {scheduleModalContext === 'seller_delivery'
+                            ? t('ordersFlow.checkout.scheduleModal.optionBuyerScheduledSeller')
+                            : t('ordersFlow.checkout.scheduleModal.optionBuyerScheduledCourier')}
                         </Text>
-                        <Text style={styles.scheduleModeDetail}>Pick a preferred date & time</Text>
+                        <Text style={styles.scheduleModeDetail}>{t('ordersFlow.checkout.scheduleModal.optionBuyerScheduledDetail')}</Text>
                       </View>
                       {scheduleStep1Mode === 'buyer_scheduled' ? <CheckCircle size={18} color="#0a61d7" /> : <ChevronRight size={18} color="#9CA3AF" />}
                     </TouchableOpacity>
@@ -1850,12 +1868,14 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                       <Building2 size={20} color={scheduleStep1Mode === 'managed' ? '#0a61d7' : '#6B7280'} />
                       <View style={{ flex: 1, marginLeft: 12 }}>
                         <Text style={[styles.scheduleModeText, scheduleStep1Mode === 'managed' && { color: '#0a61d7' }]}>
-                          {scheduleModalContext === 'seller_delivery' ? 'Distributor manages the schedule' : "I'll self-manage the courier"}
+                          {scheduleModalContext === 'seller_delivery'
+                            ? t('ordersFlow.checkout.scheduleModal.optionManagedSeller')
+                            : t('ordersFlow.checkout.scheduleModal.optionManagedCourier')}
                         </Text>
                         <Text style={styles.scheduleModeDetail}>
                           {scheduleModalContext === 'seller_delivery'
-                            ? 'No specific date, distributor will contact you'
-                            : 'No specific date, you will arrange independently'}
+                            ? t('ordersFlow.checkout.scheduleModal.managedDetailSeller')
+                            : t('ordersFlow.checkout.scheduleModal.managedDetailCourier')}
                         </Text>
                       </View>
                       {scheduleStep1Mode === 'managed' ? <CheckCircle size={18} color="#0a61d7" /> : <ChevronRight size={18} color="#9CA3AF" />}
@@ -1864,7 +1884,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
 
                   <View style={styles.modalFooter}>
                     <TouchableOpacity style={styles.cancelButton} onPress={handleDeliveryClose}>
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                      <Text style={styles.cancelButtonText}>{t('ordersFlow.checkout.scheduleModal.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.confirmButton, !scheduleStep1Mode && { opacity: 0.4 }]}
@@ -1879,7 +1899,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                       }}
                     >
                       <Text style={styles.confirmButtonText}>
-                        {scheduleStep1Mode === 'buyer_scheduled' ? 'Next' : 'Confirm'}
+                        {scheduleStep1Mode === 'buyer_scheduled'
+                          ? t('ordersFlow.checkout.scheduleModal.next')
+                          : t('ordersFlow.checkout.scheduleModal.confirm')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -1896,7 +1918,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                     >
                       <ArrowLeft size={20} color="#374151" />
                       <Text style={[styles.modalTitle, { fontSize: 17 }]}>
-                        {scheduleModalContext === 'seller_delivery' ? 'Set Delivery Time' : 'Set Courier Time'}
+                        {scheduleModalContext === 'seller_delivery'
+                          ? t('ordersFlow.checkout.scheduleModal.setDeliveryTime')
+                          : t('ordersFlow.checkout.scheduleModal.setCourierTime')}
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleDeliveryClose}>
@@ -1905,7 +1929,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                   </View>
 
                   <View style={styles.modalBody}>
-                    <Text style={styles.modalSubtitle}>Choose your preferred date and time</Text>
+                    <Text style={styles.modalSubtitle}>{t('ordersFlow.checkout.scheduleModal.subtitleStep2')}</Text>
 
                     <View style={styles.dateTimeSection}>
                       <TouchableOpacity
@@ -1915,7 +1939,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                         <Calendar size={20} color="#0a61d7" />
                         <View style={styles.dateTimeInfo}>
                           <Text style={styles.dateTimeLabel}>
-                            {scheduleModalContext === 'seller_delivery' ? 'Delivery Date' : 'Courier Date'}
+                            {scheduleModalContext === 'seller_delivery'
+                              ? t('ordersFlow.checkout.scheduleModal.deliveryDate')
+                              : t('ordersFlow.checkout.scheduleModal.courierDate')}
                           </Text>
                           <Text style={styles.dateTimeValue}>{formatDate(selectedDate)}</Text>
                         </View>
@@ -1928,7 +1954,9 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                         <Clock size={20} color="#0a61d7" />
                         <View style={styles.dateTimeInfo}>
                           <Text style={styles.dateTimeLabel}>
-                            {scheduleModalContext === 'seller_delivery' ? 'Delivery Time' : 'Courier Time'}
+                            {scheduleModalContext === 'seller_delivery'
+                              ? t('ordersFlow.checkout.scheduleModal.deliveryTime')
+                              : t('ordersFlow.checkout.scheduleModal.courierTime')}
                           </Text>
                           <Text style={styles.dateTimeValue}>{formatTime(selectedTime)}</Text>
                         </View>
@@ -1944,7 +1972,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                           />
                           <View style={styles.timeDropdown}>
                             <View style={styles.timeDropdownHeader}>
-                              <Text style={styles.timeDropdownHeaderText}>Select Time</Text>
+                              <Text style={styles.timeDropdownHeaderText}>{t('ordersFlow.checkout.scheduleModal.selectTime')}</Text>
                             </View>
                             <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
                               {timeOptions.map((time) => (
@@ -1967,10 +1995,10 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
 
                   <View style={styles.modalFooter}>
                     <TouchableOpacity style={styles.cancelButton} onPress={handleDeliveryClose}>
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                      <Text style={styles.cancelButtonText}>{t('ordersFlow.checkout.scheduleModal.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.confirmButton} onPress={confirmScheduledDelivery}>
-                      <Text style={styles.confirmButtonText}>Confirm</Text>
+                      <Text style={styles.confirmButtonText}>{t('ordersFlow.checkout.scheduleModal.confirm')}</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -2009,22 +2037,22 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
               style={{ flex: 1 }}
             >
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Schedule Pickup</Text>
+              <Text style={styles.modalTitle}>{t('ordersFlow.checkout.pickupModal.title')}</Text>
               <TouchableOpacity onPress={handlePickupClose}>
                 <X size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
             
             <View style={styles.modalBody}>
-              <Text style={styles.modalSubtitle}>Choose your preferred pickup date and time</Text>
+              <Text style={styles.modalSubtitle}>{t('ordersFlow.checkout.pickupModal.subtitle')}</Text>
               
               <View style={styles.pickupInfo}>
-                <Text style={styles.pickupAddressLabel}>Pickup Location:</Text>
+                <Text style={styles.pickupAddressLabel}>{t('ordersFlow.checkout.pickupModal.locationLabel')}:</Text>
                 <Text style={styles.pickupAddress} numberOfLines={1} ellipsizeMode="tail">
-                  {activeDistributorInfo?.companyName || 'Distributor Company'}
+                  {activeDistributorInfo?.companyName || t('ordersFlow.checkout.distributorDefaults.company')}
                 </Text>
                 <Text style={styles.pickupAddressDetail} numberOfLines={2} ellipsizeMode="tail">
-                  {activeDistributorInfo?.pickupAddress || activeDistributorInfo?.businessAddress || 'Address not available'}
+                  {activeDistributorInfo?.pickupAddress || activeDistributorInfo?.businessAddress || t('ordersFlow.checkout.distributorDefaults.addressNotAvailable')}
                 </Text>
               </View>
               
@@ -2035,7 +2063,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                 >
                   <Calendar size={20} color="#0a61d7" />
                   <View style={styles.dateTimeInfo}>
-                    <Text style={styles.dateTimeLabel}>Pickup Date</Text>
+                    <Text style={styles.dateTimeLabel}>{t('ordersFlow.checkout.pickupModal.pickupDate')}</Text>
                     <Text style={styles.dateTimeValue}>{formatDate(selectedDate)}</Text>
                   </View>
                 </TouchableOpacity>
@@ -2046,7 +2074,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                 >
                   <Clock size={20} color="#0a61d7" />
                   <View style={styles.dateTimeInfo}>
-                    <Text style={styles.dateTimeLabel}>Pickup Time</Text>
+                    <Text style={styles.dateTimeLabel}>{t('ordersFlow.checkout.pickupModal.pickupTime')}</Text>
                     <Text style={styles.dateTimeValue}>{formatTime(selectedTime)}</Text>
                   </View>
                   <ChevronDown size={20} color="#6B7280" />
@@ -2061,7 +2089,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                     />
                     <View style={styles.timeDropdown}>
                       <View style={styles.timeDropdownHeader}>
-                        <Text style={styles.timeDropdownHeaderText}>Select Time</Text>
+                        <Text style={styles.timeDropdownHeaderText}>{t('ordersFlow.checkout.scheduleModal.selectTime')}</Text>
                       </View>
                       <ScrollView style={styles.timeScrollView} showsVerticalScrollIndicator={false}>
                         {timeOptions.map((time) => (
@@ -2094,13 +2122,13 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                 style={styles.cancelButton}
                 onPress={handlePickupClose}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('ordersFlow.checkout.scheduleModal.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.confirmButton}
                 onPress={confirmPickup}
               >
-                <Text style={styles.confirmButtonText}>Confirm Pickup</Text>
+                <Text style={styles.confirmButtonText}>{t('ordersFlow.checkout.pickupModal.confirmPickup')}</Text>
               </TouchableOpacity>
             </View>
             </TouchableOpacity>

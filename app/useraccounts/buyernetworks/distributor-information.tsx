@@ -9,6 +9,7 @@ import { API_BASE_URL } from '../../../services/config';
 import { websocketService } from '../../../services/websocket';
 import { useAuthStore } from '../../../stores/authStore';
 import { followDistributor, isFollowingDistributor, unfollowDistributor } from '../../../services/distributorFollowing';
+import { useTranslation } from 'react-i18next';
 
 const primaryBlue = '#0a61d7';
 const { height: screenHeight } = Dimensions.get('window');
@@ -75,6 +76,7 @@ export default function DistributorInformationScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ id?: string; name?: string }>();
   const token = useAuthStore((s) => s.token);
+  const { t } = useTranslation();
 
   const distributorId = useMemo(() => {
     const raw = params.id ? String(params.id) : '';
@@ -82,7 +84,10 @@ export default function DistributorInformationScreen() {
     return Number.isFinite(n) && n > 0 ? n : NaN;
   }, [params.id]);
 
-  const distributorNameFromParams = useMemo(() => (params.name ? String(params.name) : 'Distributor'), [params.name]);
+  const distributorNameFromParams = useMemo(
+    () => (params.name ? String(params.name) : t('buyerNetworks.distributorInformation.fallbackDistributor')),
+    [params.name, t]
+  );
 
   const [sortKey, setSortKey] = useState<SortKey>('popular');
   const [priceDir, setPriceDir] = useState<'asc' | 'desc'>('asc');
@@ -154,7 +159,7 @@ export default function DistributorInformationScreen() {
       }
     } catch (e) {
       setAllProducts([]);
-      setError(e instanceof Error ? e.message : 'Failed to load products');
+      setError(e instanceof Error ? e.message : t('buyerNetworks.distributorInformation.errors.loadProductsFailed'));
     } finally {
       setLoading(false);
     }
@@ -163,7 +168,7 @@ export default function DistributorInformationScreen() {
   useEffect(() => {
     if (!Number.isFinite(distributorId)) {
       setLoading(false);
-      setError('Invalid distributor');
+      setError(t('buyerNetworks.distributorInformation.errors.invalidDistributor'));
       return;
     }
     void fetchData();
@@ -236,7 +241,7 @@ export default function DistributorInformationScreen() {
   const storeFollowersLabel = useMemo(() => {
     const n = safeNum(profile?.followersCount);
     if (n <= 0) return '';
-    return `${n} Followers`;
+    return t('buyerNetworks.distributorInformation.followers', { count: n });
   }, [profile?.followersCount]);
 
   const canViewSellerInfo = Number.isFinite(distributorId);
@@ -265,9 +270,12 @@ export default function DistributorInformationScreen() {
 
   const handleShareDistributor = async () => {
     try {
-      await Share.share({ message: `Check out ${displayName} on Laku Marketplace.` });
+      await Share.share({ message: t('buyerNetworks.distributorInformation.share.message', { name: displayName }) });
     } catch {
-      Alert.alert('Share', 'Unable to open share dialog right now.');
+      Alert.alert(
+        t('buyerNetworks.distributorInformation.share.title'),
+        t('buyerNetworks.distributorInformation.share.failed')
+      );
     }
   };
 
@@ -280,7 +288,10 @@ export default function DistributorInformationScreen() {
   };
 
   const handleNeedHelp = () => {
-    Alert.alert('Need help?', 'Please contact Laku support from the Help Center.');
+    Alert.alert(
+      t('buyerNetworks.distributorInformation.help.title'),
+      t('buyerNetworks.distributorInformation.help.body')
+    );
   };
 
   const openCategoryPicker = () => {
@@ -331,13 +342,23 @@ export default function DistributorInformationScreen() {
           header: () => (
             <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
-                <Pressable onPress={() => router.back()} hitSlop={10} accessibilityLabel="Back" accessibilityRole="button">
+                <Pressable
+                  onPress={() => router.back()}
+                  hitSlop={10}
+                  accessibilityLabel={t('buyerNetworks.distributorInformation.a11y.back')}
+                  accessibilityRole="button"
+                >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
                 <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 }} numberOfLines={1}>
-                  Distributor Store
+                  {t('buyerNetworks.distributorInformation.title')}
                 </Text>
-                <Pressable onPress={openMenu} hitSlop={10} accessibilityLabel="More options" accessibilityRole="button">
+                <Pressable
+                  onPress={openMenu}
+                  hitSlop={10}
+                  accessibilityLabel={t('buyerNetworks.distributorInformation.a11y.moreOptions')}
+                  accessibilityRole="button"
+                >
                   <MoreVertical color={primaryBlue} size={22} />
                 </Pressable>
               </View>
@@ -396,12 +417,18 @@ export default function DistributorInformationScreen() {
                 }
               }}
               accessibilityRole="button"
-              accessibilityLabel={isFollowing ? 'Unfollow distributor' : 'Follow distributor'}
+              accessibilityLabel={
+                isFollowing
+                  ? t('buyerNetworks.distributorInformation.follow.unfollowA11y')
+                  : t('buyerNetworks.distributorInformation.follow.followA11y')
+              }
               style={[styles.followBtn, isFollowing && styles.followBtnActive, followBusy && { opacity: 0.7 }]}
               disabled={followBusy || !token}
             >
               <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
-                {isFollowing ? 'Following' : '+ Follow'}
+                {isFollowing
+                  ? t('buyerNetworks.distributorInformation.follow.following')
+                  : t('buyerNetworks.distributorInformation.follow.follow')}
               </Text>
             </Pressable>
             <Pressable
@@ -413,11 +440,13 @@ export default function DistributorInformationScreen() {
                 });
               }}
               accessibilityRole="button"
-              accessibilityLabel="View seller information"
+              accessibilityLabel={t('buyerNetworks.distributorInformation.view.a11y')}
               style={[styles.viewBtn, !canViewSellerInfo && styles.viewBtnDisabled]}
               disabled={!canViewSellerInfo}
             >
-              <Text style={[styles.viewBtnText, !canViewSellerInfo && styles.viewBtnTextDisabled]}>View</Text>
+              <Text style={[styles.viewBtnText, !canViewSellerInfo && styles.viewBtnTextDisabled]}>
+                {t('buyerNetworks.distributorInformation.view.label')}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -427,20 +456,28 @@ export default function DistributorInformationScreen() {
         {/* Filter tabs (fixed row; underline for active). No dedicated loading UI for this page. */}
         <View style={styles.filterTabsRow}>
           <Pressable onPress={() => setSortKey('popular')} style={styles.filterTabBtn} accessibilityRole="button">
-            <Text style={[styles.filterTabText, sortKey === 'popular' && styles.filterTabTextActive]}>Popular</Text>
+            <Text style={[styles.filterTabText, sortKey === 'popular' && styles.filterTabTextActive]}>
+              {t('buyerNetworks.distributorInformation.sort.popular')}
+            </Text>
             {sortKey === 'popular' ? <View style={styles.filterUnderlineFull} /> : null}
           </Pressable>
           <Pressable onPress={() => setSortKey('latest')} style={styles.filterTabBtn} accessibilityRole="button">
-            <Text style={[styles.filterTabText, sortKey === 'latest' && styles.filterTabTextActive]}>Latest</Text>
+            <Text style={[styles.filterTabText, sortKey === 'latest' && styles.filterTabTextActive]}>
+              {t('buyerNetworks.distributorInformation.sort.latest')}
+            </Text>
             {sortKey === 'latest' ? <View style={styles.filterUnderlineFull} /> : null}
           </Pressable>
           <Pressable onPress={() => setSortKey('top_sales')} style={styles.filterTabBtn} accessibilityRole="button">
-            <Text style={[styles.filterTabText, sortKey === 'top_sales' && styles.filterTabTextActive]}>Top Sales</Text>
+            <Text style={[styles.filterTabText, sortKey === 'top_sales' && styles.filterTabTextActive]}>
+              {t('buyerNetworks.distributorInformation.sort.topSales')}
+            </Text>
             {sortKey === 'top_sales' ? <View style={styles.filterUnderlineFull} /> : null}
           </Pressable>
           <Pressable onPress={onPressPrice} style={styles.filterTabBtn} accessibilityRole="button">
             <View style={styles.filterTabInline}>
-              <Text style={[styles.filterTabText, sortKey === 'price' && styles.filterTabTextActive]}>Price</Text>
+              <Text style={[styles.filterTabText, sortKey === 'price' && styles.filterTabTextActive]}>
+                {t('buyerNetworks.distributorInformation.sort.price')}
+              </Text>
               {sortKey === 'price' ? (
                 priceDir === 'asc' ? (
                   <ChevronUp size={14} color={primaryBlue} />
@@ -457,11 +494,11 @@ export default function DistributorInformationScreen() {
             onPress={openCategoryPicker}
             style={styles.filterTabBtn}
             accessibilityRole="button"
-            accessibilityLabel="Choose category filter"
+            accessibilityLabel={t('buyerNetworks.distributorInformation.a11y.chooseCategory')}
           >
             <View style={styles.filterTabInline}>
               <Text style={[styles.filterTabText, selectedCategory !== 'all' && styles.filterTabTextActive]} numberOfLines={1}>
-                {selectedCategory === 'all' ? 'Category' : selectedCategory}
+                {selectedCategory === 'all' ? t('buyerNetworks.distributorInformation.category.label') : selectedCategory}
               </Text>
               <ChevronDown size={14} color={selectedCategory !== 'all' ? primaryBlue : '#6b7280'} />
             </View>
@@ -471,10 +508,10 @@ export default function DistributorInformationScreen() {
 
         {error ? (
           <View style={styles.inlineError}>
-            <Text style={styles.inlineErrorTitle}>Unable to load updates</Text>
+            <Text style={styles.inlineErrorTitle}>{t('buyerNetworks.distributorInformation.errors.unableToLoadUpdates')}</Text>
             <Text style={styles.inlineErrorText}>{error}</Text>
             <Pressable onPress={() => void fetchData()} style={styles.inlineRetryBtn} accessibilityRole="button">
-              <Text style={styles.inlineRetryText}>Retry</Text>
+              <Text style={styles.inlineRetryText}>{t('buyerNetworks.distributorInformation.errors.retry')}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -486,7 +523,7 @@ export default function DistributorInformationScreen() {
         >
           {!loading && visibleProducts.length === 0 ? (
             <View style={styles.emptyBlock}>
-              <Text style={styles.muted}>No products found.</Text>
+              <Text style={styles.muted}>{t('buyerNetworks.distributorInformation.empty.noProducts')}</Text>
             </View>
           ) : visibleProducts.length === 0 ? null : (
             <View style={styles.productsGrid}>
@@ -547,11 +584,16 @@ export default function DistributorInformationScreen() {
       >
         <StatusBar backgroundColor="rgba(0, 0, 0, 0.35)" barStyle="light-content" />
         <View style={styles.sheetRoot}>
-          <Pressable style={styles.sheetBackdrop} onPress={closeCategoryPicker} accessibilityRole="button" accessibilityLabel="Close category picker" />
+          <Pressable
+            style={styles.sheetBackdrop}
+            onPress={closeCategoryPicker}
+            accessibilityRole="button"
+            accessibilityLabel={t('buyerNetworks.distributorInformation.a11y.closeCategoryPicker')}
+          />
           <Animated.View style={[styles.sheet, { transform: [{ translateY: categorySlideAnim }] }]} {...categoryPanResponder.panHandlers}>
             <View style={styles.sheetHandle} />
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Categories</Text>
+              <Text style={styles.sheetTitle}>{t('buyerNetworks.distributorInformation.category.sheetTitle')}</Text>
             </View>
             <View style={styles.sheetDivider} />
             <ScrollView style={{ maxHeight: Math.min(420, screenHeight * 0.55) }} showsVerticalScrollIndicator={false}>
@@ -566,7 +608,7 @@ export default function DistributorInformationScreen() {
                   accessibilityRole="button"
                 >
                   <Text style={[styles.sheetRowText, selectedCategory === c && styles.sheetRowTextActive]}>
-                    {c === 'all' ? 'All' : c}
+                    {c === 'all' ? t('buyerNetworks.distributorInformation.category.all') : c}
                   </Text>
                 </Pressable>
               ))}
@@ -578,7 +620,12 @@ export default function DistributorInformationScreen() {
       {/* 3-dot menu */}
       <Modal visible={menuVisible} transparent animationType="none" onRequestClose={closeMenu}>
         <View style={styles.menuRoot}>
-          <Pressable style={styles.menuBackdrop} onPress={closeMenu} accessibilityLabel="Close menu" accessibilityRole="button" />
+          <Pressable
+            style={styles.menuBackdrop}
+            onPress={closeMenu}
+            accessibilityLabel={t('buyerNetworks.distributorInformation.a11y.closeMenu')}
+            accessibilityRole="button"
+          />
           <Animated.View
             style={[
               styles.menuSheet,
@@ -597,7 +644,7 @@ export default function DistributorInformationScreen() {
               style={styles.menuRow}
             >
               <Share2 size={18} color="#111827" />
-              <Text style={styles.menuRowText}>Share</Text>
+              <Text style={styles.menuRowText}>{t('buyerNetworks.distributorInformation.menu.share')}</Text>
             </Pressable>
             <View style={styles.menuDivider} />
             <Pressable
@@ -608,7 +655,9 @@ export default function DistributorInformationScreen() {
               style={styles.menuRow}
             >
               <Flag size={18} color="#ef4444" />
-              <Text style={[styles.menuRowText, styles.menuRowTextDanger]}>Report distributor</Text>
+              <Text style={[styles.menuRowText, styles.menuRowTextDanger]}>
+                {t('buyerNetworks.distributorInformation.menu.reportDistributor')}
+              </Text>
             </Pressable>
             <View style={styles.menuDivider} />
             <Pressable
@@ -619,7 +668,9 @@ export default function DistributorInformationScreen() {
               style={styles.menuRow}
             >
               <HelpCircle size={18} color="#0a61d7" />
-              <Text style={[styles.menuRowText, styles.menuRowTextPrimary]}>Need help</Text>
+              <Text style={[styles.menuRowText, styles.menuRowTextPrimary]}>
+                {t('buyerNetworks.distributorInformation.menu.needHelp')}
+              </Text>
             </Pressable>
           </Animated.View>
         </View>

@@ -40,6 +40,7 @@ import { API_BASE_URL } from '../../../services/config';
 import { websocketService } from '../../../services/websocket';
 import { calculateOrderItemPromotion } from '../../../utils/promotionUtils';
 import OrderInvoiceModal from './OrderInvoiceModal';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -174,6 +175,7 @@ export default function OrderDetailsModal() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const { token, user } = useAuthStore();
+  const { t } = useTranslation();
   
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -276,48 +278,48 @@ export default function OrderDetailsModal() {
   const getStatusText = (status: string) => {
     switch (status.toLowerCase()) {
       case 'delivered':
-        return 'Your Order is Delivered';
+        return t('ordersFlow.orderDetails.statusText.delivered');
       case 'received':
-        return 'Your Order is Completed';
+        return t('ordersFlow.orderDetails.statusText.received');
       case 'shipped':
-        return 'Your Order is Shipped';
+        return t('ordersFlow.orderDetails.statusText.shipped');
       case 'confirmed':
-        return 'Your Order is Confirmed';
+        return t('ordersFlow.orderDetails.statusText.confirmed');
       case 'packed':
-        return 'Your Order is Packed';
+        return t('ordersFlow.orderDetails.statusText.packed');
       case 'cancelled':
-        return 'Your Order is Cancelled';
+        return t('ordersFlow.orderDetails.statusText.cancelled');
       case 'returned':
-        return 'Your Order is Returned';
+        return t('ordersFlow.orderDetails.statusText.returned');
       case 'failed':
-        return 'Delivery Failed';
+        return t('ordersFlow.orderDetails.statusText.failed');
       default:
-        return 'Your Order is Pending';
+        return t('ordersFlow.orderDetails.statusText.pending');
     }
   };
 
   const getDeliveryStatusDescription = (status: string) => {
     switch (status.toLowerCase()) {
       case 'delivered':
-        return 'Your parcel has been delivered';
+        return t('ordersFlow.orderDetails.statusDescriptions.delivered');
       case 'received':
-        return 'Your order is completed and received';
+        return t('ordersFlow.orderDetails.statusDescriptions.received');
       case 'shipped':
-        return 'Your parcel is on the way to you';
+        return t('ordersFlow.orderDetails.statusDescriptions.shipped');
       case 'confirmed':
-        return 'Your order is being prepared for shipment';
+        return t('ordersFlow.orderDetails.statusDescriptions.confirmed');
       case 'packed':
-        return 'Your order is packed and ready to ship';
+        return t('ordersFlow.orderDetails.statusDescriptions.packed');
       case 'cancelled':
-        return 'Your order has been cancelled';
+        return t('ordersFlow.orderDetails.statusDescriptions.cancelled');
       case 'returned':
-        return 'Your order is being returned';
+        return t('ordersFlow.orderDetails.statusDescriptions.returned');
       case 'failed':
-        return 'Delivery could not be completed';
+        return t('ordersFlow.orderDetails.statusDescriptions.failed');
       case 'pending':
-        return 'Your order is being processed';
+        return t('ordersFlow.orderDetails.statusDescriptions.processing');
       default:
-        return 'Your order is being processed';
+        return t('ordersFlow.orderDetails.statusDescriptions.processing');
     }
   };
 
@@ -339,12 +341,12 @@ export default function OrderDetailsModal() {
         setOrder((prev: Order | null) =>
           prev ? { ...prev, status: 'Received', orderStatus: 'Received' } : null
         );
-        Alert.alert('Success', 'Order marked as received successfully!');
+        Alert.alert(t('ordersFlow.orderDetails.alerts.successTitle'), t('ordersFlow.orderDetails.alerts.receivedBody'));
       } else {
-        Alert.alert('Error', 'Failed to update order status');
+        Alert.alert(t('ordersFlow.common.errors.errorTitle'), t('ordersFlow.orderDetails.alerts.updateFailedBody'));
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update order status');
+      Alert.alert(t('ordersFlow.common.errors.errorTitle'), t('ordersFlow.orderDetails.alerts.updateFailedBody'));
     } finally {
       setIsMarkingReceived(false);
     }
@@ -374,7 +376,7 @@ export default function OrderDetailsModal() {
 
   const copyOrderId = () => {
     Clipboard.setString(orderData.orderId);
-    Alert.alert('Copied', 'Order ID copied to clipboard');
+    Alert.alert(t('ordersFlow.orderDetails.alerts.copiedTitle'), t('ordersFlow.orderDetails.alerts.copiedBody'));
   };
 
   const formatCurrency = (amount: number) => {
@@ -476,21 +478,21 @@ export default function OrderDetailsModal() {
     let scheduleStatusText: string;
     if (dateTimeText) {
       if (isPickup) {
-        scheduleStatusText = `Pickup scheduled: ${dateTimeText}`;
+        scheduleStatusText = t('ordersFlow.orderDetails.shippingSchedule.pickupScheduled', { dateTime: dateTimeText });
       } else if (isBuyerCourier) {
-        scheduleStatusText = `Courier pickup: ${dateTimeText}`;
+        scheduleStatusText = t('ordersFlow.orderDetails.shippingSchedule.courierPickup', { dateTime: dateTimeText });
       } else {
-        scheduleStatusText = `Delivery scheduled: ${dateTimeText}`;
+        scheduleStatusText = t('ordersFlow.orderDetails.shippingSchedule.deliveryScheduled', { dateTime: dateTimeText });
       }
     } else {
       if (isPickup) {
-        scheduleStatusText = 'No specific pickup date set';
+          scheduleStatusText = t('ordersFlow.orderDetails.shippingSchedule.noPickupDate');
       } else if (isBuyerCourier) {
-        scheduleStatusText = 'No specific date, managed by buyer';
+          scheduleStatusText = t('ordersFlow.orderDetails.shippingSchedule.noSpecificBuyer');
       } else if (isSellerDelivery) {
-        scheduleStatusText = 'No specific date, distributor manages the schedule';
+          scheduleStatusText = t('ordersFlow.orderDetails.shippingSchedule.noSpecificDistributor');
       } else {
-        scheduleStatusText = 'No specific date set';
+          scheduleStatusText = t('ordersFlow.orderDetails.shippingSchedule.noSpecific');
       }
     }
 
@@ -587,11 +589,11 @@ export default function OrderDetailsModal() {
                 }}
               >
                 {latestReturnRequest.status === 'Pending' &&
-                  'You have requested a return. Please wait for distributor confirmation.'}
+                  t('ordersFlow.orderDetails.returnRequest.pending')}
                 {latestReturnRequest.status === 'Accepted' &&
-                  'Your return request has been accepted. We are processing your return/refund.'}
+                  t('ordersFlow.orderDetails.returnRequest.accepted')}
                 {latestReturnRequest.status === 'Rejected' &&
-                  'Your return request was rejected. If you need help, please contact support.'}
+                  t('ordersFlow.orderDetails.returnRequest.rejected')}
               </Text>
             </View>
           )}
@@ -650,7 +652,7 @@ export default function OrderDetailsModal() {
             
             {orderData.updatedAt && (
               <Text style={styles.deliveryDateTimeText}>
-                {new Date(orderData.updatedAt).toLocaleDateString('en-GB', {
+                {new Date(orderData.updatedAt).toLocaleDateString('id-ID', {
                   day: '2-digit',
                   month: '2-digit', 
                   year: 'numeric'
@@ -665,7 +667,7 @@ export default function OrderDetailsModal() {
           
           {orderData.assignedLogistics && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Assigned Logistics:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.fields.assignedLogistics')}:</Text>
               <Text style={[styles.infoValue, styles.infoValueMedium]}>
                 {orderData.assignedLogistics}
               </Text>
@@ -674,7 +676,7 @@ export default function OrderDetailsModal() {
           
           {orderData.contactPerson && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Recipient:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.fields.recipient')}:</Text>
               <Text style={[styles.infoValue, styles.infoValueMedium]}>
                 {orderData.contactPerson}
               </Text>
@@ -683,7 +685,7 @@ export default function OrderDetailsModal() {
           
           {orderData.contactPhone && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Phone:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.fields.phone')}:</Text>
               <Text style={[styles.infoValue, styles.infoValueMedium]}>
                 {orderData.contactPhone}
               </Text>
@@ -692,7 +694,7 @@ export default function OrderDetailsModal() {
           
           {orderData.deliveryAddress && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Address:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.fields.address')}:</Text>
               <Text style={[styles.infoValue, styles.infoValueWide]} numberOfLines={1} ellipsizeMode="tail">
                 {orderData.deliveryAddress}
               </Text>
@@ -701,7 +703,7 @@ export default function OrderDetailsModal() {
           
           {orderData.deliveryNote && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Delivery Instruction:</Text>
+              <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.fields.deliveryInstruction')}:</Text>
               <Text
                 style={[styles.infoValue, styles.infoValueWide]}
                 numberOfLines={1}
@@ -798,7 +800,7 @@ export default function OrderDetailsModal() {
                     <View style={styles.promotionGiftBadge}>
                       <Gift size={12} color="#9333EA" />
                       <Text style={styles.promotionGiftText}>
-                        +{promotionGift.freeQty} Free pieces
+                        +{t('ordersFlow.orderDetails.product.freePieces', { count: promotionGift.freeQty })}
                       </Text>
                     </View>
                   );
@@ -817,7 +819,7 @@ export default function OrderDetailsModal() {
         <View style={styles.productCard}>
           <View style={styles.sectionTitleContainer}>
             <Package size={20} color="#0a61d7" />
-            <Text style={styles.sectionTitle}>Product Information</Text>
+            <Text style={styles.sectionTitle}>{t('ordersFlow.orderDetails.sections2.productInformation')}</Text>
           </View>
           
           {/* Discounted Products Section */}
@@ -836,7 +838,7 @@ export default function OrderDetailsModal() {
           
           {orderData.orderItems && orderData.orderItems.length > 0 ? (
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Product Total</Text>
+              <Text style={styles.summaryLabel}>{t('ordersFlow.orderDetails.sections2.productTotal')}</Text>
               <Text style={styles.summaryValue}>{formatCurrency(calculateProductTotal())}</Text>
             </View>
           ) : null}
@@ -845,14 +847,14 @@ export default function OrderDetailsModal() {
             const { methodLabel, scheduleStatusText } = getShippingDetails();
             return (
               <View style={styles.feeRow}>
-                <Text style={styles.feeSectionTitle}>Shipping</Text>
+                <Text style={styles.feeSectionTitle}>{t('ordersFlow.orderDetails.sections2.shipping')}</Text>
                 <View style={styles.feeDetailsWrapper}>
                   <View style={styles.feeMethodRow}>
                     <Text style={styles.shippingMethodLabel} numberOfLines={1}>
-                      {methodLabel || 'Method not specified'}
+                      {methodLabel || t('ordersFlow.orderDetails.payment.methodNotSpecified')}
                     </Text>
                     <Text style={[styles.feeValue, { color: '#6B7280', fontSize: 12 }]}>
-                      Cost agreed separately
+                      {t('ordersFlow.orderDetails.misc.costAgreedSeparately')}
                     </Text>
                   </View>
                   <Text style={styles.shippingMethodSchedule} numberOfLines={2}>
@@ -864,7 +866,9 @@ export default function OrderDetailsModal() {
           })()}
           
           <View style={styles.orderTotal}>
-            <Text style={styles.orderTotalText}>Order Total: {formatCurrency(orderData.totalAmount || orderData.total || 0)}</Text>
+            <Text style={styles.orderTotalText}>
+              {t('ordersFlow.orderDetails.totals.orderTotal', { amount: formatCurrency(orderData.totalAmount || orderData.total || 0) })}
+            </Text>
           </View>
         </View>
       </View>
@@ -906,11 +910,11 @@ export default function OrderDetailsModal() {
         <View style={styles.productCard}>
           <View style={styles.sectionTitleContainer}>
             <Building2 size={20} color="#0a61d7" />
-            <Text style={styles.sectionTitle}>Distributor Information</Text>
+              <Text style={styles.sectionTitle}>{t('ordersFlow.orderDetails.sections.distributorInfo')}</Text>
             <TouchableOpacity
               onPress={() => {
                 if (!distributorId) {
-                  Alert.alert('Unavailable', 'Distributor details are not available for this order.');
+                    Alert.alert(t('ordersFlow.orderDetails.alerts.unavailableTitle'), t('ordersFlow.orderDetails.alerts.unavailableDistributorBody'));
                   return;
                 }
                 router.push({
@@ -919,7 +923,7 @@ export default function OrderDetailsModal() {
                 });
               }}
               accessibilityRole="button"
-              accessibilityLabel="View distributor details"
+                accessibilityLabel={t('ordersFlow.orderDetails.distributor.viewDistributorDetailsA11y')}
               style={[
                 styles.viewDistributorButton,
                 !distributorId && styles.viewDistributorButtonDisabled,
@@ -927,14 +931,14 @@ export default function OrderDetailsModal() {
               disabled={!distributorId}
             >
               <Text style={[styles.viewDistributorButtonText, !distributorId && styles.viewDistributorButtonTextDisabled]}>
-                View
+                  {t('ordersFlow.orderDetails.distributor.view')}
               </Text>
             </TouchableOpacity>
           </View>
 
           {distributorCompanyName && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Company:</Text>
+                <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.distributor.labels.company')}:</Text>
               <Text style={[styles.infoValue, styles.distributorValue]}>
                 {distributorCompanyName}
               </Text>
@@ -943,7 +947,7 @@ export default function OrderDetailsModal() {
 
           {distributorName && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Name:</Text>
+                <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.distributor.labels.name')}:</Text>
               <Text style={[styles.infoValue, styles.distributorValue]}>
                 {distributorName}
               </Text>
@@ -952,7 +956,7 @@ export default function OrderDetailsModal() {
 
           {industryType && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Industry:</Text>
+                <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.distributor.labels.industry')}:</Text>
               <Text style={[styles.infoValue, styles.distributorValue]}>
                 {industryType}
               </Text>
@@ -961,7 +965,7 @@ export default function OrderDetailsModal() {
 
           {contactPerson && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Contact:</Text>
+                <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.distributor.labels.contact')}:</Text>
               <Text style={[styles.infoValue, styles.distributorValue]}>
                 {contactPerson}
               </Text>
@@ -970,7 +974,7 @@ export default function OrderDetailsModal() {
 
           {phoneNumber && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Phone:</Text>
+                <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.distributor.labels.phone')}:</Text>
               <Text style={[styles.infoValue, styles.distributorValue]}>
                 {phoneNumber}
               </Text>
@@ -979,7 +983,7 @@ export default function OrderDetailsModal() {
 
           {email && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Email:</Text>
+                <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.distributor.labels.email')}:</Text>
               <Text style={[styles.infoValue, styles.distributorValue]}>
                 {email}
               </Text>
@@ -988,7 +992,7 @@ export default function OrderDetailsModal() {
 
           {address && (
             <View style={styles.infoRowTopAligned}>
-              <Text style={styles.infoLabel}>Address:</Text>
+                <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.distributor.labels.address')}:</Text>
               <Text style={[styles.infoValueMultiline, styles.distributorValueMultiline]}>
                 {address}
               </Text>
@@ -1005,7 +1009,7 @@ export default function OrderDetailsModal() {
       <View style={styles.productCard}>
         <View style={styles.sectionTitleContainer}>
           <HelpCircle size={20} color="#0a61d7" />
-          <Text style={styles.sectionTitle}>Support Center</Text>
+          <Text style={styles.sectionTitle}>{t('ordersFlow.orderDetails.sections.supportCenter')}</Text>
         </View>
         
         <TouchableOpacity
@@ -1019,7 +1023,7 @@ export default function OrderDetailsModal() {
         >
           <RotateCcw size={20} color="#6b7280" />
           <View style={styles.supportContent}>
-            <Text style={styles.supportTitle}>Request for Return/Refund</Text>
+            <Text style={styles.supportTitle}>{t('ordersFlow.orderDetails.support.requestReturnRefund')}</Text>
           </View>
           <ChevronRight size={16} color="#6b7280" />
         </TouchableOpacity>
@@ -1029,7 +1033,7 @@ export default function OrderDetailsModal() {
         <TouchableOpacity style={styles.supportItem}>
           <MessageCircle size={20} color="#6b7280" />
           <View style={styles.supportContent}>
-            <Text style={styles.supportTitle}>Contact Seller</Text>
+            <Text style={styles.supportTitle}>{t('ordersFlow.orderDetails.support.contactSeller')}</Text>
           </View>
           <ChevronRight size={16} color="#6b7280" />
         </TouchableOpacity>
@@ -1047,14 +1051,14 @@ export default function OrderDetailsModal() {
         >
           <HelpCircle size={20} color="#6b7280" />
           <View style={styles.supportContent}>
-            <Text style={styles.supportTitle}>Help Center</Text>
+            <Text style={styles.supportTitle}>{t('ordersFlow.orderDetails.support.helpCenter')}</Text>
           </View>
           <ChevronRight size={16} color="#6b7280" />
         </TouchableOpacity>
 
         {orderData.orderStatus === 'Returned' && (
           <View style={{ marginTop: 8 }}>
-            <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 2 }}>Return/refund status</Text>
+            <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 2 }}>{t('ordersFlow.orderDetails.support.returnRefundStatusLabel')}</Text>
             <Text
               style={{
                 fontSize: 13,
@@ -1067,7 +1071,7 @@ export default function OrderDetailsModal() {
                     : '#f59e0b',
               }}
             >
-              {orderData.returnStatus || 'Pending review'}
+              {orderData.returnStatus || t('ordersFlow.orderDetails.support.pendingReview')}
             </Text>
           </View>
         )}
@@ -1079,12 +1083,12 @@ export default function OrderDetailsModal() {
     const orderInfoItems = [
       {
         key: 'orderId',
-        label: 'Order ID:',
+        label: `${t('ordersFlow.orderDetails.info.orderId')}:`,
         value: orderData.orderId,
         isSpecial: true,
         render: () => (
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Order ID:</Text>
+            <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.info.orderId')}:</Text>
             <View style={styles.orderIdContainer}>
               <Text
                 style={[styles.infoValue, styles.infoValueMedium]}
@@ -1102,13 +1106,13 @@ export default function OrderDetailsModal() {
       },
       {
         key: 'paymentTerms',
-        label: 'Paid by:',
+        label: `${t('ordersFlow.orderDetails.info.paidBy')}:`,
         value: orderData.paymentTerms,
         condition: orderData.paymentTerms
       },
       {
         key: 'invoice',
-        label: 'Invoice:',
+        label: `${t('ordersFlow.orderDetails.info.invoice')}:`,
         value: 'View',
         isSpecial: true,
         render: () => (
@@ -1117,11 +1121,11 @@ export default function OrderDetailsModal() {
             onPress={() => setInvoiceModalVisible(true)}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel="View invoice"
+            accessibilityLabel={t('ordersFlow.orderDetails.info.viewInvoiceA11y')}
           >
-            <Text style={styles.infoLabel}>Invoice:</Text>
+            <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.info.invoice')}:</Text>
             <View style={styles.invoiceRowRight}>
-              <Text style={styles.invoiceLinkText}>View & download</Text>
+              <Text style={styles.invoiceLinkText}>{t('ordersFlow.orderDetails.info.viewDownload')}</Text>
               <ChevronRight size={16} color="#0a61d7" />
             </View>
           </TouchableOpacity>
@@ -1129,25 +1133,25 @@ export default function OrderDetailsModal() {
       },
       {
         key: 'orderTime',
-        label: 'Order Time:',
+        label: `${t('ordersFlow.orderDetails.info.orderTime')}:`,
         value: orderData.orderDate ? new Date(orderData.orderDate).toLocaleString() : null,
         condition: orderData.orderDate
       },
       {
         key: 'paymentTime',
-        label: 'Payment Time:',
+        label: `${t('ordersFlow.orderDetails.info.paymentTime')}:`,
         value: orderData.updatedAt ? new Date(orderData.updatedAt).toLocaleString() : null,
         condition: orderData.paymentStatus === 'Paid' && orderData.updatedAt
       },
       {
         key: 'shipTime',
-        label: 'Ship Time:',
+        label: `${t('ordersFlow.orderDetails.info.shipTime')}:`,
         value: orderData.updatedAt ? new Date(orderData.updatedAt).toLocaleString() : null,
         condition: orderData.orderStatus === 'Shipped' && orderData.updatedAt
       },
       {
         key: 'completedTime',
-        label: 'Completed Time:',
+        label: `${t('ordersFlow.orderDetails.info.completedTime')}:`,
         value: orderData.updatedAt ? new Date(orderData.updatedAt).toLocaleString() : null,
         condition: orderData.orderStatus === 'Delivered' && orderData.updatedAt
       }
@@ -1162,7 +1166,7 @@ export default function OrderDetailsModal() {
         <View style={styles.productCard}>
           <View style={styles.sectionTitleContainer}>
             <FileText size={20} color="#0a61d7" />
-            <Text style={styles.sectionTitle}>Order ID Information</Text>
+            <Text style={styles.sectionTitle}>{t('ordersFlow.orderDetails.orderIdInfo.title')}</Text>
           </View>
           
           {itemsToShow.map((item, index) => {
@@ -1184,7 +1188,7 @@ export default function OrderDetailsModal() {
               onPress={() => setShowAllOrderInfo(!showAllOrderInfo)}
             >
               <Text style={styles.viewMoreText}>
-                {showAllOrderInfo ? 'View Less' : 'View More'}
+                {showAllOrderInfo ? t('ordersFlow.orderDetails.orderIdInfo.viewLess') : t('ordersFlow.orderDetails.orderIdInfo.viewMore')}
               </Text>
               {showAllOrderInfo ? (
                 <ChevronUp size={16} color="#6b7280" />
@@ -1212,10 +1216,10 @@ export default function OrderDetailsModal() {
       return (
         <View style={styles.bottomBar}>
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancelOrder}>
-            <Text style={styles.cancelButtonText}>Cancel Order</Text>
+            <Text style={styles.cancelButtonText}>{t('ordersFlow.orderDetails.actions.cancelOrder')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.payButton} onPress={handlePayOrder}>
-            <Text style={styles.payButtonText}>Pay Order</Text>
+            <Text style={styles.payButtonText}>{t('ordersFlow.orderDetails.actions.payOrder')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -1230,7 +1234,7 @@ export default function OrderDetailsModal() {
       return (
         <View style={styles.bottomBar}>
           <TouchableOpacity style={styles.returnButton} onPress={handleReturnRefund}>
-            <Text style={styles.returnButtonText}>Return/Refund</Text>
+            <Text style={styles.returnButtonText}>{t('ordersFlow.orderDetails.actions.returnRefund')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.rateButton} onPress={handleRateOrder}>
             <Star size={16} color="#ffffff" />
@@ -1246,9 +1250,9 @@ export default function OrderDetailsModal() {
         <View style={styles.bottomBar}>
           <TouchableOpacity
             style={styles.contactSupportButton}
-            onPress={() => Alert.alert('Contact Support', 'Support functionality coming soon!')}
+            onPress={() => Alert.alert(t('ordersFlow.orderDetails.alerts.contactSupportTitle'), t('ordersFlow.orderDetails.alerts.contactSupportBody'))}
           >
-            <Text style={styles.contactSupportButtonText}>Contact support</Text>
+            <Text style={styles.contactSupportButtonText}>{t('ordersFlow.orderDetails.actions.contactSupport')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -1262,7 +1266,7 @@ export default function OrderDetailsModal() {
             style={[styles.returnButton, styles.disabledButton]}
             disabled
           >
-            <Text style={[styles.returnButtonText, styles.disabledButtonText]}>Return/Refund</Text>
+            <Text style={[styles.returnButtonText, styles.disabledButtonText]}>{t('ordersFlow.orderDetails.actions.returnRefund')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.orderReceivedButton, isMarkingReceived && styles.disabledButton]}
@@ -1272,7 +1276,7 @@ export default function OrderDetailsModal() {
             {isMarkingReceived ? (
               <ActivityIndicator color="#ffffff" size="small" />
             ) : (
-              <Text style={styles.orderReceivedButtonText}>Order Received</Text>
+              <Text style={styles.orderReceivedButtonText}>{t('ordersFlow.orderDetails.actions.orderReceived')}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -1295,7 +1299,7 @@ export default function OrderDetailsModal() {
       return (
         <View style={styles.bottomBar}>
           <TouchableOpacity style={styles.returnButton} onPress={handleReturnRefund}>
-            <Text style={styles.returnButtonText}>Return/Refund</Text>
+            <Text style={styles.returnButtonText}>{t('ordersFlow.orderDetails.actions.returnRefund')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.rateButton} onPress={handleRateOrder}>
             <Star size={16} color="#ffffff" />
@@ -1310,7 +1314,7 @@ export default function OrderDetailsModal() {
     return (
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.cancelButton} onPress={handleCancelOrder}>
-          <Text style={styles.cancelButtonText}>Cancel Order</Text>
+          <Text style={styles.cancelButtonText}>{t('ordersFlow.orderDetails.actions.cancelOrder')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
@@ -1324,7 +1328,7 @@ export default function OrderDetailsModal() {
             styles.orderReceivedButtonText,
             !isOrderReceivedEnabled && styles.disabledButtonText
           ]}>
-            Order Received
+            {t('ordersFlow.orderDetails.actions.orderReceived')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1339,12 +1343,12 @@ export default function OrderDetailsModal() {
         <TouchableOpacity
           onPress={() => router.back()}
           hitSlop={10}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('ordersFlow.common.a11y.goBack')}
           accessibilityRole="button"
         >
           <ArrowLeft color={primaryBlue} size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Order Details</Text>
+        <Text style={styles.headerTitle}>{t('ordersFlow.orderDetails.title')}</Text>
       </View>
     </View>
   );
@@ -1360,7 +1364,7 @@ export default function OrderDetailsModal() {
         <Stack.Screen options={orderDetailsScreenOptions} />
         <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading order details...</Text>
+          <Text style={styles.loadingText}>{t('ordersFlow.orderDetails.loading')}</Text>
         </View>
       </View>
     );
@@ -1372,7 +1376,7 @@ export default function OrderDetailsModal() {
         <Stack.Screen options={orderDetailsScreenOptions} />
         <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Order not found</Text>
+          <Text style={styles.loadingText}>{t('ordersFlow.orderDetails.notFound')}</Text>
         </View>
       </View>
     );

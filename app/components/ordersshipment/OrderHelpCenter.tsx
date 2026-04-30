@@ -10,6 +10,7 @@ import {
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, HelpCircle, MessageCircle, Truck, FileText } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 const primaryBlue = '#0a61d7';
 
@@ -17,6 +18,7 @@ export default function OrderHelpCenter() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { orderId } = useLocalSearchParams();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
@@ -35,7 +37,7 @@ export default function OrderHelpCenter() {
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Order Help Center</Text>
+                <Text style={styles.headerTitle}>{t('support.orderHelpCenter.title')}</Text>
               </View>
             </View>
           ),
@@ -51,16 +53,14 @@ export default function OrderHelpCenter() {
         <View style={styles.infoCard}>
           <View style={styles.infoHeader}>
             <HelpCircle size={20} color={primaryBlue} />
-            <Text style={styles.infoTitle}>Order help overview</Text>
+            <Text style={styles.infoTitle}>{t('support.orderHelpCenter.overviewTitle')}</Text>
           </View>
           <Text style={styles.bodyText}>
-            This page gives a short guide for tracking your order and knowing who to contact. Any
-            actions such as cancel, rate, or request return/refund are done in the main order
-            details screen.
+            {t('support.orderHelpCenter.overviewBody')}
           </Text>
           {orderId ? (
             <View style={styles.orderBadge}>
-              <Text style={styles.orderBadgeLabel}>Order ID</Text>
+              <Text style={styles.orderBadgeLabel}>{t('support.orderHelpCenter.orderId')}</Text>
               <Text style={styles.orderBadgeValue}>{String(orderId)}</Text>
             </View>
           ) : null}
@@ -69,51 +69,46 @@ export default function OrderHelpCenter() {
         <View style={styles.infoCard}>
           <View style={styles.sectionHeader}>
             <Truck size={18} color={primaryBlue} />
-            <Text style={styles.sectionTitle}>See delivery status</Text>
+            <Text style={styles.sectionTitle}>{t('support.orderHelpCenter.sections.deliveryStatusTitle')}</Text>
           </View>
           <Text style={styles.bodyText}>
-            Open the order details page to see the latest status, delivery partner, tracking number,
-            and any delivery notes for this order.
+            {t('support.orderHelpCenter.sections.deliveryStatusBody')}
           </Text>
         </View>
 
         <View style={styles.infoCard}>
           <View style={styles.sectionHeader}>
             <FileText size={18} color={primaryBlue} />
-            <Text style={styles.sectionTitle}>Order status basics</Text>
+            <Text style={styles.sectionTitle}>{t('support.orderHelpCenter.sections.statusBasicsTitle')}</Text>
           </View>
           <View style={styles.bulletList}>
-            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Pending / Confirmed</Text> – seller is preparing your order</Text>
-            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Packed / Shipped</Text> – parcel is with the logistics partner</Text>
-            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Delivered</Text> – parcel reached the delivery address</Text>
-            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Received</Text> – you confirmed the order looks good</Text>
+            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Pending / Confirmed</Text> – {t('support.orderHelpCenter.statusBullets.pendingConfirmedDesc')}</Text>
+            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Packed / Shipped</Text> – {t('support.orderHelpCenter.statusBullets.packedShippedDesc')}</Text>
+            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Delivered</Text> – {t('support.orderHelpCenter.statusBullets.deliveredDesc')}</Text>
+            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Received</Text> – {t('support.orderHelpCenter.statusBullets.receivedDesc')}</Text>
           </View>
           <Text style={styles.bodyText}>
-            Some options (like rate order or request return/refund) only appear after certain
-            statuses for buyer and seller protection.
+            {t('support.orderHelpCenter.sections.statusBasicsNote')}
           </Text>
         </View>
 
         <View style={styles.infoCard}>
           <View style={styles.sectionHeader}>
             <MessageCircle size={18} color={primaryBlue} />
-            <Text style={styles.sectionTitle}>Contact seller</Text>
+            <Text style={styles.sectionTitle}>{t('support.orderHelpCenter.sections.contactSellerTitle')}</Text>
           </View>
           <Text style={styles.bodyText}>
-            Use &quot;Contact seller&quot; from the order details when delivery looks late, product details are
-            unclear, or the parcel you receive does not match the order.
+            {t('support.orderHelpCenter.sections.contactSellerBody')}
           </Text>
         </View>
 
         <View style={styles.infoCard}>
           <View style={styles.sectionHeader}>
             <HelpCircle size={18} color={primaryBlue} />
-            <Text style={styles.sectionTitle}>Contact Laku support</Text>
+            <Text style={styles.sectionTitle}>{t('support.orderHelpCenter.sections.contactSupportTitle')}</Text>
           </View>
           <Text style={styles.bodyText}>
-            Contact Laku support through the main Help Center if you cannot reach the seller, see a
-            payment or refund issue, your status is stuck for too long, or you suspect fraud or
-            policy abuse.
+            {t('support.orderHelpCenter.sections.contactSupportBody')}
           </Text>
         </View>
       </ScrollView>

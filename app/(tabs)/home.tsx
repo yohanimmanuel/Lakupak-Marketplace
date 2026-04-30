@@ -20,6 +20,7 @@ import { useRouter, Link } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Store, ShoppingCart, MessageSquareText, Search } from 'lucide-react-native';
 import CartBadge from '../components/CartBadge';
+import { useTranslation } from 'react-i18next';
 
 // Components
 import SaleBanner, { SALE_BANNER_UNIFORM_HEIGHT } from '../components/paymentcheckout/SaleBanner';
@@ -67,6 +68,7 @@ const SCROLL_DISTANCE = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT; // 55
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   // Using explicit colors instead of theme colors
   const backgroundColor = '#ffffff'; // Explicit white
   const textColor = '#111827'; // Explicit black
@@ -178,11 +180,11 @@ export default function HomeScreen() {
     try {
       await refreshAllData(token || undefined);
     } catch (err) {
-      setError('Failed to refresh data');
+      setError(t('tabsHome.errors.refreshFailed'));
     } finally {
       setRefreshing(false);
     }
-  }, [refreshAllData, token]);
+  }, [refreshAllData, token, t]);
 
   // Handle category scroll
   const handleCategoryScroll = (event: { nativeEvent: { contentOffset: { x: number }; contentSize: { width: number }; layoutMeasurement: { width: number } } }) => {
@@ -326,10 +328,10 @@ export default function HomeScreen() {
             <Store color="#ffffff" size={24} />
             <RNView style={{ marginLeft: 10, flex: 1 }}>
               <RNText style={{ color: '#ffffff', fontSize: 18, fontWeight: '700' }} numberOfLines={1}>
-                {user?.storeName || 'My Store'}
+                {user?.storeName || t('tabsHome.storeFallback')}
               </RNText>
               <RNText style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }} numberOfLines={1}>
-                {user?.chosenAddress || 'Set your address'}
+                {user?.chosenAddress || t('tabsHome.addressFallback')}
               </RNText>
             </RNView>
           </RNView>
@@ -370,7 +372,7 @@ export default function HomeScreen() {
             }}>
               <Search color="#6B7280" size={20} />
               <Text style={{ flex: 1, marginLeft: 8, color: '#6B7280', paddingVertical: 0 }}>
-                Search for products...
+                {t('tabsHome.searchPlaceholder')}
               </Text>
             </RNView>
           </Pressable>
@@ -414,9 +416,9 @@ export default function HomeScreen() {
           {homeOffers.length > 0 ? (
             <View style={{ backgroundColor: '#f9fafb', paddingTop: 5 }}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Special Offers</Text>
+                <Text style={styles.sectionTitle}>{t('tabsHome.specialOffers')}</Text>
                 <TouchableOpacity onPress={handleSpecialOffersSeeAll}>
-                  <Text style={styles.seeAllText}>See All</Text>
+                  <Text style={styles.seeAllText}>{t('tabsHome.seeAll')}</Text>
                 </TouchableOpacity>
               </View>
               <ScrollView
@@ -443,7 +445,7 @@ export default function HomeScreen() {
                     <SaleBanner
                       title={offer.title}
                       subtitle={offer.subtitle}
-                      discountText={offer.discountText || 'Offer'}
+                      discountText={offer.discountText || t('tabsHome.offerFallback')}
                       endDate={offer.endDateText}
                       onPress={() => handleOfferBannerPress(offer.id)}
                       backgroundColor={offer.backgroundColor || primaryColor}
@@ -488,9 +490,9 @@ export default function HomeScreen() {
           {/* Categories Section */}
           <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: 10 }]}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Categories</Text>
+              <Text style={styles.sectionTitle}>{t('tabsHome.categories')}</Text>
               <TouchableOpacity onPress={handleSeeAllPress}>
-                <Text style={styles.seeAllText}>See All</Text>
+                <Text style={styles.seeAllText}>{t('tabsHome.seeAll')}</Text>
               </TouchableOpacity>
             </View>
             <ScrollView 
@@ -514,9 +516,9 @@ export default function HomeScreen() {
           {/* Featured Products Section */}
           <View style={[styles.section, { backgroundColor: '#f9fafb', marginTop: 15, marginBottom: -10 }]}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Featured Products</Text>
+              <Text style={styles.sectionTitle}>{t('tabsHome.featuredProducts')}</Text>
               <TouchableOpacity onPress={handleSeeAllPress}>
-                <Text style={styles.seeAllText}>See All</Text>
+                <Text style={styles.seeAllText}>{t('tabsHome.seeAll')}</Text>
               </TouchableOpacity>
             </View>
             
@@ -545,7 +547,7 @@ export default function HomeScreen() {
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
                 <TouchableOpacity onPress={handleRefresh} style={styles.retryButton}>
-                  <Text style={styles.retryButtonText}>Retry</Text>
+                  <Text style={styles.retryButtonText}>{t('tabsHome.retry')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -593,14 +595,14 @@ export default function HomeScreen() {
             {/* End of Products Message */}
             {!loading && !error && products.length > 0 && (
               <View style={{...styles.endMessageContainer}}>
-                <Text style={styles.endMessage}>Products displays reached the end.</Text>
+                <Text style={styles.endMessage}>{t('tabsHome.endMessage')}</Text>
               </View>
             )}
 
             {/* No Products Message */}
             {!loading && !error && products.length === 0 && (
               <View style={styles.noProductsContainer}>
-                <Text style={styles.noProductsText}>No products available</Text>
+                <Text style={styles.noProductsText}>{t('tabsHome.noProducts')}</Text>
               </View>
             )}
           </View>

@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform, AppState } from 'react-native';
 import Constants from 'expo-constants';
 import { API_BASE_URL } from './config';
+import { getPushNotificationsEnabled, setPushNotificationsEnabled } from '../utils/preferences';
 
 // Configure notification handler (shouldShowBanner/shouldShowList replace deprecated shouldShowAlert)
 // Strategy:
@@ -49,6 +50,23 @@ class PushNotificationService {
   private expoPushToken: string | null = null;
   private lastPlatformAnnouncementShown: { announcementId: string; at: number } | null = null;
   private static readonly PLATFORM_ANNOUNCEMENT_DEDUP_MS = 8000;
+  private enabled: boolean | null = null;
+
+  async hydrateEnabled(): Promise<boolean> {
+    if (this.enabled != null) return this.enabled;
+    const v = await getPushNotificationsEnabled();
+    this.enabled = v;
+    return v;
+  }
+
+  async setEnabled(enabled: boolean): Promise<void> {
+    this.enabled = enabled;
+    await setPushNotificationsEnabled(enabled);
+  }
+
+  isEnabledSync(): boolean {
+    return this.enabled ?? true;
+  }
 
   // Request permissions and get push token
   async registerForPushNotifications(): Promise<string | null> {
@@ -177,6 +195,9 @@ class PushNotificationService {
     data?: Record<string, unknown>,
     channelId: string = 'orders'
   ): Promise<string> {
+    // App-level toggle: if disabled, don't show local notifications (WebSocket/in-app).
+    if (!(await this.hydrateEnabled())) return '';
+
     // Dedup platform announcements: WebSocket can deliver duplicates when reconnecting or when multiple
     // subscribers are active temporarily; avoid spamming identical notifications.
     const aType = (data as { type?: unknown } | undefined)?.type;

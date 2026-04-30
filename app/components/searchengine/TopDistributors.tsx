@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 interface TopDistributor {
   name: string;
@@ -15,6 +16,7 @@ export default function TopDistributors({
   distributors,
   onDistributorPress,
 }: TopDistributorsProps) {
+  const { t } = useTranslation();
   if (distributors.length === 0) {
     return null;
   }
@@ -24,7 +26,7 @@ export default function TopDistributors({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Top Distributors</Text>
+        <Text style={styles.title}>{t('search.sections.topDistributors')}</Text>
       </View>
 
       <ScrollView

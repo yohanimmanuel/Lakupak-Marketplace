@@ -3,12 +3,14 @@ import { StyleSheet, View, Text, ScrollView, TouchableOpacity, StatusBar } from 
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HelpCircle, AlertCircle, RotateCcw, ArrowLeft } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 const primaryBlue = '#0a61d7';
 
 export default function ReturnRefundInfo() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
@@ -25,7 +27,7 @@ export default function ReturnRefundInfo() {
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Return &amp; Refund Info</Text>
+                <Text style={styles.headerTitle}>{t('support.returnRefundInfo.title')}</Text>
               </View>
             </View>
           ),
@@ -41,45 +43,40 @@ export default function ReturnRefundInfo() {
         <View style={styles.card}>
           <View style={styles.headerRow}>
             <RotateCcw size={18} color={primaryBlue} />
-            <Text style={styles.headerText}>Return &amp; refund basics</Text>
+            <Text style={styles.headerText}>{t('support.returnRefundInfo.cards.basicsTitle')}</Text>
           </View>
           <Text style={styles.bodyText}>
-            You can request a return for eligible items and get a refund after the request is
-            approved and, when required, the items are received back in good condition.
+            {t('support.returnRefundInfo.cards.basicsBody')}
           </Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.headerRow}>
             <AlertCircle size={18} color="#f59e0b" />
-            <Text style={styles.headerText}>Policy comes from product data</Text>
+            <Text style={styles.headerText}>{t('support.returnRefundInfo.cards.policyTitle')}</Text>
           </View>
           <Text style={styles.bodyText}>
-            Each product has its own return policy stored in the product data. It defines whether
-            it is returnable, how many days after delivery you can request a return, and any
-            specific conditions.
+            {t('support.returnRefundInfo.cards.policyBody1')}
           </Text>
           <Text style={styles.bodyText}>
-            Laku checks every return/refund request against this policy. Different items in the same
-            order can therefore have different eligibility and refund amounts.
+            {t('support.returnRefundInfo.cards.policyBody2')}
           </Text>
           <Text style={styles.strongText}>
-            Refund approval and amount always depend on the return days and rules saved on each
-            product, not only on the order status.
+            {t('support.returnRefundInfo.cards.policyStrong')}
           </Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.headerRow}>
             <HelpCircle size={18} color={primaryBlue} />
-            <Text style={styles.headerText}>Quick flow</Text>
+            <Text style={styles.headerText}>{t('support.returnRefundInfo.cards.quickFlowTitle')}</Text>
           </View>
           <View style={styles.list}>
-            <Text style={styles.listItem}>1. Check the product&apos;s return policy and time limit before buying a product.</Text>
-            <Text style={styles.listItem}>2. Returns and refunds are only available when products have been delivered and received.</Text>
-            <Text style={styles.listItem}>3. Start a return/refund request from order details.</Text>
-            <Text style={styles.listItem}>4. Follow any instructions to send back the item with strong proof and evidence of return request.</Text>
-            <Text style={styles.listItem}>5. Wait for review and refund to your payment method or wallet.</Text>
+            <Text style={styles.listItem}>1. {t('support.returnRefundInfo.cards.steps.1')}</Text>
+            <Text style={styles.listItem}>2. {t('support.returnRefundInfo.cards.steps.2')}</Text>
+            <Text style={styles.listItem}>3. {t('support.returnRefundInfo.cards.steps.3')}</Text>
+            <Text style={styles.listItem}>4. {t('support.returnRefundInfo.cards.steps.4')}</Text>
+            <Text style={styles.listItem}>5. {t('support.returnRefundInfo.cards.steps.5')}</Text>
           </View>
         </View>
       </ScrollView>
