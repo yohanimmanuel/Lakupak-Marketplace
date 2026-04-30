@@ -10,6 +10,7 @@ import {
   createMarketplaceAddress as createAddress,
   updateMarketplaceAddress as updateAddress,
 } from '../../../services/user';
+import { useTranslation } from 'react-i18next';
 
 type AddressLabel = 'work' | 'store' | 'home';
 
@@ -24,6 +25,7 @@ export default function EditAddress() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
+  const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
   const token = useAuthStore(s => s.token) as string | null;
   const setUser = useAuthStore(s => s.setUser);
@@ -63,7 +65,7 @@ export default function EditAddress() {
 
   const onSave = async () => {
     try {
-      if (!token) return Alert.alert('Unauthorized');
+      if (!token) return Alert.alert(t('profile.common.unauthorized'));
       if (id) {
         await updateAddress(token, id, { fullName, phone, address, isDefault, label })
       } else {
@@ -73,7 +75,7 @@ export default function EditAddress() {
       setUser(updated);
       router.back();
     } catch (e: unknown) {
-      Alert.alert('Error', (e instanceof Error ? e.message : 'Failed to update'));
+      Alert.alert(t('profile.common.errorTitle'), (e instanceof Error ? e.message : t('profile.common.failedToUpdate')));
     }
   };
 
@@ -87,30 +89,32 @@ export default function EditAddress() {
             <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
                 <Pressable onPress={() => router.back()} hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('profile.common.a11y.back')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{id ? 'Edit Address' : 'New Address'}</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>
+                  {id ? t('profile.editAddress.editTitle') : t('profile.editAddress.newTitle')}
+                </Text>
               </View>
             </View>
           ),
         }}
       />
       <ScrollView style={{ flex: 1, backgroundColor: '#ffffff' }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={{ color: '#6B7280', marginBottom: 8 }}>Address</Text>
+      <Text style={{ color: '#6B7280', marginBottom: 8 }}>{t('profile.editAddress.sectionTitle')}</Text>
       <TextInput
         value={fullName}
         onChangeText={setFullName}
-        placeholder="Full Name"
+        placeholder={t('profile.editAddress.fullName')}
         placeholderTextColor="#9CA3AF"
         style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, color: '#111827' }}
       />
       <TextInput
         value={phone}
         onChangeText={setPhone}
-        placeholder="Phone"
+        placeholder={t('profile.editAddress.phone')}
         keyboardType="phone-pad"
         placeholderTextColor="#9CA3AF"
         style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, color: '#111827' }}
@@ -118,7 +122,7 @@ export default function EditAddress() {
       <TextInput
         value={address}
         onChangeText={setAddress}
-        placeholder="Address (street, unit, postal)"
+        placeholder={t('profile.editAddress.address')}
         multiline
         numberOfLines={3}
         placeholderTextColor="#9CA3AF"
@@ -126,15 +130,17 @@ export default function EditAddress() {
       />
       <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, marginTop: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ color: '#111827' }}>Set as Default Address</Text>
+          <Text style={{ color: '#111827' }}>{t('profile.editAddress.setDefault')}</Text>
           <Switch value={isDefault} onValueChange={setIsDefault} trackColor={{ true: '#0a61d733', false: '#e5e7eb' }} thumbColor={isDefault ? '#0a61d7' : '#f3f4f6'} />
         </View>
         <View style={{ marginTop: 12 }}>
-          <Text style={{ color: '#111827', marginBottom: 8 }}>Label As:</Text>
+          <Text style={{ color: '#111827', marginBottom: 8 }}>{t('profile.editAddress.labelAs')}</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             {(['work','store','home'] as const).map(l => (
               <Pressable key={l} onPress={() => setLabel(l)} style={{ flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: label===l ? '#0a61d7' : '#e5e7eb', backgroundColor: label===l ? '#0a61d71a' : '#ffffff' }}>
-                <Text style={{ textAlign: 'center', color: label===l ? '#0a61d7' : '#111827', fontWeight: '600' }}>{l[0].toUpperCase()+l.slice(1)}</Text>
+                <Text style={{ textAlign: 'center', color: label===l ? '#0a61d7' : '#111827', fontWeight: '600' }}>
+                  {t(`profile.editAddress.labels.${l}`)}
+                </Text>
               </Pressable>
             ))}
           </View>
@@ -142,7 +148,7 @@ export default function EditAddress() {
       </View>
       <View style={{ height: 16 }} />
       <Pressable onPress={onSave} style={{ backgroundColor: '#0a61d7', paddingVertical: 12, borderRadius: 8 }}>
-        <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '600' }}>Save</Text>
+        <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '600' }}>{t('profile.common.save')}</Text>
       </Pressable>
     </ScrollView>
     </>

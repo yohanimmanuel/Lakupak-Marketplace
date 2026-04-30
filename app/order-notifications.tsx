@@ -15,6 +15,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useDataStore } from '../stores/dataStore';
 import { NotificationService, Notification } from '../services/notificationService';
 import { OrderUpdateRow } from './components/notifications/OrderUpdateRow';
+import { useTranslation } from 'react-i18next';
 
 const MISSING_ORDER_TIMESTAMP_FALLBACK = '1970-01-01T00:00:00.000Z';
 const warnedOrderIds = new Set<string>();
@@ -29,6 +30,8 @@ export default function OrderNotificationsScreen() {
   const isAuthenticated = !!token && !!authUser;
   const [orderNotifications, setOrderNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
 
   useEffect(() => {
     if (!authUser?.id) {
@@ -44,43 +47,43 @@ export default function OrderNotificationsScreen() {
     setOrderNotifications((prev) => {
       const previousMap = new Map(prev.map((notification) => [notification.id, notification]));
       const derived = validOrders.map((order) => {
-        let title = 'Order Placed';
-        let message = `Your order ${order.orderId} has been placed.`;
+        let title = t('orderUpdates.status.orderPlacedTitle');
+        let message = t('orderUpdates.status.orderPlacedBody', { orderId: order.orderId });
 
         if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
-          title = 'Payment Required';
-          message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
+          title = t('orderUpdates.status.paymentRequiredTitle');
+          message = t('orderUpdates.status.paymentRequiredBody', { orderId: order.orderId });
         } else if (order.orderStatus === 'Confirmed') {
-          title = 'Order Confirmed';
-          message = `Excellent! Your order ${order.orderId} has been confirmed by our distributor and is now being processed.`;
+          title = t('orderUpdates.status.orderConfirmedTitle');
+          message = t('orderUpdates.status.orderConfirmedBody', { orderId: order.orderId });
         } else if (order.orderStatus === 'Packed') {
-          title = 'Order Packed';
-          message = `Fantastic! Your order ${order.orderId} has been carefully packed and is ready for shipment.`;
+          title = t('orderUpdates.status.orderPackedTitle');
+          message = t('orderUpdates.status.orderPackedBody', { orderId: order.orderId });
         } else if (order.orderStatus === 'Shipped') {
-          title = 'Order Shipped';
-          message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you.`;
+          title = t('orderUpdates.status.orderShippedTitle');
+          message = t('orderUpdates.status.orderShippedBody', { orderId: order.orderId });
         } else if (
           (order.orderStatus === 'Delivered' || order.orderStatus === 'Received') &&
           Array.isArray(order.returnRequests) &&
           order.returnRequests.some((rr: { status: string }) => rr.status === 'Pending')
         ) {
-          title = 'Return Request Submitted';
-          message = `Your return request for order ${order.orderId} has been submitted. We will process it and contact you if needed.`;
+          title = t('orderUpdates.status.returnSubmittedTitle');
+          message = t('orderUpdates.status.returnSubmittedBody', { orderId: order.orderId });
         } else if (order.orderStatus === 'Delivered') {
-          title = 'Order Delivered';
-          message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered!`;
+          title = t('orderUpdates.status.orderDeliveredTitle');
+          message = t('orderUpdates.status.orderDeliveredBody', { orderId: order.orderId });
         } else if (order.orderStatus === 'Received') {
-          title = 'Order Received';
-          message = `Thank you! You marked order ${order.orderId} as received. We hope you enjoy your purchase!`;
+          title = t('orderUpdates.status.orderReceivedTitle');
+          message = t('orderUpdates.status.orderReceivedBody', { orderId: order.orderId });
         } else if (order.orderStatus === 'Cancelled') {
-          title = 'Order Cancelled';
-          message = `We regret to inform you that your order ${order.orderId} has been cancelled.`;
+          title = t('orderUpdates.status.orderCancelledTitle');
+          message = t('orderUpdates.status.orderCancelledBody', { orderId: order.orderId });
         } else if (order.orderStatus === 'Returned') {
-          title = 'Order Returned';
-          message = `Your order ${order.orderId} has been returned to us.`;
+          title = t('orderUpdates.status.orderReturnedTitle');
+          message = t('orderUpdates.status.orderReturnedBody', { orderId: order.orderId });
         } else if (order.orderStatus === 'Failed') {
-          title = 'Delivery Failed';
-          message = `We're sorry. Delivery of your order ${order.orderId} could not be completed. Please contact support.`;
+          title = t('orderUpdates.status.deliveryFailedTitle');
+          message = t('orderUpdates.status.deliveryFailedBody', { orderId: order.orderId });
         }
 
         let timestampSource = order.createdAt || order.orderDate;
@@ -100,7 +103,7 @@ export default function OrderNotificationsScreen() {
           title,
           message,
           timestamp: new Date(timestampSource)
-            .toLocaleString('en-US', {
+            .toLocaleString(locale, {
               day: '2-digit',
               month: '2-digit',
               year: 'numeric',
@@ -119,7 +122,7 @@ export default function OrderNotificationsScreen() {
       return derived;
     });
     setLoading(false);
-  }, [orders, authUser?.id]);
+  }, [orders, authUser?.id, locale, t]);
 
   const markAsRead = useCallback(
     async (notificationId: string) => {
@@ -151,19 +154,19 @@ export default function OrderNotificationsScreen() {
             <TouchableOpacity
               onPress={() => router.back()}
               hitSlop={10}
-              accessibilityLabel="Go back"
+              accessibilityLabel={t('orderUpdates.a11y.back')}
               accessibilityRole="button"
             >
               <ArrowLeft color={primaryBlue} size={24} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Order updates</Text>
+            <Text style={styles.headerTitle}>{t('orderUpdates.title')}</Text>
           </View>
         </View>
       </View>
 
       {!isAuthenticated ? (
         <View style={styles.centered}>
-          <Text style={styles.muted}>Sign in to see your order notifications.</Text>
+          <Text style={styles.muted}>{t('orderUpdates.states.signIn')}</Text>
         </View>
       ) : loading ? (
         <View style={styles.centered}>
@@ -171,7 +174,7 @@ export default function OrderNotificationsScreen() {
         </View>
       ) : !hasRows ? (
         <View style={styles.centered}>
-          <Text style={styles.muted}>No order updates yet.</Text>
+          <Text style={styles.muted}>{t('orderUpdates.states.empty')}</Text>
         </View>
       ) : (
         <ScrollView

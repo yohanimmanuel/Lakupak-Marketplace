@@ -7,6 +7,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import type { MarketplaceProduct } from '../../../services/marketplace';
 import { useDataStore } from '../../../stores/dataStore';
+import { useTranslation } from 'react-i18next';
 
 interface Distributor {
   id: number;
@@ -84,6 +85,8 @@ export default function MyNetworksScreen() {
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
   const iconGray = '#6B7280';
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
 
   useEffect(() => {
     if (!authUser?.id || !token) {
@@ -249,7 +252,7 @@ export default function MyNetworksScreen() {
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>My Networks</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('myNetworks.title')}</Text>
               </View>
             </View>
           ),
@@ -262,15 +265,13 @@ export default function MyNetworksScreen() {
       >
         {isLoading || isOrdersLoading ? (
           <View style={styles.loading}>
-            <Text style={styles.loadingText}>Loading...</Text>
+            <Text style={styles.loadingText}>{t('myNetworks.states.loading')}</Text>
           </View>
         ) : distributors.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Users color={iconGray} size={48} />
-            <Text style={styles.emptyTitle}>No Networks Yet</Text>
-            <Text style={styles.emptyText}>
-              Start purchasing from distributors to build your network
-            </Text>
+            <Text style={styles.emptyTitle}>{t('myNetworks.states.emptyTitle')}</Text>
+            <Text style={styles.emptyText}>{t('myNetworks.states.emptyBody')}</Text>
           </View>
         ) : (
           distributors.map((distributor) => (
@@ -316,14 +317,15 @@ export default function MyNetworksScreen() {
                     <View style={styles.ordersRow}>
                       <Package color={iconGray} size={14} />
                       <Text style={styles.ordersText}>
-                        {distributor.totalOrders} {distributor.totalOrders === 1 ? 'order' : 'orders'}
+                        {t('myNetworks.orders', { count: distributor.totalOrders })}
                       </Text>
                       {distributor.lastOrderDate && (() => {
                         const date = new Date(distributor.lastOrderDate);
                         if (!isNaN(date.getTime())) {
+                          const d = date.toLocaleDateString(locale);
                           return (
                             <Text style={styles.lastOrderText}>
-                              • Last: {date.toLocaleDateString()}
+                              • {t('myNetworks.lastLabel', { date: d })}
                             </Text>
                           );
                         }

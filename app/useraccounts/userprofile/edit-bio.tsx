@@ -5,11 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { updateMe } from '../../../services/user';
+import { useTranslation } from 'react-i18next';
 
 export default function EditBio() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
+  const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
   const token = useAuthStore(s => s.token) as string | null;
   const setUser = useAuthStore(s => s.setUser);
@@ -17,12 +19,12 @@ export default function EditBio() {
 
   const onSave = async () => {
     try {
-      if (!token) return Alert.alert('Unauthorized');
+      if (!token) return Alert.alert(t('profile.common.unauthorized'));
       const updated = await updateMe(token, { bio: value });
       setUser(updated);
       router.back();
     } catch (e: unknown) {
-      Alert.alert('Error', (e instanceof Error ? e.message : 'Failed to update'));
+      Alert.alert(t('profile.common.errorTitle'), (e instanceof Error ? e.message : t('profile.common.failedToUpdate')));
     }
   };
 
@@ -37,7 +39,7 @@ export default function EditBio() {
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Edit Bio</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('profile.editField.editBio')}</Text>
               </View>
             </View>
           ),
@@ -47,14 +49,14 @@ export default function EditBio() {
         <TextInput
           value={value}
           onChangeText={setValue}
-          placeholder="Bio"
+          placeholder={t('profile.editField.placeholders.bio')}
           multiline
           numberOfLines={4}
           placeholderTextColor="#9CA3AF"
           style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, textAlignVertical: 'top', minHeight: 120, color: '#111827' }}
         />
         <Pressable onPress={onSave} style={{ marginTop: 16, backgroundColor: '#0a61d7', paddingVertical: 12, borderRadius: 8 }}>
-          <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '600' }}>Save</Text>
+          <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '600' }}>{t('profile.common.save')}</Text>
         </Pressable>
       </View>
     </>

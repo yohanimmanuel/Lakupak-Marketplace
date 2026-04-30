@@ -6,12 +6,14 @@ import { ChevronRight, Camera, ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { updateMe } from '../../../services/user';
 import { pickImage, takePhoto } from '../../../services/imagePicker';
+import { useTranslation } from 'react-i18next';
 
 export default function EditProfileModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
   const iconGray = '#6B7280';
+  const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
   const token = useAuthStore(s => s.token);
   const setUser = useAuthStore(s => s.setUser);
@@ -21,24 +23,26 @@ export default function EditProfileModal() {
     if (!token) return;
 
     Alert.alert(
-      'Select Image',
-      'Choose what you want to edit',
+      t('profile.editProfile.imagePicker.title'),
+      t('profile.editProfile.imagePicker.subtitle'),
       [
-        { text: 'Profile Picture', onPress: () => showImagePicker('profile') },
-        { text: 'Banner Image', onPress: () => showImagePicker('banner') },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('profile.editProfile.imagePicker.profilePicture'), onPress: () => showImagePicker('profile') },
+        { text: t('profile.editProfile.imagePicker.bannerImage'), onPress: () => showImagePicker('banner') },
+        { text: t('profile.editProfile.imagePicker.cancel'), style: 'cancel' },
       ]
     );
   };
 
   const showImagePicker = (type: 'profile' | 'banner') => {
     Alert.alert(
-      'Select Image',
-      `Choose how you want to add your ${type === 'profile' ? 'profile picture' : 'banner image'}`,
+      t('profile.editProfile.imagePicker.sourceTitle'),
+      type === 'profile'
+        ? t('profile.editProfile.imagePicker.sourceBodyProfile')
+        : t('profile.editProfile.imagePicker.sourceBodyBanner'),
       [
-        { text: 'Camera', onPress: () => uploadImage('camera', type) },
-        { text: 'Photo Library', onPress: () => uploadImage('library', type) },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('profile.editProfile.imagePicker.camera'), onPress: () => uploadImage('camera', type) },
+        { text: t('profile.editProfile.imagePicker.photoLibrary'), onPress: () => uploadImage('library', type) },
+        { text: t('profile.editProfile.imagePicker.cancel'), style: 'cancel' },
       ]
     );
   };
@@ -61,9 +65,14 @@ export default function EditProfileModal() {
       const updatedUser = await updateMe(token, updateData);
       setUser(updatedUser);
       
-      Alert.alert('Success', `${type === 'profile' ? 'Profile picture' : 'Banner image'} updated successfully!`);
+      Alert.alert(
+        t('profile.common.successTitle'),
+        type === 'profile'
+          ? t('profile.editProfile.alerts.updatedBodyProfile')
+          : t('profile.editProfile.alerts.updatedBodyBanner')
+      );
     } catch (error: unknown) {
-      Alert.alert('Error', (error instanceof Error ? error.message : `Failed to update ${type === 'profile' ? 'profile picture' : 'banner image'}`));
+      Alert.alert(t('profile.common.errorTitle'), (error instanceof Error ? error.message : t('profile.common.failedToUpdate')));
     } finally {
       setIsUploading(false);
     }
@@ -74,7 +83,7 @@ export default function EditProfileModal() {
       <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: '#111827', fontSize: 15, fontWeight: '600', marginBottom: 4 }}>{title}</Text>
-          <Text style={{ color: '#6B7280' }}>{value ?? 'Set Now'}</Text>
+          <Text style={{ color: '#6B7280' }}>{value ?? t('profile.editProfile.rowValueFallback')}</Text>
         </View>
         <ChevronRight color={iconGray} size={18} />
       </Pressable>
@@ -92,7 +101,7 @@ export default function EditProfileModal() {
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Profile</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('profile.editProfile.title')}</Text>
               </View>
             </View>
           ),
@@ -135,7 +144,7 @@ export default function EditProfileModal() {
             elevation: 5,
             opacity: isUploading ? 0.9 : 1,
           }}
-          accessibilityLabel={isUploading ? 'Uploading…' : 'Change profile or banner image'}
+          accessibilityLabel={isUploading ? t('profile.editProfile.a11y.uploading') : t('profile.editProfile.a11y.changeImages')}
           accessibilityState={{ busy: isUploading }}
         >
           {isUploading ? (
@@ -146,14 +155,14 @@ export default function EditProfileModal() {
         </Pressable>
       </View>
       
-      <Row title="Username" value={user?.username || user?.name} href={{ pathname: '/useraccounts/userprofile/edit-username' }} />
-      <Row title="Name" value={user?.name} href={{ pathname: '/useraccounts/userprofile/edit-name' }} />
-      <Row title="Store Name" value={user?.storeName} href={{ pathname: '/useraccounts/userprofile/edit-store-name' }} />
-      <Row title="Bio" value={user?.bio} href={{ pathname: '/useraccounts/userprofile/edit-bio' }} />
-      <Row title="Phone" value={user?.phone} href={{ pathname: '/useraccounts/userprofile/edit-phone' }} />
-      <Row title="Email" value={user?.email} href={{ pathname: '/useraccounts/userprofile/edit-email' }} />
-      <Row title="Address" value={user?.chosenAddress} href={{ pathname: '/useraccounts/userprofile/addresses' }} />
-      <Row title="Country" value={user?.country} href={{ pathname: '/useraccounts/userprofile/edit-country' }} />
+      <Row title={t('profile.editProfile.rows.username')} value={user?.username || user?.name} href={{ pathname: '/useraccounts/userprofile/edit-username' }} />
+      <Row title={t('profile.editProfile.rows.name')} value={user?.name} href={{ pathname: '/useraccounts/userprofile/edit-name' }} />
+      <Row title={t('profile.editProfile.rows.storeName')} value={user?.storeName} href={{ pathname: '/useraccounts/userprofile/edit-store-name' }} />
+      <Row title={t('profile.editProfile.rows.bio')} value={user?.bio} href={{ pathname: '/useraccounts/userprofile/edit-bio' }} />
+      <Row title={t('profile.editProfile.rows.phone')} value={user?.phone} href={{ pathname: '/useraccounts/userprofile/edit-phone' }} />
+      <Row title={t('profile.editProfile.rows.email')} value={user?.email} href={{ pathname: '/useraccounts/userprofile/edit-email' }} />
+      <Row title={t('profile.editProfile.rows.address')} value={user?.chosenAddress} href={{ pathname: '/useraccounts/userprofile/addresses' }} />
+      <Row title={t('profile.editProfile.rows.country')} value={user?.country} href={{ pathname: '/useraccounts/userprofile/edit-country' }} />
     </ScrollView>
     </>
   );

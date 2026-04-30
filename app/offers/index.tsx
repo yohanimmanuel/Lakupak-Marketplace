@@ -17,6 +17,7 @@ import { Text as ThemedText } from '../components/Themed';
 import SaleBanner, { SALE_BANNER_UNIFORM_HEIGHT } from '../components/paymentcheckout/SaleBanner';
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
+import { useTranslation } from 'react-i18next';
 
 const primaryColor = '#0a61d7';
 
@@ -27,6 +28,7 @@ export default function SpecialOffersListScreen() {
   const { homeOffers, loadHomeOffers } = useDataStore();
   const [refreshing, setRefreshing] = useState(false);
   const [listReady, setListReady] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!token) {
@@ -64,12 +66,12 @@ export default function SpecialOffersListScreen() {
         <TouchableOpacity
           onPress={() => router.back()}
           hitSlop={10}
-          accessibilityLabel="Go back"
+          accessibilityLabel={t('offers.a11y.back')}
           accessibilityRole="button"
         >
           <ArrowLeft color={primaryColor} size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Special Offers</Text>
+        <Text style={styles.headerTitle}>{t('offers.title')}</Text>
       </View>
     </View>
   );
@@ -84,7 +86,7 @@ export default function SpecialOffersListScreen() {
         </View>
       ) : !token ? (
         <View style={[styles.centered, styles.bodyFill]}>
-          <ThemedText style={styles.muted}>Sign in to view offers.</ThemedText>
+          <ThemedText style={styles.muted}>{t('offers.states.signInToView')}</ThemedText>
         </View>
       ) : homeOffers.length === 0 ? (
         <ScrollView
@@ -94,8 +96,8 @@ export default function SpecialOffersListScreen() {
           }
         >
           <View style={styles.centered}>
-            <ThemedText style={styles.muted}>No special offers right now.</ThemedText>
-            <ThemedText style={styles.hint}>Pull to refresh or check back later.</ThemedText>
+            <ThemedText style={styles.muted}>{t('offers.states.emptyTitle')}</ThemedText>
+            <ThemedText style={styles.hint}>{t('offers.states.emptyHint')}</ThemedText>
           </View>
         </ScrollView>
       ) : (
@@ -106,9 +108,7 @@ export default function SpecialOffersListScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primaryColor} />
           }
         >
-          <ThemedText style={styles.intro}>
-            Tap an offer to read full details. Each card matches the banner design on home.
-          </ThemedText>
+          <ThemedText style={styles.intro}>{t('offers.intro')}</ThemedText>
           {homeOffers.map((offer) => (
             <Pressable
               key={offer.id}
@@ -118,7 +118,7 @@ export default function SpecialOffersListScreen() {
               <SaleBanner
                 title={offer.title}
                 subtitle={offer.subtitle}
-                discountText={offer.discountText || 'Offer'}
+                discountText={offer.discountText || t('offers.states.offerFallbackBadge')}
                 endDate={offer.endDateText}
                 onPress={() => router.push(`/offers/${offer.id}`)}
                 backgroundColor={offer.backgroundColor || primaryColor}

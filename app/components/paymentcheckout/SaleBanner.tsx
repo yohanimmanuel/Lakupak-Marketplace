@@ -8,6 +8,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 /** Must match server allowlist in Laku-Dashboard `marketplaceHomeOfferIcons`. */
 const SAFE_ICONS = new Set([
@@ -80,6 +81,9 @@ export default function SaleBanner({
   embeddedInCarousel = false,
   fixedHeight,
 }: SaleBannerProps) {
+  const { t } = useTranslation();
+  const resolvedTitle = title || t('offers.bannerDefaults.title');
+  const resolvedDiscountText = discountText || t('offers.bannerDefaults.discountText');
   const rightIcon = safeIconName(rightIconName, 'gift');
   const discountIcon = safeIconName(discountIconName, 'flash');
 
@@ -154,7 +158,7 @@ export default function SaleBanner({
             style={[styles.title, { color: textColor }]}
             numberOfLines={fixedHeight != null ? 2 : undefined}
           >
-            {title}
+            {resolvedTitle}
           </Text>
           {subtitle.trim() ? (
             <Text
@@ -167,7 +171,7 @@ export default function SaleBanner({
           <View style={styles.discountContainer}>
             <View style={styles.discountBadge}>
               <Ionicons name={discountIcon as 'flash'} size={16} color={backgroundColor} />
-              <Text style={[styles.discountText, { color: backgroundColor }]}>{discountText}</Text>
+              <Text style={[styles.discountText, { color: backgroundColor }]}>{resolvedDiscountText}</Text>
             </View>
           </View>
         </View>

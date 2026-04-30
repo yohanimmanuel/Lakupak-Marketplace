@@ -19,6 +19,7 @@ import {
   type PlatformAnnouncement,
 } from '../../../../services/latestUpdatesService';
 import { useAuthStore } from '../../../../stores/authStore';
+import { useTranslation } from 'react-i18next';
 
 const primaryBlue = '#0a61d7';
 
@@ -27,6 +28,8 @@ export default function LatestUpdateDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const authUser = useAuthStore((s) => s.user);
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
   const [item, setItem] = useState<PlatformAnnouncement | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -37,7 +40,7 @@ export default function LatestUpdateDetailScreen() {
   useEffect(() => {
     if (!validId) {
       setLoading(false);
-      setErr('Invalid update');
+      setErr(t('latestUpdatesDetail.states.invalid'));
       return;
     }
     let cancelled = false;
@@ -46,7 +49,7 @@ export default function LatestUpdateDetailScreen() {
         const a = await fetchPublishedLatestUpdateById(id);
         if (cancelled) return;
         if (!a) {
-          setErr('This update is no longer available.');
+          setErr(t('latestUpdatesDetail.states.noLongerAvailable'));
           setItem(null);
         } else {
           setItem(a);
@@ -55,7 +58,7 @@ export default function LatestUpdateDetailScreen() {
           markAnnouncementRead(a.id, uid).catch(() => {});
         }
       } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : 'Failed to load');
+        if (!cancelled) setErr(e instanceof Error ? e.message : t('latestUpdatesDetail.states.failedToLoad'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -86,12 +89,12 @@ export default function LatestUpdateDetailScreen() {
                 <TouchableOpacity
                   onPress={() => router.back()}
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('latestUpdatesDetail.a11y.back')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Latest updates</Text>
+                <Text style={styles.headerTitle}>{t('latestUpdatesDetail.title')}</Text>
               </View>
             </View>
           ),
@@ -104,7 +107,7 @@ export default function LatestUpdateDetailScreen() {
         </View>
       ) : err || !item ? (
         <View style={styles.center}>
-          <Text style={styles.err}>{err || 'Not found'}</Text>
+          <Text style={styles.err}>{err || t('latestUpdatesDetail.states.notFound')}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -117,7 +120,7 @@ export default function LatestUpdateDetailScreen() {
               if (!Number.isFinite(d.getTime())) return null;
               return (
                 <Text style={styles.meta}>
-                  {d.toLocaleString('en-GB', {
+                  {d.toLocaleString(locale, {
                     day: '2-digit',
                     month: 'short',
                     year: 'numeric',
@@ -136,7 +139,7 @@ export default function LatestUpdateDetailScreen() {
             ) : null}
             {item.linkUrl ? (
               <TouchableOpacity style={styles.linkBtn} onPress={openLink} activeOpacity={0.85}>
-                <Text style={styles.linkBtnText}>Open link</Text>
+                <Text style={styles.linkBtnText}>{t('latestUpdatesDetail.actions.openLink')}</Text>
               </TouchableOpacity>
             ) : null}
           </View>

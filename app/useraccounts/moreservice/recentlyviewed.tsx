@@ -10,12 +10,14 @@ import { useAuthStore } from '../../../stores/authStore';
 import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { Product } from '../../../data/sampleProducts';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function RecentlyViewedModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { products } = useDataStore();
   const { getViewedProducts, toggleLikedProduct, loadUserActivities, refreshUserActivities } = useUserActivityStore();
   const storeLikedProducts = useUserActivityStore(state => state.likedProducts);
@@ -84,9 +86,9 @@ export default function RecentlyViewedModal() {
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Eye size={60} color="#9CA3AF" />
-      <Text style={styles.emptyTitle}>No Recently Viewed Items</Text>
+      <Text style={styles.emptyTitle}>{t('moreService.recentlyViewed.emptyTitle')}</Text>
       <Text style={styles.emptySubtitle}>
-        Start browsing products to see them here!
+        {t('moreService.recentlyViewed.emptyBody')}
       </Text>
     </View>
   );
@@ -98,7 +100,7 @@ export default function RecentlyViewedModal() {
       <View style={styles.youMayAlsoLikeSection}>
         <View style={styles.sectionDivider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.sectionTitle}>You May Also Like</Text>
+          <Text style={styles.sectionTitle}>{t('moreService.common.youMayAlsoLike')}</Text>
           <View style={styles.dividerLine} />
         </View>
         
@@ -165,7 +167,7 @@ export default function RecentlyViewedModal() {
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Recently Viewed</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('moreService.recentlyViewed.title')}</Text>
               </View>
             </View>
           ),

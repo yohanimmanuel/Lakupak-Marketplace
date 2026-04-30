@@ -8,6 +8,7 @@ import { formatCurrency } from '../../../utils/currencyUtils';
 import { API_BASE_URL } from '../../../services/config';
 import type { MarketplaceProduct } from '../../../services/marketplace';
 import { useDataStore, type MarketplaceOrder } from '../../../stores/dataStore';
+import { useTranslation } from 'react-i18next';
 
 // Normalize relative image paths to absolute URLs
 const normalizeUrl = (url?: string | null): string | undefined => {
@@ -98,6 +99,8 @@ export default function DistributorDetailScreen() {
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
   const iconGray = '#6B7280';
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
 
   useEffect(() => {
     if (authUser?.id && token) {
@@ -254,10 +257,13 @@ export default function DistributorDetailScreen() {
   const handleShareDistributor = async () => {
     if (!distributor) return;
     try {
-      const message = `Check out ${distributor.name} on Laku Marketplace.`;
+      const message = t('buyerNetworks.distributorDetail.share.message', { name: distributor.name });
       await Share.share({ message });
     } catch (e) {
-      Alert.alert('Share', 'Unable to open share dialog right now.');
+      Alert.alert(
+        t('buyerNetworks.distributorDetail.share.errorTitle'),
+        t('buyerNetworks.distributorDetail.share.errorBody')
+      );
     }
   };
 
@@ -273,7 +279,7 @@ export default function DistributorDetailScreen() {
   };
 
   const handleNeedHelp = () => {
-    Alert.alert('Need help?', 'Please contact Laku support from the Help Center.');
+    router.push('/useraccounts/consent/helpcenter');
   };
 
   const openMenu = () => {
@@ -297,7 +303,7 @@ export default function DistributorDetailScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.centered}>
-          <Text style={styles.muted}>Loading...</Text>
+          <Text style={styles.muted}>{t('buyerNetworks.distributorDetail.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -308,8 +314,8 @@ export default function DistributorDetailScreen() {
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <View style={styles.centeredPadded}>
           <Users color={iconGray} size={48} />
-          <Text style={styles.notFoundTitle}>Distributor Not Found</Text>
-          <Text style={styles.notFoundText}>This distributor may not exist or you haven't made any orders from them yet.</Text>
+          <Text style={styles.notFoundTitle}>{t('buyerNetworks.distributorDetail.notFoundTitle')}</Text>
+          <Text style={styles.notFoundText}>{t('buyerNetworks.distributorDetail.notFoundBody')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -332,16 +338,18 @@ export default function DistributorDetailScreen() {
                 <Pressable
                   onPress={() => router.back()}
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('buyerNetworks.distributorDetail.a11y.back')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 }}>Distributor Details</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 }}>
+                  {t('buyerNetworks.distributorDetail.title')}
+                </Text>
                 <Pressable
                   onPress={openMenu}
                   hitSlop={10}
-                  accessibilityLabel="More options"
+                  accessibilityLabel={t('buyerNetworks.distributorDetail.a11y.moreOptions')}
                   accessibilityRole="button"
                 >
                   <MoreVertical color={primaryBlue} size={22} />
@@ -384,7 +392,7 @@ export default function DistributorDetailScreen() {
                 <View style={styles.ratingRow}>
                   <Star color="#fbbf24" size={16} fill="#fbbf24" />
                   <Text style={styles.ratingVal}>{distributor.rating}</Text>
-                  <Text style={styles.ratingCount}>({distributor.totalOrders} orders)</Text>
+                  <Text style={styles.ratingCount}>{t('buyerNetworks.distributorDetail.ratingOrders', { count: distributor.totalOrders })}</Text>
                 </View>
               )}
             </View>
@@ -432,11 +440,11 @@ export default function DistributorDetailScreen() {
         </View>
 
         <View style={styles.historySection}>
-          <Text style={styles.historyTitle}>Order History</Text>
+          <Text style={styles.historyTitle}>{t('buyerNetworks.distributorDetail.historyTitle')}</Text>
           {orders.length === 0 ? (
             <View style={styles.historyEmpty}>
               <Package color={iconGray} size={48} />
-              <Text style={styles.historyEmptyText}>No orders yet</Text>
+              <Text style={styles.historyEmptyText}>{t('buyerNetworks.distributorDetail.historyEmpty')}</Text>
             </View>
           ) : (
             orders.map((order) => (
@@ -450,9 +458,9 @@ export default function DistributorDetailScreen() {
                         {(() => {
                           const date = new Date(order.date);
                           if (!isNaN(date.getTime())) {
-                            return date.toLocaleDateString();
+                            return date.toLocaleDateString(locale);
                           }
-                          return 'Invalid Date';
+                          return t('buyerNetworks.distributorDetail.invalidDate');
                         })()}
                       </Text>
                     </View>
@@ -462,7 +470,9 @@ export default function DistributorDetailScreen() {
                     <Text style={styles.orderStatus}>{order.status}</Text>
                   </View>
                 </View>
-                <Text style={styles.orderItems}>{order.items} {order.items === 1 ? 'item' : 'items'}</Text>
+                <Text style={styles.orderItems}>
+                  {t('buyerNetworks.distributorDetail.items', { count: order.items })}
+                </Text>
               </View>
             ))
           )}
@@ -473,10 +483,10 @@ export default function DistributorDetailScreen() {
         <TouchableOpacity
           style={styles.reviewButton}
           onPress={handleLeaveReview}
-          accessibilityLabel="Rate and review distributor"
+          accessibilityLabel={t('buyerNetworks.distributorDetail.a11y.rateReview')}
           accessibilityRole="button"
         >
-          <Text style={styles.reviewButtonText}>Rate & Review Distributor</Text>
+          <Text style={styles.reviewButtonText}>{t('buyerNetworks.distributorDetail.cta.rateReview')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -490,7 +500,7 @@ export default function DistributorDetailScreen() {
           <Pressable
             style={styles.menuBackdrop}
             onPress={closeMenu}
-            accessibilityLabel="Close menu"
+            accessibilityLabel={t('buyerNetworks.distributorDetail.a11y.closeMenu')}
             accessibilityRole="button"
           />
           <Animated.View
@@ -511,7 +521,7 @@ export default function DistributorDetailScreen() {
               style={styles.menuRow}
             >
               <Share2 size={18} color="#111827" />
-              <Text style={styles.menuRowText}>Share</Text>
+              <Text style={styles.menuRowText}>{t('buyerNetworks.distributorDetail.menu.share')}</Text>
             </Pressable>
             <View style={styles.menuDivider} />
             <Pressable
@@ -522,7 +532,7 @@ export default function DistributorDetailScreen() {
               style={styles.menuRow}
             >
               <Flag size={18} color="#ef4444" />
-              <Text style={[styles.menuRowText, styles.menuRowTextDanger]}>Report distributor</Text>
+              <Text style={[styles.menuRowText, styles.menuRowTextDanger]}>{t('buyerNetworks.distributorDetail.menu.report')}</Text>
             </Pressable>
             <View style={styles.menuDivider} />
             <Pressable
@@ -533,11 +543,12 @@ export default function DistributorDetailScreen() {
               style={styles.menuRow}
             >
               <HelpCircle size={18} color="#0a61d7" />
-              <Text style={[styles.menuRowText, styles.menuRowTextPrimary]}>Need help</Text>
+              <Text style={[styles.menuRowText, styles.menuRowTextPrimary]}>{t('buyerNetworks.distributorDetail.needHelp.menu')}</Text>
             </Pressable>
           </Animated.View>
         </View>
       </Modal>
+
     </SafeAreaView>
   );
 }

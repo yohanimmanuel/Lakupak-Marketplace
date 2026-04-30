@@ -202,7 +202,9 @@ export default function TabLayout() {
                 {({ pressed }) => (
                   <View style={{ backgroundColor: '#ffffff', borderRadius: 9999, paddingVertical: 6, paddingHorizontal: 12, opacity: pressed ? 0.9 : 1, flexDirection: 'row', alignItems: 'center' }}>
                     <Store color={primaryBlue} size={16} />
-                    <Text style={{ color: primaryBlue, fontSize: 14, fontWeight: '700', marginLeft: 6 }}>Start Distributing!</Text>
+                    <Text style={{ color: primaryBlue, fontSize: 14, fontWeight: '700', marginLeft: 6 }}>
+                      {t('startDistributing.badge')}
+                    </Text>
                   </View>
                 )}
               </Pressable>

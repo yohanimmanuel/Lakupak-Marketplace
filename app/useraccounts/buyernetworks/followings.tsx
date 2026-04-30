@@ -6,6 +6,7 @@ import { ArrowLeft, ChevronRight, Store } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { listFollowedDistributors, type FollowedDistributor } from '../../../services/distributorFollowing';
 import { API_BASE_URL } from '../../../services/config';
+import { useTranslation } from 'react-i18next';
 
 const primaryBlue = '#0a61d7';
 
@@ -21,6 +22,7 @@ export default function FollowingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const token = useAuthStore((s) => s.token);
+  const { t } = useTranslation();
 
   const [items, setItems] = useState<FollowedDistributor[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,10 +42,10 @@ export default function FollowingsScreen() {
         setItems(data);
         setError(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load followings');
+        setError(e instanceof Error ? e.message : t('followingsPage.errors.failedToLoad'));
       }
     },
-    [token]
+    [token, t]
   );
 
   useEffect(() => {
@@ -56,7 +58,7 @@ export default function FollowingsScreen() {
     setRefreshing(false);
   }, [load]);
 
-  const title = useMemo(() => 'Followings', []);
+  const title = useMemo(() => t('followingsPage.title'), [t]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -73,7 +75,12 @@ export default function FollowingsScreen() {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
-                <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Go back">
+                <Pressable
+                  onPress={() => router.back()}
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('followingsPage.a11y.back')}
+                >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
                 <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{title}</Text>
@@ -91,13 +98,13 @@ export default function FollowingsScreen() {
       >
         {!canLoad ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Login required</Text>
-            <Text style={styles.emptyText}>Please login to view distributors you follow.</Text>
+            <Text style={styles.emptyTitle}>{t('followingsPage.states.loginRequiredTitle')}</Text>
+            <Text style={styles.emptyText}>{t('followingsPage.states.loginRequiredBody')}</Text>
           </View>
         ) : items.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No followings yet</Text>
-            <Text style={styles.emptyText}>Follow a distributor to see them here.</Text>
+            <Text style={styles.emptyTitle}>{t('followingsPage.states.emptyTitle')}</Text>
+            <Text style={styles.emptyText}>{t('followingsPage.states.emptyBody')}</Text>
           </View>
         ) : (
           <View style={styles.list}>
@@ -114,7 +121,7 @@ export default function FollowingsScreen() {
                   }
                   style={styles.row}
                   accessibilityRole="button"
-                  accessibilityLabel={`Open ${it.name} store`}
+                  accessibilityLabel={t('followingsPage.a11y.openStore', { name: it.name })}
                 >
                   <View style={styles.avatar}>
                     {logo ? <Image source={{ uri: logo }} style={styles.avatarImg} /> : <Store size={22} color={primaryBlue} />}
@@ -124,7 +131,7 @@ export default function FollowingsScreen() {
                       {it.name}
                     </Text>
                     <Text style={styles.rowSub} numberOfLines={1}>
-                      Followed
+                      {t('followingsPage.row.followed')}
                     </Text>
                   </View>
                   <ChevronRight size={18} color="#9ca3af" />
@@ -138,7 +145,7 @@ export default function FollowingsScreen() {
           <View style={styles.inlineError}>
             <Text style={styles.inlineErrorText}>{error}</Text>
             <Pressable onPress={() => void load()} style={styles.inlineRetryBtn} accessibilityRole="button">
-              <Text style={styles.inlineRetryText}>Retry</Text>
+              <Text style={styles.inlineRetryText}>{t('followingsPage.errors.retry')}</Text>
             </Pressable>
           </View>
         ) : null}

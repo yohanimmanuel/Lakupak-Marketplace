@@ -5,11 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { updateMe } from '../../../services/user';
+import { useTranslation } from 'react-i18next';
 
 export default function EditStoreName() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
+  const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
   const token = useAuthStore(s => s.token) as string | null;
   const setUser = useAuthStore(s => s.setUser);
@@ -17,12 +19,12 @@ export default function EditStoreName() {
 
   const onSave = async () => {
     try {
-      if (!token) return Alert.alert('Unauthorized');
+      if (!token) return Alert.alert(t('profile.common.unauthorized'));
       const updated = await updateMe(token, { storeName: value });
       setUser(updated);
       router.back();
     } catch (e: unknown) {
-      Alert.alert('Error', (e instanceof Error ? e.message : 'Failed to update'));
+      Alert.alert(t('profile.common.errorTitle'), (e instanceof Error ? e.message : t('profile.common.failedToUpdate')));
     }
   };
 
@@ -37,12 +39,12 @@ export default function EditStoreName() {
                 <Pressable 
                   onPress={() => router.back()} 
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('profile.common.a11y.back')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Edit Store Name</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('profile.editField.editStoreName')}</Text>
               </View>
             </View>
           ),
@@ -52,19 +54,19 @@ export default function EditStoreName() {
         <TextInput
           value={value}
           onChangeText={setValue}
-          placeholder="Store Name"
+          placeholder={t('profile.editField.placeholders.storeName')}
           placeholderTextColor="#9CA3AF"
-          accessibilityLabel="Store name input"
-          accessibilityHint="Enter your store name"
+          accessibilityLabel={t('profile.editField.a11y.storeNameInput')}
+          accessibilityHint={t('profile.editField.a11y.storeNameHint')}
           style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, color: '#111827' }}
         />
         <Pressable 
           onPress={onSave} 
-          accessibilityLabel="Save store name"
+          accessibilityLabel={t('profile.editField.a11y.saveStoreName')}
           accessibilityRole="button"
           style={{ marginTop: 16, backgroundColor: '#0a61d7', paddingVertical: 12, borderRadius: 8 }}
         >
-          <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '600' }}>Save</Text>
+          <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '600' }}>{t('profile.common.save')}</Text>
         </Pressable>
       </View>
     </>

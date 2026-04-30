@@ -10,12 +10,14 @@ import { useAuthStore } from '../../../stores/authStore';
 import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { Product } from '../../../data/sampleProducts';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function FavouritesModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { products } = useDataStore();
   const { getLikedProducts, toggleLikedProduct, loadUserActivities, refreshUserActivities } = useUserActivityStore();
   const storeLikedProducts = useUserActivityStore(state => state.likedProducts);
@@ -84,9 +86,9 @@ export default function FavouritesModal() {
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Heart size={60} color="#9CA3AF" />
-      <Text style={styles.emptyTitle}>No Favourites Yet</Text>
+      <Text style={styles.emptyTitle}>{t('moreService.favourites.emptyTitle')}</Text>
       <Text style={styles.emptySubtitle}>
-        Start liking products to see them here!
+        {t('moreService.favourites.emptyBody')}
       </Text>
     </View>
   );
@@ -98,7 +100,7 @@ export default function FavouritesModal() {
       <View style={styles.youMayAlsoLikeSection}>
         <View style={styles.sectionDivider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.sectionTitle}>You May Also Like</Text>
+          <Text style={styles.sectionTitle}>{t('moreService.common.youMayAlsoLike')}</Text>
           <View style={styles.dividerLine} />
         </View>
         
@@ -165,7 +167,7 @@ export default function FavouritesModal() {
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Favourites</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('moreService.favourites.title')}</Text>
               </View>
             </View>
           ),

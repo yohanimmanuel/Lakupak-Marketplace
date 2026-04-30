@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { getMarketplaceAddresses, deleteMarketplaceAddress, MobileAddress } from '../../../services/user';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 
 type Address = MobileAddress
 
@@ -14,6 +15,7 @@ export default function AddressesList() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
+  const { t } = useTranslation();
   const token = useAuthStore(s => s.token) as string | null;
   const [list, setList] = useState<Address[]>([]);
   const [deleteMode, setDeleteMode] = useState(false)
@@ -49,9 +51,9 @@ export default function AddressesList() {
 
   const performBulkDelete = async () => {
     if (!token || selectedIds.size === 0) { setDeleteMode(false); return }
-    Alert.alert('Delete address', 'Are you sure you want to delete selected address(es)?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => {
+    Alert.alert(t('profile.addresses.deleteAlertTitle'), t('profile.addresses.deleteAlertBody'), [
+      { text: t('profile.addresses.deleteCancel'), style: 'cancel' },
+      { text: t('profile.addresses.deleteConfirm'), style: 'destructive', onPress: async () => {
         const ids = Array.from(selectedIds)
         for (const id of ids) {
           await deleteMarketplaceAddress(token, id)
@@ -74,10 +76,10 @@ export default function AddressesList() {
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>My Addresses</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('profile.addresses.title')}</Text>
                 {deleteMode ? (
                   <Pressable onPress={() => { setDeleteMode(false); setSelectedIds(new Set()) }} style={{ paddingVertical: 6, paddingHorizontal: 8 }}>
-                    <Text style={{ color: '#0a61d7', fontWeight: '700' }}>Undo</Text>
+                    <Text style={{ color: '#0a61d7', fontWeight: '700' }}>{t('profile.common.undo')}</Text>
                   </Pressable>
                 ) : (
                   <Pressable onPress={() => { setDeleteMode(true) }} style={{ padding: 8 }}>
@@ -91,7 +93,7 @@ export default function AddressesList() {
       />
       <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
         <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <Text style={{ color: '#6B7280', marginBottom: 8 }}>Address</Text>
+        <Text style={{ color: '#6B7280', marginBottom: 8 }}>{t('profile.addresses.label')}</Text>
         {(list || []).map((a) => (
           <View key={a.id} style={{ borderWidth: 1, borderColor: selectedIds.has(a.id) && deleteMode ? '#0a61d7' : '#e5e7eb', backgroundColor: selectedIds.has(a.id) && deleteMode ? '#0a61d70d' : '#ffffff', borderRadius: 12, padding: 14, marginBottom: 12 }}>
             {deleteMode && (
@@ -114,7 +116,7 @@ export default function AddressesList() {
             )}
             {a.isDefault && (
               <View style={{ alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#fca5a5' }}>
-                <Text style={{ color: '#ef4444' }}>Default</Text>
+                <Text style={{ color: '#ef4444' }}>{t('profile.addresses.defaultBadge')}</Text>
               </View>
             )}
           </View>
@@ -124,7 +126,7 @@ export default function AddressesList() {
           <Pressable disabled={deleteMode} style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 18, borderWidth: 1, borderColor: '#0a61d7', borderStyle: 'dashed', borderRadius: 12, opacity: deleteMode ? 0.5 : 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Plus color="#0a61d7" size={18} />
-              <Text style={{ color: '#0a61d7', marginLeft: 8, fontWeight: '600' }}>Add a new address</Text>
+              <Text style={{ color: '#0a61d7', marginLeft: 8, fontWeight: '600' }}>{t('profile.addresses.addNew')}</Text>
             </View>
           </Pressable>
         </Link>
@@ -132,7 +134,7 @@ export default function AddressesList() {
       {deleteMode && (
         <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#f3f4f6', backgroundColor: '#ffffff' }}>
           <Pressable onPress={performBulkDelete} style={{ backgroundColor: selectedIds.size > 0 ? '#ef4444' : '#e5e7eb', paddingVertical: 14, borderRadius: 10 }}>
-            <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '700' }}>Delete</Text>
+            <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '700' }}>{t('profile.addresses.delete')}</Text>
           </Pressable>
         </View>
       )}

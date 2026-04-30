@@ -11,6 +11,7 @@ import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { Product } from '@/data/sampleProducts';
 import { useDataStore } from '../../../stores/dataStore';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -64,6 +65,8 @@ export default function MyPurchasesModal() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
   const token = useAuthStore(s => s.token);
   const authUser = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
@@ -112,7 +115,7 @@ export default function MyPurchasesModal() {
     }
 
     const transformedOrders = storeOrders.map((order) => {
-      const fallbackStoreName = order.storeName || order.user?.company?.name || 'Laku Store';
+      const fallbackStoreName = order.storeName || order.user?.company?.name || t('myPurchases.fallbackStore');
       return {
         ...(order as unknown as Order),
         orderItems: (order.orderItems || []) as unknown as OrderItem[],
@@ -125,7 +128,7 @@ export default function MyPurchasesModal() {
           isPreferred: true
         },
         expectedDelivery: order.orderStatus === 'Shipped'
-          ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })
+          ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString(locale, { day: '2-digit', month: 'short' })
           : undefined
       } as Order;
     });
@@ -237,17 +240,17 @@ export default function MyPurchasesModal() {
 
   const getStatusText = (order: Order) => {
     if (order.orderStatus === 'Pending') {
-      return 'To Pay';
+      return t('myPurchases.statusPills.toPay');
     } else if (order.orderStatus === 'Confirmed' || order.orderStatus === 'Packed') {
-      return 'To Ship';
+      return t('myPurchases.statusPills.toShip');
     } else if (order.orderStatus === 'Shipped') {
-      return 'To Receive';
+      return t('myPurchases.statusPills.toReceive');
     } else if (order.orderStatus === 'Delivered') {
-      return 'Completed';
+      return t('myPurchases.statusPills.completed');
     } else if (order.orderStatus === 'Returned') {
-      return 'Return/Refund';
+      return t('myPurchases.statusPills.returns');
     } else if (order.orderStatus === 'Cancelled') {
-      return 'Cancelled';
+      return t('myPurchases.statusPills.cancelled');
     }
     return order.orderStatus;
   };
@@ -256,17 +259,17 @@ export default function MyPurchasesModal() {
     const buttons = [];
     
     if (order.orderStatus === 'Pending') {
-      buttons.push({ text: 'Pay', type: 'primary', action: 'pay' });
+      buttons.push({ text: t('myPurchases.actions.pay'), type: 'primary', action: 'pay' });
     } else if (order.orderStatus === 'Confirmed' || order.orderStatus === 'Packed') {
-      buttons.push({ text: 'Contact Seller', type: 'secondary', action: 'contact' });
+      buttons.push({ text: t('ordersFlow.orderDetails.support.contactSeller'), type: 'secondary', action: 'contact' });
     } else if (order.orderStatus === 'Shipped') {
-      buttons.push({ text: 'Return/Refund', type: 'secondary', action: 'return' });
-      buttons.push({ text: 'Order Received', type: 'primary', action: 'received' });
+      buttons.push({ text: t('myPurchases.actions.returnRefund'), type: 'secondary', action: 'return' });
+      buttons.push({ text: t('ordersFlow.orderDetails.actions.orderReceived'), type: 'primary', action: 'received' });
     } else if (order.orderStatus === 'Delivered') {
-      buttons.push({ text: 'Return/Refund', type: 'secondary', action: 'return' });
-      buttons.push({ text: 'Rate', type: 'primary', action: 'rate' });
+      buttons.push({ text: t('myPurchases.actions.returnRefund'), type: 'secondary', action: 'return' });
+      buttons.push({ text: t('tabsAccount.purchaseStatus.toRate'), type: 'primary', action: 'rate' });
     } else if (order.orderStatus === 'Returned') {
-      buttons.push({ text: 'View Details', type: 'secondary', action: 'details' });
+      buttons.push({ text: t('ordersFlow.orderDetails.orderIdInfo.viewMore'), type: 'secondary', action: 'details' });
     }
     
     return buttons;
@@ -275,8 +278,7 @@ export default function MyPurchasesModal() {
   const handleAction = (order: Order, action: string) => {
     switch (action) {
       case 'pay':
-        // Navigate to payment success for now (placeholder)
-        router.push('/payment-success');
+        router.push(`/components/ordersshipment/PayOrder?orderId=${encodeURIComponent(order.orderId)}`);
         break;
       case 'contact':
         router.push('/messages');
@@ -392,11 +394,6 @@ export default function MyPurchasesModal() {
         {/* Seller Info */}
         <View style={styles.sellerInfo}>
           <View style={styles.sellerLeft}>
-            {order.seller?.isPreferred && (
-              <View style={styles.preferredBadge}>
-                <Text style={styles.preferredText}>Preferred</Text>
-              </View>
-            )}
             <Text style={styles.sellerName}>{order.seller?.name}</Text>
           </View>
           <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
@@ -468,7 +465,7 @@ export default function MyPurchasesModal() {
         {/* Order Summary */}
         <View style={styles.orderSummary}>
           <Text style={styles.totalText}>
-            Total {order.orderItems.length} item{order.orderItems.length > 1 ? 's' : ''}: {formatCurrency(order.totalAmount)}
+            {t('myPurchases.summary.totalItems', { count: order.orderItems.length, amount: formatCurrency(order.totalAmount) })}
           </Text>
         </View>
 
@@ -477,7 +474,7 @@ export default function MyPurchasesModal() {
           <View style={styles.expectedDelivery}>
             <MapPin size={16} color="#10b981" />
             <Text style={styles.expectedDeliveryText}>
-              Expected delivery: {order.expectedDelivery}
+              {t('myPurchases.meta.expectedDelivery', { date: order.expectedDelivery })}
             </Text>
             <ChevronRight size={16} color="#10b981" />
           </View>
@@ -510,15 +507,15 @@ export default function MyPurchasesModal() {
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Package size={48} color="#d1d5db" />
-      <Text style={styles.emptyStateTitle}>No Orders Found</Text>
+      <Text style={styles.emptyStateTitle}>{t('myPurchases.empty.noneTitle')}</Text>
       <Text style={styles.emptyStateDescription}>
-        {activeTab === 'to-pay' && 'You have no pending payments.'}
-        {activeTab === 'to-ship' && 'No orders are being prepared for shipment.'}
-        {activeTab === 'to-receive' && 'No orders are currently in transit.'}
-        {activeTab === 'completed' && 'You have no completed orders yet.'}
-        {activeTab === 'returns' && 'You have no return/refund requests.'}
-        {activeTab === 'cancelled' && 'You have no cancelled orders.'}
-        {activeTab === 'to-rate' && 'No orders are ready for rating.'}
+        {activeTab === 'to-pay' && t('myPurchases.empty.noneBodyToPay')}
+        {activeTab === 'to-ship' && t('myPurchases.empty.toShip')}
+        {activeTab === 'to-receive' && t('myPurchases.empty.toReceive')}
+        {activeTab === 'completed' && t('myPurchases.empty.completed')}
+        {activeTab === 'returns' && t('myPurchases.empty.returns')}
+        {activeTab === 'cancelled' && t('myPurchases.empty.cancelled')}
+        {activeTab === 'to-rate' && t('myPurchases.empty.toRate')}
       </Text>
     </View>
   );
@@ -530,7 +527,7 @@ export default function MyPurchasesModal() {
       <View style={styles.youMayAlsoLikeSection}>
         <View style={styles.sectionDivider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.sectionTitle}>You May Also Like</Text>
+            <Text style={styles.sectionTitle}>{t('moreService.common.youMayAlsoLike')}</Text>
           <View style={styles.dividerLine} />
         </View>
         
@@ -595,7 +592,7 @@ export default function MyPurchasesModal() {
               <Pressable onPress={() => router.back()} hitSlop={10}>
                 <ArrowLeft color={primaryBlue} size={24} />
               </Pressable>
-              <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>My Purchases</Text>
+              <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('myPurchases.title')}</Text>
               <Pressable onPress={() => router.push('/messages')} hitSlop={10}>
                 <MessageSquareText color={primaryBlue} size={22} />
               </Pressable>
@@ -608,7 +605,7 @@ export default function MyPurchasesModal() {
                 <TextInput 
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search orders" 
+                  placeholder={t('myPurchases.searchPlaceholder')} 
                   style={{ flex: 1, marginLeft: 8, color: '#111827', paddingVertical: 0 }} 
                   placeholderTextColor={inactiveGrey} 
                 />
@@ -618,13 +615,13 @@ export default function MyPurchasesModal() {
             {/* Tab Navigation - part of header */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <TabItem label="To Pay" value={'to-pay'} />
-                <TabItem label="To Ship" value={'to-ship'} />
-                <TabItem label="To Receive" value={'to-receive'} />
-                <TabItem label="To Rate" value={'to-rate'} />
-                <TabItem label="Completed" value={'completed'} />
-                <TabItem label="Return/Refund" value={'returns'} />
-                <TabItem label="Cancelled" value={'cancelled'} />
+                <TabItem label={t('myPurchases.tabs.toPay')} value={'to-pay'} />
+                <TabItem label={t('myPurchases.tabs.toShip')} value={'to-ship'} />
+                <TabItem label={t('myPurchases.tabs.toReceive')} value={'to-receive'} />
+                <TabItem label={t('myPurchases.tabs.toRate')} value={'to-rate'} />
+                <TabItem label={t('myPurchases.tabs.completed')} value={'completed'} />
+                <TabItem label={t('myPurchases.tabs.returns')} value={'returns'} />
+                <TabItem label={t('myPurchases.tabs.cancelled')} value={'cancelled'} />
               </View>
             </ScrollView>
           </View>
@@ -635,14 +632,14 @@ export default function MyPurchasesModal() {
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading your orders...</Text>
+            <Text style={styles.loadingText}>{t('myPurchases.loading')}</Text>
           </View>
         ) : !isAuthenticated ? (
           <View style={styles.emptyState}>
             <Package size={48} color="#d1d5db" />
-            <Text style={styles.emptyStateTitle}>Please Login</Text>
+            <Text style={styles.emptyStateTitle}>{t('myPurchases.loginTitle')}</Text>
             <Text style={styles.emptyStateDescription}>
-              You need to be logged in to view your purchase history.
+              {t('myPurchases.loginBody')}
                 </Text>
               </View>
         ) : getFilteredOrders().length > 0 ? (
@@ -676,18 +673,6 @@ const styles = StyleSheet.create({
   sellerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  preferredBadge: {
-    backgroundColor: '#ef4444',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  preferredText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '600',
   },
   sellerName: {
     fontSize: 14,

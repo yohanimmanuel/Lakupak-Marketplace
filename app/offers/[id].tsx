@@ -16,6 +16,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import { marketplaceService, type MarketplaceHomeOfferPayload } from '../../services/marketplace';
 import { useAuthStore } from '../../stores/authStore';
 import { SALE_BANNER_UNIFORM_HEIGHT } from '../components/paymentcheckout/SaleBanner';
+import { useTranslation } from 'react-i18next';
 
 const primaryBlue = '#0a61d7';
 
@@ -35,6 +36,7 @@ export default function HomeOfferDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const token = useAuthStore((s) => s.token);
+  const { t } = useTranslation();
   const [item, setItem] = useState<MarketplaceHomeOfferPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export default function HomeOfferDetailScreen() {
   useEffect(() => {
     if (!validId || !token) {
       setLoading(false);
-      setErr(!token ? 'Sign in to view this offer.' : 'Invalid offer');
+      setErr(!token ? t('offers.states.signInToView') : t('offers.states.invalidOffer'));
       return;
     }
     let cancelled = false;
@@ -54,13 +56,13 @@ export default function HomeOfferDetailScreen() {
         const o = await marketplaceService.getHomeOfferById(token, id);
         if (cancelled) return;
         if (!o) {
-          setErr('This offer is no longer available.');
+          setErr(t('offers.states.noLongerAvailable'));
           setItem(null);
         } else {
           setItem(o);
         }
       } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : 'Failed to load');
+        if (!cancelled) setErr(e instanceof Error ? e.message : t('offers.states.failedToLoad'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -82,12 +84,12 @@ export default function HomeOfferDetailScreen() {
                 <TouchableOpacity
                   onPress={() => router.back()}
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('offers.a11y.back')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Special Offers</Text>
+                <Text style={styles.headerTitle}>{t('offers.title')}</Text>
               </View>
             </View>
           ),
@@ -188,7 +190,7 @@ export default function HomeOfferDetailScreen() {
               </View>
             )}
             <View style={styles.body}>
-              <Text style={styles.bodyText}>{item.detailsBody?.trim() || 'No additional details for this offer.'}</Text>
+              <Text style={styles.bodyText}>{item.detailsBody?.trim() || t('offers.states.noDetails')}</Text>
             </View>
           </View>
         </ScrollView>

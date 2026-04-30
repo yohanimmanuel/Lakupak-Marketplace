@@ -297,6 +297,454 @@
     }
   }
   ,
+  "offers": {
+    "a11y": {
+      "back": "Go back"
+    },
+    "title": "Special Offers",
+    "intro": "Tap an offer to read full details. Each card matches the banner design on home.",
+    "states": {
+      "signInToView": "Sign in to view offers.",
+      "emptyTitle": "No special offers right now.",
+      "emptyHint": "Pull to refresh or check back later.",
+      "offerFallbackBadge": "Offer",
+      "invalidOffer": "Invalid offer",
+      "noLongerAvailable": "This offer is no longer available.",
+      "failedToLoad": "Failed to load",
+      "noDetails": "No additional details for this offer."
+    },
+    "bannerDefaults": {
+      "title": "Sale",
+      "discountText": "Promo"
+    }
+  },
+  "orderUpdates": {
+    "a11y": {
+      "back": "Go back"
+    },
+    "title": "Order updates",
+    "states": {
+      "signIn": "Sign in to see your order notifications.",
+      "empty": "No order updates yet."
+    },
+    "status": {
+      "orderPlacedTitle": "Order Placed",
+      "orderPlacedBody": "Your order {{orderId}} has been placed.",
+      "paymentRequiredTitle": "Payment Required",
+      "paymentRequiredBody": "Your order {{orderId}} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.",
+      "orderConfirmedTitle": "Order Confirmed",
+      "orderConfirmedBody": "Excellent! Your order {{orderId}} has been confirmed by our distributor and is now being processed.",
+      "orderPackedTitle": "Order Packed",
+      "orderPackedBody": "Fantastic! Your order {{orderId}} has been carefully packed and is ready for shipment.",
+      "orderShippedTitle": "Order Shipped",
+      "orderShippedBody": "Exciting news! Your order {{orderId}} has been shipped and is now on its way to you.",
+      "returnSubmittedTitle": "Return Request Submitted",
+      "returnSubmittedBody": "Your return request for order {{orderId}} has been submitted. We will process it and contact you if needed.",
+      "orderDeliveredTitle": "Order Delivered",
+      "orderDeliveredBody": "Your order {{orderId}} has been successfully delivered!",
+      "orderReceivedTitle": "Order Received",
+      "orderReceivedBody": "Thank you! You marked order {{orderId}} as received. We hope you enjoy your purchase!",
+      "orderCancelledTitle": "Order Cancelled",
+      "orderCancelledBody": "We regret to inform you that your order {{orderId}} has been cancelled.",
+      "orderReturnedTitle": "Order Returned",
+      "orderReturnedBody": "Your order {{orderId}} has been returned to us.",
+      "deliveryFailedTitle": "Delivery Failed",
+      "deliveryFailedBody": "We're sorry. Delivery of your order {{orderId}} could not be completed. Please contact support."
+    }
+  },
+  "latestUpdatesDetail": {
+    "a11y": {
+      "back": "Go back"
+    },
+    "title": "Latest updates",
+    "states": {
+      "invalid": "Invalid update",
+      "noLongerAvailable": "This update is no longer available.",
+      "failedToLoad": "Failed to load",
+      "notFound": "Not found"
+    },
+    "actions": {
+      "openLink": "Open link"
+    }
+  },
+  "profile": {
+    "common": {
+      "a11y": {
+        "back": "Go back"
+      },
+      "save": "Save",
+      "close": "Close",
+      "undo": "Undo",
+      "unauthorized": "Unauthorized",
+      "errorTitle": "Error",
+      "successTitle": "Success",
+      "failedToUpdate": "Failed to update"
+    },
+    "editProfile": {
+      "title": "Profile",
+      "rowValueFallback": "Set Now",
+      "a11y": {
+        "uploading": "Uploading…",
+        "changeImages": "Change profile or banner image"
+      },
+      "imagePicker": {
+        "title": "Select Image",
+        "subtitle": "Choose what you want to edit",
+        "profilePicture": "Profile Picture",
+        "bannerImage": "Banner Image",
+        "cancel": "Cancel",
+        "sourceTitle": "Select Image",
+        "sourceBodyProfile": "Choose how you want to add your profile picture",
+        "sourceBodyBanner": "Choose how you want to add your banner image",
+        "camera": "Camera",
+        "photoLibrary": "Photo Library"
+      },
+      "alerts": {
+        "updatedBodyProfile": "Profile picture updated successfully!",
+        "updatedBodyBanner": "Banner image updated successfully!"
+      },
+      "rows": {
+        "username": "Username",
+        "name": "Name",
+        "storeName": "Store Name",
+        "bio": "Bio",
+        "phone": "Phone",
+        "email": "Email",
+        "address": "Address",
+        "country": "Country"
+      }
+    },
+    "editField": {
+      "editUsername": "Edit Username",
+      "editName": "Edit Name",
+      "editStoreName": "Edit Store Name",
+      "editBio": "Edit Bio",
+      "editPhone": "Edit Phone",
+      "editEmail": "Edit Email",
+      "editCountry": "Edit Country",
+      "placeholders": {
+        "username": "Username",
+        "name": "Name",
+        "storeName": "Store Name",
+        "bio": "Bio",
+        "phone": "Phone",
+        "email": "Email",
+        "country": "Country"
+      },
+      "a11y": {
+        "storeNameInput": "Store name input",
+        "storeNameHint": "Enter your store name",
+        "saveStoreName": "Save store name"
+      }
+    },
+    "addresses": {
+      "title": "My Addresses",
+      "label": "Address",
+      "defaultBadge": "Default",
+      "addNew": "Add a new address",
+      "delete": "Delete",
+      "deleteAlertTitle": "Delete address",
+      "deleteAlertBody": "Are you sure you want to delete selected address(es)?",
+      "deleteCancel": "Cancel",
+      "deleteConfirm": "Delete"
+    },
+    "editAddress": {
+      "editTitle": "Edit Address",
+      "newTitle": "New Address",
+      "sectionTitle": "Address",
+      "fullName": "Full Name",
+      "phone": "Phone",
+      "address": "Address (street, unit, postal)",
+      "setDefault": "Set as Default Address",
+      "labelAs": "Label As:",
+      "labels": {
+        "work": "Work",
+        "store": "Store",
+        "home": "Home"
+      }
+    }
+    ,
+    "social": {
+      "followersTitle": "Followers",
+      "followingTitle": "Following",
+      "comingSoon": "Coming soon."
+    }
+  },
+  "myNetworks": {
+    "title": "My Networks",
+    "a11y": { "back": "Go back" },
+    "states": {
+      "loading": "Loading…",
+      "emptyTitle": "No Networks Yet",
+      "emptyBody": "Start purchasing from distributors to build your network"
+    },
+    "orders_one": "{{count}} order",
+    "orders_other": "{{count}} orders",
+    "lastLabel": "Last: {{date}}"
+  },
+  "followingsPage": {
+    "title": "Followings",
+    "a11y": {
+      "back": "Go back",
+      "openStore": "Open {{name}} store"
+    },
+    "states": {
+      "loginRequiredTitle": "Login required",
+      "loginRequiredBody": "Please login to view distributors you follow.",
+      "emptyTitle": "No followings yet",
+      "emptyBody": "Follow a distributor to see them here."
+    },
+    "row": {
+      "followed": "Followed"
+    },
+    "errors": {
+      "failedToLoad": "Failed to load followings",
+      "retry": "Retry"
+    }
+  },
+  "moreService": {
+    "common": {
+      "a11y": { "back": "Go back" },
+      "youMayAlsoLike": "You May Also Like"
+    },
+    "favourites": {
+      "title": "Favourites",
+      "emptyTitle": "No Favourites Yet",
+      "emptyBody": "Start liking products to see them here!"
+    },
+    "recentlyViewed": {
+      "title": "Recently Viewed",
+      "emptyTitle": "No Recently Viewed Items",
+      "emptyBody": "Start browsing products to see them here!"
+    },
+    "buyAgain": {
+      "title": "Buy Again",
+      "emptyTitle": "No Previous Orders",
+      "emptyBody": "Start shopping to see your order history here!"
+    },
+    "vouchers": {
+      "title": "Get Vouchers",
+      "headline": "Get Vouchers",
+      "body": "Discover and claim available vouchers and promotional codes."
+    }
+  }
+  ,
+
+  "myPurchases": {
+    "title": "My Purchases",
+    "searchPlaceholder": "Search orders",
+    "loading": "Loading your orders…",
+    "loginTitle": "Please Login",
+    "loginBody": "You need to be logged in to view your purchase history.",
+    "tabs": {
+      "toPay": "To Pay",
+      "toShip": "To Ship",
+      "toReceive": "To Receive",
+      "toRate": "To Rate",
+      "completed": "Completed",
+      "returns": "Return/Refund",
+      "cancelled": "Cancelled"
+    },
+    "empty": {
+      "noneTitle": "No Orders Found",
+      "noneBodyToPay": "You have no pending payments.",
+      "toShip": "No orders are being prepared for shipment.",
+      "toReceive": "No orders are currently in transit.",
+      "toRate": "No orders are ready for rating.",
+      "completed": "You have no completed orders yet.",
+      "returns": "You have no return/refund requests.",
+      "cancelled": "You have no cancelled orders."
+    },
+    "statusPills": {
+      "toPay": "To Pay",
+      "toShip": "To Ship",
+      "toReceive": "To Receive",
+      "completed": "Completed",
+      "returns": "Return/Refund",
+      "cancelled": "Cancelled"
+    },
+    "actions": {
+      "pay": "Pay",
+      "returnRefund": "Return/Refund"
+    },
+    "meta": {
+      "expectedDelivery": "Expected delivery: {{date}}"
+    },
+    "summary": {
+      "totalItems_one": "Total {{count}} item: {{amount}}",
+      "totalItems_other": "Total {{count}} items: {{amount}}"
+    },
+    "fallbackStore": "Laku Store"
+  },
+  "startDistributing": {
+    "title": "Welcome to Laku!",
+    "badge": "Start Distributing!",
+    "headline": "Start Distributing!",
+    "body": "Join Laku as a distributor to access wholesale tools, manage catalogs, and reach more buyers.",
+    "actions": {
+      "maybeLater": "Maybe later",
+      "getStarted": "Get Started"
+    }
+  },
+  "wallet": {
+    "common": {
+      "a11y": { "back": "Go back" },
+      "close": "Close"
+    },
+    "myWallet": {
+      "title": "My Wallet",
+      "headline": "Wallet Management",
+      "body": "Manage your bonuses, discounts, and deposited amounts here."
+    },
+    "lakuPay": {
+      "title": "LakuPay",
+      "headline": "LakuPay Balance",
+      "body": "Manage your LakuPay balance and view transaction history.",
+      "availableBalance": "Available Balance"
+    },
+    "bonuses": {
+      "title": "Bonuses",
+      "headline": "Your Bonuses",
+      "body": "Here you can view all your earned bonuses and rewards.",
+      "total": "Total Bonuses"
+    },
+    "discounts": {
+      "title": "Discounts",
+      "headline": "Your Discounts",
+      "body": "Here you can view all your available discounts and vouchers.",
+      "total": "Total Discounts"
+    },
+    "widget": {
+      "lakupay": "LakuPay",
+      "bonuses": "Bonuses",
+      "discounts": "Discounts"
+    }
+  },
+  "legal": {
+    "communityRules": {
+      "title": "Community Rules",
+      "tabs": {
+        "overview": "Overview",
+        "dos": "Dos",
+        "donts": "Don'ts",
+        "summary": "Summary"
+      },
+      "overview": {
+        "p1": "Welcome to Laku Marketplace! Our community rules ensure a safe, respectful, and productive environment for all users.",
+        "p2": "These guidelines apply to all interactions on our platform, including product listings, reviews, messages, and community discussions.",
+        "p3": "By using Laku, you agree to follow these community standards and help us maintain a positive marketplace experience for everyone.",
+        "p4": "Violations of these rules may result in warnings, content removal, account restrictions, or permanent suspension."
+      },
+      "dos": {
+        "title": "✅ What You Should Do",
+        "sections": {
+          "respect": {
+            "title": "Be Respectful & Professional",
+            "body": "• Treat all users with respect and courtesy\\n• Use polite language in all communications\\n• Provide helpful and constructive feedback\\n• Be patient and understanding with other users"
+          },
+          "accurate": {
+            "title": "Provide Accurate Information",
+            "body": "• List products with honest descriptions\\n• Use clear, high-quality product photos\\n• Provide accurate pricing and availability\\n• Update product information regularly"
+          },
+          "quality": {
+            "title": "Maintain Quality Standards",
+            "body": "• Ensure products meet safety standards\\n• Package items securely for shipping\\n• Provide excellent customer service\\n• Honor return and refund policies"
+          },
+          "report": {
+            "title": "Report Issues Responsibly",
+            "body": "• Report suspicious or inappropriate behavior\\n• Flag counterfeit or illegal products\\n• Contact support for technical issues\\n• Help maintain platform integrity"
+          }
+        }
+      },
+      "donts": {
+        "title": "❌ What You Shouldn't Do",
+        "sections": {
+          "prohibited": {
+            "title": "Prohibited Content & Behavior",
+            "body": "• No harassment, bullying, or hate speech\\n• No spam, scams, or fraudulent activities\\n• No counterfeit or illegal products\\n• No inappropriate or offensive content"
+          },
+          "misleading": {
+            "title": "Misleading Practices",
+            "body": "• Don't use fake reviews or ratings\\n• Don't manipulate search results\\n• Don't create duplicate accounts\\n• Don't misrepresent product quality"
+          },
+          "privacy": {
+            "title": "Privacy & Security Violations",
+            "body": "• Don't share personal information publicly\\n• Don't attempt to hack or exploit the platform\\n• Don't use unauthorized payment methods\\n• Don't violate intellectual property rights"
+          },
+          "abuse": {
+            "title": "Platform Abuse",
+            "body": "• Don't circumvent platform policies\\n• Don't use automated tools without permission\\n• Don't engage in price manipulation\\n• Don't interfere with other users' transactions"
+          }
+        }
+      },
+      "summary": {
+        "title": "📋 Summary",
+        "coreTitle": "Core Principles",
+        "coreBody": "Laku Marketplace is built on trust, respect, and mutual benefit. We expect all users to contribute positively to our community.",
+        "takeawaysTitle": "Key Takeaways:",
+        "takeaways": "• Be honest, respectful, and professional in all interactions\\n• Provide accurate product information and quality service\\n• Report violations and help maintain platform integrity\\n• Respect others' privacy and intellectual property\\n• Follow all applicable laws and regulations",
+        "enforcementTitle": "Enforcement",
+        "enforcementBody": "Violations are reviewed on a case-by-case basis. We may issue warnings, remove content, restrict accounts, or suspend users who repeatedly violate these rules.",
+        "questionsTitle": "Questions?",
+        "questionsBody": "If you have questions about these rules or need to report a violation, please contact our support team through the Help Center."
+      }
+    },
+    "securityPrivacy": {
+      "headerTitle": "Security & Privacy",
+      "tabs": {
+        "privacy": "Privacy Policy",
+        "terms": "Terms & Conditions"
+      },
+      "privacy": {
+        "title": "Privacy Policy",
+        "intro": "This Privacy Policy explains how Laku collects, uses, discloses, and protects your personal information when you use our marketplace applications and services.",
+        "sections": {
+          "collectTitle": "1. Information We Collect",
+          "collectBody": "• Account Data: name, phone number, country/region, email, profile details.\\n• Authentication Data: verification codes (WhatsApp/SMS), device identifiers for fraud prevention.\\n• Transaction Data: orders, payments, refunds, vouchers, wallet balance (LakuPay), discounts and bonuses.\\n• Usage Data: pages viewed, buttons clicked, device and app version, approximate location (country/region).\\n• Communications: messages with support and notifications preferences.",
+          "useTitle": "2. How We Use Information",
+          "useBody": "• Provide and improve core features including account creation, order processing, and wallet management.\\n• Authenticate your identity, send verification codes, and protect against fraud and abuse.\\n• Personalize your experience (e.g., recently viewed, buy again) aligned with Laku standards.\\n• Communicate with you about orders, promotions, and service updates.\\n• Comply with legal obligations and enforce our Terms.",
+          "shareTitle": "3. Sharing and Disclosure",
+          "shareBody": "• Service Providers: payment processing, analytics, cloud hosting, and communications strictly under contract.\\n• Business Partners: where you opt in to specific services, we may share minimal data to fulfil your requests.\\n• Legal Requirements: to comply with applicable laws, regulations, or lawful requests.\\n• Transfers: in a merger, acquisition, or asset sale, we will notify you where legally required.",
+          "retentionTitle": "4. Data Retention",
+          "retentionBody": "We retain personal information only for as long as necessary to provide services, meet legal obligations, resolve disputes, and enforce agreements. Retention periods vary by data type and regulatory requirements.",
+          "rightsTitle": "5. Your Rights",
+          "rightsBody": "Subject to local laws, you may request access, correction, deletion, restriction, or portability of your data. You can also object to certain processing or withdraw consent.",
+          "securityTitle": "6. Security",
+          "securityBody": "We use industry-standard safeguards including encryption in transit, secure credential storage, risk-based authentication, and access controls. While no system is perfectly secure, we continuously improve our protections.",
+          "childrenTitle": "7. Children",
+          "childrenBody": "Laku is not directed to children under the age of 13 (or the minimum age in your jurisdiction). We do not knowingly collect personal information from children.",
+          "changesTitle": "8. Changes to This Policy",
+          "changesBody": "We may update this policy to reflect changes in our practices or legal requirements. We will post updates in-app and revise the effective date."
+        }
+      },
+      "terms": {
+        "title": "Terms & Conditions",
+        "intro": "These Terms govern your access to and use of Laku marketplace applications and services. By using our services, you agree to these Terms.",
+        "sections": {
+          "accountsTitle": "1. Accounts",
+          "accountsBody": "• You must provide accurate, current information. You are responsible for maintaining account security.\\n• Social sign-in (e.g., Google) must map to your valid email. We may require additional verification.",
+          "ordersTitle": "2. Orders and Payments",
+          "ordersBody": "• Prices, promotions, and stock availability may change.\\n• Payments may be processed by third-party providers. Refunds follow product and channel rules.\\n• Disputes and chargebacks will be reviewed according to policy and evidence provided.",
+          "walletTitle": "3. Wallet and Vouchers",
+          "walletBody": "• LakuPay balances, bonuses, and discounts are subject to eligibility and expiry rules.\\n• Misuse, fraud, or policy violations may result in suspension or forfeiture as permitted by law.",
+          "useTitle": "4. Acceptable Use",
+          "useBody": "You agree not to: violate laws; infringe IP; reverse engineer; spam; harm users; or interfere with the service. We may suspend accounts involved in prohibited activities.",
+          "ipTitle": "5. Intellectual Property",
+          "ipBody": "Laku trademarks, logos, and content are protected by law. You may not use our branding without prior written permission.",
+          "liabilityTitle": "6. Liability",
+          "liabilityBody": "To the extent permitted by law, Laku is not liable for indirect, incidental, or consequential damages. Our aggregate liability is limited to amounts you paid within the last 6 months.",
+          "terminationTitle": "7. Termination",
+          "terminationBody": "We may suspend or terminate your access for policy violations, unlawful activity, or risk to users. You may stop using the services at any time.",
+          "lawTitle": "8. Governing Law",
+          "lawBody": "These Terms are governed by applicable local laws where Laku operates or as required by mandatory consumer protection laws."
+        }
+      },
+      "actions": {
+        "understand": "I Understand"
+      }
+    }
+  },
+
   "tabsAccount": {
     "loginPrompt": {
       "title": "Create an account to win first-order benefits!",
@@ -638,6 +1086,161 @@
         "friday": "Friday",
         "saturday": "Saturday",
         "sunday": "Sunday"
+      }
+    },
+    "distributorDetail": {
+      "a11y": {
+        "back": "Go back",
+        "moreOptions": "More options",
+        "closeMenu": "Close menu",
+        "rateReview": "Rate and review distributor"
+      },
+      "share": {
+        "message": "Check out {{name}} on Laku Marketplace.",
+        "errorTitle": "Share",
+        "errorBody": "Unable to open share dialog right now."
+      },
+      "needHelp": {
+        "menu": "Need help",
+        "title": "Need help?",
+        "body": "Please contact Laku support from the Help Center.",
+        "goToHelpCenter": "Open Help Center",
+        "close": "Close"
+      },
+      "menu": {
+        "share": "Share",
+        "report": "Report distributor"
+      },
+      "loading": "Loading…",
+      "notFoundTitle": "Distributor Not Found",
+      "notFoundBody": "This distributor may not exist or you haven't made any orders from them yet.",
+      "title": "Distributor Details",
+      "ratingOrders": "({{count}} orders)",
+      "historyTitle": "Order History",
+      "historyEmpty": "No orders yet",
+      "invalidDate": "Invalid Date",
+      "items_one": "{{count}} item",
+      "items_other": "{{count}} items",
+      "cta": {
+        "rateReview": "Rate & Review Distributor"
+      }
+    },
+    "distributorRating": {
+      "a11y": {
+        "back": "Go back"
+      },
+      "title": "Rate Distributor",
+      "alerts": {
+        "missingIdTitle": "Missing ID",
+        "missingIdBody": "Cannot submit review: distributor ID is missing.",
+        "ratingRequiredTitle": "Rating Required",
+        "ratingRequiredBody": "Please select an overall rating before submitting.",
+        "signInRequiredTitle": "Sign in required",
+        "signInRequiredBody": "Please sign in to submit a review.",
+        "thankYouTitle": "Thank You",
+        "submittedBody": "Your review has been submitted.",
+        "errorTitle": "Error",
+        "submitFailedBody": "Failed to submit review. Please try again.",
+        "ok": "OK"
+      },
+      "defaults": {
+        "initial": "D",
+        "name": "Distributor"
+      },
+      "meta": {
+        "ordersWithDistributor_one": "{{count}} order with this distributor",
+        "ordersWithDistributor_other": "{{count}} orders with this distributor"
+      },
+      "sections": {
+        "overallTitle": "Overall experience",
+        "overallSubtitle": "How would you rate your overall experience with this distributor?",
+        "communication": "Communication",
+        "communicationHint": "Responsiveness, clarity, support",
+        "deliveryPackaging": "Delivery & packaging",
+        "deliveryPackagingHint": "On-time delivery, packaging condition",
+        "productQuality": "Product quality",
+        "productQualityHint": "Quality of products received",
+        "wouldOrderAgain": "Would you order from them again?",
+        "wouldOrderAgainSubtitle": "Your answer helps other buyers decide."
+      },
+      "choices": {
+        "yes": "Yes",
+        "no": "No",
+        "maybe": "Maybe"
+      },
+      "comment": {
+        "label": "Comment (optional)",
+        "subtitle": "Share details that would help other buyers—e.g. communication, delivery, product quality, or anything else.",
+        "placeholder": "Share your experience…"
+      },
+      "submit": {
+        "submit": "Submit review",
+        "submitting": "Submitting…"
+      }
+    },
+    "reportDistributor": {
+      "a11y": {
+        "back": "Go back",
+        "removePhoto": "Remove photo",
+        "addPhotos": "Add photos"
+      },
+      "title": "Report Distributor",
+      "warning": "Please select a reason and add at least one photo as proof (up to 5). Our team will review your report.",
+      "distributorLabel": "Distributor",
+      "whyTitle": "Why are you reporting this distributor?",
+      "customReasonLabel": "Please specify your reason",
+      "customReasonPlaceholder": "Enter your reason…",
+      "photosLabel": "Photos (required, max {{max}})",
+      "photosHint": "Add at least one image: screenshots, chats, or product photos help us investigate.",
+      "addPhotos": "Add photos",
+      "addMore": "Add more",
+      "submit": "Submit Report",
+      "alerts": {
+        "uploadFailedTitle": "Upload failed",
+        "uploadFailedBody": "Could not upload images. Please try again.",
+        "pleaseWaitTitle": "Please wait",
+        "pleaseWaitBody": "Photos are still uploading. Try again in a moment.",
+        "selectReasonTitle": "Select Reason",
+        "selectReasonBody": "Please select a reason for reporting this distributor.",
+        "provideReasonTitle": "Provide Reason",
+        "provideReasonBody": "Please provide a custom reason for reporting.",
+        "photosRequiredTitle": "Photos required",
+        "photosRequiredBody": "Please add at least one photo as proof (up to 5).",
+        "confirmTitle": "Confirm Report",
+        "confirmBody": "Do you want to submit this report? Our team will review it.",
+        "no": "No",
+        "yesSubmit": "Yes, Submit",
+        "signInRequiredTitle": "Sign in required",
+        "signInRequiredBody": "Please sign in to submit a report.",
+        "invalidDistributorTitle": "Error",
+        "invalidDistributorBody": "Invalid distributor.",
+        "submittedTitle": "Report Submitted",
+        "submittedBody": "Thanks for your report.",
+        "errorTitle": "Error",
+        "submitFailedBody": "Failed to submit report. Please try again.",
+        "ok": "OK"
+      },
+      "reasons": {
+        "fraud": {
+          "label": "Suspicious or fraudulent activity",
+          "description": "Fake listings, misleading claims, or scams"
+        },
+        "poor_service": {
+          "label": "Poor service",
+          "description": "Unresponsive, rude, or unhelpful communication"
+        },
+        "quality": {
+          "label": "Product quality concerns",
+          "description": "Repeated quality issues or inaccurate descriptions"
+        },
+        "policy": {
+          "label": "Policy violation",
+          "description": "Behavior that violates marketplace rules"
+        },
+        "other": {
+          "label": "Other reason",
+          "description": "Please specify your reason below"
+        }
       }
     }
   }

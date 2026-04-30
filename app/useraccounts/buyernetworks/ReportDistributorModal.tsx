@@ -20,36 +20,12 @@ import { AlertCircle, ArrowLeft, ImagePlus, X } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { pickMultipleImages } from '../../../services/imagePicker';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
-const REPORT_REASONS = [
-  {
-    id: 'fraud',
-    label: 'Suspicious or fraudulent activity',
-    description: 'Fake listings, misleading claims, or scams',
-  },
-  {
-    id: 'poor_service',
-    label: 'Poor service',
-    description: 'Unresponsive, rude, or unhelpful communication',
-  },
-  {
-    id: 'quality',
-    label: 'Product quality concerns',
-    description: 'Repeated quality issues or inaccurate descriptions',
-  },
-  {
-    id: 'policy',
-    label: 'Policy violation',
-    description: 'Behavior that violates marketplace rules',
-  },
-  {
-    id: 'other',
-    label: 'Other reason',
-    description: 'Please specify your reason below',
-  },
-] as const;
+const REPORT_REASON_IDS = ['fraud', 'poor_service', 'quality', 'policy', 'other'] as const;
+type ReportReasonId = (typeof REPORT_REASON_IDS)[number];
 
 const primaryBlue = '#0a61d7';
 
@@ -58,12 +34,14 @@ export default function ReportDistributorModal() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ distributorId?: string; distributorName?: string }>();
   const token = useAuthStore((s) => s.token);
+  const { t } = useTranslation();
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [customReason, setCustomReason] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const maxPhotos = 5;
 
   const scrollToInput = () => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
@@ -71,8 +49,8 @@ export default function ReportDistributorModal() {
 
   const handleAddPhotos = async () => {
     const currentCount = imageUrls.length;
-    if (currentCount >= 5) return;
-    const remaining = 5 - currentCount;
+    if (currentCount >= maxPhotos) return;
+    const remaining = maxPhotos - currentCount;
     try {
       setUploadingPhotos(true);
       const urls = await pickMultipleImages({
@@ -80,12 +58,12 @@ export default function ReportDistributorModal() {
         selectionLimit: remaining,
       });
       if (urls && urls.length > 0) {
-        setImageUrls((prev) => [...prev, ...urls].slice(0, 5));
+        setImageUrls((prev) => [...prev, ...urls].slice(0, maxPhotos));
       }
     } catch (error) {
       Alert.alert(
-        'Upload failed',
-        error instanceof Error ? error.message : 'Could not upload images. Please try again.'
+        t('buyerNetworks.reportDistributor.alerts.uploadFailedTitle'),
+        error instanceof Error ? error.message : t('buyerNetworks.reportDistributor.alerts.uploadFailedBody')
       );
     } finally {
       setUploadingPhotos(false);
@@ -98,45 +76,45 @@ export default function ReportDistributorModal() {
 
   const handleSubmit = async () => {
     if (uploadingPhotos) {
-      Alert.alert('Please wait', 'Photos are still uploading. Try again in a moment.');
+      Alert.alert(t('buyerNetworks.reportDistributor.alerts.pleaseWaitTitle'), t('buyerNetworks.reportDistributor.alerts.pleaseWaitBody'));
       return;
     }
     if (!selectedReason) {
-      Alert.alert('Select Reason', 'Please select a reason for reporting this distributor.');
+      Alert.alert(t('buyerNetworks.reportDistributor.alerts.selectReasonTitle'), t('buyerNetworks.reportDistributor.alerts.selectReasonBody'));
       return;
     }
 
     if (selectedReason === 'other' && !customReason.trim()) {
-      Alert.alert('Provide Reason', 'Please provide a custom reason for reporting.');
+      Alert.alert(t('buyerNetworks.reportDistributor.alerts.provideReasonTitle'), t('buyerNetworks.reportDistributor.alerts.provideReasonBody'));
       return;
     }
 
     if (imageUrls.length === 0) {
-      Alert.alert('Photos required', 'Please add at least one photo as proof (up to 5).');
+      Alert.alert(t('buyerNetworks.reportDistributor.alerts.photosRequiredTitle'), t('buyerNetworks.reportDistributor.alerts.photosRequiredBody'));
       return;
     }
 
     const reasonText =
       selectedReason === 'other'
         ? customReason.trim()
-        : REPORT_REASONS.find((r) => r.id === selectedReason)?.label || 'User submitted a report';
+        : t(`buyerNetworks.reportDistributor.reasons.${selectedReason}.label`) || 'User submitted a report';
 
     Alert.alert(
-      'Confirm Report',
-      'Do you want to submit this report? Our team will review it.',
+      t('buyerNetworks.reportDistributor.alerts.confirmTitle'),
+      t('buyerNetworks.reportDistributor.alerts.confirmBody'),
       [
-        { text: 'No', style: 'cancel' },
+        { text: t('buyerNetworks.reportDistributor.alerts.no'), style: 'cancel' },
         {
-          text: 'Yes, Submit',
+          text: t('buyerNetworks.reportDistributor.alerts.yesSubmit'),
           style: 'destructive',
           onPress: async () => {
             if (!token) {
-              Alert.alert('Sign in required', 'Please sign in to submit a report.');
+              Alert.alert(t('buyerNetworks.reportDistributor.alerts.signInRequiredTitle'), t('buyerNetworks.reportDistributor.alerts.signInRequiredBody'));
               return;
             }
             const distributorId = params.distributorId ? parseInt(String(params.distributorId), 10) : NaN;
             if (!Number.isFinite(distributorId) || distributorId < 1) {
-              Alert.alert('Error', 'Invalid distributor.');
+              Alert.alert(t('buyerNetworks.reportDistributor.alerts.invalidDistributorTitle'), t('buyerNetworks.reportDistributor.alerts.invalidDistributorBody'));
               return;
             }
             try {
@@ -162,15 +140,14 @@ export default function ReportDistributorModal() {
                 throw new Error(data?.error || `Failed to submit report (${res.status})`);
               }
               Alert.alert(
-                'Report Submitted',
-                data.message ||
-                  `Thanks for your report${params.distributorName ? ` about ${params.distributorName}` : ''}.`,
-                [{ text: 'OK', onPress: () => router.back() }]
+                t('buyerNetworks.reportDistributor.alerts.submittedTitle'),
+                t('buyerNetworks.reportDistributor.alerts.submittedBody'),
+                [{ text: t('buyerNetworks.reportDistributor.alerts.ok'), onPress: () => router.back() }]
               );
             } catch (e) {
               Alert.alert(
-                'Error',
-                e instanceof Error ? e.message : 'Failed to submit report. Please try again.'
+                t('buyerNetworks.reportDistributor.alerts.errorTitle'),
+                e instanceof Error ? e.message : t('buyerNetworks.reportDistributor.alerts.submitFailedBody')
               );
             } finally {
               setIsSubmitting(false);
@@ -200,12 +177,12 @@ export default function ReportDistributorModal() {
                 <TouchableOpacity
                   onPress={() => router.back()}
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('buyerNetworks.reportDistributor.a11y.back')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Report Distributor</Text>
+                <Text style={styles.headerTitle}>{t('buyerNetworks.reportDistributor.title')}</Text>
               </View>
             </View>
           ),
@@ -230,13 +207,13 @@ export default function ReportDistributorModal() {
           <View style={styles.warningContainer}>
             <AlertCircle size={20} color="#f59e0b" />
             <Text style={styles.warningText}>
-              Please select a reason and add at least one photo as proof (up to 5). Our team will review your report.
+              {t('buyerNetworks.reportDistributor.warning')}
             </Text>
           </View>
 
           {(params.distributorName || params.distributorId) ? (
             <View style={styles.orderInfoContainer}>
-              <Text style={styles.orderIdLabel}>Distributor</Text>
+              <Text style={styles.orderIdLabel}>{t('buyerNetworks.reportDistributor.distributorLabel')}</Text>
               <Text style={styles.orderIdValue}>
                 {params.distributorName ? params.distributorName : `#${String(params.distributorId)}`}
               </Text>
@@ -244,29 +221,29 @@ export default function ReportDistributorModal() {
           ) : null}
 
           <View style={styles.reasonsContainer}>
-            <Text style={styles.sectionTitle}>Why are you reporting this distributor?</Text>
+            <Text style={styles.sectionTitle}>{t('buyerNetworks.reportDistributor.whyTitle')}</Text>
 
-            {REPORT_REASONS.map((reason) => (
+            {REPORT_REASON_IDS.map((reasonId) => (
               <TouchableOpacity
-                key={reason.id}
-                style={[styles.reasonItem, selectedReason === reason.id && styles.reasonItemSelected]}
-                onPress={() => setSelectedReason(reason.id)}
+                key={reasonId}
+                style={[styles.reasonItem, selectedReason === reasonId && styles.reasonItemSelected]}
+                onPress={() => setSelectedReason(reasonId)}
               >
                 <View style={styles.reasonContent}>
-                  <Text style={[styles.reasonLabel, selectedReason === reason.id && styles.reasonLabelSelected]}>
-                    {reason.label}
+                  <Text style={[styles.reasonLabel, selectedReason === reasonId && styles.reasonLabelSelected]}>
+                    {t(`buyerNetworks.reportDistributor.reasons.${reasonId}.label`)}
                   </Text>
                   <Text
                     style={[
                       styles.reasonDescription,
-                      selectedReason === reason.id && styles.reasonDescriptionSelected,
+                      selectedReason === reasonId && styles.reasonDescriptionSelected,
                     ]}
                   >
-                    {reason.description}
+                    {t(`buyerNetworks.reportDistributor.reasons.${reasonId}.description`)}
                   </Text>
                 </View>
-                <View style={[styles.radioButton, selectedReason === reason.id && styles.radioButtonSelected]}>
-                  {selectedReason === reason.id && <View style={styles.radioButtonInner} />}
+                <View style={[styles.radioButton, selectedReason === reasonId && styles.radioButtonSelected]}>
+                  {selectedReason === reasonId && <View style={styles.radioButtonInner} />}
                 </View>
               </TouchableOpacity>
             ))}
@@ -274,12 +251,12 @@ export default function ReportDistributorModal() {
 
           {selectedReason === 'other' && (
             <View style={styles.customReasonContainer}>
-              <Text style={styles.customReasonLabel}>Please specify your reason:</Text>
+              <Text style={styles.customReasonLabel}>{t('buyerNetworks.reportDistributor.customReasonLabel')}</Text>
               <TextInput
                 style={styles.customReasonInput}
                 value={customReason}
                 onChangeText={setCustomReason}
-                placeholder="Enter your reason..."
+                placeholder={t('buyerNetworks.reportDistributor.customReasonPlaceholder')}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -289,9 +266,9 @@ export default function ReportDistributorModal() {
           )}
 
           <View style={styles.photosSection}>
-            <Text style={styles.inputLabel}>Photos (required, max 5)</Text>
+            <Text style={styles.inputLabel}>{t('buyerNetworks.reportDistributor.photosLabel', { max: maxPhotos })}</Text>
             <Text style={styles.photosHint}>
-              Add at least one image: screenshots, chats, or product photos help us investigate.
+              {t('buyerNetworks.reportDistributor.photosHint')}
             </Text>
             <View style={styles.photoRow}>
               {imageUrls.map((uri, index) => (
@@ -300,19 +277,19 @@ export default function ReportDistributorModal() {
                   <TouchableOpacity
                     style={styles.photoRemove}
                     onPress={() => handleRemovePhoto(index)}
-                    accessibilityLabel="Remove photo"
+                    accessibilityLabel={t('buyerNetworks.reportDistributor.a11y.removePhoto')}
                     accessibilityRole="button"
                   >
                     <X size={14} color="#fff" />
                   </TouchableOpacity>
                 </View>
               ))}
-              {imageUrls.length < 5 && (
+              {imageUrls.length < maxPhotos && (
                 <TouchableOpacity
                   style={styles.photoAdd}
                   onPress={handleAddPhotos}
                   disabled={uploadingPhotos}
-                  accessibilityLabel="Add photos"
+                  accessibilityLabel={t('buyerNetworks.reportDistributor.a11y.addPhotos')}
                   accessibilityRole="button"
                 >
                   {uploadingPhotos ? (
@@ -321,7 +298,9 @@ export default function ReportDistributorModal() {
                     <ImagePlus size={24} color="#6b7280" />
                   )}
                   <Text style={styles.photoAddText}>
-                    Add {imageUrls.length > 0 ? 'more' : 'photos'}
+                    {imageUrls.length > 0
+                      ? t('buyerNetworks.reportDistributor.addMore')
+                      : t('buyerNetworks.reportDistributor.addPhotos')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -340,7 +319,7 @@ export default function ReportDistributorModal() {
             <ActivityIndicator color="#fff" size="small" />
           ) : (
             <Text style={[styles.submitButtonText, disabled && styles.submitButtonTextDisabled]}>
-              Submit Report
+              {t('buyerNetworks.reportDistributor.submit')}
             </Text>
           )}
         </TouchableOpacity>

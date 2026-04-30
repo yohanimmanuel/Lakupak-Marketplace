@@ -10,12 +10,14 @@ import { useAuthStore } from '../../../stores/authStore';
 import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { Product } from '../../../data/sampleProducts';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function BuyAgainModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { products, orders, loadOrdersData } = useDataStore();
   const { toggleLikedProduct } = useUserActivityStore();
   const storeLikedProducts = useUserActivityStore(state => state.likedProducts);
@@ -90,9 +92,9 @@ export default function BuyAgainModal() {
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <ShoppingBag size={60} color="#9CA3AF" />
-      <Text style={styles.emptyTitle}>No Previous Orders</Text>
+      <Text style={styles.emptyTitle}>{t('moreService.buyAgain.emptyTitle')}</Text>
       <Text style={styles.emptySubtitle}>
-        Start shopping to see your order history here!
+        {t('moreService.buyAgain.emptyBody')}
       </Text>
     </View>
   );
@@ -104,7 +106,7 @@ export default function BuyAgainModal() {
       <View style={styles.youMayAlsoLikeSection}>
         <View style={styles.sectionDivider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.sectionTitle}>You May Also Like</Text>
+          <Text style={styles.sectionTitle}>{t('moreService.common.youMayAlsoLike')}</Text>
           <View style={styles.dividerLine} />
         </View>
         
@@ -172,11 +174,11 @@ export default function BuyAgainModal() {
                   onPress={() => router.back()} 
                   hitSlop={10}
                   accessibilityRole="button"
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('moreService.common.a11y.back')}
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Buy Again</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('moreService.buyAgain.title')}</Text>
               </View>
             </View>
           ),

@@ -16,6 +16,7 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Star, MessageSquare, Truck, Package, ThumbsUp } from 'lucide-react-native';
 import { API_BASE_URL } from '../../../services/config';
 import { useAuthStore } from '../../../stores/authStore';
+import { useTranslation } from 'react-i18next';
 
 interface DistributorRatingParams {
   id?: string;
@@ -40,6 +41,7 @@ export default function DistributorRatingScreen() {
   const token = useAuthStore((s) => s.token);
   const { id, name, logo, description, industryType, totalOrders } = params as DistributorRatingParams;
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   const [overallRating, setOverallRating] = useState<number>(0);
   const [communicationRating, setCommunicationRating] = useState<number>(0);
@@ -57,16 +59,16 @@ export default function DistributorRatingScreen() {
 
   const handleSubmit = async () => {
     if (!id) {
-      Alert.alert('Missing ID', 'Cannot submit review: distributor ID is missing.');
+      Alert.alert(t('buyerNetworks.distributorRating.alerts.missingIdTitle'), t('buyerNetworks.distributorRating.alerts.missingIdBody'));
       return;
     }
     if (!overallRating) {
-      Alert.alert('Rating Required', 'Please select an overall rating before submitting.');
+      Alert.alert(t('buyerNetworks.distributorRating.alerts.ratingRequiredTitle'), t('buyerNetworks.distributorRating.alerts.ratingRequiredBody'));
       return;
     }
 
     if (!token) {
-      Alert.alert('Sign in required', 'Please sign in to submit a review.');
+      Alert.alert(t('buyerNetworks.distributorRating.alerts.signInRequiredTitle'), t('buyerNetworks.distributorRating.alerts.signInRequiredBody'));
       return;
     }
 
@@ -100,16 +102,16 @@ export default function DistributorRatingScreen() {
         throw new Error(message);
       }
 
-      Alert.alert('Thank You', 'Your review has been submitted.', [
+      Alert.alert(t('buyerNetworks.distributorRating.alerts.thankYouTitle'), t('buyerNetworks.distributorRating.alerts.submittedBody'), [
         {
-          text: 'OK',
+          text: t('buyerNetworks.distributorRating.alerts.ok'),
           onPress: () => router.back(),
         },
       ]);
     } catch (error) {
       console.error('Distributor review submission failed:', error);
-      const message = error instanceof Error ? error.message : 'Failed to submit review. Please try again.';
-      Alert.alert('Error', message, [{ text: 'OK' }]);
+      const message = error instanceof Error ? error.message : t('buyerNetworks.distributorRating.alerts.submitFailedBody');
+      Alert.alert(t('buyerNetworks.distributorRating.alerts.errorTitle'), message, [{ text: t('buyerNetworks.distributorRating.alerts.ok') }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -154,7 +156,7 @@ export default function DistributorRatingScreen() {
                 <TouchableOpacity
                   onPress={() => router.back()}
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('buyerNetworks.distributorRating.a11y.back')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
@@ -169,7 +171,7 @@ export default function DistributorRatingScreen() {
                     marginLeft: 35,
                   }}
                 >
-                  Rate Distributor
+                  {t('buyerNetworks.distributorRating.title')}
                 </Text>
               </View>
             </View>
@@ -195,18 +197,18 @@ export default function DistributorRatingScreen() {
             ) : (
               <View style={styles.distributorAvatar}>
                 <Text style={styles.distributorInitials}>
-                  {name ? name.charAt(0).toUpperCase() : 'D'}
+                  {name ? name.charAt(0).toUpperCase() : t('buyerNetworks.distributorRating.defaults.initial')}
                 </Text>
               </View>
             )}
             <View style={styles.distributorInfo}>
-              <Text style={styles.distributorName}>{name || 'Distributor'}</Text>
+              <Text style={styles.distributorName}>{name || t('buyerNetworks.distributorRating.defaults.name')}</Text>
               {industryType ? (
                 <Text style={styles.distributorMeta}>{industryType}</Text>
               ) : null}
               {isValidOrderCount ? (
                 <Text style={styles.distributorMeta}>
-                  {orderCount} {orderCount === 1 ? 'order' : 'orders'} with this distributor
+                  {t('buyerNetworks.distributorRating.meta.ordersWithDistributor', { count: orderCount })}
                 </Text>
               ) : null}
               {description ? (
@@ -218,9 +220,9 @@ export default function DistributorRatingScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Overall experience</Text>
+            <Text style={styles.sectionTitle}>{t('buyerNetworks.distributorRating.sections.overallTitle')}</Text>
             <Text style={styles.sectionSubtitle}>
-              How would you rate your overall experience with this distributor?
+              {t('buyerNetworks.distributorRating.sections.overallSubtitle')}
             </Text>
             {renderStars(overallRating, setOverallRating)}
           </View>
@@ -228,8 +230,8 @@ export default function DistributorRatingScreen() {
           <View style={styles.ratingRow}>
             <MessageSquare color={iconGray} size={18} />
             <View style={styles.ratingRowContent}>
-              <Text style={styles.ratingRowLabel}>Communication</Text>
-              <Text style={styles.ratingRowHint}>Responsiveness, clarity, support</Text>
+              <Text style={styles.ratingRowLabel}>{t('buyerNetworks.distributorRating.sections.communication')}</Text>
+              <Text style={styles.ratingRowHint}>{t('buyerNetworks.distributorRating.sections.communicationHint')}</Text>
               {renderStars(communicationRating, setCommunicationRating)}
             </View>
           </View>
@@ -237,8 +239,8 @@ export default function DistributorRatingScreen() {
           <View style={styles.ratingRow}>
             <Truck color={iconGray} size={18} />
             <View style={styles.ratingRowContent}>
-              <Text style={styles.ratingRowLabel}>Delivery & packaging</Text>
-              <Text style={styles.ratingRowHint}>On-time delivery, packaging condition</Text>
+              <Text style={styles.ratingRowLabel}>{t('buyerNetworks.distributorRating.sections.deliveryPackaging')}</Text>
+              <Text style={styles.ratingRowHint}>{t('buyerNetworks.distributorRating.sections.deliveryPackagingHint')}</Text>
               {renderStars(deliveryRating, setDeliveryRating)}
             </View>
           </View>
@@ -246,8 +248,8 @@ export default function DistributorRatingScreen() {
           <View style={styles.ratingRow}>
             <Package color={iconGray} size={18} />
             <View style={styles.ratingRowContent}>
-              <Text style={styles.ratingRowLabel}>Product quality</Text>
-              <Text style={styles.ratingRowHint}>Quality of products received</Text>
+              <Text style={styles.ratingRowLabel}>{t('buyerNetworks.distributorRating.sections.productQuality')}</Text>
+              <Text style={styles.ratingRowHint}>{t('buyerNetworks.distributorRating.sections.productQualityHint')}</Text>
               {renderStars(productQualityRating, setProductQualityRating)}
             </View>
           </View>
@@ -256,11 +258,11 @@ export default function DistributorRatingScreen() {
             <View style={styles.sectionHeaderRow}>
               <ThumbsUp color={iconGray} size={18} />
               <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>
-                Would you order from them again?
+                {t('buyerNetworks.distributorRating.sections.wouldOrderAgain')}
               </Text>
             </View>
             <Text style={styles.sectionSubtitle}>
-              Your answer helps other buyers decide.
+              {t('buyerNetworks.distributorRating.sections.wouldOrderAgainSubtitle')}
             </Text>
             <View style={styles.orderAgainRow}>
               {(['yes', 'no', 'maybe'] as const).map((opt) => (
@@ -278,7 +280,11 @@ export default function DistributorRatingScreen() {
                       wouldOrderAgain === opt && styles.orderAgainButtonTextSelected,
                     ]}
                   >
-                    {opt === 'yes' ? 'Yes' : opt === 'no' ? 'No' : 'Maybe'}
+                    {opt === 'yes'
+                      ? t('buyerNetworks.distributorRating.choices.yes')
+                      : opt === 'no'
+                        ? t('buyerNetworks.distributorRating.choices.no')
+                        : t('buyerNetworks.distributorRating.choices.maybe')}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -289,17 +295,17 @@ export default function DistributorRatingScreen() {
             <View style={styles.sectionHeaderRow}>
               <MessageSquare color={iconGray} size={18} />
               <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>
-                Written review (optional)
+                {t('buyerNetworks.distributorRating.comment.label')}
               </Text>
             </View>
             <Text style={styles.sectionSubtitle}>
-              Share details that would help other buyers—e.g. communication, delivery, product quality, or anything else.
+              {t('buyerNetworks.distributorRating.comment.subtitle')}
             </Text>
             <TextInput
               style={styles.textArea}
               value={comment}
               onChangeText={setComment}
-              placeholder="Write your review here..."
+              placeholder={t('buyerNetworks.distributorRating.comment.placeholder')}
               placeholderTextColor="#9ca3af"
               multiline
               numberOfLines={5}
@@ -324,7 +330,9 @@ export default function DistributorRatingScreen() {
                 (!overallRating || isSubmitting) && styles.submitButtonTextDisabled,
               ]}
             >
-              {isSubmitting ? 'Submitting...' : 'Submit Review'}
+              {isSubmitting
+                ? t('buyerNetworks.distributorRating.submit.submitting')
+                : t('buyerNetworks.distributorRating.submit.submit')}
             </Text>
           </TouchableOpacity>
         </View>
