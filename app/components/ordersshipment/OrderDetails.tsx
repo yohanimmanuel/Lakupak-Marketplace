@@ -610,25 +610,25 @@ export default function OrderDetailsModal() {
             const hasRange = minDays != null || maxDays != null;
             const rangeText = hasRange
               ? minDays != null && maxDays != null
-                ? `${minDays}–${maxDays} business days`
+                ? t('ordersFlow.orderDetails.estimatedDelivery.rangeBusinessDays', { min: minDays, max: maxDays })
                 : minDays != null
-                  ? `${minDays}+ business days`
+                  ? t('ordersFlow.orderDetails.estimatedDelivery.minPlusBusinessDays', { min: minDays })
                   : maxDays != null
-                    ? `Up to ${maxDays} business days`
-                    : '—'
-              : '—';
+                    ? t('ordersFlow.orderDetails.estimatedDelivery.upToBusinessDays', { max: maxDays })
+                    : t('ordersFlow.orderDetails.estimatedDelivery.unknown')
+              : t('ordersFlow.orderDetails.estimatedDelivery.unknown');
             const estimatedDateText = orderData.estimatedDeliveryDate
               ? new Date(orderData.estimatedDeliveryDate).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
-              : 'Pending';
+              : t('ordersFlow.orderDetails.estimatedDelivery.pending');
 
               return (
                 <View style={styles.estimatedDeliveryBlock}>
                 <View style={styles.deliveryEstimatedRangeRow}>
-                  <Text style={styles.deliveryEstimatedRangeLabel}>Estimated delivery date: </Text>
+                  <Text style={styles.deliveryEstimatedRangeLabel}>{t('ordersFlow.orderDetails.estimatedDelivery.dateLabel')} </Text>
                   <Text style={styles.deliveryEstimatedRangeValue}>{estimatedDateText}</Text>
                 </View>
                 <View style={styles.deliveryEstimatedRangeRow}>
-                  <Text style={styles.deliveryEstimatedRangeLabel}>Estimated delivery: </Text>
+                  <Text style={styles.deliveryEstimatedRangeLabel}>{t('ordersFlow.orderDetails.estimatedDelivery.rangeLabel')} </Text>
                   <Text style={styles.deliveryEstimatedRangeValue}>{rangeText}</Text>
                 </View>
                 </View>
@@ -1238,7 +1238,7 @@ export default function OrderDetailsModal() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.rateButton} onPress={handleRateOrder}>
             <Star size={16} color="#ffffff" />
-            <Text style={styles.rateButtonText}>Rate</Text>
+            <Text style={styles.rateButtonText}>{t('ordersFlow.orderDetails.actions.rate')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -1288,7 +1288,7 @@ export default function OrderDetailsModal() {
       return (
         <View style={styles.bottomBar}>
           <TouchableOpacity style={styles.goBackButton} onPress={() => router.back()}>
-            <Text style={styles.goBackButtonText}>Back to Orders</Text>
+            <Text style={styles.goBackButtonText}>{t('ordersFlow.orderDetails.actions.backToOrders')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -1303,7 +1303,7 @@ export default function OrderDetailsModal() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.rateButton} onPress={handleRateOrder}>
             <Star size={16} color="#ffffff" />
-            <Text style={styles.rateButtonText}>Rate</Text>
+            <Text style={styles.rateButtonText}>{t('ordersFlow.orderDetails.actions.rate')}</Text>
           </TouchableOpacity>
         </View>
       );

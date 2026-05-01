@@ -5,6 +5,7 @@ import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { User as UserIcon, ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
+import { useTranslation } from 'react-i18next';
 
 export default function MessagesScreen() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function MessagesScreen() {
   const token = useAuthStore(s => s.token);
   const authUser = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
+  const { t } = useTranslation();
   
   const isAuthenticated = !!token && !!authUser;
   const primaryBlue = '#0a61d7';
@@ -26,17 +28,17 @@ export default function MessagesScreen() {
         <UserIcon color="#0a61d7" size={28} />
       </View>
       <Text style={styles.loginPromptTitle}>
-        Create an account to win first-order benefits!
+        {t('tabsOrders.loginPrompt.title')}
       </Text>
       <View style={styles.loginPromptButtons}>
         <Link href="/useraccounts/loginsignup/loginmodal" asChild>
           <Pressable style={styles.loginButton}>
-            <Text style={styles.loginButtonText}>Login</Text>
+            <Text style={styles.loginButtonText}>{t('tabsOrders.loginPrompt.login')}</Text>
           </Pressable>
         </Link>
         <Link href="/useraccounts/loginsignup/signupmodal" asChild>
           <Pressable style={styles.signupButton}>
-            <Text style={styles.signupButtonText}>Sign Up</Text>
+            <Text style={styles.signupButtonText}>{t('tabsOrders.loginPrompt.signup')}</Text>
           </Pressable>
         </Link>
       </View>
@@ -54,14 +56,14 @@ export default function MessagesScreen() {
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Messages</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('messages.title')}</Text>
               </View>
             </View>
           ),
         }}
       />
       {isAuthenticated ? (
-        <Text style={styles.title}>Messages</Text>
+        <Text style={styles.title}>{t('messages.title')}</Text>
       ) : (
         renderLoginPrompt()
       )}

@@ -527,13 +527,13 @@ export default function DeliveryInformation() {
         <View style={styles.mapSection}>
           {/* <View style={styles.mapHeader}>
             <MapPin size={20} color="#0a61d7" />
-            <Text style={styles.mapTitle}>Distributor Location</Text>
+            <Text style={styles.mapTitle}>{t('ordersFlow.deliveryInfo.map.title')}</Text>
           </View>
           {isGeocoding ? (
             <View style={styles.mapPlaceholder}>
               <ActivityIndicator size="large" color="#0a61d7" />
-              <Text style={styles.mapPlaceholderText}>Loading map...</Text>
-              <Text style={styles.mapPlaceholderSubtext}>Geocoding distributor address</Text>
+              <Text style={styles.mapPlaceholderText}>{t('ordersFlow.deliveryInfo.map.loading')}</Text>
+              <Text style={styles.mapPlaceholderSubtext}>{t('ordersFlow.deliveryInfo.map.geocoding')}</Text>
             </View>
           ) : geocodeResult?.coordinates ? (
             <MapComponent
@@ -551,11 +551,11 @@ export default function DeliveryInformation() {
           ) : (
             <View style={styles.mapPlaceholder}>
               <MapPin size={48} color="#9CA3AF" />
-              <Text style={styles.mapPlaceholderText}>Map unavailable</Text>
+              <Text style={styles.mapPlaceholderText}>{t('ordersFlow.deliveryInfo.map.unavailable')}</Text>
               <Text style={styles.mapPlaceholderSubtext}>
                 {(order.user?.company?.pickupAddress || order.user?.company?.businessAddress)
-                  ? 'Unable to locate distributor address'
-                  : 'Distributor address not available'}
+                  ? t('ordersFlow.deliveryInfo.map.unableToLocate')
+                  : t('ordersFlow.deliveryInfo.map.addressNotAvailable')}
               </Text>
             </View>
           )} */}
@@ -564,7 +564,6 @@ export default function DeliveryInformation() {
             <View style={styles.deliveryInfoRow}>
               <Clock size={16} color="#6B7280" />
               <View style={styles.deliveryInfoContent}>
-                <Text style={styles.deliveryInfoLabel}>Preferred Delivery Time</Text>
                 <Text style={styles.deliveryInfoLabel}>{t('ordersFlow.deliveryInfo.details.preferredDeliveryTime')}</Text>
                 <Text style={styles.deliveryInfoValue}>
                   {order.preferredDeliveryTime || t('ordersFlow.deliveryInfo.details.notSpecified')}

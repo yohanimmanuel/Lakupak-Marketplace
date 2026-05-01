@@ -112,8 +112,75 @@
       "id": "Bahasa Indonesia",
       "en": "English"
     }
-  }
-  ,
+  },
+  "suspension": {
+    "title": "Account suspended",
+    "body": "Your account has been suspended for a moment. You will be redirected to the login screen in {{seconds}}s.",
+    "protectionNote": "This helps protect the platform from abusive traffic and unexpected API costs.",
+    "reasonLabel": "Reason:",
+    "goToLogin": "Go to login",
+    "notDismissible": "This notice can’t be dismissed."
+  },
+  "notFound": {
+    "title": "Oops!",
+    "message": "This screen doesn't exist.",
+    "goHome": "Go to home screen!"
+  },
+  "dev": {
+    "editScreenInfo": {
+      "openCode": "Open up the code for this screen:",
+      "autoUpdate": "Change any of the text, save the file, and your app will automatically update.",
+      "tapIfNotUpdating": "Tap here if your app doesn't automatically update after making changes"
+    },
+    "productMarketplaceExample": {
+      "backToProducts": "Back to Products",
+      "title": "Product Catalog",
+      "subtitle": "{{count}} products available"
+    }
+  },
+  "messages": {
+    "title": "Messages"
+  },
+  "map": {
+    "loading": "Loading map…",
+    "errors": {
+      "unavailable": "Map unavailable",
+      "missingToken": "Mapbox access token not configured. Please add EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN to your .env file.",
+      "noCoordinates": "No coordinates available",
+      "requiresDevBuildTitle": "Map requires development build",
+      "requiresDevBuildBody": "@rnmapbox/maps requires native code.\n\nRun:\nnpx expo run:android\nor\nnpx expo run:ios",
+      "componentsUnavailable": "Map components are not available."
+    }
+  },
+  "paymentSuccessPage": {
+    "headerTitle": "Payment Success",
+    "title": "Payment Successful!",
+    "paid": "You paid {{amount}}",
+    "notifiedSingle": "We have notified the seller to ship out your order.",
+    "notifiedMultiple": "We have created {{count}} separate orders and notified the sellers to ship out your orders.",
+    "actions": {
+      "home": "Home",
+      "myOrders": "My Orders"
+    },
+    "status": {
+      "title": "Order Status",
+      "paymentRequired": "Payment Required",
+      "processing": "Processing Order",
+      "shipped": "Shipped",
+      "delivered": "Delivered"
+    },
+    "nextSteps": {
+      "title": "What's Next?",
+      "step1": "Seller will prepare your order",
+      "step2": "You'll receive shipping notification",
+      "step3": "Track your package delivery"
+    },
+    "support": {
+      "title": "Need Help?",
+      "body": "If you have any questions about your order, please contact our support team.",
+      "cta": "Contact Support"
+    }
+  },
   "auth": {
     "welcome": {
       "slides": {
@@ -164,7 +231,54 @@
         "helpCenter": "Help Center",
         "close": "Close"
       },
+      "social": {
+        "apple": "Sign up with Apple Id"
+      },
       "createAccount": "Create Account"
+    },
+    "forgotPassword": {
+      "title": "Forgot Password",
+      "passwordHint": "At least 8 characters, with uppercase, lowercase, number, and special character.",
+      "backToLogin": "Back to Login",
+      "alerts": {
+        "requiredTitle": "Required",
+        "enterEmailBody": "Please enter your email address.",
+        "invalidEmailTitle": "Invalid Email",
+        "invalidEmailBody": "Please enter a valid email address.",
+        "errorTitle": "Error",
+        "genericErrorBody": "Something went wrong. Please try again.",
+        "codeRequiredTitle": "Verification Code Required",
+        "codeRequiredBody": "Please enter the 6-digit code we sent to your email.",
+        "enterNewPasswordBody": "Please enter a new password.",
+        "mismatchTitle": "Mismatch",
+        "mismatchBody": "New password and confirmation do not match.",
+        "weakPasswordTitle": "Weak Password",
+        "passwordResetTitle": "Password Reset",
+        "passwordResetBody": "Your password has been reset. You can now log in with your new password.",
+        "invalidOrExpiredCodeTitle": "Invalid or Expired Code",
+        "invalidOrExpiredCodeBody": "The verification code is invalid or has expired. Please request a new password reset and try again.",
+        "ok": "OK"
+      },
+      "step1": {
+        "heading": "Reset your password",
+        "subheading": "Enter the email address you use to log in. We'll let you set a new password.",
+        "emailLabel": "Your Email",
+        "emailPlaceholder": "Example@gmail.com",
+        "sending": "Sending…",
+        "continue": "Continue"
+      },
+      "step2": {
+        "heading": "Create new password",
+        "subheading": "Enter the 6-digit code we sent to your email, then choose a new password.",
+        "codeLabel": "Verification Code",
+        "codePlaceholder": "e.g. 123456",
+        "newPasswordLabel": "New Password",
+        "newPasswordPlaceholder": "New password",
+        "confirmPasswordLabel": "Confirm Password",
+        "confirmPasswordPlaceholder": "Confirm new password",
+        "resetting": "Resetting…",
+        "resetPassword": "Reset password"
+      }
     },
     "signup": {
       "title": "Create Account",
@@ -190,6 +304,8 @@
       "alerts": {
         "missingTitle": "Missing Information",
         "missingNameEmail": "Please enter both name and email.",
+        "invalidEmailTitle": "Invalid Email",
+        "invalidEmailBody": "Please enter a valid email address.",
         "missingStoreName": "Please enter a store name.",
         "missingAllFields": "Please fill in all fields.",
         "passwordMismatchTitle": "Password Mismatch",
@@ -210,6 +326,29 @@
         "securityPrivacy": "Security & Privacy",
         "helpCenter": "Help Center",
         "close": "Close"
+      },
+      "social": {
+        "google": "Sign up with Google",
+        "apple": "Sign up with Apple Id"
+      },
+      "phoneOtp": {
+        "addPhoneNumber": "Add Phone Number",
+        "phoneNumberLabel": "Phone Number",
+        "phonePlaceholder": "Enter phone number",
+        "sendOtp": "Send OTP",
+        "sending": "Sending…",
+        "alerts": {
+          "missingTitle": "Missing Information",
+          "missingBody": "Please enter your phone number.",
+          "sentTitle": "OTP Sent",
+          "sentBody": "Please check your phone for the verification code.",
+          "failedTitle": "Failed",
+          "failedBody": "Something went wrong"
+        }
+      },
+      "countryPicker": {
+        "title": "Select country/region",
+        "searchPlaceholder": "Search country or code"
       }
     }
   }
@@ -1111,6 +1250,12 @@
         "share": "Share",
         "report": "Report distributor"
       },
+      "alerts": {
+        "contactTitle": "Contact Distributor",
+        "contactBody": "Phone: {{phone}}\nEmail: {{email}}",
+        "viewStoreTitle": "View Store",
+        "viewStoreBody": "Navigate to store page"
+      },
       "loading": "Loading…",
       "notFoundTitle": "Distributor Not Found",
       "notFoundBody": "This distributor may not exist or you haven't made any orders from them yet.",
@@ -1371,9 +1516,13 @@
         "contactSupportBody": "Contact Laku support through the main Help Center if you cannot reach the seller, see a payment or refund issue, your status is stuck for too long, or you suspect fraud or policy abuse."
       },
       "statusBullets": {
+        "pendingConfirmedTitle": "Pending / Confirmed",
         "pendingConfirmedDesc": "seller is preparing your order",
+        "packedShippedTitle": "Packed / Shipped",
         "packedShippedDesc": "parcel is with the logistics partner",
+        "deliveredTitle": "Delivered",
         "deliveredDesc": "parcel reached the delivery address",
+        "receivedTitle": "Received",
         "receivedDesc": "you confirmed the order looks good"
       }
     }
@@ -1581,6 +1730,14 @@
         "deliveryNote": "Delivery Note",
         "noInstructions": "No special instructions"
       },
+      "map": {
+        "title": "Distributor Location",
+        "loading": "Loading map…",
+        "geocoding": "Geocoding distributor address",
+        "unavailable": "Map unavailable",
+        "unableToLocate": "Unable to locate distributor address",
+        "addressNotAvailable": "Distributor address not available"
+      },
       "summary": {
         "orderId": "Order ID",
         "na": "N/A",
@@ -1646,7 +1803,18 @@
         "payOrder": "Pay Order",
         "returnRefund": "Return/Refund",
         "contactSupport": "Contact support",
-        "orderReceived": "Order Received"
+        "orderReceived": "Order Received",
+        "rate": "Rate",
+        "backToOrders": "Back to Orders"
+      },
+      "estimatedDelivery": {
+        "dateLabel": "Estimated delivery date:",
+        "rangeLabel": "Estimated delivery:",
+        "pending": "Pending",
+        "unknown": "—",
+        "rangeBusinessDays": "{{min}}–{{max}} business days",
+        "minPlusBusinessDays": "{{min}}+ business days",
+        "upToBusinessDays": "Up to {{max}} business days"
       },
       "statusText": {
         "delivered": "Your Order is Delivered",
@@ -1750,6 +1918,8 @@
         "pdfFailedBody": "Could not create PDF",
         "imageTitle": "Image",
         "imageFailedBody": "Could not export image",
+        "permissionDeniedBody": "Permission denied. Please allow access to save the file.",
+        "captureFailedBody": "Could not export image",
         "printTitle": "Print",
         "printFailedBody": "Print failed",
         "moreOptionsTitle": "More options",

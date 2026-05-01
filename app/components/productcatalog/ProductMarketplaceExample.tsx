@@ -6,8 +6,10 @@ import Colors from '../../../constants/Colors';
 import { useColorScheme } from '../useColorScheme';
 import { useThemeColor } from '../Themed';
 import { sampleProducts, Product } from '../../../data/sampleProducts';
+import { useTranslation } from 'react-i18next';
 
 export default function ProductMarketplaceExample() {
+  const { t } = useTranslation();
   const colorScheme = useColorScheme();
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -70,7 +72,7 @@ export default function ProductMarketplaceExample() {
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBackToGrid} style={styles.backButton}>
             <Text style={[styles.backButtonText, { color: primaryColor }]}>
-              ← Back to Products
+              ← {t('dev.productMarketplaceExample.backToProducts')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -93,10 +95,10 @@ export default function ProductMarketplaceExample() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: textColor }]}>
-          Product Catalog
+          {t('dev.productMarketplaceExample.title')}
         </Text>
         <Text style={[styles.headerSubtitle, { color: textColor }]}>
-          {sampleProducts.length} products available
+          {t('dev.productMarketplaceExample.subtitle', { count: sampleProducts.length })}
         </Text>
       </View>
     </View>

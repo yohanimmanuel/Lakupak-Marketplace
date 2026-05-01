@@ -231,11 +231,17 @@ export default function DistributorDetailScreen() {
   };
 
   const handleContact = () => {
-    Alert.alert('Contact Distributor', `Phone: ${distributor?.phone}\nEmail: ${distributor?.email}`);
+    Alert.alert(
+      t('buyerNetworks.distributorDetail.alerts.contactTitle'),
+      t('buyerNetworks.distributorDetail.alerts.contactBody', {
+        phone: distributor?.phone ?? '—',
+        email: distributor?.email ?? '—',
+      })
+    );
   };
 
   const handleViewStore = () => {
-    Alert.alert('View Store', 'Navigate to store page');
+    Alert.alert(t('buyerNetworks.distributorDetail.alerts.viewStoreTitle'), t('buyerNetworks.distributorDetail.alerts.viewStoreBody'));
   };
 
   const handleLeaveReview = () => {

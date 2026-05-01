@@ -112,8 +112,75 @@
       "id": "Bahasa Indonesia",
       "en": "English"
     }
-  }
-  ,
+  },
+  "suspension": {
+    "title": "Akun ditangguhkan",
+    "body": "Akun Anda ditangguhkan untuk sementara. Anda akan diarahkan ke layar login dalam {{seconds}} detik.",
+    "protectionNote": "Ini membantu melindungi platform dari trafik abusif dan biaya API yang tidak terduga.",
+    "reasonLabel": "Alasan:",
+    "goToLogin": "Ke login",
+    "notDismissible": "Pemberitahuan ini tidak dapat ditutup."
+  },
+  "notFound": {
+    "title": "Oops!",
+    "message": "Halaman ini tidak tersedia.",
+    "goHome": "Kembali ke beranda!"
+  },
+  "dev": {
+    "editScreenInfo": {
+      "openCode": "Buka kode untuk layar ini:",
+      "autoUpdate": "Ubah teks, simpan file, dan aplikasi akan otomatis diperbarui.",
+      "tapIfNotUpdating": "Ketuk di sini jika aplikasi tidak otomatis diperbarui setelah melakukan perubahan"
+    },
+    "productMarketplaceExample": {
+      "backToProducts": "Kembali ke Produk",
+      "title": "Katalog Produk",
+      "subtitle": "{{count}} produk tersedia"
+    }
+  },
+  "messages": {
+    "title": "Pesan"
+  },
+  "map": {
+    "loading": "Memuat peta…",
+    "errors": {
+      "unavailable": "Peta tidak tersedia",
+      "missingToken": "Token akses Mapbox belum dikonfigurasi. Silakan tambahkan EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ke file .env Anda.",
+      "noCoordinates": "Koordinat tidak tersedia",
+      "requiresDevBuildTitle": "Peta memerlukan development build",
+      "requiresDevBuildBody": "@rnmapbox/maps memerlukan native code.\n\nJalankan:\nnpx expo run:android\natau\nnpx expo run:ios",
+      "componentsUnavailable": "Komponen peta tidak tersedia."
+    }
+  },
+  "paymentSuccessPage": {
+    "headerTitle": "Pembayaran Berhasil",
+    "title": "Pembayaran Berhasil!",
+    "paid": "Anda membayar {{amount}}",
+    "notifiedSingle": "Kami telah memberi tahu penjual untuk mengirim pesanan Anda.",
+    "notifiedMultiple": "Kami telah membuat {{count}} pesanan terpisah dan memberi tahu penjual untuk mengirim pesanan Anda.",
+    "actions": {
+      "home": "Beranda",
+      "myOrders": "Pesanan Saya"
+    },
+    "status": {
+      "title": "Status Pesanan",
+      "paymentRequired": "Perlu Pembayaran",
+      "processing": "Pesanan Diproses",
+      "shipped": "Dikirim",
+      "delivered": "Terkirim"
+    },
+    "nextSteps": {
+      "title": "Langkah Selanjutnya",
+      "step1": "Penjual akan menyiapkan pesanan Anda",
+      "step2": "Anda akan menerima notifikasi pengiriman",
+      "step3": "Lacak pengiriman paket Anda"
+    },
+    "support": {
+      "title": "Butuh Bantuan?",
+      "body": "Jika Anda punya pertanyaan tentang pesanan, silakan hubungi tim dukungan kami.",
+      "cta": "Hubungi Dukungan"
+    }
+  },
   "auth": {
     "welcome": {
       "slides": {
@@ -164,7 +231,54 @@
         "helpCenter": "Pusat Bantuan",
         "close": "Tutup"
       },
+      "social": {
+        "apple": "Daftar dengan Apple ID"
+      },
       "createAccount": "Buat Akun"
+    },
+    "forgotPassword": {
+      "title": "Lupa Kata Sandi",
+      "passwordHint": "Minimal 8 karakter, dengan huruf besar, huruf kecil, angka, dan karakter khusus.",
+      "backToLogin": "Kembali ke Masuk",
+      "alerts": {
+        "requiredTitle": "Wajib diisi",
+        "enterEmailBody": "Silakan masukkan alamat email Anda.",
+        "invalidEmailTitle": "Email tidak valid",
+        "invalidEmailBody": "Silakan masukkan alamat email yang valid.",
+        "errorTitle": "Terjadi kesalahan",
+        "genericErrorBody": "Terjadi kesalahan. Silakan coba lagi.",
+        "codeRequiredTitle": "Kode verifikasi diperlukan",
+        "codeRequiredBody": "Silakan masukkan kode 6 digit yang kami kirim ke email Anda.",
+        "enterNewPasswordBody": "Silakan masukkan kata sandi baru.",
+        "mismatchTitle": "Tidak cocok",
+        "mismatchBody": "Kata sandi baru dan konfirmasi tidak sama.",
+        "weakPasswordTitle": "Kata sandi lemah",
+        "passwordResetTitle": "Kata sandi direset",
+        "passwordResetBody": "Kata sandi Anda berhasil direset. Sekarang Anda bisa masuk dengan kata sandi baru.",
+        "invalidOrExpiredCodeTitle": "Kode tidak valid atau kedaluwarsa",
+        "invalidOrExpiredCodeBody": "Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta reset kata sandi lagi dan coba kembali.",
+        "ok": "OK"
+      },
+      "step1": {
+        "heading": "Reset kata sandi",
+        "subheading": "Masukkan email yang Anda gunakan untuk masuk. Setelah itu Anda bisa membuat kata sandi baru.",
+        "emailLabel": "Email Anda",
+        "emailPlaceholder": "Example@gmail.com",
+        "sending": "Mengirim…",
+        "continue": "Lanjut"
+      },
+      "step2": {
+        "heading": "Buat kata sandi baru",
+        "subheading": "Masukkan kode 6 digit yang kami kirim ke email Anda, lalu buat kata sandi baru.",
+        "codeLabel": "Kode verifikasi",
+        "codePlaceholder": "mis. 123456",
+        "newPasswordLabel": "Kata sandi baru",
+        "newPasswordPlaceholder": "Kata sandi baru",
+        "confirmPasswordLabel": "Konfirmasi kata sandi",
+        "confirmPasswordPlaceholder": "Konfirmasi kata sandi baru",
+        "resetting": "Mereset…",
+        "resetPassword": "Reset kata sandi"
+      }
     },
     "signup": {
       "title": "Buat Akun",
@@ -190,6 +304,8 @@
       "alerts": {
         "missingTitle": "Data belum lengkap",
         "missingNameEmail": "Mohon isi nama dan email.",
+        "invalidEmailTitle": "Email tidak valid",
+        "invalidEmailBody": "Silakan masukkan alamat email yang valid.",
         "missingStoreName": "Mohon isi nama toko.",
         "missingAllFields": "Mohon lengkapi semua field.",
         "passwordMismatchTitle": "Kata sandi tidak cocok",
@@ -210,6 +326,29 @@
         "securityPrivacy": "Keamanan & Privasi",
         "helpCenter": "Pusat Bantuan",
         "close": "Tutup"
+      },
+      "social": {
+        "google": "Daftar dengan Google",
+        "apple": "Daftar dengan Apple ID"
+      },
+      "phoneOtp": {
+        "addPhoneNumber": "Tambahkan Nomor HP",
+        "phoneNumberLabel": "Nomor HP",
+        "phonePlaceholder": "Masukkan nomor HP",
+        "sendOtp": "Kirim OTP",
+        "sending": "Mengirim…",
+        "alerts": {
+          "missingTitle": "Data belum lengkap",
+          "missingBody": "Silakan masukkan nomor HP Anda.",
+          "sentTitle": "OTP terkirim",
+          "sentBody": "Silakan cek ponsel Anda untuk kode verifikasi.",
+          "failedTitle": "Gagal",
+          "failedBody": "Terjadi kesalahan"
+        }
+      },
+      "countryPicker": {
+        "title": "Pilih negara/wilayah",
+        "searchPlaceholder": "Cari negara atau kode"
       }
     }
   }
@@ -1109,6 +1248,12 @@
         "share": "Bagikan",
         "report": "Laporkan distributor"
       },
+      "alerts": {
+        "contactTitle": "Hubungi Distributor",
+        "contactBody": "Telepon: {{phone}}\nEmail: {{email}}",
+        "viewStoreTitle": "Lihat Toko",
+        "viewStoreBody": "Buka halaman toko"
+      },
       "loading": "Memuat…",
       "notFoundTitle": "Distributor tidak ditemukan",
       "notFoundBody": "Distributor ini mungkin tidak ada atau Anda belum pernah memesan dari mereka.",
@@ -1369,9 +1514,13 @@
         "contactSupportBody": "Hubungi dukungan Laku melalui Pusat Bantuan jika Anda tidak bisa menghubungi penjual, ada masalah pembayaran/refund, status macet terlalu lama, atau Anda mencurigai penipuan/penyalahgunaan kebijakan."
       },
       "statusBullets": {
+        "pendingConfirmedTitle": "Menunggu / Dikonfirmasi",
         "pendingConfirmedDesc": "penjual sedang menyiapkan pesanan",
+        "packedShippedTitle": "Dikemas / Dikirim",
         "packedShippedDesc": "paket sedang dibawa partner logistik",
+        "deliveredTitle": "Terkirim",
         "deliveredDesc": "paket sampai di alamat tujuan",
+        "receivedTitle": "Diterima",
         "receivedDesc": "Anda mengonfirmasi pesanan diterima dengan baik"
       }
     }
@@ -1553,7 +1702,7 @@
         "steps": {
           "placed": "Dibuat",
           "shipped": "Dikirim",
-          "outForDelivery": "Dalam pengantaran",
+          "outForDelivery": "Mengantar",
           "delivered": "Terkirim"
         }
       },
@@ -1578,6 +1727,14 @@
         "notAvailable": "Tidak tersedia",
         "deliveryNote": "Catatan pengiriman",
         "noInstructions": "Tidak ada instruksi khusus"
+      },
+      "map": {
+        "title": "Lokasi Distributor",
+        "loading": "Memuat peta…",
+        "geocoding": "Mencari koordinat alamat distributor",
+        "unavailable": "Peta tidak tersedia",
+        "unableToLocate": "Tidak dapat menemukan alamat distributor",
+        "addressNotAvailable": "Alamat distributor tidak tersedia"
       },
       "summary": {
         "orderId": "ID Pesanan",
@@ -1644,7 +1801,18 @@
         "payOrder": "Bayar pesanan",
         "returnRefund": "Retur/Refund",
         "contactSupport": "Hubungi dukungan",
-        "orderReceived": "Pesanan diterima"
+        "orderReceived": "Pesanan diterima",
+        "rate": "Beri Nilai",
+        "backToOrders": "Kembali ke Pesanan"
+      },
+      "estimatedDelivery": {
+        "dateLabel": "Perkiraan tanggal tiba:",
+        "rangeLabel": "Perkiraan pengiriman:",
+        "pending": "Menunggu",
+        "unknown": "—",
+        "rangeBusinessDays": "{{min}}–{{max}} hari kerja",
+        "minPlusBusinessDays": "{{min}}+ hari kerja",
+        "upToBusinessDays": "Maks. {{max}} hari kerja"
       },
       "statusText": {
         "delivered": "Pesanan Anda sudah terkirim",
@@ -1748,6 +1916,8 @@
         "pdfFailedBody": "Tidak bisa membuat PDF",
         "imageTitle": "Gambar",
         "imageFailedBody": "Tidak bisa mengekspor gambar",
+        "permissionDeniedBody": "Izin ditolak. Mohon izinkan akses untuk menyimpan file.",
+        "captureFailedBody": "Tidak bisa mengekspor gambar",
         "printTitle": "Cetak",
         "printFailedBody": "Cetak gagal",
         "moreOptionsTitle": "Opsi lainnya",

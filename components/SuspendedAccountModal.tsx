@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
+import { useTranslation } from 'react-i18next';
 
 const SUSPENSION_NOTICE_SECONDS = 60;
 
@@ -8,6 +9,7 @@ export default function SuspendedAccountModal() {
   const suspension = useAuthStore((s) => s.suspension);
   const setSuspension = useAuthStore((s) => s.setSuspension);
   const logout = useAuthStore((s) => s.logout);
+  const { t } = useTranslation();
 
   const startedAt = suspension.startedAt ?? null;
   const [now, setNow] = useState(Date.now());
@@ -47,22 +49,22 @@ export default function SuspendedAccountModal() {
     <Modal visible={suspension.active} transparent animationType="fade" statusBarTranslucent>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <View style={{ width: '100%', maxWidth: 420, backgroundColor: '#ffffff', borderRadius: 16, padding: 18 }}>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>Account suspended</Text>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>{t('suspension.title')}</Text>
           <Text style={{ marginTop: 8, fontSize: 14, lineHeight: 20, color: '#4b5563' }}>
-            Your account has been suspended for a moment. You will be redirected to the login screen in{' '}
-            <Text style={{ fontWeight: '700', color: '#111827' }}>{secondsLeft}s</Text>.
+            {t('suspension.body', { seconds: secondsLeft })}
           </Text>
 
           <View style={{ marginTop: 14, padding: 12, backgroundColor: '#fef2f2', borderRadius: 12 }}>
             <Text style={{ fontSize: 13, color: '#991b1b', lineHeight: 18 }}>
-              This helps protect the platform from abusive traffic and unexpected API costs.
+              {t('suspension.protectionNote')}
             </Text>
           </View>
 
           {reason ? (
             <View style={{ marginTop: 10, padding: 12, backgroundColor: '#fffbeb', borderRadius: 12 }}>
               <Text style={{ fontSize: 13, color: '#92400e', lineHeight: 18 }}>
-                Reason: <Text style={{ fontWeight: '700' }}>{reason}</Text>
+                {t('suspension.reasonLabel')}{' '}
+                <Text style={{ fontWeight: '700' }}>{reason}</Text>
               </Text>
             </View>
           ) : null}
@@ -78,7 +80,7 @@ export default function SuspendedAccountModal() {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700' }}>Go to login</Text>
+              <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700' }}>{t('suspension.goToLogin')}</Text>
             </Pressable>
           </View>
 
@@ -88,7 +90,7 @@ export default function SuspendedAccountModal() {
             }}
             style={{ marginTop: 10, alignItems: 'center', paddingVertical: 8 }}
           >
-            <Text style={{ fontSize: 12, color: '#6b7280' }}>This notice can’t be dismissed.</Text>
+            <Text style={{ fontSize: 12, color: '#6b7280' }}>{t('suspension.notDismissible')}</Text>
           </Pressable>
         </View>
       </View>

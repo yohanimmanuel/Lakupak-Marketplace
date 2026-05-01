@@ -519,7 +519,7 @@ export default function CartScreen() {
       <View style={styles.youMayAlsoLikeSection}>
         <View style={styles.sectionDivider}>
           <View style={styles.dividerLine} />
-          <Text style={styles.sectionTitle}>You May Also Like</Text>
+          <Text style={styles.sectionTitle}>{t('product.youMayAlsoLike')}</Text>
           <View style={styles.dividerLine} />
         </View>
         

@@ -13,6 +13,7 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CheckCircle, Home, Package, ArrowLeft } from 'lucide-react-native';
 import { formatCurrency } from '../utils/currencyUtils';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -28,6 +29,7 @@ export default function PaymentSuccessScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<PaymentSuccessParams>();
   const primaryBlue = '#0a61d7';
+  const { t } = useTranslation();
   
   const orderId = params.orderId || '';
   const totalAmount = parseFloat(params.totalAmount || '0');
@@ -54,7 +56,7 @@ export default function PaymentSuccessScreen() {
                 <Pressable onPress={() => router.back()} hitSlop={10}>
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>Payment Success</Text>
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>{t('paymentSuccessPage.headerTitle')}</Text>
               </View>
             </View>
           ),
@@ -68,14 +70,14 @@ export default function PaymentSuccessScreen() {
             <CheckCircle size={80} color="#10b981" />
           </View>
           
-          <Text style={styles.successTitle}>Payment Successful!</Text>
+          <Text style={styles.successTitle}>{t('paymentSuccessPage.title')}</Text>
           <Text style={styles.successSubtitle}>
-            You paid {formatCurrency(totalAmount)}
+            {t('paymentSuccessPage.paid', { amount: formatCurrency(totalAmount) })}
           </Text>
           <Text style={styles.notificationText}>
             {orderCount > 1 
-              ? `We have created ${orderCount} separate orders and notified the sellers to ship out your orders.`
-              : 'We have notified the seller to ship out your order.'
+              ? t('paymentSuccessPage.notifiedMultiple', { count: orderCount })
+              : t('paymentSuccessPage.notifiedSingle')
             }
           </Text>
         </View>
@@ -84,61 +86,61 @@ export default function PaymentSuccessScreen() {
         <View style={styles.actionButtonsContainer}>
           <TouchableOpacity style={styles.homeButton} onPress={handleGoHome}>
             <Home size={20} color="#0a61d7" />
-            <Text style={styles.homeButtonText}>Home</Text>
+            <Text style={styles.homeButtonText}>{t('paymentSuccessPage.actions.home')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.ordersButton} onPress={handleViewOrders}>
             <Package size={20} color="#ffffff" />
-            <Text style={styles.ordersButtonText}>My Orders</Text>
+            <Text style={styles.ordersButtonText}>{t('paymentSuccessPage.actions.myOrders')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Order Status Card */}
         <View style={styles.statusCard}>
-          <Text style={styles.statusCardTitle}>Order Status</Text>
+          <Text style={styles.statusCardTitle}>{t('paymentSuccessPage.status.title')}</Text>
           <View style={styles.statusItem}>
             <View style={[styles.statusDot, styles.statusCompleted]} />
-            <Text style={styles.statusText}>Payment Required</Text>
+            <Text style={styles.statusText}>{t('paymentSuccessPage.status.paymentRequired')}</Text>
           </View>
           <View style={styles.statusItem}>
             <View style={[styles.statusDot, styles.statusPending]} />
-            <Text style={styles.statusText}>Processing Order</Text>
+            <Text style={styles.statusText}>{t('paymentSuccessPage.status.processing')}</Text>
           </View>
           <View style={styles.statusItem}>
             <View style={[styles.statusDot, styles.statusPending]} />
-            <Text style={styles.statusText}>Shipped</Text>
+            <Text style={styles.statusText}>{t('paymentSuccessPage.status.shipped')}</Text>
           </View>
           <View style={styles.statusItem}>
             <View style={[styles.statusDot, styles.statusPending]} />
-            <Text style={styles.statusText}>Delivered</Text>
+            <Text style={styles.statusText}>{t('paymentSuccessPage.status.delivered')}</Text>
           </View>
         </View>
 
         {/* Next Steps */}
         <View style={styles.nextStepsCard}>
-          <Text style={styles.nextStepsTitle}>What's Next?</Text>
+          <Text style={styles.nextStepsTitle}>{t('paymentSuccessPage.nextSteps.title')}</Text>
           <View style={styles.stepItem}>
             <Text style={styles.stepNumber}>1</Text>
-            <Text style={styles.stepText}>Seller will prepare your order</Text>
+            <Text style={styles.stepText}>{t('paymentSuccessPage.nextSteps.step1')}</Text>
           </View>
           <View style={styles.stepItem}>
             <Text style={styles.stepNumber}>2</Text>
-            <Text style={styles.stepText}>You'll receive shipping notification</Text>
+            <Text style={styles.stepText}>{t('paymentSuccessPage.nextSteps.step2')}</Text>
           </View>
           <View style={styles.stepItem}>
             <Text style={styles.stepNumber}>3</Text>
-            <Text style={styles.stepText}>Track your package delivery</Text>
+            <Text style={styles.stepText}>{t('paymentSuccessPage.nextSteps.step3')}</Text>
           </View>
         </View>
 
         {/* Support Section */}
         <View style={styles.supportCard}>
-          <Text style={styles.supportTitle}>Need Help?</Text>
+          <Text style={styles.supportTitle}>{t('paymentSuccessPage.support.title')}</Text>
           <Text style={styles.supportText}>
-            If you have any questions about your order, please contact our support team.
+            {t('paymentSuccessPage.support.body')}
           </Text>
           <TouchableOpacity style={styles.supportButton}>
-            <Text style={styles.supportButtonText}>Contact Support</Text>
+            <Text style={styles.supportButtonText}>{t('paymentSuccessPage.support.cta')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

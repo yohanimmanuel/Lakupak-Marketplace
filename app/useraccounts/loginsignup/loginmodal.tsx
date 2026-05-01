@@ -269,7 +269,7 @@ export default function LoginModal() {
               >
                 <Text style={{ fontSize: 18, marginRight: 12 }}>🍎</Text>
                 <Text style={{ color: '#111827', fontSize: 16, fontWeight: '500' }}>
-                  Sign up with Apple Id
+                  {t('auth.login.social.apple')}
                 </Text>
               </Pressable>
             </View>

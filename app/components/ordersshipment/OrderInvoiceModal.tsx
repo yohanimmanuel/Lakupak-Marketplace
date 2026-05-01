@@ -51,7 +51,9 @@ async function saveToDeviceAndroidSaf(args: { uri: string; filename: string; mim
 
   const perm = await SAF.requestDirectoryPermissionsAsync();
   if (!perm.granted) {
-    throw new Error('Permission denied. Please allow access to save the file.');
+    const err = new Error('PERMISSION_DENIED');
+    (err as Error & { code?: string }).code = 'PERMISSION_DENIED';
+    throw err;
   }
   const destUri = await SAF.createFileAsync(perm.directoryUri, args.filename, args.mimeType);
   const b64 = await FS.readAsStringAsync(args.uri, { encoding: FileSystem.EncodingType.Base64 });
@@ -304,7 +306,10 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
     try {
       await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
       const uri = await shot.capture();
-      if (!uri) throw new Error('Capture failed');
+      if (!uri) {
+        Alert.alert(t('ordersFlow.invoice.alerts.imageTitle'), t('ordersFlow.invoice.alerts.captureFailedBody'));
+        return;
+      }
       const filename = `invoice_${order.orderId}.png`;
       const namedUri = await ensureNamedCacheFile({ srcUri: uri, filename });
       if (Platform.OS === 'android') {
@@ -342,6 +347,11 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
         }
       }
     } catch (e) {
+      const code = (e as Error & { code?: unknown }).code;
+      if (code === 'PERMISSION_DENIED') {
+        Alert.alert(t('ordersFlow.invoice.alerts.imageTitle'), t('ordersFlow.invoice.alerts.permissionDeniedBody'));
+        return;
+      }
       Alert.alert(t('ordersFlow.invoice.alerts.imageTitle'), e instanceof Error ? e.message : t('ordersFlow.invoice.alerts.imageFailedBody'));
     } finally {
       setBusy(false);

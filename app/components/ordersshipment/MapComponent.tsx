@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text, type ViewStyle } from 'react-native';
 import { MapCoordinates, getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
+import { useTranslation } from 'react-i18next';
 
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
@@ -123,6 +124,7 @@ export default function MapComponent({
   showControls = true,
   onMarkerClick,
 }: MapComponentProps) {
+  const { t } = useTranslation();
   const [mapLoaded, setMapLoaded] = useState(false);
   const cameraRef = useRef<CameraHandle | null>(null);
 
@@ -166,9 +168,9 @@ export default function MapComponent({
     return (
       <View style={[styles.container, { height }, style]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Map unavailable</Text>
+          <Text style={styles.errorText}>{t('map.errors.unavailable')}</Text>
           <Text style={styles.errorSubtext}>
-            Mapbox access token not configured. Please add EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN to your .env file.
+            {t('map.errors.missingToken')}
           </Text>
         </View>
       </View>
@@ -179,8 +181,8 @@ export default function MapComponent({
     return (
       <View style={[styles.container, { height }, style]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Map unavailable</Text>
-          <Text style={styles.errorSubtext}>No coordinates available</Text>
+          <Text style={styles.errorText}>{t('map.errors.unavailable')}</Text>
+          <Text style={styles.errorSubtext}>{t('map.errors.noCoordinates')}</Text>
         </View>
       </View>
     );
@@ -191,13 +193,9 @@ export default function MapComponent({
     return (
       <View style={[styles.container, { height }, style]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Map requires development build</Text>
+          <Text style={styles.errorText}>{t('map.errors.requiresDevBuildTitle')}</Text>
           <Text style={styles.errorSubtext}>
-            @rnmapbox/maps requires native code.{'\n\n'}
-            Run:{'\n'}
-            npx expo run:android{'\n'}
-            or{'\n'}
-            npx expo run:ios
+            {t('map.errors.requiresDevBuildBody')}
           </Text>
         </View>
       </View>
@@ -212,8 +210,8 @@ export default function MapComponent({
     return (
       <View style={[styles.container, { height }, style]}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Map unavailable</Text>
-          <Text style={styles.errorSubtext}>Map components are not available.</Text>
+          <Text style={styles.errorText}>{t('map.errors.unavailable')}</Text>
+          <Text style={styles.errorSubtext}>{t('map.errors.componentsUnavailable')}</Text>
         </View>
       </View>
     );
@@ -270,7 +268,7 @@ export default function MapComponent({
       {!mapLoaded && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0a61d7" />
-          <Text style={styles.loadingText}>Loading map...</Text>
+          <Text style={styles.loadingText}>{t('map.loading')}</Text>
         </View>
       )}
     </View>

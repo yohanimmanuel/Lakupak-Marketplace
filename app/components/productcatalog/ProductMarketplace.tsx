@@ -520,7 +520,7 @@ export default function ProductMarketplace({
     
     return (
       <View style={styles.cardPreferredTag}>
-        <Text style={styles.cardPreferredText}>Preferred</Text>
+        <Text style={styles.cardPreferredText}>{t('product.badges.preferred')}</Text>
       </View>
     );
   };
@@ -531,8 +531,8 @@ export default function ProductMarketplace({
       const shipping = product.shipping as unknown as { leadTimeMinDays?: unknown; leadTimeMaxDays?: unknown } | null | undefined;
       const min = safeGetNumber(shipping?.leadTimeMinDays);
       const max = safeGetNumber(shipping?.leadTimeMaxDays);
-      if (min > 0 && max > 0) return min === max ? `${min} days` : `${min}-${max} days`;
-      if (min > 0) return `${min}+ days`;
+      if (min > 0 && max > 0) return min === max ? t('product.shipping.days', { count: min }) : t('product.shipping.daysRange', { min, max });
+      if (min > 0) return t('product.shipping.daysPlus', { min });
       const infoDays = safeGetString(product.shippingInfo?.days, '').trim();
       return infoDays ? infoDays : null;
     };

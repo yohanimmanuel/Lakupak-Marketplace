@@ -287,7 +287,13 @@ export default function SignUpModal() {
                       await signupStep1(signupData.name.trim(), signupData.email.trim());
                       setSignupStep(2);
                     } catch (error: unknown) {
-                      Alert.alert(t('auth.signup.alerts.failedTitle'), (error instanceof Error ? error.message : t('auth.signup.alerts.genericBody')));
+                      const msg = error instanceof Error ? error.message : '';
+                      // `signupStep1` does local validation and throws an English error; map to i18n.
+                      if (msg === 'Please enter a valid email address.') {
+                        Alert.alert(t('auth.signup.alerts.invalidEmailTitle'), t('auth.signup.alerts.invalidEmailBody'));
+                        return;
+                      }
+                      Alert.alert(t('auth.signup.alerts.failedTitle'), (msg || t('auth.signup.alerts.genericBody')));
                     }
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 24 }}
@@ -460,7 +466,7 @@ export default function SignUpModal() {
                   onPress={() => setSignupStep(4)}
                   style={{ backgroundColor: 'transparent', borderRadius: 12, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: '#e5e7eb', marginBottom: 24 }}
                 >
-                  <Text style={{ color: '#111827', fontSize: 16, fontWeight: '600' }}>Add Phone Number</Text>
+                  <Text style={{ color: '#111827', fontSize: 16, fontWeight: '600' }}>{t('auth.signup.phoneOtp.addPhoneNumber')}</Text>
                 </Pressable> */}
               </View>
             )}
@@ -470,7 +476,7 @@ export default function SignUpModal() {
               <View>
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                    Phone Number
+                    {t('auth.signup.phoneOtp.phoneNumberLabel')}
                   </Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Pressable
@@ -494,7 +500,7 @@ export default function SignUpModal() {
                       <TextInput
                         value={signupData.phone}
                         onChangeText={(text) => setSignupData(prev => ({ ...prev, phone: text }))}
-                        placeholder="Enter phone number"
+                        placeholder={t('auth.signup.phoneOtp.phonePlaceholder')}
                         placeholderTextColor="#9ca3af"
                         style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
                         keyboardType="phone-pad"
@@ -505,7 +511,7 @@ export default function SignUpModal() {
                 <Pressable
                   onPress={async () => {
                     if (!signupData.phone.trim()) {
-                      Alert.alert('Missing Information', 'Please enter your phone number.');
+                      Alert.alert(t('auth.signup.phoneOtp.alerts.missingTitle'), t('auth.signup.phoneOtp.alerts.missingBody'));
                       return;
                     }
                     try {
@@ -515,10 +521,10 @@ export default function SignUpModal() {
                         signupData.countryCode,
                         'sms'
                       );
-                      Alert.alert('OTP Sent', 'Please check your phone for the verification code.');
+                      Alert.alert(t('auth.signup.phoneOtp.alerts.sentTitle'), t('auth.signup.phoneOtp.alerts.sentBody'));
                       // TODO: Add OTP verification step
                     } catch (error: unknown) {
-                      Alert.alert('Failed', (error instanceof Error ? error.message : 'Something went wrong'));
+                      Alert.alert(t('auth.signup.phoneOtp.alerts.failedTitle'), (error instanceof Error ? error.message : t('auth.signup.phoneOtp.alerts.failedBody')));
                     } finally {
                       setIsVerifying(false);
                     }
@@ -526,7 +532,7 @@ export default function SignUpModal() {
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 24 }}
                 >
                   <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>
-                    {isVerifying ? 'Sending...' : 'Send OTP'}
+                    {isVerifying ? t('auth.signup.phoneOtp.sending') : t('auth.signup.phoneOtp.sendOtp')}
                   </Text>
                 </Pressable>
               </View>
@@ -550,7 +556,7 @@ export default function SignUpModal() {
               >
                 <Image source={require('../../../assets/images/google.png')} style={{ width: 18, height: 18, marginRight: 12 }} />
                 <Text style={{ color: '#111827', fontSize: 16, fontWeight: '500' }}>
-                  Sign up with Google
+                  {t('auth.signup.social.google')}
                 </Text>
               </Pressable>
               
@@ -569,7 +575,7 @@ export default function SignUpModal() {
               >
                 <Text style={{ fontSize: 18, marginRight: 12 }}>🍎</Text>
                 <Text style={{ color: '#111827', fontSize: 16, fontWeight: '500' }}>
-                  Sign up with Apple Id
+                  {t('auth.signup.social.apple')}
                 </Text>
               </Pressable>
             </View> */}
@@ -660,12 +666,12 @@ export default function SignUpModal() {
             }}
           >
             <View style={{ paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 10 }}>Select country/region</Text>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 10 }}>{t('auth.signup.countryPicker.title')}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f9fafb', borderRadius: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: '#e5e7eb' }}>
                 <TextInput
                   value={countrySearch}
                   onChangeText={setCountrySearch}
-                  placeholder="Search country or code"
+                  placeholder={t('auth.signup.countryPicker.searchPlaceholder')}
                   placeholderTextColor="#9ca3af"
                   style={{ flex: 1, paddingVertical: 10, fontSize: 14, color: '#111827' }}
                 />

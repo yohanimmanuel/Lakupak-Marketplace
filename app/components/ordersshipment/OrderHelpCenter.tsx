@@ -82,10 +82,10 @@ export default function OrderHelpCenter() {
             <Text style={styles.sectionTitle}>{t('support.orderHelpCenter.sections.statusBasicsTitle')}</Text>
           </View>
           <View style={styles.bulletList}>
-            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Pending / Confirmed</Text> – {t('support.orderHelpCenter.statusBullets.pendingConfirmedDesc')}</Text>
-            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Packed / Shipped</Text> – {t('support.orderHelpCenter.statusBullets.packedShippedDesc')}</Text>
-            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Delivered</Text> – {t('support.orderHelpCenter.statusBullets.deliveredDesc')}</Text>
-            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>Received</Text> – {t('support.orderHelpCenter.statusBullets.receivedDesc')}</Text>
+            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>{t('support.orderHelpCenter.statusBullets.pendingConfirmedTitle')}</Text> – {t('support.orderHelpCenter.statusBullets.pendingConfirmedDesc')}</Text>
+            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>{t('support.orderHelpCenter.statusBullets.packedShippedTitle')}</Text> – {t('support.orderHelpCenter.statusBullets.packedShippedDesc')}</Text>
+            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>{t('support.orderHelpCenter.statusBullets.deliveredTitle')}</Text> – {t('support.orderHelpCenter.statusBullets.deliveredDesc')}</Text>
+            <Text style={styles.bulletItem}>• <Text style={styles.inlineStrong}>{t('support.orderHelpCenter.statusBullets.receivedTitle')}</Text> – {t('support.orderHelpCenter.statusBullets.receivedDesc')}</Text>
           </View>
           <Text style={styles.bodyText}>
             {t('support.orderHelpCenter.sections.statusBasicsNote')}
