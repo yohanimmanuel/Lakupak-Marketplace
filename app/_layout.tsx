@@ -14,6 +14,7 @@ import { useDataStore } from '../stores/dataStore';
 import { useCartStore } from '../stores/cartStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { pushNotificationService } from '../services/pushNotifications';
+import { applyStoredUserPreferences } from '../utils/applyStoredUserPreferences';
 import SuspendedAccountModal from '../components/SuspendedAccountModal';
 import AuthGuard from '../components/AuthGuard';
 
@@ -59,7 +60,8 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { hydrateFromStorage, token, user } = useAuthStore();
+  const { hydrateFromStorage, token, user, hasHydrated } = useAuthStore();
+  const preferenceUserId = user?.id ?? null;
   const { refreshAllData, startAutoRefresh, stopAutoRefresh } = useDataStore();
   const { initializeCart } = useCartStore();
   const { loadUserActivities } = useUserActivityStore();
@@ -124,9 +126,6 @@ function RootLayoutNav() {
       // Hydrate auth state first
       await hydrateFromStorage();
 
-      // Hydrate app-level preferences (e.g., push notifications toggle)
-      await pushNotificationService.hydrateEnabled();
-      
       // Get token and user after hydration
       const currentToken = useAuthStore.getState().token;
       const currentUser = useAuthStore.getState().user;
@@ -145,6 +144,11 @@ function RootLayoutNav() {
     
     initializeApp();
   }, [hydrateFromStorage, refreshAllData, initializeCart, startAutoRefresh, loadUserActivities]);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
+    void applyStoredUserPreferences(preferenceUserId);
+  }, [hasHydrated, preferenceUserId]);
 
   // Handle app state changes to pause/resume auto-refresh
   useEffect(() => {

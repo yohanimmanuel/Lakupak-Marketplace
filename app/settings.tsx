@@ -6,13 +6,14 @@ import { Stack, Link, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
-import { getPreferredLanguage } from '../utils/preferences';
+import { getPreferredLanguage, getLanguageForPublicOrGuestSession } from '../utils/preferences';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
   const logout = useAuthStore(s => s.logout);
+  const preferenceUserId = useAuthStore((s) => (s.user?.id != null ? s.user.id : null));
   const { t } = useTranslation();
 
   const [currentLanguage, setCurrentLanguage] = useState<'id' | 'en'>('id');
@@ -21,7 +22,10 @@ export default function SettingsScreen() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const prefLang = await getPreferredLanguage();
+      const prefLang =
+        preferenceUserId != null
+          ? await getPreferredLanguage(preferenceUserId)
+          : await getLanguageForPublicOrGuestSession();
       if (!alive) return;
       if (prefLang) setCurrentLanguage(prefLang);
       else setCurrentLanguage(i18n.language === 'en' ? 'en' : 'id');
@@ -30,7 +34,7 @@ export default function SettingsScreen() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [preferenceUserId]);
 
   // Keep the displayed language in sync when user switches languages on the language settings page.
   useEffect(() => {

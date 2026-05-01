@@ -2,7 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import id from './locales/id.json';
 import en from './locales/en.json';
-import { getPreferredLanguage } from '../utils/preferences';
+import { getLanguageForPublicOrGuestSession } from '../utils/preferences';
 
 export const SUPPORTED_LANGUAGES = ['id', 'en'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
@@ -27,7 +27,7 @@ if (!i18n.isInitialized) {
     })
     .then(async () => {
       // Indonesian-first: default is `id`, but allow explicit user preference to override.
-      const preferred = await getPreferredLanguage();
+      const preferred = await getLanguageForPublicOrGuestSession();
       if (preferred) {
         await i18n.changeLanguage(preferred);
         return;

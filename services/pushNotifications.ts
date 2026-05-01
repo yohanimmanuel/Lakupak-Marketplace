@@ -51,17 +51,38 @@ class PushNotificationService {
   private lastPlatformAnnouncementShown: { announcementId: string; at: number } | null = null;
   private static readonly PLATFORM_ANNOUNCEMENT_DEDUP_MS = 8000;
   private enabled: boolean | null = null;
+  /** Push toggle is read from storage per logged-in user (or guest when logged out). */
+  private preferenceUserId: number | null = null;
+  /** Monotonic token so stale async hydrations can't overwrite a newer scope/value. */
+  private enabledHydrationToken = 0;
+
+  setPreferenceUserScope(userId: number | null): void {
+    if (this.preferenceUserId !== userId) {
+      this.preferenceUserId = userId;
+      this.enabled = null;
+      this.enabledHydrationToken++;
+    }
+  }
 
   async hydrateEnabled(): Promise<boolean> {
     if (this.enabled != null) return this.enabled;
-    const v = await getPushNotificationsEnabled();
+    const requestToken = ++this.enabledHydrationToken;
+    const userIdAtStart = this.preferenceUserId;
+    const v = await getPushNotificationsEnabled(userIdAtStart);
+
+    // If scope changed, a new hydration started, or a value was set explicitly, discard stale result.
+    if (this.enabledHydrationToken !== requestToken || this.preferenceUserId !== userIdAtStart || this.enabled != null) {
+      return this.enabled ?? v;
+    }
+
     this.enabled = v;
-    return v;
+    return this.enabled;
   }
 
   async setEnabled(enabled: boolean): Promise<void> {
+    const targetUserId = this.preferenceUserId;
     this.enabled = enabled;
-    await setPushNotificationsEnabled(enabled);
+    await setPushNotificationsEnabled(enabled, targetUserId);
   }
 
   isEnabledSync(): boolean {

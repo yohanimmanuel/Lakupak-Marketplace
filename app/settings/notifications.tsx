@@ -6,12 +6,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { getPushNotificationsEnabled } from '../../utils/preferences';
 import { pushNotificationService } from '../../services/pushNotifications';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function NotificationSettingsPage() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
   const { t } = useTranslation();
+  const preferenceUserId = useAuthStore((s) => (s.user?.id != null ? s.user.id : null));
 
   const [pushEnabled, setPushEnabled] = useState(true);
   const [hydrated, setHydrated] = useState(false);
@@ -19,7 +21,8 @@ export default function NotificationSettingsPage() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const enabled = await getPushNotificationsEnabled();
+      pushNotificationService.setPreferenceUserScope(preferenceUserId);
+      const enabled = await getPushNotificationsEnabled(preferenceUserId);
       if (!alive) return;
       setPushEnabled(enabled);
       setHydrated(true);
@@ -27,7 +30,7 @@ export default function NotificationSettingsPage() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [preferenceUserId]);
 
   const headerTitle = useMemo(() => t('settings.rows.notificationSettings'), [t]);
 

@@ -5,33 +5,42 @@ import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
-import { getPreferredLanguage, setPreferredLanguage } from '../../utils/preferences';
+import {
+  getPreferredLanguage,
+  getLanguageForPublicOrGuestSession,
+  setPreferredLanguage,
+} from '../../utils/preferences';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function LanguageSettingsPage() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
   const { t } = useTranslation();
+  const preferenceUserId = useAuthStore((s) => (s.user?.id != null ? s.user.id : null));
 
   const [currentLanguage, setCurrentLanguage] = useState<'id' | 'en'>(i18n.language === 'en' ? 'en' : 'id');
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      const pref = await getPreferredLanguage();
+      const pref =
+        preferenceUserId != null
+          ? await getPreferredLanguage(preferenceUserId)
+          : await getLanguageForPublicOrGuestSession();
       if (!alive) return;
       if (pref) setCurrentLanguage(pref);
     })();
     return () => {
       alive = false;
     };
-  }, []);
+  }, [preferenceUserId]);
 
   const headerTitle = useMemo(() => t('settings.rows.languageSettings'), [t]);
 
   const selectLanguage = async (lang: 'id' | 'en') => {
     setCurrentLanguage(lang);
-    await setPreferredLanguage(lang);
+    await setPreferredLanguage(lang, preferenceUserId);
     await i18n.changeLanguage(lang);
   };
 
