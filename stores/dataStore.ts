@@ -487,7 +487,15 @@ export const useDataStore = create<DataState>()(
                   const orderId = data?.orderId as string
                   const orderStatus = data?.orderStatus as string
                   if (orderId && orderStatus) {
-                    pushNotificationService.showOrderNotificationInApp(orderId, orderStatus)
+                    // Forward the server-supplied title/body so non-status events
+                    // (e.g. return/refund submitted) don't fall through to the generic
+                    // status copy in `getBuyerOrderNotificationStrings`.
+                    pushNotificationService.showOrderNotificationInApp(
+                      orderId,
+                      orderStatus,
+                      title || undefined,
+                      body || undefined,
+                    )
                   }
                 } else {
                   const base =

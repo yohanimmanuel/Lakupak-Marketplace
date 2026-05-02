@@ -509,6 +509,8 @@
       "orderShippedBody": "Kabar baik! Pesanan {{orderId}} sudah dikirim dan sedang dalam perjalanan.",
       "returnSubmittedTitle": "Pengajuan retur terkirim",
       "returnSubmittedBody": "Pengajuan retur untuk pesanan {{orderId}} telah dikirim. Kami akan memprosesnya dan menghubungi Anda jika diperlukan.",
+      "returnRejectedTitle": "Pengajuan retur ditolak",
+      "returnRejectedBody": "Pengajuan retur untuk pesanan {{orderId}} ditolak oleh distributor.",
       "orderDeliveredTitle": "Pesanan terkirim",
       "orderDeliveredBody": "Pesanan {{orderId}} telah berhasil terkirim.",
       "orderReceivedTitle": "Pesanan diterima",

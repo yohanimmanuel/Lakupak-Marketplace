@@ -247,7 +247,15 @@ function RootLayoutNav() {
       const content = notification.request.content;
       const data = content.data as { type?: string; orderId?: string; orderStatus?: string; paymentStatus?: string } | undefined;
       if (data?.type === 'order' && data?.orderId) {
-        pushNotificationService.showOrderNotificationInApp(String(data.orderId), data.orderStatus ?? '');
+        // Forward the server-supplied title/body so non-status pushes (e.g. return-refund
+        // submitted) don't get re-derived to the generic "Order <Status>" copy from
+        // `getBuyerOrderNotificationStrings`, which only knows order-status transitions.
+        pushNotificationService.showOrderNotificationInApp(
+          String(data.orderId),
+          data.orderStatus ?? '',
+          content.title ?? undefined,
+          content.body ?? undefined,
+        );
         return;
       }
 

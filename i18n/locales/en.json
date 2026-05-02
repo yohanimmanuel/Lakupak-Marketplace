@@ -509,6 +509,8 @@
       "orderShippedBody": "Exciting news! Your order {{orderId}} has been shipped and is now on its way to you.",
       "returnSubmittedTitle": "Return Request Submitted",
       "returnSubmittedBody": "Your return request for order {{orderId}} has been submitted. We will process it and contact you if needed.",
+      "returnRejectedTitle": "Return Request Declined",
+      "returnRejectedBody": "Your return request for order {{orderId}} was declined by the distributor.",
       "orderDeliveredTitle": "Order Delivered",
       "orderDeliveredBody": "Your order {{orderId}} has been successfully delivered!",
       "orderReceivedTitle": "Order Received",

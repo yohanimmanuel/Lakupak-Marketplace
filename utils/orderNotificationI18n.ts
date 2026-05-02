@@ -100,6 +100,17 @@ export function getOrderPreviewStrings(order: OrderPreviewInput, t: TFunction): 
     };
   }
 
+  if (
+    (order.orderStatus === 'Delivered' || order.orderStatus === 'Received') &&
+    Array.isArray(order.returnRequests) &&
+    order.returnRequests.some((rr) => rr.status === 'Rejected')
+  ) {
+    return {
+      title: t('orderUpdates.status.returnRejectedTitle'),
+      message: t('orderUpdates.status.returnRejectedBody', { orderId }),
+    };
+  }
+
   const status = order.orderStatus ?? '';
   switch (status) {
     case 'Confirmed':

@@ -312,7 +312,7 @@ class PushNotificationService {
   }
 
   // Dedup: avoid showing the same order notification twice when multiple channels deliver (push/WebSocket/realtime)
-  private lastOrderNotificationShown: { orderId: string; orderStatus: string; at: number } | null = null;
+  private lastOrderNotificationShown: { orderId: string; orderStatus: string; titleKey: string; at: number } | null = null;
   private static readonly ORDER_NOTIFICATION_DEDUP_MS = 5000;
 
   /**
@@ -335,18 +335,6 @@ class PushNotificationService {
     customTitle?: string,
     customMessage?: string,
   ): Promise<void> {
-    const now = Date.now();
-    const statusKey = (orderStatus || 'unknown').toLowerCase();
-    if (
-      this.lastOrderNotificationShown &&
-      this.lastOrderNotificationShown.orderId === orderId &&
-      this.lastOrderNotificationShown.orderStatus === statusKey &&
-      now - this.lastOrderNotificationShown.at < PushNotificationService.ORDER_NOTIFICATION_DEDUP_MS
-    ) {
-      return;
-    }
-    this.lastOrderNotificationShown = { orderId, orderStatus: statusKey, at: now };
-
     const { title, body } =
       customTitle != null &&
       customTitle !== '' &&
@@ -354,6 +342,22 @@ class PushNotificationService {
       customMessage !== ''
         ? { title: customTitle, body: customMessage }
         : getBuyerOrderNotificationStrings(orderId, orderStatus);
+
+    // Dedup includes the title so non-status events (e.g. return/refund submitted) aren't
+    // suppressed by a recent status banner sharing the same `(orderId, orderStatus)` pair.
+    const now = Date.now();
+    const statusKey = (orderStatus || 'unknown').toLowerCase();
+    const titleKey = title || '';
+    if (
+      this.lastOrderNotificationShown &&
+      this.lastOrderNotificationShown.orderId === orderId &&
+      this.lastOrderNotificationShown.orderStatus === statusKey &&
+      this.lastOrderNotificationShown.titleKey === titleKey &&
+      now - this.lastOrderNotificationShown.at < PushNotificationService.ORDER_NOTIFICATION_DEDUP_MS
+    ) {
+      return;
+    }
+    this.lastOrderNotificationShown = { orderId, orderStatus: statusKey, titleKey, at: now };
 
     await this.scheduleLocalNotification(title, body, {
       type: 'order',
