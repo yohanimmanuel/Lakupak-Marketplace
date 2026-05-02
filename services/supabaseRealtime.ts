@@ -2,6 +2,7 @@ import { createClient, RealtimeChannel, SupabaseClient } from '@supabase/supabas
 import { pushNotificationService } from './pushNotifications';
 import { NotificationService } from './notificationService';
 import { useAuthStore } from '../stores/authStore';
+import { getBuyerOrderNotificationStrings } from '../utils/orderNotificationI18n';
 
 // Supabase configuration
 // You need to add these to your .env file:
@@ -157,96 +158,17 @@ class SupabaseRealtimeService {
   // Show notification for order status change
   private async showOrderNotification(order: OrderChange): Promise<void> {
     const { orderId, orderStatus } = order;
-
-    let title = 'Order Update';
-    let body = `Your order #${orderId} status has been updated.`;
-
-    switch (orderStatus) {
-      case 'Confirmed':
-        title = 'Order Confirmed';
-        body = `Great news! Your order #${orderId} has been confirmed and is being processed.`;
-        break;
-      case 'Packed':
-        title = 'Order Packed';
-        body = `Your order #${orderId} has been packed and is ready for shipping.`;
-        break;
-      case 'Shipped':
-        title = 'Order Shipped';
-        body = `Your order #${orderId} is on its way! Track your delivery for updates.`;
-        break;
-      case 'Delivered':
-        title = 'Order Delivered';
-        body = `Your order #${orderId} has been delivered. Enjoy your purchase!`;
-        break;
-      case 'Received':
-        title = 'Order Received';
-        body = `Your order #${orderId} has been marked as received. Thank you for confirming!`;
-        break;
-      case 'Cancelled':
-        title = 'Order Cancelled';
-        body = `Your order #${orderId} has been cancelled.`;
-        break;
-      case 'Returned':
-        title = 'Order Returned';
-        body = `Your order #${orderId} return has been processed.`;
-        break;
-      case 'Failed':
-        title = 'Delivery Failed';
-        body = `We're sorry. Delivery of your order #${orderId} could not be completed. Please contact support.`;
-        break;
-    }
-
-    // Show local notification (phone notification tray)
-    await pushNotificationService.showOrderNotification(orderId, orderStatus, title, body);
+    await pushNotificationService.showOrderNotification(orderId, orderStatus);
   }
 
   // Add to in-app notification list (NotificationService stores in AsyncStorage)
   private async addToNotificationList(order: OrderChange): Promise<void> {
     const { orderId, orderStatus } = order;
+    const { title, body } = getBuyerOrderNotificationStrings(orderId, orderStatus);
 
-    let title = 'Order Update';
-    let body = `Your order #${orderId} status has been updated.`;
-
-    switch (orderStatus) {
-      case 'Confirmed':
-        title = 'Order Confirmed';
-        body = `Great news! Your order #${orderId} has been confirmed and is being processed.`;
-        break;
-      case 'Packed':
-        title = 'Order Packed';
-        body = `Your order #${orderId} has been packed and is ready for shipping.`;
-        break;
-      case 'Shipped':
-        title = 'Order Shipped';
-        body = `Your order #${orderId} is on its way! Track your delivery for updates.`;
-        break;
-      case 'Delivered':
-        title = 'Order Delivered';
-        body = `Your order #${orderId} has been delivered. Enjoy your purchase!`;
-        break;
-      case 'Received':
-        title = 'Order Received';
-        body = `Your order #${orderId} has been marked as received. Thank you for confirming!`;
-        break;
-      case 'Cancelled':
-        title = 'Order Cancelled';
-        body = `Your order #${orderId} has been cancelled.`;
-        break;
-      case 'Returned':
-        title = 'Order Returned';
-        body = `Your order #${orderId} return has been processed.`;
-        break;
-      case 'Failed':
-        title = 'Delivery Failed';
-        body = `We're sorry. Delivery of your order #${orderId} could not be completed. Please contact support.`;
-        break;
-    }
-
-    // Get current user ID for storing notification per-user
     const authState = useAuthStore.getState();
     const userId = authState.user?.id ?? null;
 
-    // Add to in-app notification list
     await NotificationService.createOrderNotifications(orderId, 1, undefined, userId, title, body);
   }
 

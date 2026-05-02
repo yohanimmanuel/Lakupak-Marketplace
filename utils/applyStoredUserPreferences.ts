@@ -6,6 +6,7 @@ import {
   syncAppliedLanguageForDevice,
 } from './preferences';
 import { pushNotificationService } from '../services/pushNotifications';
+import { useAuthStore } from '../stores/authStore';
 
 /**
  * Apply persisted language + push-notification preference scope for the active account (or guest).
@@ -17,11 +18,22 @@ export async function applyStoredUserPreferences(userId: number | null): Promise
   }
 
   pushNotificationService.setPreferenceUserScope(userId);
-  await pushNotificationService.hydrateEnabled();
+  await pushNotificationService.hydrateAllCategoryPreferences();
 
   const preferred =
     userId != null ? await getPreferredLanguage(userId) : await getLanguageForPublicOrGuestSession();
   const lng = preferred ?? 'id';
   await syncAppliedLanguageForDevice(lng);
   await i18n.changeLanguage(lng);
+
+  if (userId != null) {
+    const authToken = useAuthStore.getState().token;
+    if (authToken) {
+      try {
+        await pushNotificationService.setMarketplaceUserPushLanguage(authToken, lng);
+      } catch {
+        // best-effort — _layout registration will retry
+      }
+    }
+  }
 }

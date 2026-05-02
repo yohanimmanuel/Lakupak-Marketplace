@@ -15,10 +15,14 @@ import { useCartStore } from '../stores/cartStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { pushNotificationService } from '../services/pushNotifications';
 import { applyStoredUserPreferences } from '../utils/applyStoredUserPreferences';
+import { getPreferredLanguage, getLanguageForPublicOrGuestSession } from '../utils/preferences';
 import SuspendedAccountModal from '../components/SuspendedAccountModal';
 import AuthGuard from '../components/AuthGuard';
 
-import '../i18n';
+import i18n from '../i18n';
+
+/** Avoid re-POSTing the same Expo token unless it rotates (foreground retries). */
+let lastSentMarketplacePushToken: string | null = null;
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -169,9 +173,17 @@ function RootLayoutNav() {
         // Retry push registration if we still don't have a token (e.g. first run failed, permission granted later, FCM later available)
         if (currentUser?.id && currentToken && !pushNotificationService.getPushToken()) {
           try {
+            const storedLang = await getPreferredLanguage(currentUser.id);
+            const language = storedLang ?? 'id';
             const pushToken = await pushNotificationService.registerForPushNotifications();
             if (pushToken) {
-              await pushNotificationService.savePushTokenToServer(currentUser.id, pushToken, currentToken);
+              await pushNotificationService.savePushTokenToServer(
+                currentUser.id,
+                pushToken,
+                currentToken,
+                language,
+              );
+              await pushNotificationService.setMarketplaceUserPushLanguage(currentToken, language);
             }
           } catch {
             // Silently handle errors - will retry on next foreground
@@ -203,12 +215,24 @@ function RootLayoutNav() {
   // Initialize push notifications
   useEffect(() => {
     const initializePushNotifications = async () => {
-      // Register for push notifications
+      const uid = user?.id ?? null;
+      const stored =
+        uid != null ? await getPreferredLanguage(uid) : await getLanguageForPublicOrGuestSession();
+      const language = stored ?? 'id';
+
       const pushToken = await pushNotificationService.registerForPushNotifications();
-      
-      // Save token to server if user is logged in (auth required by API)
-      if (pushToken && user?.id && token) {
-        await pushNotificationService.savePushTokenToServer(user.id, pushToken, token);
+
+      if (pushToken && user?.id && token && pushToken !== lastSentMarketplacePushToken) {
+        const saved = await pushNotificationService.savePushTokenToServer(
+          user.id,
+          pushToken,
+          token,
+          language,
+        );
+        if (saved) lastSentMarketplacePushToken = pushToken;
+      }
+      if (token && user?.id) {
+        await pushNotificationService.setMarketplaceUserPushLanguage(token, language);
       }
     };
 
@@ -223,19 +247,14 @@ function RootLayoutNav() {
       const content = notification.request.content;
       const data = content.data as { type?: string; orderId?: string; orderStatus?: string; paymentStatus?: string } | undefined;
       if (data?.type === 'order' && data?.orderId) {
-        pushNotificationService.showOrderNotificationInApp(
-          String(data.orderId),
-          data.orderStatus ?? '',
-          content.title ?? undefined,
-          content.body ?? undefined
-        );
+        pushNotificationService.showOrderNotificationInApp(String(data.orderId), data.orderStatus ?? '');
         return;
       }
 
       // Payment notifications (e.g. "Your payment has been confirmed") should also show in foreground.
       if (data?.type === 'payment') {
         void pushNotificationService.scheduleLocalNotification(
-          content.title ?? 'Payment Update',
+          content.title ?? i18n.t('orderUpdates.payment.foregroundBannerTitle'),
           content.body ?? '',
           data as Record<string, unknown>,
           'orders'

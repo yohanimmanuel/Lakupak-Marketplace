@@ -35,7 +35,8 @@ export default function LatestUpdateDetailScreen() {
   const [err, setErr] = useState<string | null>(null);
 
   const id = Number(idParam);
-  const validId = Number.isInteger(id) && id > 0;
+  /** Positive = platform announcement; negative = homepage offer (see Dashboard latest-updates API). */
+  const validId = Number.isInteger(id) && id !== 0;
 
   useEffect(() => {
     if (!validId) {

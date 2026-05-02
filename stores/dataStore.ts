@@ -447,10 +447,16 @@ export const useDataStore = create<DataState>()(
               if (AppState.currentState !== 'active') {
                 const preview =
                   a.body && a.body.length > 120 ? `${a.body.slice(0, 117)}…` : (a.body ?? '')
-                pushNotificationService.scheduleLocalNotification(
+                const cat = (a.category ?? '').trim().toLowerCase()
+                const isPromotion = cat === 'promotion' || cat === 'promotions'
+                void pushNotificationService.scheduleLocalNotification(
                   a.title,
                   preview || a.title || 'New update from Laku',
-                  { type: 'platform_announcement', announcementId: String(a.id) }
+                  {
+                    type: isPromotion ? 'promotion' : 'platform_announcement',
+                    announcementId: String(a.id),
+                  },
+                  isPromotion ? 'promotions' : 'system',
                 )
               }
             }
@@ -478,14 +484,25 @@ export const useDataStore = create<DataState>()(
 
               if (!targetUserId || targetUserId === currentUserId) {
                 if (type === 'order') {
-                  // Show one in-app notification (same content as push); dedup with push-received in foreground
                   const orderId = data?.orderId as string
                   const orderStatus = data?.orderStatus as string
                   if (orderId && orderStatus) {
-                    pushNotificationService.showOrderNotificationInApp(orderId, orderStatus, title, body)
+                    pushNotificationService.showOrderNotificationInApp(orderId, orderStatus)
                   }
                 } else {
-                  pushNotificationService.scheduleLocalNotification(title, body, data as Record<string, unknown>)
+                  const base =
+                    data && typeof data === 'object' ? { ...(data as Record<string, unknown>) } : {};
+                  const merged: Record<string, unknown> = {
+                    ...base,
+                    ...(typeof type === 'string' ? { type } : {}),
+                  };
+                  const channelId =
+                    merged.type === 'promotion'
+                      ? 'promotions'
+                      : merged.type === 'platform_announcement' || merged.type === 'system'
+                        ? 'system'
+                        : 'orders';
+                  void pushNotificationService.scheduleLocalNotification(title, body, merged, channelId)
                 }
               }
             }

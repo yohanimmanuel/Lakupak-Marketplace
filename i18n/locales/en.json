@@ -7,7 +7,9 @@
     "save": "Save",
     "edit": "Edit",
     "cancel": "Cancel",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "a11ySelected": "Selected",
+    "a11yNotSelected": "Not selected"
   },
   "tabs": {
     "home": "Home",
@@ -101,9 +103,32 @@
       },
       "notifications": {
         "title": "Notifications",
-        "push": {
+        "master": {
           "label": "Push notifications",
-          "description": "Enable to receive order updates & important info"
+          "description": "Turn off to stop all notifications from the app."
+        },
+        "groups": {
+          "updates": "Updates",
+          "promotions": "Promotions"
+        },
+        "sections": {
+          "orders": "Orders",
+          "latestUpdates": "Latest updates",
+          "promotions": "Promotions"
+        },
+        "categories": {
+          "orders": {
+            "label": "Orders",
+            "description": "Latest updates on order status, payments, and shipping"
+          },
+          "latestUpdates": {
+            "label": "Latest updates",
+            "description": "Announcements and news from Laku"
+          },
+          "promotions": {
+            "label": "Promotions",
+            "description": "Vouchers, campaigns, and promotional messages"
+          }
         },
         "systemNote": "Note: You may still receive notifications from your device system settings."
       }
@@ -465,6 +490,9 @@
     "states": {
       "signIn": "Sign in to see your order notifications.",
       "empty": "No order updates yet."
+    },
+    "payment": {
+      "foregroundBannerTitle": "Payment update"
     },
     "status": {
       "orderPlacedTitle": "Order Placed",

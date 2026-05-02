@@ -32,6 +32,7 @@ import { useDataStore } from '../../stores/dataStore';
 import { usePlatformAnnouncementsRealtimeStore } from '../../stores/platformAnnouncementsRealtimeStore';
 import { OrderUpdateRow } from '../components/notifications/OrderUpdateRow';
 import { useTranslation } from 'react-i18next';
+import { getOrderPreviewStrings } from '../../utils/orderNotificationI18n';
 
 const MISSING_ORDER_TIMESTAMP_FALLBACK = '1970-01-01T00:00:00.000Z';
 const warnedOrderIds = new Set<string>();
@@ -71,7 +72,8 @@ function formatAnnouncementTime(iso: string | null, fallbackIso: string) {
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const orderPreviewLocale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
   const token = useAuthStore((s) => s.token);
   const authUser = useAuthStore((s) => s.user);
   const hydrate = useAuthStore((s) => s.hydrateFromStorage);
@@ -224,44 +226,15 @@ export default function NotificationsScreen() {
     setOrderNotifications((prev) => {
       const previousMap = new Map(prev.map((notification) => [notification.id, notification]));
       const derived = validOrders.map((order) => {
-        let title = 'Order Placed';
-        let message = `Your order ${order.orderId} has been placed.`;
-
-        if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
-          title = 'Payment Required';
-          message = `Your order ${order.orderId} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.`;
-        } else if (order.orderStatus === 'Confirmed') {
-          title = 'Order Confirmed';
-          message = `Excellent! Your order ${order.orderId} has been confirmed by our distributor and is now being processed.`;
-        } else if (order.orderStatus === 'Packed') {
-          title = 'Order Packed';
-          message = `Fantastic! Your order ${order.orderId} has been carefully packed and is ready for shipment.`;
-        } else if (order.orderStatus === 'Shipped') {
-          title = 'Order Shipped';
-          message = `Exciting news! Your order ${order.orderId} has been shipped and is now on its way to you.`;
-        } else if (
-          (order.orderStatus === 'Delivered' || order.orderStatus === 'Received') &&
-          Array.isArray(order.returnRequests) &&
-          order.returnRequests.some((rr: { status: string }) => rr.status === 'Pending')
-        ) {
-          title = 'Return Request Submitted';
-          message = `Your return request for order ${order.orderId} has been submitted. We will process it and contact you if needed.`;
-        } else if (order.orderStatus === 'Delivered') {
-          title = 'Order Delivered';
-          message = `🎉 Congratulations! Your order ${order.orderId} has been successfully delivered!`;
-        } else if (order.orderStatus === 'Received') {
-          title = 'Order Received';
-          message = `Thank you! You marked order ${order.orderId} as received. We hope you enjoy your purchase!`;
-        } else if (order.orderStatus === 'Cancelled') {
-          title = 'Order Cancelled';
-          message = `We regret to inform you that your order ${order.orderId} has been cancelled.`;
-        } else if (order.orderStatus === 'Returned') {
-          title = 'Order Returned';
-          message = `Your order ${order.orderId} has been returned to us.`;
-        } else if (order.orderStatus === 'Failed') {
-          title = 'Delivery Failed';
-          message = `We're sorry. Delivery of your order ${order.orderId} could not be completed. Please contact support.`;
-        }
+        const { title, message } = getOrderPreviewStrings(
+          {
+            orderId: order.orderId,
+            orderStatus: order.orderStatus,
+            paymentStatus: order.paymentStatus,
+            returnRequests: order.returnRequests,
+          },
+          t,
+        );
 
         let timestampSource = order.createdAt || order.orderDate;
         if (!timestampSource) {
@@ -282,7 +255,7 @@ export default function NotificationsScreen() {
           title,
           message,
           timestamp: new Date(timestampSource)
-            .toLocaleString('en-US', {
+            .toLocaleString(orderPreviewLocale, {
               day: '2-digit',
               month: '2-digit',
               year: 'numeric',
@@ -300,7 +273,7 @@ export default function NotificationsScreen() {
 
       return derived;
     });
-  }, [orders, authUser?.id]);
+  }, [orders, authUser?.id, t, orderPreviewLocale]);
 
   const markAsRead = async (notificationId: string) => {
     try {

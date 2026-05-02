@@ -11,6 +11,17 @@ import {
   setPreferredLanguage,
 } from '../../utils/preferences';
 import { useAuthStore } from '../../stores/authStore';
+import { pushNotificationService } from '../../services/pushNotifications';
+
+function tryGetUpdates(): { reloadAsync: () => Promise<void> } | null {
+  try {
+    const mod = require('expo-updates') as { reloadAsync?: () => Promise<void> };
+    if (typeof mod.reloadAsync !== 'function') return null;
+    return { reloadAsync: mod.reloadAsync };
+  } catch {
+    return null;
+  }
+}
 
 export default function LanguageSettingsPage() {
   const router = useRouter();
@@ -18,8 +29,10 @@ export default function LanguageSettingsPage() {
   const primaryBlue = '#0a61d7';
   const { t } = useTranslation();
   const preferenceUserId = useAuthStore((s) => (s.user?.id != null ? s.user.id : null));
+  const authToken = useAuthStore((s) => s.token);
 
   const [currentLanguage, setCurrentLanguage] = useState<'id' | 'en'>(i18n.language === 'en' ? 'en' : 'id');
+  const [isApplying, setIsApplying] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -39,9 +52,37 @@ export default function LanguageSettingsPage() {
   const headerTitle = useMemo(() => t('settings.rows.languageSettings'), [t]);
 
   const selectLanguage = async (lang: 'id' | 'en') => {
+    if (isApplying || lang === currentLanguage) {
+      setCurrentLanguage(lang);
+      return;
+    }
+    setIsApplying(true);
     setCurrentLanguage(lang);
-    await setPreferredLanguage(lang, preferenceUserId);
-    await i18n.changeLanguage(lang);
+    try {
+      await setPreferredLanguage(lang, preferenceUserId);
+      await i18n.changeLanguage(lang);
+
+      if (authToken) {
+        try {
+          await pushNotificationService.setMarketplaceUserPushLanguage(authToken, lang);
+        } catch {
+          // best-effort
+        }
+      }
+
+      const updates = tryGetUpdates();
+      if (updates) {
+        try {
+          await updates.reloadAsync();
+          return;
+        } catch {
+          // fall through
+        }
+      }
+      router.replace('/(tabs)/home');
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   const Option = ({ lang }: { lang: 'id' | 'en' }) => {
@@ -52,7 +93,10 @@ export default function LanguageSettingsPage() {
         <View style={{ flex: 1 }}>
           <Text style={styles.rowTitle}>{label}</Text>
         </View>
-        <Text style={[styles.check, { opacity: active ? 1 : 0 }]} accessibilityLabel={active ? 'selected' : 'not-selected'}>
+        <Text
+          style={[styles.check, { opacity: active ? 1 : 0 }]}
+          accessibilityLabel={active ? t('common.a11ySelected') : t('common.a11yNotSelected')}
+        >
           ✓
         </Text>
       </Pressable>

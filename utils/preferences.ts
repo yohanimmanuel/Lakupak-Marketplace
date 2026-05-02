@@ -9,7 +9,23 @@ const LEGACY = {
 const v2 = {
   language: (scope: string) => `laku.preferences.v2.language.${scope}`,
   pushEnabled: (scope: string) => `laku.preferences.v2.pushEnabled.${scope}`,
+  pushOrders: (scope: string) => `laku.preferences.v2.pushOrders.${scope}`,
+  pushLatestUpdates: (scope: string) => `laku.preferences.v2.pushLatestUpdates.${scope}`,
+  pushPromotions: (scope: string) => `laku.preferences.v2.pushPromotions.${scope}`,
 } as const;
+
+export type PushNotificationCategory = 'orders' | 'latestUpdates' | 'promotions';
+
+function pushCategoryKey(scope: string, category: PushNotificationCategory): string {
+  switch (category) {
+    case 'orders':
+      return v2.pushOrders(scope);
+    case 'latestUpdates':
+      return v2.pushLatestUpdates(scope);
+    case 'promotions':
+      return v2.pushPromotions(scope);
+  }
+}
 
 /** Last language applied in the app (settings or resolved account). Used for welcome/login/signup when logged out. */
 const LANGUAGE_MOST_RECENT = 'laku.preferences.v2.language.mostRecent';
@@ -120,6 +136,66 @@ export async function setPushNotificationsEnabled(enabled: boolean, userId: numb
   }
 }
 
+async function getPushCategoryStored(
+  userId: number | null,
+  category: PushNotificationCategory,
+): Promise<boolean | null> {
+  try {
+    const scope = preferenceScopeFromUserId(userId);
+    const v = await AsyncStorage.getItem(pushCategoryKey(scope, category));
+    if (v === 'true' || v === 'false') return v === 'true';
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Per-category toggle; falls back to legacy single `pushEnabled` when unset. */
+export async function getPushOrdersEnabled(userId: number | null = null): Promise<boolean> {
+  const stored = await getPushCategoryStored(userId, 'orders');
+  if (stored != null) return stored;
+  return getPushNotificationsEnabled(userId);
+}
+
+export async function getPushLatestUpdatesEnabled(userId: number | null = null): Promise<boolean> {
+  const stored = await getPushCategoryStored(userId, 'latestUpdates');
+  if (stored != null) return stored;
+  return getPushNotificationsEnabled(userId);
+}
+
+export async function getPushPromotionsEnabled(userId: number | null = null): Promise<boolean> {
+  const stored = await getPushCategoryStored(userId, 'promotions');
+  if (stored != null) return stored;
+  return getPushNotificationsEnabled(userId);
+}
+
+export async function setPushOrdersEnabled(enabled: boolean, userId: number | null = null): Promise<void> {
+  try {
+    const scope = preferenceScopeFromUserId(userId);
+    await AsyncStorage.setItem(pushCategoryKey(scope, 'orders'), enabled ? 'true' : 'false');
+  } catch {
+    // ignore
+  }
+}
+
+export async function setPushLatestUpdatesEnabled(enabled: boolean, userId: number | null = null): Promise<void> {
+  try {
+    const scope = preferenceScopeFromUserId(userId);
+    await AsyncStorage.setItem(pushCategoryKey(scope, 'latestUpdates'), enabled ? 'true' : 'false');
+  } catch {
+    // ignore
+  }
+}
+
+export async function setPushPromotionsEnabled(enabled: boolean, userId: number | null = null): Promise<void> {
+  try {
+    const scope = preferenceScopeFromUserId(userId);
+    await AsyncStorage.setItem(pushCategoryKey(scope, 'promotions'), enabled ? 'true' : 'false');
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * When a user signs in and has no saved prefs yet, copy explicit guest prefs so the account matches what they saw while logged out.
  */
@@ -138,6 +214,23 @@ export async function seedFirstLoginPreferencesFromGuest(userId: number): Promis
       const guestStored = await getPushNotificationsStored(null);
       if (guestStored != null) {
         await setPushNotificationsEnabled(guestStored, userId);
+      }
+    }
+
+    const categories: PushNotificationCategory[] = ['orders', 'latestUpdates', 'promotions'];
+    const guestLegacy = await getPushNotificationsStored(null);
+    for (const cat of categories) {
+      const userCat = await getPushCategoryStored(userId, cat);
+      if (userCat != null) continue;
+      const guestCat = await getPushCategoryStored(null, cat);
+      if (guestCat != null) {
+        if (cat === 'orders') await setPushOrdersEnabled(guestCat, userId);
+        else if (cat === 'latestUpdates') await setPushLatestUpdatesEnabled(guestCat, userId);
+        else await setPushPromotionsEnabled(guestCat, userId);
+      } else if (guestLegacy != null) {
+        if (cat === 'orders') await setPushOrdersEnabled(guestLegacy, userId);
+        else if (cat === 'latestUpdates') await setPushLatestUpdatesEnabled(guestLegacy, userId);
+        else await setPushPromotionsEnabled(guestLegacy, userId);
       }
     }
   } catch {

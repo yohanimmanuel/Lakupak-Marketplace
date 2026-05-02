@@ -7,7 +7,9 @@
     "save": "Simpan",
     "edit": "Ubah",
     "cancel": "Batal",
-    "confirm": "Konfirmasi"
+    "confirm": "Konfirmasi",
+    "a11ySelected": "Terpilih",
+    "a11yNotSelected": "Tidak terpilih"
   },
   "tabs": {
     "home": "Beranda",
@@ -101,9 +103,32 @@
       },
       "notifications": {
         "title": "Notifikasi",
-        "push": {
+        "master": {
           "label": "Notifikasi push",
-          "description": "Aktifkan untuk menerima update pesanan & info penting"
+          "description": "Nonaktifkan untuk menghentikan semua notifikasi dari aplikasi."
+        },
+        "groups": {
+          "updates": "Pembaruan",
+          "promotions": "Promosi"
+        },
+        "sections": {
+          "orders": "Pesanan",
+          "latestUpdates": "Pembaruan terbaru",
+          "promotions": "Promosi"
+        },
+        "categories": {
+          "orders": {
+            "label": "Pesanan",
+            "description": "Update status pesanan, pembayaran, dan pengiriman"
+          },
+          "latestUpdates": {
+            "label": "Pembaruan terbaru",
+            "description": "Pengumuman dan berita dari Laku"
+          },
+          "promotions": {
+            "label": "Promosi",
+            "description": "Voucher, kampanye, dan pesan promosi"
+          }
         },
         "systemNote": "Catatan: Anda mungkin masih menerima notifikasi dari pengaturan sistem perangkat."
       }
@@ -465,6 +490,9 @@
     "states": {
       "signIn": "Masuk untuk melihat notifikasi pesanan Anda.",
       "empty": "Belum ada update pesanan."
+    },
+    "payment": {
+      "foregroundBannerTitle": "Pembaharuan pembayaran"
     },
     "status": {
       "orderPlacedTitle": "Pesanan dibuat",

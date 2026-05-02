@@ -2,42 +2,32 @@ import * as Notifications from 'expo-notifications';
 import { Platform, AppState } from 'react-native';
 import Constants from 'expo-constants';
 import { API_BASE_URL } from './config';
-import { getPushNotificationsEnabled, setPushNotificationsEnabled } from '../utils/preferences';
+import {
+  getPushNotificationsEnabled,
+  setPushNotificationsEnabled,
+  getPushOrdersEnabled,
+  getPushLatestUpdatesEnabled,
+  getPushPromotionsEnabled,
+  setPushOrdersEnabled,
+  setPushLatestUpdatesEnabled,
+  setPushPromotionsEnabled,
+  type PushNotificationCategory,
+} from '../utils/preferences';
+import { getBuyerOrderNotificationStrings } from '../utils/orderNotificationI18n';
 
-// Configure notification handler (shouldShowBanner/shouldShowList replace deprecated shouldShowAlert)
-// Strategy:
-// - Remote push notifications: only show when app is closed/background
-// - Local notifications (from WebSocket): always show (for in-app notifications)
-Notifications.setNotificationHandler({
-  handleNotification: async (notification) => {
-    const isAppInForeground = AppState.currentState === 'active';
-    
-    // Check if this is a remote notification (from Expo push) or local (from WebSocket)
-    // Remote push notifications have trigger.type === 'push'
-    const trigger = notification.request.trigger;
-    const isRemoteNotification = trigger && 'type' in trigger && trigger.type === 'push';
-    
-    // If it's a remote push and app is in foreground:
-    // - Platform announcements: show (these may arrive in bursts; WebSocket also updates the in-app list)
-    // - Everything else: don't show (WebSocket/in-app handlers will handle it)
-    const data = notification.request.content.data as { type?: unknown } | undefined;
-    const dataType = typeof data?.type === 'string' ? data.type : undefined;
-    const allowRemoteInForeground = dataType === 'platform_announcement';
-
-    // If it's a local notification (WebSocket), always show.
-    const shouldShow =
-      !isRemoteNotification ||
-      !isAppInForeground ||
-      (isRemoteNotification && isAppInForeground && allowRemoteInForeground);
-    
-    return {
-      shouldPlaySound: shouldShow,
-      shouldSetBadge: true,
-      shouldShowBanner: shouldShow,
-      shouldShowList: shouldShow,
-    };
-  },
-});
+/** Map payload + Android channel to a user-controlled notification category. */
+export function resolvePushCategory(
+  data: Record<string, unknown> | undefined,
+  channelId: string,
+): PushNotificationCategory {
+  const type = typeof data?.type === 'string' ? data.type : undefined;
+  if (type === 'order' || type === 'payment') return 'orders';
+  if (type === 'platform_announcement' || type === 'system') return 'latestUpdates';
+  if (type === 'promotion') return 'promotions';
+  if (channelId === 'promotions') return 'promotions';
+  if (channelId === 'system') return 'latestUpdates';
+  return 'orders';
+}
 
 export interface PushNotificationData {
   type: 'order' | 'promotion' | 'system';
@@ -50,43 +40,87 @@ class PushNotificationService {
   private expoPushToken: string | null = null;
   private lastPlatformAnnouncementShown: { announcementId: string; at: number } | null = null;
   private static readonly PLATFORM_ANNOUNCEMENT_DEDUP_MS = 8000;
-  private enabled: boolean | null = null;
-  /** Push toggle is read from storage per logged-in user (or guest when logged out). */
+  private masterEnabled: boolean | null = null;
+  private categoryEnabled: Record<PushNotificationCategory, boolean | null> = {
+    orders: null,
+    latestUpdates: null,
+    promotions: null,
+  };
+  /** Push toggles are read from storage per logged-in user (or guest when logged out). */
   private preferenceUserId: number | null = null;
-  /** Monotonic token so stale async hydrations can't overwrite a newer scope/value. */
-  private enabledHydrationToken = 0;
+  /** Bumps when preference scope changes so async hydrations discard stale results. */
+  private categoryHydrationGen = 0;
 
   setPreferenceUserScope(userId: number | null): void {
     if (this.preferenceUserId !== userId) {
       this.preferenceUserId = userId;
-      this.enabled = null;
-      this.enabledHydrationToken++;
+      this.masterEnabled = null;
+      this.categoryEnabled = { orders: null, latestUpdates: null, promotions: null };
+      this.categoryHydrationGen++;
     }
   }
 
-  async hydrateEnabled(): Promise<boolean> {
-    if (this.enabled != null) return this.enabled;
-    const requestToken = ++this.enabledHydrationToken;
+  /** Overall push switch (`pushEnabled` in storage). When off, no notifications are shown. */
+  async hydrateMasterEnabled(): Promise<boolean> {
+    if (this.masterEnabled != null) return this.masterEnabled;
+
+    const gen = this.categoryHydrationGen;
     const userIdAtStart = this.preferenceUserId;
     const v = await getPushNotificationsEnabled(userIdAtStart);
 
-    // If scope changed, a new hydration started, or a value was set explicitly, discard stale result.
-    if (this.enabledHydrationToken !== requestToken || this.preferenceUserId !== userIdAtStart || this.enabled != null) {
-      return this.enabled ?? v;
+    if (this.categoryHydrationGen !== gen || this.preferenceUserId !== userIdAtStart) {
+      return this.masterEnabled ?? v;
     }
 
-    this.enabled = v;
-    return this.enabled;
+    this.masterEnabled = v;
+    return v;
   }
 
-  async setEnabled(enabled: boolean): Promise<void> {
+  async setMasterEnabled(enabled: boolean): Promise<void> {
     const targetUserId = this.preferenceUserId;
-    this.enabled = enabled;
+    this.masterEnabled = enabled;
     await setPushNotificationsEnabled(enabled, targetUserId);
   }
 
-  isEnabledSync(): boolean {
-    return this.enabled ?? true;
+  async hydrateCategoryEnabled(category: PushNotificationCategory): Promise<boolean> {
+    if (!(await this.hydrateMasterEnabled())) return false;
+
+    if (this.categoryEnabled[category] != null) return this.categoryEnabled[category]!;
+
+    const gen = this.categoryHydrationGen;
+    const userIdAtStart = this.preferenceUserId;
+
+    const read =
+      category === 'orders'
+        ? getPushOrdersEnabled
+        : category === 'latestUpdates'
+          ? getPushLatestUpdatesEnabled
+          : getPushPromotionsEnabled;
+    const v = await read(userIdAtStart);
+
+    if (this.categoryHydrationGen !== gen || this.preferenceUserId !== userIdAtStart) {
+      return this.categoryEnabled[category] ?? v;
+    }
+
+    this.categoryEnabled[category] = v;
+    return v;
+  }
+
+  async hydrateAllCategoryPreferences(): Promise<void> {
+    await this.hydrateMasterEnabled();
+    await Promise.all([
+      this.hydrateCategoryEnabled('orders'),
+      this.hydrateCategoryEnabled('latestUpdates'),
+      this.hydrateCategoryEnabled('promotions'),
+    ]);
+  }
+
+  async setCategoryEnabled(category: PushNotificationCategory, enabled: boolean): Promise<void> {
+    const targetUserId = this.preferenceUserId;
+    this.categoryEnabled[category] = enabled;
+    if (category === 'orders') await setPushOrdersEnabled(enabled, targetUserId);
+    else if (category === 'latestUpdates') await setPushLatestUpdatesEnabled(enabled, targetUserId);
+    else await setPushPromotionsEnabled(enabled, targetUserId);
   }
 
   // Request permissions and get push token
@@ -168,7 +202,12 @@ class PushNotificationService {
   }
 
   // Save push token to server (requires auth token for /api/mobile/push-token)
-  async savePushTokenToServer(userId: number, token: string, authToken?: string): Promise<boolean> {
+  async savePushTokenToServer(
+    userId: number,
+    token: string,
+    authToken?: string,
+    language?: string,
+  ): Promise<boolean> {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
@@ -180,12 +219,31 @@ class PushNotificationService {
           userId,
           token,
           platform: Platform.OS,
+          ...(language ? { language } : {}),
         }),
       });
 
       return response.ok;
     } catch (error) {
       console.error('Error saving push token to server:', error);
+      return false;
+    }
+  }
+
+  /** Update language on all active push tokens (no Expo token required). */
+  async setMarketplaceUserPushLanguage(authToken: string, language: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/mobile/push-token`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ language }),
+      });
+      return res.ok;
+    } catch (error) {
+      console.error('Error updating push language on server:', error);
       return false;
     }
   }
@@ -216,14 +274,17 @@ class PushNotificationService {
     data?: Record<string, unknown>,
     channelId: string = 'orders'
   ): Promise<string> {
-    // App-level toggle: if disabled, don't show local notifications (WebSocket/in-app).
-    if (!(await this.hydrateEnabled())) return '';
+    const category = resolvePushCategory(data, channelId);
+    if (!(await this.hydrateCategoryEnabled(category))) return '';
 
     // Dedup platform announcements: WebSocket can deliver duplicates when reconnecting or when multiple
     // subscribers are active temporarily; avoid spamming identical notifications.
     const aType = (data as { type?: unknown } | undefined)?.type;
     const announcementId = (data as { announcementId?: unknown } | undefined)?.announcementId;
-    if (aType === 'platform_announcement' && announcementId != null) {
+    if (
+      (aType === 'platform_announcement' || aType === 'promotion') &&
+      announcementId != null
+    ) {
       const idStr = String(announcementId);
       const now = Date.now();
       if (
@@ -256,16 +317,15 @@ class PushNotificationService {
 
   /**
    * Show one in-app order notification when app is in foreground. Deduplicates push vs WebSocket.
-   * Call this from WebSocket handler or from push received listener so user sees same content and no duplicate.
    */
   showOrderNotificationInApp(
     orderId: string,
     orderStatus: string,
     customTitle?: string,
-    customMessage?: string
+    customMessage?: string,
   ): void {
     if (AppState.currentState !== 'active') return;
-    this.showOrderNotification(orderId, orderStatus, customTitle, customMessage);
+    void this.showOrderNotification(orderId, orderStatus, customTitle, customMessage);
   }
 
   // Show order status notification
@@ -273,7 +333,7 @@ class PushNotificationService {
     orderId: string,
     orderStatus: string,
     customTitle?: string,
-    customMessage?: string
+    customMessage?: string,
   ): Promise<void> {
     const now = Date.now();
     const statusKey = (orderStatus || 'unknown').toLowerCase();
@@ -287,52 +347,13 @@ class PushNotificationService {
     }
     this.lastOrderNotificationShown = { orderId, orderStatus: statusKey, at: now };
 
-    let title = customTitle || '';
-    let body = customMessage || '';
-
-    if (!customTitle || !customMessage) {
-      switch (orderStatus.toLowerCase()) {
-        case 'pending':
-          title = 'Order Placed';
-          body = `Your order #${orderId} has been placed and is awaiting confirmation.`;
-          break;
-        case 'confirmed':
-          title = 'Order Confirmed';
-          body = `Great news! Your order #${orderId} has been confirmed and is being processed.`;
-          break;
-        case 'packed':
-          title = 'Order Packed';
-          body = `Your order #${orderId} has been packed and is ready for shipping.`;
-          break;
-        case 'shipped':
-          title = 'Order Shipped';
-          body = `Your order #${orderId} is on its way! Track your delivery for updates.`;
-          break;
-        case 'delivered':
-          title = 'Order Delivered';
-          body = `Your order #${orderId} has been delivered. Enjoy your purchase!`;
-          break;
-        case 'received':
-          title = 'Order Received';
-          body = `Your order #${orderId} has been marked as received. Thank you for confirming!`;
-          break;
-        case 'cancelled':
-          title = 'Order Cancelled';
-          body = `Your order #${orderId} has been cancelled.`;
-          break;
-        case 'returned':
-          title = 'Order Returned';
-          body = `Your order #${orderId} return has been processed.`;
-          break;
-        case 'failed':
-          title = 'Delivery Failed';
-          body = `We're sorry. Delivery of your order #${orderId} could not be completed. Please contact support.`;
-          break;
-        default:
-          title = 'Order Update';
-          body = `Your order #${orderId} status has been updated to ${orderStatus}.`;
-      }
-    }
+    const { title, body } =
+      customTitle != null &&
+      customTitle !== '' &&
+      customMessage != null &&
+      customMessage !== ''
+        ? { title: customTitle, body: customMessage }
+        : getBuyerOrderNotificationStrings(orderId, orderStatus);
 
     await this.scheduleLocalNotification(title, body, {
       type: 'order',
@@ -390,3 +411,46 @@ class PushNotificationService {
 }
 
 export const pushNotificationService = new PushNotificationService();
+
+// Configure notification handler (shouldShowBanner/shouldShowList replace deprecated shouldShowAlert)
+// Strategy:
+// - Remote push: respect per-category toggles; foreground rules unchanged below
+// - Local notifications: category gating happens in scheduleLocalNotification
+Notifications.setNotificationHandler({
+  handleNotification: async (notification) => {
+    const isAppInForeground = AppState.currentState === 'active';
+
+    const trigger = notification.request.trigger;
+    const isRemoteNotification = trigger && 'type' in trigger && trigger.type === 'push';
+
+    const data = notification.request.content.data as Record<string, unknown> | undefined;
+
+    if (isRemoteNotification) {
+      const category = resolvePushCategory(data, 'orders');
+      if (!(await pushNotificationService.hydrateCategoryEnabled(category))) {
+        return {
+          shouldPlaySound: false,
+          shouldSetBadge: false,
+          shouldShowBanner: false,
+          shouldShowList: false,
+        };
+      }
+    }
+
+    const dataType = typeof data?.type === 'string' ? data.type : undefined;
+    const allowRemoteInForeground =
+      dataType === 'platform_announcement' || dataType === 'promotion';
+
+    const shouldShow =
+      !isRemoteNotification ||
+      !isAppInForeground ||
+      (isRemoteNotification && isAppInForeground && allowRemoteInForeground);
+
+    return {
+      shouldPlaySound: shouldShow,
+      shouldSetBadge: true,
+      shouldShowBanner: shouldShow,
+      shouldShowList: shouldShow,
+    };
+  },
+});
