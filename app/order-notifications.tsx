@@ -16,6 +16,7 @@ import { useDataStore } from '../stores/dataStore';
 import { NotificationService, Notification } from '../services/notificationService';
 import { OrderUpdateRow } from './components/notifications/OrderUpdateRow';
 import { useTranslation } from 'react-i18next';
+import { getOrderPreviewStrings } from '../utils/orderNotificationI18n';
 
 const MISSING_ORDER_TIMESTAMP_FALLBACK = '1970-01-01T00:00:00.000Z';
 const warnedOrderIds = new Set<string>();
@@ -47,44 +48,15 @@ export default function OrderNotificationsScreen() {
     setOrderNotifications((prev) => {
       const previousMap = new Map(prev.map((notification) => [notification.id, notification]));
       const derived = validOrders.map((order) => {
-        let title = t('orderUpdates.status.orderPlacedTitle');
-        let message = t('orderUpdates.status.orderPlacedBody', { orderId: order.orderId });
-
-        if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
-          title = t('orderUpdates.status.paymentRequiredTitle');
-          message = t('orderUpdates.status.paymentRequiredBody', { orderId: order.orderId });
-        } else if (order.orderStatus === 'Confirmed') {
-          title = t('orderUpdates.status.orderConfirmedTitle');
-          message = t('orderUpdates.status.orderConfirmedBody', { orderId: order.orderId });
-        } else if (order.orderStatus === 'Packed') {
-          title = t('orderUpdates.status.orderPackedTitle');
-          message = t('orderUpdates.status.orderPackedBody', { orderId: order.orderId });
-        } else if (order.orderStatus === 'Shipped') {
-          title = t('orderUpdates.status.orderShippedTitle');
-          message = t('orderUpdates.status.orderShippedBody', { orderId: order.orderId });
-        } else if (
-          (order.orderStatus === 'Delivered' || order.orderStatus === 'Received') &&
-          Array.isArray(order.returnRequests) &&
-          order.returnRequests.some((rr: { status: string }) => rr.status === 'Pending')
-        ) {
-          title = t('orderUpdates.status.returnSubmittedTitle');
-          message = t('orderUpdates.status.returnSubmittedBody', { orderId: order.orderId });
-        } else if (order.orderStatus === 'Delivered') {
-          title = t('orderUpdates.status.orderDeliveredTitle');
-          message = t('orderUpdates.status.orderDeliveredBody', { orderId: order.orderId });
-        } else if (order.orderStatus === 'Received') {
-          title = t('orderUpdates.status.orderReceivedTitle');
-          message = t('orderUpdates.status.orderReceivedBody', { orderId: order.orderId });
-        } else if (order.orderStatus === 'Cancelled') {
-          title = t('orderUpdates.status.orderCancelledTitle');
-          message = t('orderUpdates.status.orderCancelledBody', { orderId: order.orderId });
-        } else if (order.orderStatus === 'Returned') {
-          title = t('orderUpdates.status.orderReturnedTitle');
-          message = t('orderUpdates.status.orderReturnedBody', { orderId: order.orderId });
-        } else if (order.orderStatus === 'Failed') {
-          title = t('orderUpdates.status.deliveryFailedTitle');
-          message = t('orderUpdates.status.deliveryFailedBody', { orderId: order.orderId });
-        }
+        const { title, message } = getOrderPreviewStrings(
+          {
+            orderId: order.orderId,
+            orderStatus: order.orderStatus,
+            paymentStatus: order.paymentStatus,
+            returnRequests: order.returnRequests,
+          },
+          t,
+        );
 
         let timestampSource = order.createdAt || order.orderDate;
         if (!timestampSource) {

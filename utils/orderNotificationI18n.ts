@@ -16,9 +16,12 @@ export function getBuyerOrderNotificationStrings(
 
   switch (status) {
     case 'pending':
+      // "Order Placed" copy is reserved for the checkout banner (see checkout.tsx custom strings).
+      // Server `translateMarketplaceBuyerOrderStatus` also returns generic Order Update for Pending,
+      // so the in-app banner matches the OS push when an order is reverted to Pending.
       return {
-        title: title('orderUpdates.status.orderPlacedTitle'),
-        body: body('orderUpdates.status.orderPlacedBody', { orderId }),
+        title: title('orderUpdates.status.orderUpdatedTitle'),
+        body: body('orderUpdates.status.orderUpdatedBody', { orderId }),
       };
     case 'confirmed':
       return {
@@ -62,8 +65,8 @@ export function getBuyerOrderNotificationStrings(
       };
     default:
       return {
-        title: title('orderUpdates.status.orderPlacedTitle'),
-        body: body('orderUpdates.status.orderPlacedBody', { orderId }),
+        title: title('orderUpdates.status.orderUpdatedTitle'),
+        body: body('orderUpdates.status.orderUpdatedBody', { orderId }),
       };
   }
 }
@@ -141,8 +144,8 @@ export function getOrderPreviewStrings(order: OrderPreviewInput, t: TFunction): 
       };
     default:
       return {
-        title: t('orderUpdates.status.orderPlacedTitle'),
-        message: t('orderUpdates.status.orderPlacedBody', { orderId }),
+        title: t('orderUpdates.status.orderUpdatedTitle'),
+        message: t('orderUpdates.status.orderUpdatedBody', { orderId }),
       };
   }
 }

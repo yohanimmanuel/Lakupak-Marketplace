@@ -497,6 +497,8 @@
     "status": {
       "orderPlacedTitle": "Pesanan dibuat",
       "orderPlacedBody": "Pesanan Anda {{orderId}} telah dibuat.",
+      "orderUpdatedTitle": "Pembaruan Pesanan",
+      "orderUpdatedBody": "Status pesanan #{{orderId}} telah diperbarui.",
       "paymentRequiredTitle": "Pembayaran diperlukan",
       "paymentRequiredBody": "Pesanan {{orderId}} berhasil dibuat dan menunggu konfirmasi pembayaran. Silakan selesaikan pembayaran agar pesanan dapat diproses.",
       "orderConfirmedTitle": "Pesanan dikonfirmasi",

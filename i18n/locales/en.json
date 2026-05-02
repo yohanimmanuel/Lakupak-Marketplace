@@ -497,6 +497,8 @@
     "status": {
       "orderPlacedTitle": "Order Placed",
       "orderPlacedBody": "Your order {{orderId}} has been placed.",
+      "orderUpdatedTitle": "Order Update",
+      "orderUpdatedBody": "Your order #{{orderId}} status has been updated.",
       "paymentRequiredTitle": "Payment Required",
       "paymentRequiredBody": "Your order {{orderId}} has been created successfully and is pending payment confirmation. Please complete your payment to proceed with processing.",
       "orderConfirmedTitle": "Order Confirmed",
