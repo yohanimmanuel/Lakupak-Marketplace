@@ -249,7 +249,9 @@
         "invalidTitle": "Invalid Credentials",
         "invalidBody": "The email or password is incorrect. Please try again.",
         "failedTitle": "Login Failed",
-        "genericBody": "Something went wrong. Please try again."
+        "genericBody": "Something went wrong. Please try again.",
+        "rateLimitedTitle": "Too many attempts",
+        "rateLimitedBody": "For your security, sign-in is temporarily limited. Please try again in about 15 minutes."
       },
       "menu": {
         "securityPrivacy": "Security & Privacy",
@@ -282,7 +284,9 @@
         "passwordResetBody": "Your password has been reset. You can now log in with your new password.",
         "invalidOrExpiredCodeTitle": "Invalid or Expired Code",
         "invalidOrExpiredCodeBody": "The verification code is invalid or has expired. Please request a new password reset and try again.",
-        "ok": "OK"
+        "ok": "OK",
+        "rateLimitedTitle": "Too many attempts",
+        "rateLimitedBody": "Too many password reset requests. Please try again in about an hour."
       },
       "step1": {
         "heading": "Reset your password",

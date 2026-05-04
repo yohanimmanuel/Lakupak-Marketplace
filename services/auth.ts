@@ -2,6 +2,21 @@ import { API_BASE_URL } from './config'
 
 export type Channel = 'whatsapp' | 'sms'
 
+/** Thrown by login/forgot flows when API returns 429 — UI should map to i18n, not raw API English. */
+export const AUTH_ERROR_CODE = {
+  ACCOUNT_SUSPENDED: 'ACCOUNT_SUSPENDED',
+  RATE_LIMITED: 'RATE_LIMITED',
+} as const
+
+export type AuthThrownError = Error & { code?: string }
+
+export function getAuthErrorCode(error: unknown): string | undefined {
+  if (error instanceof Error && typeof (error as AuthThrownError).code === 'string') {
+    return (error as AuthThrownError).code
+  }
+  return undefined
+}
+
 export async function signInWithGoogle(): Promise<{ token: string; user: { id: number; name?: string | null; email: string; address?: string | null } }> {
   // Temporarily disabled for debugging
   throw new Error('Google Sign-in is temporarily disabled. Please use WhatsApp/SMS login.')
@@ -71,18 +86,27 @@ export async function loginWithCredentials(username: string, password: string): 
       if (res.status === 403 && (errorData?.error === 'ACCOUNT_SUSPENDED' || errorData?.message?.includes('suspend'))) {
         errorMessage = 'Your account has been suspended for a moment.'
         const err = new Error(errorMessage)
-        ;(err as Error & { code?: string }).code = 'ACCOUNT_SUSPENDED'
+        ;(err as AuthThrownError).code = AUTH_ERROR_CODE.ACCOUNT_SUSPENDED
         throw err
       }
       errorMessage = errorData.error || errorData.message || errorMessage
-    } catch {
+    } catch (e) {
+      if (getAuthErrorCode(e) === AUTH_ERROR_CODE.ACCOUNT_SUSPENDED) {
+        throw e
+      }
       if (res.status === 401) {
         errorMessage = 'Invalid username or password.'
       } else if (res.status === 404) {
         errorMessage = 'User not found. Please sign up first.'
+      } else if (res.status === 429) {
+        errorMessage = 'Too many login attempts. Please try again in 15 minutes.'
       }
     }
-    throw new Error(errorMessage)
+    const err = new Error(errorMessage) as AuthThrownError
+    if (res.status === 429) {
+      err.code = AUTH_ERROR_CODE.RATE_LIMITED
+    }
+    throw err
   }
   
   return res.json()
@@ -132,7 +156,11 @@ export async function requestForgotPassword(email: string): Promise<{ message: s
   })
   const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string }
   if (!res.ok) {
-    throw new Error(data.error || 'Failed to send reset instructions.')
+    const err = new Error(data.error || 'Failed to send reset instructions.') as AuthThrownError
+    if (res.status === 429) {
+      err.code = AUTH_ERROR_CODE.RATE_LIMITED
+    }
+    throw err
   }
   return { message: data.message || 'If this email is registered, check your inbox for instructions.' }
 }
@@ -155,8 +183,8 @@ export async function resetPassword(email: string, token: string, newPassword: s
   })
   const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string; code?: string }
   if (!res.ok) {
-    const err = new Error(data.error || 'Failed to reset password.')
-    ;(err as Error & { code?: string }).code = data.code
+    const err = new Error(data.error || 'Failed to reset password.') as AuthThrownError
+    err.code = res.status === 429 ? AUTH_ERROR_CODE.RATE_LIMITED : data.code
     throw err
   }
   return { message: data.message || 'Password has been reset. You can now log in.' }

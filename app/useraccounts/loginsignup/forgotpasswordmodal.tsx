@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
-import { requestForgotPassword, resetPassword } from '../../../services/auth';
+import { AUTH_ERROR_CODE, getAuthErrorCode, requestForgotPassword, resetPassword } from '../../../services/auth';
 import { useTranslation } from 'react-i18next';
 
 export default function ForgotPasswordModal() {
@@ -56,6 +56,13 @@ export default function ForgotPasswordModal() {
       await requestForgotPassword(trimmed);
       setStep(2);
     } catch (e) {
+      if (getAuthErrorCode(e) === AUTH_ERROR_CODE.RATE_LIMITED) {
+        Alert.alert(
+          t('auth.forgotPassword.alerts.rateLimitedTitle'),
+          t('auth.forgotPassword.alerts.rateLimitedBody'),
+        );
+        return;
+      }
       Alert.alert(
         t('auth.forgotPassword.alerts.errorTitle'),
         e instanceof Error ? e.message : t('auth.forgotPassword.alerts.genericErrorBody')
@@ -102,13 +109,20 @@ export default function ForgotPasswordModal() {
         [{ text: t('auth.forgotPassword.alerts.ok'), onPress: () => router.replace('/useraccounts/loginsignup/loginmodal') }]
       );
     } catch (e) {
+      if (getAuthErrorCode(e) === AUTH_ERROR_CODE.RATE_LIMITED) {
+        Alert.alert(
+          t('auth.forgotPassword.alerts.rateLimitedTitle'),
+          t('auth.forgotPassword.alerts.rateLimitedBody'),
+        );
+        return;
+      }
       const err = e as Error & { code?: string; response?: { data?: { code?: string } } };
-      const code = err?.code ?? err?.response?.data?.code;
+      const apiCode = err?.code ?? err?.response?.data?.code;
       const msg = err instanceof Error ? err.message : 'Failed to reset password. Please try again.';
       const isInvalidOrExpiredCode =
-        code === 'INVALID_OR_EXPIRED_CODE' ||
-        code === 'EXPIRED_CODE' ||
-        (!code && (msg.includes('Invalid') || msg.includes('expired') || msg.includes('Verification'))); // fallback for legacy
+        apiCode === 'INVALID_OR_EXPIRED_CODE' ||
+        apiCode === 'EXPIRED_CODE' ||
+        (!apiCode && (msg.includes('Invalid') || msg.includes('expired') || msg.includes('Verification'))); // fallback for legacy
       if (isInvalidOrExpiredCode) {
         Alert.alert(
           t('auth.forgotPassword.alerts.invalidOrExpiredCodeTitle'),

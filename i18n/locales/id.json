@@ -249,7 +249,9 @@
         "invalidTitle": "Kredensial Tidak Valid",
         "invalidBody": "Email atau kata sandi salah. Silakan coba lagi.",
         "failedTitle": "Gagal Masuk",
-        "genericBody": "Terjadi kesalahan. Silakan coba lagi."
+        "genericBody": "Terjadi kesalahan. Silakan coba lagi.",
+        "rateLimitedTitle": "Terlalu banyak percobaan",
+        "rateLimitedBody": "Untuk keamanan Anda, masuk sementara dibatasi. Silakan coba lagi sekitar 15 menit lagi."
       },
       "menu": {
         "securityPrivacy": "Keamanan & Privasi",
@@ -282,7 +284,9 @@
         "passwordResetBody": "Kata sandi Anda berhasil direset. Sekarang Anda bisa masuk dengan kata sandi baru.",
         "invalidOrExpiredCodeTitle": "Kode tidak valid atau kedaluwarsa",
         "invalidOrExpiredCodeBody": "Kode verifikasi tidak valid atau sudah kedaluwarsa. Silakan minta reset kata sandi lagi dan coba kembali.",
-        "ok": "OK"
+        "ok": "OK",
+        "rateLimitedTitle": "Terlalu banyak percobaan",
+        "rateLimitedBody": "Terlalu banyak permintaan reset kata sandi. Silakan coba lagi sekitar satu jam lagi."
       },
       "step1": {
         "heading": "Reset kata sandi",

@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { View, Text, Pressable, Image, Animated, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
-import { loginWithCredentials } from '../../../services/auth';
+import { AUTH_ERROR_CODE, getAuthErrorCode, loginWithCredentials } from '../../../services/auth';
 // import { signInWithGoogle } from '../../../services/auth'; // Temporarily disabled
 import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
@@ -199,8 +199,13 @@ export default function LoginModal() {
                   }, 200);
                 } catch (error: unknown) {
                   setIsLoggingIn(false);
-                  if (error instanceof Error && (error as Error & { code?: string }).code === 'ACCOUNT_SUSPENDED') {
+                  const code = getAuthErrorCode(error)
+                  if (code === AUTH_ERROR_CODE.ACCOUNT_SUSPENDED) {
                     Alert.alert(t('auth.login.alerts.suspendedTitle'), t('auth.login.alerts.suspendedBody'));
+                    return;
+                  }
+                  if (code === AUTH_ERROR_CODE.RATE_LIMITED) {
+                    Alert.alert(t('auth.login.alerts.rateLimitedTitle'), t('auth.login.alerts.rateLimitedBody'));
                     return;
                   }
                   if (error instanceof Error && (error.message.includes('User not found') || error.message.includes('Please sign up first'))) {
