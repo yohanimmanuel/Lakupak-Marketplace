@@ -168,7 +168,7 @@
     "title": "Pesan",
     "list": {
       "emptyTitle": "Belum ada pesan",
-      "emptyBody": "Ikuti distributor untuk dapat menghubungi mereka lewat sini.",
+      "emptyBody": "Chat distributor dari halaman produk agar muncul di sini.",
       "noBusinessPhone": "Nomor telepon bisnis tidak tersedia"
     },
     "errors": {

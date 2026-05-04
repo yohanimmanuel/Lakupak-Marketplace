@@ -63,6 +63,14 @@ async function clearUserScopedStores() {
         // Ignore errors if cartStore is unavailable
       }
     })(),
+    (async () => {
+      try {
+        const { useMessagesStore } = await import('./messagesStore')
+        useMessagesStore.getState().clearUserData()
+      } catch {
+        // Ignore errors if messagesStore is unavailable
+      }
+    })(),
   ])
 }
 

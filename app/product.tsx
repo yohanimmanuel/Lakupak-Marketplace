@@ -7,6 +7,7 @@ import BuyNowModal from './components/productcatalog/BuyNowModal';
 import { useDataStore } from '../stores/dataStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { useAuthStore } from '../stores/authStore';
+import { useMessagesStore } from '../stores/messagesStore';
 import type { MarketplaceProduct } from '../services/marketplace';
 import type { Product } from '../data/sampleProducts';
 import { openWhatsApp } from '../utils/whatsapp';
@@ -63,6 +64,20 @@ export default function ProductModal() {
     const mp = product as MarketplaceProduct;
     const phone = mp?.seller?.company?.businessPhone;
     const productName = product.name || 'Product';
+    const distributorId = typeof mp?.userId === 'number' ? mp.userId : Number.NaN;
+    const distributorName = (mp?.seller?.company?.name || mp?.seller?.name || '').trim() || 'Distributor';
+    const logoUrl = mp?.seller?.company?.logo ?? null;
+
+    if (Number.isFinite(distributorId)) {
+      useMessagesStore.getState().upsertConversation({
+        distributorId,
+        name: distributorName,
+        phone: typeof phone === 'string' ? phone : null,
+        logoUrl,
+        lastProductId: String(product.id),
+        lastProductName: productName,
+      });
+    }
 
     openWhatsApp({
       phone: typeof phone === 'string' ? phone : '',

@@ -7,8 +7,7 @@ import { User as UserIcon, ArrowLeft, ChevronRight, Store } from 'lucide-react-n
 import { useAuthStore } from '../stores/authStore';
 import { useTranslation } from 'react-i18next';
 import { openWhatsApp } from '../utils/whatsapp';
-import { listFollowedDistributors, type FollowedDistributor } from '../services/distributorFollowing';
-import { API_BASE_URL } from '../services/config';
+import { useMessagesStore, type Conversation } from '../stores/messagesStore';
 
 export default function MessagesScreen() {
   const router = useRouter();
@@ -21,8 +20,7 @@ export default function MessagesScreen() {
   const isAuthenticated = !!token && !!authUser;
   const primaryBlue = '#0a61d7';
 
-  const [items, setItems] = useState<FollowedDistributor[]>([]);
-  const [phones, setPhones] = useState<Record<number, string | null>>({});
+  const [items, setItems] = useState<Conversation[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,60 +29,25 @@ export default function MessagesScreen() {
     hydrate();
   }, [hydrate]);
 
-  const normalizeUrl = useCallback((url?: string | null): string | undefined => {
-    if (!url) return undefined;
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const base = API_BASE_URL?.replace(/\/$/, '') || '';
-    const path = url.startsWith('/') ? url : `/${url}`;
-    return `${base}${path}`;
-  }, []);
-
-  const loadPhones = useCallback(async (list: FollowedDistributor[]) => {
-    const base = (API_BASE_URL || '').replace(/\/$/, '');
-    const entries = await Promise.all(
-      list.map(async (it) => {
-        try {
-          const res = await fetch(`${base}/api/mobile/distributor/${encodeURIComponent(String(it.distributorId))}`);
-          if (!res.ok) return [it.distributorId, null] as const;
-          const json = (await res.json()) as Record<string, unknown>;
-          const phone =
-            (typeof json.businessPhone === 'string' && json.businessPhone) ||
-            (typeof json.phone === 'string' && json.phone) ||
-            (typeof (json as any)?.company?.businessPhone === 'string' && (json as any).company.businessPhone) ||
-            null;
-          return [it.distributorId, phone] as const;
-        } catch {
-          return [it.distributorId, null] as const;
-        }
-      })
-    );
-    setPhones((prev) => {
-      const next = { ...prev };
-      for (const [id, phone] of entries) next[id] = phone;
-      return next;
-    });
-  }, []);
-
   const load = useCallback(async (silent = false) => {
     if (!token) {
       setItems([]);
-      setPhones({});
       setLoading(false);
       return;
     }
     if (!silent) setLoading(true);
     if (!silent) setError(null);
     try {
-      const data = await listFollowedDistributors(token);
+      const userId = useAuthStore.getState().user?.id ?? null;
+      const data = useMessagesStore.getState().listConversations(userId);
       setItems(data);
       setError(null);
-      void loadPhones(data);
     } catch {
       setError(t('messages.errors.failedToLoad'));
     } finally {
       setLoading(false);
     }
-  }, [token, loadPhones, t]);
+  }, [token, t]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -156,8 +119,8 @@ export default function MessagesScreen() {
           ) : (
             <View style={styles.list}>
               {items.map((it) => {
-                const logo = normalizeUrl(it.logo);
-                const phone = phones[it.distributorId] ?? null;
+                const logo = it.logoUrl || null;
+                const phone = it.phone ?? null;
                 const disabled = !phone;
                 return (
                   <Pressable
