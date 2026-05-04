@@ -1121,9 +1121,8 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                   });
                 }
 
-              } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : t('ordersFlow.checkout.alerts.placeOrderFailed');
-                Alert.alert(t('ordersFlow.checkout.alerts.errorTitle'), errorMessage);
+              } catch {
+                Alert.alert(t('ordersFlow.checkout.alerts.errorTitle'), t('ordersFlow.checkout.alerts.placeOrderFailed'));
               } finally {
                 setIsPlacingOrder(false);
               }

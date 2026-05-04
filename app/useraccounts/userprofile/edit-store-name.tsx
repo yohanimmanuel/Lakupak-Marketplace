@@ -24,7 +24,7 @@ export default function EditStoreName() {
       setUser(updated);
       router.back();
     } catch (e: unknown) {
-      Alert.alert(t('profile.common.errorTitle'), (e instanceof Error ? e.message : t('profile.common.failedToUpdate')));
+      Alert.alert(t('profile.common.errorTitle'), t('profile.common.failedToUpdate'));
     }
   };
 

@@ -32,7 +32,7 @@ export default function OrderHelpCenter() {
                 <TouchableOpacity
                   onPress={() => router.back()}
                   hitSlop={10}
-                  accessibilityLabel="Go back"
+                  accessibilityLabel={t('common.a11yBack')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />

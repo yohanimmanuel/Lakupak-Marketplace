@@ -58,8 +58,8 @@ export default function LatestUpdateDetailScreen() {
           // Fire-and-forget: marking read is non-critical
           markAnnouncementRead(a.id, uid).catch(() => {});
         }
-      } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : t('latestUpdatesDetail.states.failedToLoad'));
+      } catch {
+        if (!cancelled) setErr(t('latestUpdatesDetail.states.failedToLoad'));
       } finally {
         if (!cancelled) setLoading(false);
       }

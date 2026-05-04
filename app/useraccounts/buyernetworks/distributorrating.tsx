@@ -110,8 +110,9 @@ export default function DistributorRatingScreen() {
       ]);
     } catch (error) {
       console.error('Distributor review submission failed:', error);
-      const message = error instanceof Error ? error.message : t('buyerNetworks.distributorRating.alerts.submitFailedBody');
-      Alert.alert(t('buyerNetworks.distributorRating.alerts.errorTitle'), message, [{ text: t('buyerNetworks.distributorRating.alerts.ok') }]);
+      Alert.alert(t('buyerNetworks.distributorRating.alerts.errorTitle'), t('buyerNetworks.distributorRating.alerts.submitFailedBody'), [
+        { text: t('buyerNetworks.distributorRating.alerts.ok') },
+      ]);
     } finally {
       setIsSubmitting(false);
     }

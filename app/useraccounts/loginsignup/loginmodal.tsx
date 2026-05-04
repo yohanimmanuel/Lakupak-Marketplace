@@ -199,7 +199,7 @@ export default function LoginModal() {
                   }, 200);
                 } catch (error: unknown) {
                   setIsLoggingIn(false);
-                  const code = getAuthErrorCode(error)
+                  const code = getAuthErrorCode(error);
                   if (code === AUTH_ERROR_CODE.ACCOUNT_SUSPENDED) {
                     Alert.alert(t('auth.login.alerts.suspendedTitle'), t('auth.login.alerts.suspendedBody'));
                     return;
@@ -208,22 +208,22 @@ export default function LoginModal() {
                     Alert.alert(t('auth.login.alerts.rateLimitedTitle'), t('auth.login.alerts.rateLimitedBody'));
                     return;
                   }
-                  if (error instanceof Error && (error.message.includes('User not found') || error.message.includes('Please sign up first'))) {
+                  if (code === AUTH_ERROR_CODE.USER_NOT_FOUND) {
                     Alert.alert(
                       t('auth.login.alerts.notFoundTitle'),
                       t('auth.login.alerts.notFoundBody'),
                       [
                         { text: t('auth.login.alerts.ok'), style: 'default' },
-                        { text: t('auth.login.alerts.signUp'), style: 'default', onPress: () => router.push('/useraccounts/loginsignup/signupmodal') }
-                      ]
+                        { text: t('auth.login.alerts.signUp'), style: 'default', onPress: () => router.push('/useraccounts/loginsignup/signupmodal') },
+                      ],
                     );
-                  } else if (error instanceof Error && error.message.includes('Invalid username or password')) {
-                    Alert.alert(t('auth.login.alerts.invalidTitle'), t('auth.login.alerts.invalidBody'));
-                  } else {
-                    const fallback = t('auth.login.alerts.genericBody');
-                    const errorMessage = error instanceof Error ? error.message : fallback;
-                    Alert.alert(t('auth.login.alerts.failedTitle'), errorMessage);
+                    return;
                   }
+                  if (code === AUTH_ERROR_CODE.INVALID_CREDENTIALS) {
+                    Alert.alert(t('auth.login.alerts.invalidTitle'), t('auth.login.alerts.invalidBody'));
+                    return;
+                  }
+                  Alert.alert(t('auth.login.alerts.failedTitle'), t('auth.login.alerts.genericBody'));
                 }
               }}
               disabled={isLoggingIn}

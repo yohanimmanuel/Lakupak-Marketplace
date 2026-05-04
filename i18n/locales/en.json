@@ -9,7 +9,8 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "a11ySelected": "Selected",
-    "a11yNotSelected": "Not selected"
+    "a11yNotSelected": "Not selected",
+    "a11yBack": "Go back"
   },
   "tabs": {
     "home": "Home",

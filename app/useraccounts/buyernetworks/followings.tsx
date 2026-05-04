@@ -41,8 +41,8 @@ export default function FollowingsScreen() {
         const data = await listFollowedDistributors(token);
         setItems(data);
         setError(null);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t('followingsPage.errors.failedToLoad'));
+      } catch {
+        setError(t('followingsPage.errors.failedToLoad'));
       }
     },
     [token, t]

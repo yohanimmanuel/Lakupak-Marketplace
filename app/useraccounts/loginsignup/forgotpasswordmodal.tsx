@@ -63,10 +63,7 @@ export default function ForgotPasswordModal() {
         );
         return;
       }
-      Alert.alert(
-        t('auth.forgotPassword.alerts.errorTitle'),
-        e instanceof Error ? e.message : t('auth.forgotPassword.alerts.genericErrorBody')
-      );
+      Alert.alert(t('auth.forgotPassword.alerts.errorTitle'), t('auth.forgotPassword.alerts.genericErrorBody'));
     } finally {
       setIsLoading(false);
     }
@@ -116,21 +113,29 @@ export default function ForgotPasswordModal() {
         );
         return;
       }
+      const code = getAuthErrorCode(e);
+      if (code === AUTH_ERROR_CODE.VERIFICATION_CODE_REQUIRED) {
+        Alert.alert(t('auth.forgotPassword.alerts.codeRequiredTitle'), t('auth.forgotPassword.alerts.codeRequiredBody'));
+        return;
+      }
+      if (code === AUTH_ERROR_CODE.SIGNUP_WEAK_PASSWORD) {
+        Alert.alert(t('auth.forgotPassword.alerts.weakPasswordTitle'), t('auth.forgotPassword.passwordHint'));
+        return;
+      }
       const err = e as Error & { code?: string; response?: { data?: { code?: string } } };
       const apiCode = err?.code ?? err?.response?.data?.code;
-      const msg = err instanceof Error ? err.message : 'Failed to reset password. Please try again.';
       const isInvalidOrExpiredCode =
         apiCode === 'INVALID_OR_EXPIRED_CODE' ||
         apiCode === 'EXPIRED_CODE' ||
-        (!apiCode && (msg.includes('Invalid') || msg.includes('expired') || msg.includes('Verification'))); // fallback for legacy
+        apiCode === AUTH_ERROR_CODE.OTP_VERIFY_FAILED;
       if (isInvalidOrExpiredCode) {
         Alert.alert(
           t('auth.forgotPassword.alerts.invalidOrExpiredCodeTitle'),
           t('auth.forgotPassword.alerts.invalidOrExpiredCodeBody'),
-          [{ text: t('auth.forgotPassword.alerts.ok') }]
+          [{ text: t('auth.forgotPassword.alerts.ok') }],
         );
       } else {
-        Alert.alert(t('auth.forgotPassword.alerts.errorTitle'), msg);
+        Alert.alert(t('auth.forgotPassword.alerts.errorTitle'), t('auth.forgotPassword.alerts.genericErrorBody'));
       }
     } finally {
       setIsLoading(false);

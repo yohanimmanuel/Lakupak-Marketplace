@@ -60,10 +60,10 @@ export default function ReportDistributorModal() {
       if (urls && urls.length > 0) {
         setImageUrls((prev) => [...prev, ...urls].slice(0, maxPhotos));
       }
-    } catch (error) {
+    } catch {
       Alert.alert(
         t('buyerNetworks.reportDistributor.alerts.uploadFailedTitle'),
-        error instanceof Error ? error.message : t('buyerNetworks.reportDistributor.alerts.uploadFailedBody')
+        t('buyerNetworks.reportDistributor.alerts.uploadFailedBody')
       );
     } finally {
       setUploadingPhotos(false);
@@ -144,10 +144,10 @@ export default function ReportDistributorModal() {
                 t('buyerNetworks.reportDistributor.alerts.submittedBody'),
                 [{ text: t('buyerNetworks.reportDistributor.alerts.ok'), onPress: () => router.back() }]
               );
-            } catch (e) {
+            } catch {
               Alert.alert(
                 t('buyerNetworks.reportDistributor.alerts.errorTitle'),
-                e instanceof Error ? e.message : t('buyerNetworks.reportDistributor.alerts.submitFailedBody')
+                t('buyerNetworks.reportDistributor.alerts.submitFailedBody')
               );
             } finally {
               setIsSubmitting(false);

@@ -160,8 +160,8 @@ export default function NotificationsScreen() {
     try {
       const list = await fetchPublishedLatestUpdates({ limit: 80 });
       setLatestUpdates(list);
-    } catch (e) {
-      setLatestError(e instanceof Error ? e.message : t('tabsNotifications.errors.latestUpdatesFailed'));
+    } catch {
+      setLatestError(t('tabsNotifications.errors.latestUpdatesFailed'));
       setLatestUpdates([]);
     } finally {
       setLatestLoading(false);

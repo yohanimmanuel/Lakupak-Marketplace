@@ -72,7 +72,7 @@ export default function EditProfileModal() {
           : t('profile.editProfile.alerts.updatedBodyBanner')
       );
     } catch (error: unknown) {
-      Alert.alert(t('profile.common.errorTitle'), (error instanceof Error ? error.message : t('profile.common.failedToUpdate')));
+      Alert.alert(t('profile.common.errorTitle'), t('profile.common.failedToUpdate'));
     } finally {
       setIsUploading(false);
     }

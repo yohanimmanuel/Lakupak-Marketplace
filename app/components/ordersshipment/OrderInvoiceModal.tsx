@@ -292,8 +292,8 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
           Alert.alert(t('ordersFlow.invoice.alerts.saveUnavailableTitle'), t('ordersFlow.invoice.alerts.saveUnavailableBody'));
         }
       }
-    } catch (e) {
-      Alert.alert(t('ordersFlow.invoice.alerts.pdfTitle'), e instanceof Error ? e.message : t('ordersFlow.invoice.alerts.pdfFailedBody'));
+    } catch {
+      Alert.alert(t('ordersFlow.invoice.alerts.pdfTitle'), t('ordersFlow.invoice.alerts.pdfFailedBody'));
     } finally {
       setBusy(false);
     }
@@ -353,7 +353,7 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
         Alert.alert(t('ordersFlow.invoice.alerts.imageTitle'), t('ordersFlow.invoice.alerts.permissionDeniedBody'));
         return;
       }
-      Alert.alert(t('ordersFlow.invoice.alerts.imageTitle'), e instanceof Error ? e.message : t('ordersFlow.invoice.alerts.imageFailedBody'));
+      Alert.alert(t('ordersFlow.invoice.alerts.imageTitle'), t('ordersFlow.invoice.alerts.imageFailedBody'));
     } finally {
       setBusy(false);
     }
@@ -377,8 +377,8 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
     setBusy(true);
     try {
       await Print.printAsync({ html: buildOrderInvoiceHtml(order, { logoUri, logoDataUri }) });
-    } catch (e) {
-      Alert.alert(t('ordersFlow.invoice.alerts.printTitle'), e instanceof Error ? e.message : t('ordersFlow.invoice.alerts.printFailedBody'));
+    } catch {
+      Alert.alert(t('ordersFlow.invoice.alerts.printTitle'), t('ordersFlow.invoice.alerts.printFailedBody'));
     } finally {
       setBusy(false);
     }

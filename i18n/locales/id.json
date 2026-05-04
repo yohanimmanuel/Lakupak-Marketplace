@@ -9,7 +9,8 @@
     "cancel": "Batal",
     "confirm": "Konfirmasi",
     "a11ySelected": "Terpilih",
-    "a11yNotSelected": "Tidak terpilih"
+    "a11yNotSelected": "Tidak terpilih",
+    "a11yBack": "Kembali"
   },
   "tabs": {
     "home": "Beranda",

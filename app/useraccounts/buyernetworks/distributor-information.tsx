@@ -157,9 +157,9 @@ export default function DistributorInformationScreen() {
           // non-blocking
         }
       }
-    } catch (e) {
+    } catch {
       setAllProducts([]);
-      setError(e instanceof Error ? e.message : t('buyerNetworks.distributorInformation.errors.loadProductsFailed'));
+      setError(t('buyerNetworks.distributorInformation.errors.loadProductsFailed'));
     } finally {
       setLoading(false);
     }

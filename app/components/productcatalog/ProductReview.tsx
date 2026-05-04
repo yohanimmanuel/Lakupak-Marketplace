@@ -184,9 +184,8 @@ export default function ProductReviewScreen() {
           onPress: () => router.back(),
         },
       ]);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : t('productReview.alerts.failedGeneric');
-      Alert.alert(t('productReview.alerts.errorTitle'), message, [{ text: t('productReview.alerts.ok') }]);
+    } catch {
+      Alert.alert(t('productReview.alerts.errorTitle'), t('productReview.alerts.failedGeneric'), [{ text: t('productReview.alerts.ok') }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -237,10 +236,10 @@ export default function ProductReviewScreen() {
         const combined = [...current, ...urls].slice(0, MAX_PHOTOS_PER_PRODUCT);
         updateProductReview(productIndex, 'images', combined);
       }
-    } catch (e) {
+    } catch {
       Alert.alert(
         t('productReview.alerts.uploadFailedTitle'),
-        e instanceof Error ? e.message : t('productReview.alerts.uploadFailedBody')
+        t('productReview.alerts.uploadFailedBody')
       );
     } finally {
       setUploadingPhotoIndex(null);

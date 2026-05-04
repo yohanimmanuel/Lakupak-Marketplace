@@ -61,8 +61,8 @@ export default function HomeOfferDetailScreen() {
         } else {
           setItem(o);
         }
-      } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : t('offers.states.failedToLoad'));
+      } catch {
+        if (!cancelled) setErr(t('offers.states.failedToLoad'));
       } finally {
         if (!cancelled) setLoading(false);
       }

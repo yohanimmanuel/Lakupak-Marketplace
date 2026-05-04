@@ -125,10 +125,10 @@ export default function OrderCancelModal() {
                   }
                 ]
               );
-            } catch (error) {
+            } catch {
               Alert.alert(
                 t('ordersFlow.common.errors.errorTitle'),
-                error instanceof Error ? error.message : t('ordersFlow.cancel.alerts.failedBody'),
+                t('ordersFlow.cancel.alerts.failedBody'),
                 [{ text: t('ordersFlow.common.buttons.ok') }]
               );
             } finally {

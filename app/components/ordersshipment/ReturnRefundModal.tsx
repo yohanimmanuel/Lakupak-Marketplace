@@ -65,10 +65,10 @@ export default function ReturnRefundModal() {
           return combined.slice(0, 5);
         });
       }
-    } catch (error) {
+    } catch {
       Alert.alert(
         t('ordersFlow.returnRefund.alerts.uploadFailedTitle'),
-        error instanceof Error ? error.message : t('ordersFlow.returnRefund.alerts.uploadFailedBody')
+        t('ordersFlow.returnRefund.alerts.uploadFailedBody')
       );
     } finally {
       setUploadingPhotos(false);
@@ -128,10 +128,10 @@ export default function ReturnRefundModal() {
         t('ordersFlow.returnRefund.alerts.submittedBody'),
         [{ text: t('ordersFlow.common.buttons.ok'), onPress: () => router.back() }]
       );
-    } catch (error) {
+    } catch {
       Alert.alert(
         t('ordersFlow.common.errors.errorTitle'),
-        error instanceof Error ? error.message : t('ordersFlow.returnRefund.alerts.failedBody'),
+        t('ordersFlow.returnRefund.alerts.failedBody'),
         [{ text: t('ordersFlow.common.buttons.ok') }]
       );
     } finally {

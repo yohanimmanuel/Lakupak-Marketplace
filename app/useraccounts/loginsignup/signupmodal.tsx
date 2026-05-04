@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, Animated, Easing, Alert, KeyboardAvoidingView, Platform, Keyboard, StatusBar, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
-import { requestOtp, verifyOtp, signupStep1, signupStep2, signupStep3 } from '../../../services/auth';
+import { AUTH_ERROR_CODE, getAuthErrorCode, requestOtp, verifyOtp, signupStep1, signupStep2, signupStep3 } from '../../../services/auth';
 import { useAuthStore } from '../../../stores/authStore';
 import { ArrowLeft, Fingerprint, Shield, HelpCircle, X } from 'lucide-react-native';
 import { COUNTRIES, getFlagEmoji } from '../../../constants/countries';
@@ -287,13 +287,16 @@ export default function SignUpModal() {
                       await signupStep1(signupData.name.trim(), signupData.email.trim());
                       setSignupStep(2);
                     } catch (error: unknown) {
-                      const msg = error instanceof Error ? error.message : '';
-                      // `signupStep1` does local validation and throws an English error; map to i18n.
-                      if (msg === 'Please enter a valid email address.') {
+                      const code = getAuthErrorCode(error);
+                      if (code === AUTH_ERROR_CODE.SIGNUP_INVALID_EMAIL) {
                         Alert.alert(t('auth.signup.alerts.invalidEmailTitle'), t('auth.signup.alerts.invalidEmailBody'));
                         return;
                       }
-                      Alert.alert(t('auth.signup.alerts.failedTitle'), (msg || t('auth.signup.alerts.genericBody')));
+                      if (code === AUTH_ERROR_CODE.SIGNUP_MISSING_NAME_EMAIL) {
+                        Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingNameEmail'));
+                        return;
+                      }
+                      Alert.alert(t('auth.signup.alerts.failedTitle'), t('auth.signup.alerts.genericBody'));
                     }
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 24 }}
@@ -348,7 +351,11 @@ export default function SignUpModal() {
                       await signupStep2(signupData.storeName.trim(), signupData.bio.trim());
                       setSignupStep(3);
                     } catch (error: unknown) {
-                      Alert.alert(t('auth.signup.alerts.failedTitle'), (error instanceof Error ? error.message : t('auth.signup.alerts.genericBody')));
+                      if (getAuthErrorCode(error) === AUTH_ERROR_CODE.SIGNUP_MISSING_STORE) {
+                        Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingStoreName'));
+                        return;
+                      }
+                      Alert.alert(t('auth.signup.alerts.failedTitle'), t('auth.signup.alerts.genericBody'));
                     }
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 24 }}
@@ -453,7 +460,20 @@ export default function SignUpModal() {
                       Alert.alert(t('auth.signup.accountCreatedTitle'), t('auth.signup.accountCreatedBody'));
                       router.replace('/(tabs)/home');
                     } catch (error: unknown) {
-                      Alert.alert(t('auth.signup.alerts.failedTitle'), (error instanceof Error ? error.message : t('auth.signup.alerts.genericBody')));
+                      const code = getAuthErrorCode(error);
+                      if (code === AUTH_ERROR_CODE.RATE_LIMITED) {
+                        Alert.alert(t('auth.login.alerts.rateLimitedTitle'), t('auth.login.alerts.rateLimitedBody'));
+                        return;
+                      }
+                      if (code === AUTH_ERROR_CODE.SIGNUP_MISSING_CREDENTIALS) {
+                        Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingAllFields'));
+                        return;
+                      }
+                      if (code === AUTH_ERROR_CODE.SIGNUP_WEAK_PASSWORD) {
+                        Alert.alert(t('auth.signup.alerts.weakPasswordTitle'), t('auth.signup.alerts.weakPasswordBody'));
+                        return;
+                      }
+                      Alert.alert(t('auth.signup.alerts.failedTitle'), t('auth.signup.alerts.genericBody'));
                     }
                   }}
                   style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 12 }}
@@ -524,7 +544,11 @@ export default function SignUpModal() {
                       Alert.alert(t('auth.signup.phoneOtp.alerts.sentTitle'), t('auth.signup.phoneOtp.alerts.sentBody'));
                       // TODO: Add OTP verification step
                     } catch (error: unknown) {
-                      Alert.alert(t('auth.signup.phoneOtp.alerts.failedTitle'), (error instanceof Error ? error.message : t('auth.signup.phoneOtp.alerts.failedBody')));
+                      if (getAuthErrorCode(error) === AUTH_ERROR_CODE.RATE_LIMITED) {
+                        Alert.alert(t('auth.login.alerts.rateLimitedTitle'), t('auth.login.alerts.rateLimitedBody'));
+                        return;
+                      }
+                      Alert.alert(t('auth.signup.phoneOtp.alerts.failedTitle'), t('auth.signup.phoneOtp.alerts.failedBody'));
                     } finally {
                       setIsVerifying(false);
                     }
