@@ -411,7 +411,7 @@ export default function SellerInformationScreen() {
                     </View>
                   </View>
                   {review.comment ? (
-                    <Text style={styles.reviewComment}>"{review.comment}"</Text>
+                    <Text style={styles.reviewComment}>{`\u201c${review.comment}\u201d`}</Text>
                   ) : null}
                 </View>
               ))}

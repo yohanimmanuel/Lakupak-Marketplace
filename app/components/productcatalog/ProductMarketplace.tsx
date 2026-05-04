@@ -1165,7 +1165,7 @@ export default function ProductMarketplace({
                 ) : null}
                 {review.comment ? (
                   <Text style={[styles.reviewComment, { color: textColor }]}>
-                    "{review.comment}"
+                    {`\u201c${review.comment}\u201d`}
                   </Text>
                 ) : null}
                 {normalizedImageUrls.length > 0 ? (

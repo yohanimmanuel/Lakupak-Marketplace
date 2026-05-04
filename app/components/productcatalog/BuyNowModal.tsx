@@ -325,123 +325,6 @@ export default function BuyNowModal({
     };
   }, [product, selectedVariantOptions, quantity, safeGetArray, safeGetString, safeGetNumber]);
 
-  if (!product || !computedValues) return null;
-
-  const {
-    productImage,
-    currentVariantOption,
-    unitPrice,
-    piecesPerPackage,
-    pricePerPackage,
-    totalPrice,
-    totalPieces,
-    stock,
-    packageType,
-    variantName,
-    moq,
-    meetsMOQ,
-    isFormValid
-  } = computedValues;
-
-  // Quantity handlers with long-press support
-  const startLongPress = useCallback((increment: boolean) => {
-    const changeQuantity = () => {
-      setQuantity((prev) => {
-        const newQty = increment ? prev + 1 : Math.max(1, prev - 1);
-        const newTotalPieces = newQty * piecesPerPackage;
-        return newTotalPieces <= stock ? newQty : prev;
-      });
-    };
-
-    // Initial change
-    changeQuantity();
-
-    // Start long-press after delay
-    longPressTimeout.current = setTimeout(() => {
-      longPressInterval.current = setInterval(changeQuantity, 100);
-    }, 500);
-  }, [piecesPerPackage, stock]);
-
-  const stopLongPress = useCallback(() => {
-    if (longPressTimeout.current) {
-      clearTimeout(longPressTimeout.current);
-      longPressTimeout.current = null;
-    }
-    if (longPressInterval.current) {
-      clearInterval(longPressInterval.current);
-      longPressInterval.current = null;
-    }
-  }, []);
-
-  // Calculate promotion free items (works with MOQ - starts counting after MOQ)
-  const promotionInfo = useMemo(() => {
-    if (!product?.promotionDetails) return null;
-    
-    // Get total pieces from quantity
-    const totalPieces = quantity * piecesPerPackage;
-    
-    // Get MOQ from current variant option
-    const moqValue = moq;
-    
-    // Calculate promotion using the utility function logic
-    const minQty = product.promotionDetails.minQuantity || 1;
-    const freeQty = product.promotionDetails.freeQuantity || 0;
-    
-    // If no MOQ, calculate from total quantity (starts from 1)
-    if (!moqValue) {
-      const completeSets = Math.floor(totalPieces / minQty);
-      const totalFreeItems = completeSets * freeQty;
-      return totalFreeItems > 0 ? totalFreeItems : null;
-    }
-    
-    // If MOQ exists and not met, no free items
-    if (totalPieces < moqValue) return null;
-    
-    // Calculate free items from quantity above MOQ (starts counting after MOQ)
-    const quantityAboveMOQ = totalPieces - moqValue;
-    const completeSets = Math.floor(quantityAboveMOQ / minQty);
-    const totalFreeItems = completeSets * freeQty;
-    
-    return totalFreeItems > 0 ? totalFreeItems : null;
-  }, [product, quantity, piecesPerPackage, moq]);
-
-  const handleConfirm = useCallback(() => {
-    if (isFormValid && product) {
-      if (mode === 'cart') {
-        // Add to cart logic - directly call cart store with variant information
-        addItem(product, quantity, variantName);
-        handleClose();
-      } else {
-        // Navigate to checkout with product details
-        const checkoutParams: Record<string, string> = {
-          productId: product.id,
-          quantity: quantity.toString(),
-          totalPrice: totalPrice.toString(),
-          productName: safeGetString(product.name),
-          productImage: productImage || '',
-          unitPrice: unitPrice.toString(),
-          packageType: packageType,
-          piecesPerPackage: piecesPerPackage.toString(),
-          variantId: currentVariantOption?.id?.toString() || '',
-          variantName: variantName,
-          moq: moq?.toString() || '',
-        };
-        
-        // Add promotion details if available
-        const promotionDetails = product?.promotionDetails;
-        if (promotionDetails) {
-          checkoutParams.promotionDetails = JSON.stringify(promotionDetails);
-        }
-        
-        router.push({
-          pathname: '/components/productcatalog/checkout',
-          params: checkoutParams
-        });
-        handleClose();
-      }
-    }
-  }, [isFormValid, product, mode, addItem, quantity, variantName, handleClose, totalPrice, safeGetString, unitPrice, packageType, piecesPerPackage, currentVariantOption, router]);
-
   // Parse variant definitions and options from product for new structure
   const variantData = useMemo(() => {
     if (!product) return { definitions: [], options: [] };
@@ -467,14 +350,14 @@ export default function BuyNowModal({
         isDefault: boolean;
         isActive: boolean;
       }>;
-      
+
       // Parse options from JSON if needed
       const parsedDefinitions = definitions.map(def => ({
         ...def,
-        options: typeof def.options === 'string' 
-          ? JSON.parse(def.options as string) 
-          : Array.isArray(def.options) 
-            ? def.options 
+        options: typeof def.options === 'string'
+          ? JSON.parse(def.options as string)
+          : Array.isArray(def.options)
+            ? def.options
             : []
       }));
 
@@ -483,6 +366,126 @@ export default function BuyNowModal({
 
     return { definitions: [], options: [] };
   }, [product]);
+
+  // Quantity handlers with long-press support (must run unconditionally — hooks rules)
+  const startLongPress = useCallback((increment: boolean) => {
+    const pp = computedValues?.piecesPerPackage ?? 1;
+    const st = computedValues?.stock ?? 0;
+    const changeQuantity = () => {
+      setQuantity((prev) => {
+        const newQty = increment ? prev + 1 : Math.max(1, prev - 1);
+        const newTotalPieces = newQty * pp;
+        return newTotalPieces <= st ? newQty : prev;
+      });
+    };
+
+    changeQuantity();
+
+    longPressTimeout.current = setTimeout(() => {
+      longPressInterval.current = setInterval(changeQuantity, 100);
+    }, 500);
+  }, [computedValues]);
+
+  const stopLongPress = useCallback(() => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+    }
+    if (longPressInterval.current) {
+      clearInterval(longPressInterval.current);
+      longPressInterval.current = null;
+    }
+  }, []);
+
+  const promotionInfo = useMemo(() => {
+    if (!product?.promotionDetails || !computedValues) return null;
+
+    const { piecesPerPackage, moq } = computedValues;
+    const totalPieces = quantity * piecesPerPackage;
+    const moqValue = moq;
+
+    const minQty = product.promotionDetails.minQuantity || 1;
+    const freeQty = product.promotionDetails.freeQuantity || 0;
+
+    if (!moqValue) {
+      const completeSets = Math.floor(totalPieces / minQty);
+      const totalFreeItems = completeSets * freeQty;
+      return totalFreeItems > 0 ? totalFreeItems : null;
+    }
+
+    if (totalPieces < moqValue) return null;
+
+    const quantityAboveMOQ = totalPieces - moqValue;
+    const completeSets = Math.floor(quantityAboveMOQ / minQty);
+    const totalFreeItems = completeSets * freeQty;
+
+    return totalFreeItems > 0 ? totalFreeItems : null;
+  }, [product, quantity, computedValues]);
+
+  const handleConfirm = useCallback(() => {
+    if (!product || !computedValues) return;
+    const {
+      isFormValid,
+      productImage,
+      currentVariantOption,
+      unitPrice,
+      packageType,
+      piecesPerPackage,
+      totalPrice,
+      variantName,
+      moq,
+    } = computedValues;
+    if (!isFormValid) return;
+
+    if (mode === 'cart') {
+      addItem(product, quantity, variantName);
+      handleClose();
+      return;
+    }
+
+    const checkoutParams: Record<string, string> = {
+      productId: product.id,
+      quantity: quantity.toString(),
+      totalPrice: totalPrice.toString(),
+      productName: safeGetString(product.name),
+      productImage: productImage || '',
+      unitPrice: unitPrice.toString(),
+      packageType: packageType,
+      piecesPerPackage: piecesPerPackage.toString(),
+      variantId: currentVariantOption?.id?.toString() || '',
+      variantName: variantName,
+      moq: moq?.toString() || '',
+    };
+
+    const promotionDetails = product?.promotionDetails;
+    if (promotionDetails) {
+      checkoutParams.promotionDetails = JSON.stringify(promotionDetails);
+    }
+
+    router.push({
+      pathname: '/components/productcatalog/checkout',
+      params: checkoutParams
+    });
+    handleClose();
+  }, [product, computedValues, mode, addItem, quantity, handleClose, safeGetString, router]);
+
+  if (!product || !computedValues) return null;
+
+  const {
+    productImage,
+    currentVariantOption,
+    unitPrice,
+    piecesPerPackage,
+    pricePerPackage,
+    totalPrice,
+    totalPieces,
+    stock,
+    packageType,
+    variantName,
+    moq,
+    meetsMOQ,
+    isFormValid
+  } = computedValues;
 
   return (
     <Modal
