@@ -165,7 +165,27 @@
     }
   },
   "messages": {
-    "title": "Pesan"
+    "title": "Pesan",
+    "list": {
+      "emptyTitle": "Belum ada pesan",
+      "emptyBody": "Ikuti distributor untuk dapat menghubungi mereka lewat sini.",
+      "noBusinessPhone": "Nomor telepon bisnis tidak tersedia"
+    },
+    "errors": {
+      "failedToLoad": "Gagal memuat pesan.",
+      "businessPhoneUnavailable": "Nomor telepon bisnis tidak tersedia.",
+      "sellerPhoneUnavailable": "Nomor telepon penjual tidak tersedia untuk produk ini."
+    },
+    "actions": {
+      "retry": "Coba lagi"
+    },
+    "a11y": {
+      "openChatWith": "Buka chat dengan {{name}}"
+    },
+    "whatsapp": {
+      "distributorMessage": "Halo {{name}}, saya ingin menanyakan produk Anda di Laku Marketplace.",
+      "productInquiry": "Halo, saya tertarik dengan \"{{productName}}\" di Laku Marketplace. Apakah masih tersedia?"
+    }
   },
   "map": {
     "loading": "Memuat peta…",
@@ -1096,6 +1116,13 @@
       "chatNow": "Chat sekarang",
       "addToCart": "Keranjang",
       "buyNow": "Beli sekarang"
+    },
+    "share": {
+      "withPrice": "Lihat \"{{productName}}\" di Laku Marketplace.\nHarga: Rp{{price}}\n{{link}}",
+      "withoutPrice": "Lihat \"{{productName}}\" di Laku Marketplace.\n{{link}}",
+      "dialogTitle": "Bagikan produk",
+      "copiedTitle": "Teks tersalin",
+      "copiedBody": "Teks bagikan sudah disalin. Tempel sebagai caption WhatsApp setelah memilih gambar."
     },
     "details": {
       "brand": "Merek:",

@@ -9,6 +9,8 @@ import { useUserActivityStore } from '../stores/userActivityStore';
 import { useAuthStore } from '../stores/authStore';
 import type { MarketplaceProduct } from '../services/marketplace';
 import type { Product } from '../data/sampleProducts';
+import { openWhatsApp } from '../utils/whatsapp';
+import { useTranslation } from 'react-i18next';
 
 type ProductType = MarketplaceProduct | { id: string; name: string; sellingPrice?: number; images?: string[]; packageType?: string; piecesPerPackage?: number; };
 
@@ -19,6 +21,7 @@ export default function ProductModal() {
   const { toggleLikedProduct } = useUserActivityStore();
   const likedProducts = useUserActivityStore(state => state.likedProducts);
   const { user } = useAuthStore();
+  const { t } = useTranslation();
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   
   // Refresh products (and offers) when modal gains focus
@@ -57,7 +60,15 @@ export default function ProductModal() {
   };
 
   const handleChatSeller = () => {
-    // Chat seller functionality
+    const mp = product as MarketplaceProduct;
+    const phone = mp?.seller?.company?.businessPhone;
+    const productName = product.name || 'Product';
+
+    openWhatsApp({
+      phone: typeof phone === 'string' ? phone : '',
+      text: t('messages.whatsapp.productInquiry', { productName }),
+      onErrorMessage: t('messages.errors.sellerPhoneUnavailable'),
+    });
   };
 
   const handleShare = async () => {
@@ -69,8 +80,8 @@ export default function ProductModal() {
       });
 
       const message = unitPrice
-        ? `Check out "${productName}" on Laku Marketplace.\nPrice: Rp${unitPrice.toLocaleString()}\n${deepLink}`
-        : `Check out "${productName}" on Laku Marketplace.\n${deepLink}`;
+        ? t('product.share.withPrice', { productName, price: unitPrice.toLocaleString(), link: deepLink })
+        : t('product.share.withoutPrice', { productName, link: deepLink });
 
       await Share.share({ message });
     } catch {

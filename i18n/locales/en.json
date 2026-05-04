@@ -165,7 +165,27 @@
     }
   },
   "messages": {
-    "title": "Messages"
+    "title": "Messages",
+    "list": {
+      "emptyTitle": "No messages yet",
+      "emptyBody": "Follow distributors to quickly message them here.",
+      "noBusinessPhone": "No business phone number"
+    },
+    "errors": {
+      "failedToLoad": "Failed to load messages.",
+      "businessPhoneUnavailable": "Business phone number is not available.",
+      "sellerPhoneUnavailable": "Seller phone number is not available for this product."
+    },
+    "actions": {
+      "retry": "Retry"
+    },
+    "a11y": {
+      "openChatWith": "Open chat with {{name}}"
+    },
+    "whatsapp": {
+      "distributorMessage": "Hi {{name}}, I'd like to ask about your products on Laku Marketplace.",
+      "productInquiry": "Hi, I'm interested in \"{{productName}}\" on Laku Marketplace. Is it available?"
+    }
   },
   "map": {
     "loading": "Loading map…",
@@ -1098,6 +1118,13 @@
       "chatNow": "Chat Now",
       "addToCart": "Add to Cart",
       "buyNow": "Buy Now"
+    },
+    "share": {
+      "withPrice": "Check out \"{{productName}}\" on Laku Marketplace.\nPrice: Rp{{price}}\n{{link}}",
+      "withoutPrice": "Check out \"{{productName}}\" on Laku Marketplace.\n{{link}}",
+      "dialogTitle": "Share product",
+      "copiedTitle": "Caption copied",
+      "copiedBody": "We copied the share text. Paste it as the WhatsApp caption after selecting the image."
     },
     "details": {
       "brand": "Brand:",
