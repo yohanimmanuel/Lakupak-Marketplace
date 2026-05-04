@@ -2,13 +2,15 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
-  ScrollView,
   TouchableOpacity,
   Image,
   StatusBar,
   Text,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import {
   Bell,
   Gift,
@@ -17,13 +19,15 @@ import {
   Megaphone,
   Wrench,
   FileText,
+  Trash2,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { NotificationService, Notification } from '../../services/notificationService';
 import {
   fetchPublishedLatestUpdates,
+  getDismissedAnnouncementIds,
   getReadAnnouncementIds,
-  markAnnouncementRead,
+  dismissAnnouncementFromList,
   markAnnouncementsRead,
   type PlatformAnnouncement,
 } from '../../services/latestUpdatesService';
@@ -94,6 +98,7 @@ export default function NotificationsScreen() {
   const [latestLoading, setLatestLoading] = useState(false);
   const [latestError, setLatestError] = useState<string | null>(null);
   const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<number>>(new Set());
+  const [dismissedAnnouncementIds, setDismissedAnnouncementIds] = useState<Set<number>>(new Set());
   const [selectedUpdateCategory, setSelectedUpdateCategory] = useState<LatestUpdateTabId>('all');
 
   const paRealtimeVersion = usePlatformAnnouncementsRealtimeStore((s) => s.version);
@@ -137,6 +142,18 @@ export default function NotificationsScreen() {
     };
   }, [isAuthenticated, authUser?.id]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const marketplaceUserId = isAuthenticated && authUser?.id != null ? authUser.id : null;
+    (async () => {
+      const dismissed = await getDismissedAnnouncementIds(marketplaceUserId);
+      if (!cancelled) setDismissedAnnouncementIds(dismissed);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, authUser?.id]);
+
   const loadLatestUpdates = useCallback(async () => {
     setLatestLoading(true);
     setLatestError(null);
@@ -173,6 +190,12 @@ export default function NotificationsScreen() {
         next.delete(id);
         return next;
       });
+      setDismissedAnnouncementIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   }, [paRealtimeVersion]);
 
@@ -181,6 +204,32 @@ export default function NotificationsScreen() {
     const key = selectedUpdateCategory;
     return latestUpdates.filter((a) => normalizeAnnouncementCategory(a.category) === key);
   }, [latestUpdates, selectedUpdateCategory]);
+
+  const visibleFilteredLatestUpdates = useMemo(
+    () => filteredLatestUpdates.filter((a) => !dismissedAnnouncementIds.has(a.id)),
+    [filteredLatestUpdates, dismissedAnnouncementIds],
+  );
+
+  const handleDismissLatestUpdate = useCallback(
+    async (announcementId: number) => {
+      const uid = authUser?.id ?? null;
+      try {
+        await dismissAnnouncementFromList(announcementId, uid);
+        setDismissedAnnouncementIds((prev) => {
+          const next = new Set(prev);
+          next.add(announcementId);
+          return next;
+        });
+      } catch (err) {
+        console.error('[Notifications] dismissAnnouncementFromList failed', err);
+        Alert.alert(
+          t('tabsNotifications.latestUpdates.dismissFailedTitle'),
+          t('tabsNotifications.latestUpdates.dismissFailedBody'),
+        );
+      }
+    },
+    [authUser?.id, t],
+  );
 
   const getAlertIcon = (notification: Notification) => {
     switch (notification.type) {
@@ -292,7 +341,7 @@ export default function NotificationsScreen() {
 
   const onReadAllLatest = async () => {
     const uid = authUser?.id ?? null;
-    const ids = filteredLatestUpdates.map((a) => a.id);
+    const ids = visibleFilteredLatestUpdates.map((a) => a.id);
     await markAnnouncementsRead(ids, uid);
     setReadAnnouncementIds((prev) => {
       const next = new Set(prev);
@@ -396,13 +445,13 @@ export default function NotificationsScreen() {
               <TouchableOpacity
                 onPress={onReadAllLatest}
                 hitSlop={8}
-                disabled={filteredLatestUpdates.length === 0}
+                disabled={visibleFilteredLatestUpdates.length === 0}
                 style={styles.sectionHeaderAction}
               >
                 <Text
                   style={[
                     styles.sectionHeaderActionText,
-                    filteredLatestUpdates.length === 0 && styles.sectionHeaderActionDisabled,
+                    visibleFilteredLatestUpdates.length === 0 && styles.sectionHeaderActionDisabled,
                   ]}
                 >
                   {t('tabsNotifications.latestUpdates.readAll')}
@@ -458,42 +507,69 @@ export default function NotificationsScreen() {
 
             {!latestLoading &&
               !latestError &&
-              filteredLatestUpdates.map((item) => {
+              latestUpdates.length > 0 &&
+              filteredLatestUpdates.length > 0 &&
+              visibleFilteredLatestUpdates.length === 0 && (
+                <Text style={styles.latestEmpty}>{t('tabsNotifications.latestUpdates.dismissedAll')}</Text>
+              )}
+
+            {!latestLoading &&
+              !latestError &&
+              visibleFilteredLatestUpdates.map((item) => {
                 const read = readAnnouncementIds.has(item.id);
                 const timeLabel = formatAnnouncementTime(item.publishedAt, item.createdAt);
                 const rowTab = announcementCategoryToTabId(item.category);
                 return (
-                  <TouchableOpacity
+                  <ReanimatedSwipeable
                     key={item.id}
-                    style={styles.latestCard}
-                    activeOpacity={0.7}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/components/notifications/latest-update/[id]',
-                        params: { id: String(item.id) },
-                      })
-                    }
-                  >
-                    <View style={styles.latestRowCompact}>
-                      <View style={styles.latestIcon}>{getUpdateTabIcon(rowTab, false)}</View>
-                      <View style={styles.latestTextColCompact}>
-                        <View style={styles.latestTitleRow}>
-                          {!read ? <View style={styles.unreadDotBlue} /> : null}
-                          <Text style={styles.latestTitleOneLine} numberOfLines={1}>
-                            {item.title}
-                          </Text>
-                        </View>
-                        <Text style={styles.latestTimeCompact}>{timeLabel}</Text>
+                    friction={2}
+                    overshootRight={false}
+                    containerStyle={styles.latestSwipeContainer}
+                    childrenContainerStyle={styles.latestSwipeChild}
+                    renderRightActions={() => (
+                      <View style={styles.latestSwipeDeleteBg}>
+                        <TouchableOpacity
+                          style={styles.latestSwipeDeleteBtn}
+                          onPress={() => handleDismissLatestUpdate(item.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('tabsNotifications.latestUpdates.deleteA11y')}
+                        >
+                          <Trash2 size={22} color="#ffffff" />
+                        </TouchableOpacity>
                       </View>
-                      {item.imageUrl ? (
-                        <Image
-                          source={{ uri: item.imageUrl }}
-                          style={styles.latestThumbSmall}
-                          resizeMode="cover"
-                        />
-                      ) : null}
-                    </View>
-                  </TouchableOpacity>
+                    )}
+                  >
+                    <TouchableOpacity
+                      style={styles.latestCard}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/components/notifications/latest-update/[id]',
+                          params: { id: String(item.id) },
+                        })
+                      }
+                    >
+                      <View style={styles.latestRowCompact}>
+                        <View style={styles.latestIcon}>{getUpdateTabIcon(rowTab, false)}</View>
+                        <View style={styles.latestTextColCompact}>
+                          <View style={styles.latestTitleRow}>
+                            {!read ? <View style={styles.unreadDotBlue} /> : null}
+                            <Text style={styles.latestTitleOneLine} numberOfLines={1}>
+                              {item.title}
+                            </Text>
+                          </View>
+                          <Text style={styles.latestTimeCompact}>{timeLabel}</Text>
+                        </View>
+                        {item.imageUrl ? (
+                          <Image
+                            source={{ uri: item.imageUrl }}
+                            style={styles.latestThumbSmall}
+                            resizeMode="cover"
+                          />
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  </ReanimatedSwipeable>
                 );
               })}
           </View>
@@ -710,8 +786,6 @@ const styles = StyleSheet.create({
   },
   latestCard: {
     backgroundColor: '#ffffff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e5e7eb',
   },
   latestIcon: {
     width: 40,
@@ -763,5 +837,28 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 8,
     backgroundColor: '#f3f4f6',
+  },
+  latestSwipeContainer: {
+    backgroundColor: '#ffffff',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#e5e7eb',
+    overflow: 'hidden',
+  },
+  latestSwipeChild: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  latestSwipeDeleteBg: {
+    width: 88,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: primaryBlue,
+  },
+  latestSwipeDeleteBtn: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 56,
   },
 });

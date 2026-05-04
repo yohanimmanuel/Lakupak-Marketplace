@@ -450,7 +450,11 @@
       "readAll": "Tandai semua dibaca",
       "loading": "Memuat update…",
       "empty": "Belum ada update",
-      "emptyCategory": "Belum ada update di kategori ini."
+      "emptyCategory": "Belum ada update di kategori ini.",
+      "dismissedAll": "Anda sudah menghapus semua update di daftar ini. Coba tab kategori lain atau kembali lagi nanti.",
+      "deleteA11y": "Hapus dari daftar",
+      "dismissFailedTitle": "Tidak dapat menghapus",
+      "dismissFailedBody": "Perubahan tidak tersimpan di perangkat ini. Silakan coba lagi."
     },
     "tabs": {
       "all": "Semua",

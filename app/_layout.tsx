@@ -5,6 +5,7 @@ import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Notifications from 'expo-notifications';
 import { API_BASE_URL } from '../services/config';
 import { useTranslation } from 'react-i18next';
@@ -334,10 +335,11 @@ function RootLayoutNav() {
   }, [user?.id, token, initializeCart, loadUserActivities, refreshAllData, startAutoRefresh, stopAutoRefresh]);
 
   return (
-    <ThemeProvider value={DefaultTheme}>
-      <SuspendedAccountModal />
-      <AuthGuard>
-        <Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={DefaultTheme}>
+        <SuspendedAccountModal />
+        <AuthGuard>
+          <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: '#f9fafb' } }} />
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="useraccounts/welcome" options={{ headerShown: false }} />
@@ -705,8 +707,9 @@ function RootLayoutNav() {
           }}
         />
         
-        </Stack>
-      </AuthGuard>
-    </ThemeProvider>
+          </Stack>
+        </AuthGuard>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

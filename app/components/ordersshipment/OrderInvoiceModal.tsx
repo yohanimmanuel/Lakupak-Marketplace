@@ -24,6 +24,7 @@ import { X, FileDown, Image as ImageIcon, Share2, MoreHorizontal } from 'lucide-
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   buildOrderInvoiceHtml,
   buildOrderInvoicePlainText,
@@ -79,7 +80,7 @@ async function ensureNamedCacheFile(args: { srcUri: string; filename: string }):
   }
 }
 
-function InvoiceRasterBody({ order, t }: { order: OrderLike; t: (key: string, opts?: any) => string }) {
+function InvoiceRasterBody({ order, t }: { order: OrderLike; t: TFunction }) {
   const s = buildInvoiceSnapshot(order);
   return (
     <View style={rasterStyles.sheet} collapsable={false}>

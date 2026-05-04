@@ -450,7 +450,11 @@
       "readAll": "Read all",
       "loading": "Loading updates…",
       "empty": "No updates",
-      "emptyCategory": "No updates in this category."
+      "emptyCategory": "No updates in this category.",
+      "dismissedAll": "You've removed these updates from your list. Try another category tab or check back later for new updates.",
+      "deleteA11y": "Remove from list",
+      "dismissFailedTitle": "Couldn’t remove",
+      "dismissFailedBody": "We couldn’t save that change on this device. Please try again."
     },
     "tabs": {
       "all": "All",
