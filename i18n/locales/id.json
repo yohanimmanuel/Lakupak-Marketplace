@@ -292,7 +292,7 @@
         "heading": "Reset kata sandi",
         "subheading": "Masukkan email yang Anda gunakan untuk masuk. Setelah itu Anda bisa membuat kata sandi baru.",
         "emailLabel": "Email Anda",
-        "emailPlaceholder": "Example@gmail.com",
+        "emailPlaceholder": "contoh@gmail.com",
         "sending": "Mengirim…",
         "continue": "Lanjut"
       },
