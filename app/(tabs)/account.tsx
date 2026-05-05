@@ -325,7 +325,7 @@ export default function AccountScreen() {
         )}
       </View>
 
-      {/* Section 3: My Wallet */}
+      {/* Section 3: My Wallet — commented out until payment / wallet is implemented; uncomment to restore
       <View style={{ backgroundColor: '#ffffff', padding: 16, marginBottom: 10, opacity: isAuthenticated ? 1 : 0.6 }}>
         <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 26 }}>{t('tabsAccount.sections.myWallet')}</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 }}>
@@ -387,6 +387,7 @@ export default function AccountScreen() {
           </View>
         )}
       </View>
+      */}
 
       {/* Section 4: More Services */}
       <View style={{ backgroundColor: '#ffffff', padding: 16, marginBottom: 10, opacity: isAuthenticated ? 1 : 0.6 }}>
