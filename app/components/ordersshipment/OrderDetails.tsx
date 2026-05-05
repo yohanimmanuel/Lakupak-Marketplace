@@ -181,6 +181,7 @@ export default function OrderDetailsModal() {
   const [isLoading, setIsLoading] = useState(true);
   const [isReceived, setIsReceived] = useState(false);
   const [isMarkingReceived, setIsMarkingReceived] = useState(false);
+  const [hasExistingReview, setHasExistingReview] = useState(false);
   const [showAllOrderInfo, setShowAllOrderInfo] = useState(false);
   const [productMOQs, setProductMOQs] = useState<Record<string, number | null>>({});
   const [invoiceModalVisible, setInvoiceModalVisible] = useState(false);
@@ -227,6 +228,42 @@ export default function OrderDetailsModal() {
       fetchOrderDetails(params.orderId);
     }
   }, [params.orderId, fetchOrderDetails]);
+
+  // Detect if this order already has a review (so CTA becomes "Edit review")
+  useEffect(() => {
+    let cancelled = false;
+    const loadExistingReviews = async () => {
+      const orderId = params.orderId;
+      if (!token || !orderId || typeof orderId !== 'string' || !orderId.trim()) return;
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/mobile/reviews/order?orderId=${encodeURIComponent(orderId.trim())}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        const json = (await res.json().catch(() => null)) as
+          | {
+              productReviews?: Array<{ productId: string }>;
+              deliveryReview?: { deliveryRating?: number | null; deliveryComment?: string | null } | null;
+            }
+          | null;
+        if (!res.ok || !json) return;
+        if (cancelled) return;
+        const hasProduct = Array.isArray(json.productReviews) && json.productReviews.length > 0;
+        const hasDelivery =
+          !!json.deliveryReview &&
+          ((typeof json.deliveryReview.deliveryRating === 'number' && json.deliveryReview.deliveryRating > 0) ||
+            (typeof json.deliveryReview.deliveryComment === 'string' && json.deliveryReview.deliveryComment.trim().length > 0));
+        setHasExistingReview(hasProduct || hasDelivery);
+      } catch {
+        // best-effort
+      }
+    };
+
+    void loadExistingReviews();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, params.orderId]);
 
   // Subscribe to WebSocket for real-time order updates
   useEffect(() => {
@@ -1238,7 +1275,9 @@ export default function OrderDetailsModal() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.rateButton} onPress={handleRateOrder}>
             <Star size={16} color="#ffffff" />
-            <Text style={styles.rateButtonText}>{t('ordersFlow.orderDetails.actions.rate')}</Text>
+            <Text style={styles.rateButtonText}>
+              {hasExistingReview ? t('ordersFlow.orderDetails.actions.editReview') : t('ordersFlow.orderDetails.actions.rate')}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -1303,7 +1342,9 @@ export default function OrderDetailsModal() {
           </TouchableOpacity>
           <TouchableOpacity style={styles.rateButton} onPress={handleRateOrder}>
             <Star size={16} color="#ffffff" />
-            <Text style={styles.rateButtonText}>{t('ordersFlow.orderDetails.actions.rate')}</Text>
+            <Text style={styles.rateButtonText}>
+              {hasExistingReview ? t('ordersFlow.orderDetails.actions.editReview') : t('ordersFlow.orderDetails.actions.rate')}
+            </Text>
           </TouchableOpacity>
         </View>
       );

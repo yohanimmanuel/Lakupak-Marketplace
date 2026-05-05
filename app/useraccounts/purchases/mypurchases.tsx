@@ -44,7 +44,7 @@ interface Order {
   customerEmail: string;
   deliveryAddress: string;
   deliveryMethod: string;
-  orderStatus: 'Pending' | 'Confirmed' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned';
+  orderStatus: 'Pending' | 'Confirmed' | 'Packed' | 'Shipped' | 'Delivered' | 'Received' | 'Cancelled' | 'Returned';
   paymentStatus: 'Unpaid' | 'Paid' | 'Refunded';
   paymentTerms: string;
   userId: string | null;
@@ -86,6 +86,7 @@ export default function MyPurchasesModal() {
   const [query, setQuery] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  const [orderHasReview, setOrderHasReview] = useState<Record<string, boolean>>({});
 
   const isAuthenticated = !!token && !!authUser;
   const storeOrders = useDataStore(state => state.orders);
@@ -134,7 +135,69 @@ export default function MyPurchasesModal() {
     });
 
     setOrders(transformedOrders);
+    // Orders refreshed via websocket/load → reset cached review flags to avoid stale "Edit review"
+    setOrderHasReview({});
   }, [storeOrders, isAuthenticated, authUser?.id]);
+
+  // Best-effort: cache whether each order already has an existing review (for "Edit review" label).
+  useEffect(() => {
+    let cancelled = false;
+    const loadFlags = async () => {
+      if (!token || !isAuthenticated) return;
+      const candidateOrderIds = Array.from(
+        new Set(
+          orders
+            .filter((o) => o.orderStatus === 'Delivered' || o.orderStatus === 'Received')
+            .map((o) => o.orderId)
+            .filter(Boolean),
+        ),
+      );
+      const toFetch = candidateOrderIds.filter((id) => orderHasReview[id] === undefined).slice(0, 25);
+      if (toFetch.length === 0) return;
+
+      try {
+        const results = await Promise.all(
+          toFetch.map(async (orderId) => {
+            try {
+              const res = await fetch(
+                `${API_BASE_URL}/api/mobile/reviews/order?orderId=${encodeURIComponent(orderId)}`,
+                { headers: { Authorization: `Bearer ${token}` } },
+              );
+              const json = (await res.json().catch(() => null)) as
+                | {
+                    productReviews?: unknown[];
+                    deliveryReview?: { deliveryRating?: number | null; deliveryComment?: string | null } | null;
+                  }
+                | null;
+              if (!res.ok || !json) return { orderId, has: false };
+              const hasProduct = Array.isArray(json.productReviews) && json.productReviews.length > 0;
+              const hasDelivery =
+                !!json.deliveryReview &&
+                ((typeof json.deliveryReview.deliveryRating === 'number' && json.deliveryReview.deliveryRating > 0) ||
+                  (typeof json.deliveryReview.deliveryComment === 'string' && json.deliveryReview.deliveryComment.trim().length > 0));
+              return { orderId, has: hasProduct || hasDelivery };
+            } catch {
+              return { orderId, has: false };
+            }
+          }),
+        );
+
+        if (cancelled) return;
+        setOrderHasReview((prev) => {
+          const next = { ...prev };
+          for (const r of results) next[r.orderId] = r.has;
+          return next;
+        });
+      } catch {
+        // ignore
+      }
+    };
+
+    void loadFlags();
+    return () => {
+      cancelled = true;
+    };
+  }, [orders, token, isAuthenticated, orderHasReview]);
 
   // Get related products from websocket-enabled products store
   const relatedProducts = React.useMemo(() => {
@@ -192,7 +255,7 @@ export default function MyPurchasesModal() {
         filtered = orders.filter(order => order.orderStatus === 'Shipped');
         break;
       case 'completed':
-        filtered = orders.filter(order => order.orderStatus === 'Delivered');
+        filtered = orders.filter(order => ['Delivered', 'Received'].includes(order.orderStatus));
         break;
       case 'returns':
         filtered = orders.filter(order => order.orderStatus === 'Returned');
@@ -201,7 +264,7 @@ export default function MyPurchasesModal() {
         filtered = orders.filter(order => order.orderStatus === 'Cancelled');
         break;
       case 'to-rate':
-        filtered = orders.filter(order => order.orderStatus === 'Delivered');
+        filtered = orders.filter(order => ['Delivered', 'Received'].includes(order.orderStatus));
         break;
     }
     
@@ -265,9 +328,13 @@ export default function MyPurchasesModal() {
     } else if (order.orderStatus === 'Shipped') {
       buttons.push({ text: t('myPurchases.actions.returnRefund'), type: 'secondary', action: 'return' });
       buttons.push({ text: t('ordersFlow.orderDetails.actions.orderReceived'), type: 'primary', action: 'received' });
-    } else if (order.orderStatus === 'Delivered') {
+    } else if (order.orderStatus === 'Delivered' || order.orderStatus === 'Received') {
       buttons.push({ text: t('myPurchases.actions.returnRefund'), type: 'secondary', action: 'return' });
-      buttons.push({ text: t('tabsAccount.purchaseStatus.toRate'), type: 'primary', action: 'rate' });
+      buttons.push({
+        text: orderHasReview[order.orderId] ? t('ordersFlow.orderDetails.actions.editReview') : t('tabsAccount.purchaseStatus.toRate'),
+        type: 'primary',
+        action: 'rate',
+      });
     } else if (order.orderStatus === 'Returned') {
       buttons.push({ text: t('ordersFlow.orderDetails.orderIdInfo.viewMore'), type: 'secondary', action: 'details' });
     }
@@ -284,16 +351,25 @@ export default function MyPurchasesModal() {
         router.push('/messages');
         break;
       case 'return':
-        // Navigate to settings for now (placeholder)
-        router.push('/settings');
+        router.push(`/components/ordersshipment/ReturnRefundModal?orderId=${encodeURIComponent(order.orderId)}`);
         break;
       case 'received':
-        // Update order status to delivered
-        updateOrderStatus(order.orderId, 'Delivered');
+        updateOrderStatus(order.orderId, 'Received');
         break;
       case 'rate':
-        // Navigate to product page for now (placeholder)
-        router.push('/product');
+        {
+          const reviewItems = (order.orderItems ?? [])
+            .filter((it) => it.productId)
+            .map((it) => ({
+              productId: String(it.productId),
+              productName: it.productName ?? 'Product',
+              image: (it.images && it.images[0]) ? it.images[0] : '',
+            }));
+          router.push({
+            pathname: '/components/productcatalog/ProductReview',
+            params: { orderId: order.orderId, itemsJson: JSON.stringify(reviewItems) },
+          });
+        }
         break;
       case 'details':
         router.push({
@@ -410,9 +486,23 @@ export default function MyPurchasesModal() {
             <Text style={styles.productName} numberOfLines={2}>
               {mainItem.productName}
               </Text>
-            {mainItem.variant && (
-              <Text style={styles.productVariant}>{mainItem.variant}</Text>
-            )}
+            {(mainItem.variant || mainItem.color || mainItem.packageType || mainItem.piecesPerPackage) ? (
+              <Text style={styles.productVariant} numberOfLines={2}>
+                {[
+                  mainItem.variant,
+                  mainItem.color ? `Color: ${mainItem.color}` : undefined,
+                  mainItem.packageType && mainItem.piecesPerPackage
+                    ? `${mainItem.packageType} · ${mainItem.piecesPerPackage} pcs`
+                    : mainItem.packageType
+                      ? mainItem.packageType
+                      : mainItem.piecesPerPackage
+                        ? `${mainItem.piecesPerPackage} pcs`
+                        : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(' • ')}
+              </Text>
+            ) : null}
             <Text style={styles.productQuantity}>x{mainItem.packageQuantity}</Text>
             <View style={styles.priceContainer}>
               {order.discounts > 0 && (
@@ -487,16 +577,23 @@ export default function MyPurchasesModal() {
               key={index}
               style={[
                 styles.actionButton,
-                button.type === 'primary' ? styles.primaryButton : styles.secondaryButton
+                button.action === 'rate' ? styles.ratePrimaryButton : button.type === 'primary' ? styles.primaryButton : styles.secondaryButton
               ]}
               onPress={() => handleAction(order, button.action)}
             >
-              <Text style={[
-                styles.actionButtonText,
-                button.type === 'primary' ? styles.primaryButtonText : styles.secondaryButtonText
-              ]}>
-                {button.text}
-              </Text>
+              {button.action === 'rate' ? (
+                <>
+                  <Star size={16} color="#ffffff" />
+                  <Text style={[styles.actionButtonText, styles.primaryButtonText]}>{button.text}</Text>
+                </>
+              ) : (
+                <Text style={[
+                  styles.actionButtonText,
+                  button.type === 'primary' ? styles.primaryButtonText : styles.secondaryButtonText
+                ]}>
+                  {button.text}
+                </Text>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -813,6 +910,12 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: '#f97316',
+  },
+  ratePrimaryButton: {
+    backgroundColor: '#f59e0b',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
   },
   secondaryButton: {
     backgroundColor: '#ffffff',

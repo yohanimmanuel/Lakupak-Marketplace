@@ -15,10 +15,10 @@ import {
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AlertCircle, ArrowLeft, ImagePlus, X } from 'lucide-react-native';
+import { AlertCircle, ArrowLeft, Camera, ImagePlus, X } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
-import { pickMultipleImages } from '../../../services/imagePicker';
+import { pickImage, takePhoto } from '../../../services/imagePicker';
 import { useTranslation } from 'react-i18next';
 
 const RETURN_REASON_IDS = [
@@ -49,21 +49,31 @@ export default function ReturnRefundModal() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
   };
 
-  const handleAddPhotos = async () => {
-    const currentCount = imageUrls.length;
-    if (currentCount >= 5) return;
-    const remaining = 5 - currentCount;
+  const handleAddPhotoFromGallery = async () => {
+    if (imageUrls.length >= 5) return;
     try {
       setUploadingPhotos(true);
-      const urls = await pickMultipleImages({
-        folder: 'reviews',
-        selectionLimit: remaining,
-      });
-      if (urls && urls.length > 0) {
-        setImageUrls((prev) => {
-          const combined = [...prev, ...urls];
-          return combined.slice(0, 5);
-        });
+      const url = await pickImage({ folder: 'returns', allowsEditing: false });
+      if (url) {
+        setImageUrls((prev) => [...prev, url].slice(0, 5));
+      }
+    } catch {
+      Alert.alert(
+        t('ordersFlow.returnRefund.alerts.uploadFailedTitle'),
+        t('ordersFlow.returnRefund.alerts.uploadFailedBody')
+      );
+    } finally {
+      setUploadingPhotos(false);
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    if (imageUrls.length >= 5) return;
+    try {
+      setUploadingPhotos(true);
+      const url = await takePhoto({ folder: 'returns', allowsEditing: false });
+      if (url) {
+        setImageUrls((prev) => [...prev, url].slice(0, 5));
       }
     } catch {
       Alert.alert(
@@ -249,7 +259,7 @@ export default function ReturnRefundModal() {
           )}
 
           <View style={styles.photosSection}>
-            <Text style={styles.inputLabel}>{t('ordersFlow.returnRefund.photosLabel', { max: 5 })}</Text>
+            <Text style={styles.photosLabel}>{t('ordersFlow.returnRefund.photosLabel', { max: 5 })}</Text>
             <Text style={styles.photosHint}>
               {t('ordersFlow.returnRefund.photosHint')}
             </Text>
@@ -268,22 +278,36 @@ export default function ReturnRefundModal() {
                 </View>
               ))}
               {imageUrls.length < 5 && (
-                <TouchableOpacity
-                  style={styles.photoAdd}
-                  onPress={handleAddPhotos}
-                  disabled={uploadingPhotos}
-                  accessibilityLabel={t('ordersFlow.returnRefund.a11y.addPhotos')}
-                  accessibilityRole="button"
-                >
-                  {uploadingPhotos ? (
-                    <ActivityIndicator size="small" color={primaryBlue} />
-                  ) : (
-                    <ImagePlus size={24} color="#6b7280" />
-                  )}
-                  <Text style={styles.photoAddText}>
-                    {imageUrls.length > 0 ? t('ordersFlow.returnRefund.addMore') : t('ordersFlow.returnRefund.addPhotos')}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.photoActionsRow}>
+                  <TouchableOpacity
+                    style={styles.photoAdd}
+                    onPress={handleTakePhoto}
+                    disabled={uploadingPhotos}
+                    accessibilityLabel={t('ordersFlow.returnRefund.a11y.camera')}
+                    accessibilityRole="button"
+                  >
+                    {uploadingPhotos ? (
+                      <ActivityIndicator size="small" color={primaryBlue} />
+                    ) : (
+                      <Camera size={22} color="#6b7280" />
+                    )}
+                    <Text style={styles.photoAddText}>{t('ordersFlow.returnRefund.camera')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.photoAdd}
+                    onPress={handleAddPhotoFromGallery}
+                    disabled={uploadingPhotos}
+                    accessibilityLabel={t('ordersFlow.returnRefund.a11y.gallery')}
+                    accessibilityRole="button"
+                  >
+                    {uploadingPhotos ? (
+                      <ActivityIndicator size="small" color={primaryBlue} />
+                    ) : (
+                      <ImagePlus size={22} color="#6b7280" />
+                    )}
+                    <Text style={styles.photoAddText}>{t('ordersFlow.returnRefund.gallery')}</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           </View>
@@ -481,13 +505,27 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   photosSection: {
-    paddingHorizontal: 8,
-    paddingBottom: 16,
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  photosLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 6,
   },
   photosHint: {
     fontSize: 12,
     color: '#6B7280',
-    marginTop: 4,
+    marginBottom: 10,
+    lineHeight: 16,
+  },
+  photoActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
   },
   photoRow: {
     flexDirection: 'row',
@@ -520,9 +558,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 8,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#d1d5db',
+    backgroundColor: '#f3f4f6',
     alignItems: 'center',
     justifyContent: 'center',
   },

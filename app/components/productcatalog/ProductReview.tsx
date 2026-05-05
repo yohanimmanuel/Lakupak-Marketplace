@@ -14,9 +14,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Star, MessageSquare, Package, ImagePlus, X } from 'lucide-react-native';
+import { ArrowLeft, Star, MessageSquare, Package, Camera, ImagePlus, X } from 'lucide-react-native';
 import { API_BASE_URL } from '../../../services/config';
-import { pickMultipleImages } from '../../../services/imagePicker';
+import { pickImage, pickMultipleImages, takePhoto } from '../../../services/imagePicker';
 import { useAuthStore } from '../../../stores/authStore';
 import { useTranslation } from 'react-i18next';
 
@@ -109,6 +109,76 @@ export default function ProductReviewScreen() {
       );
     }
   }, [items.length, itemsKey]);
+
+  // Prefill existing reviews (1 buyer = 1 review per product per order)
+  useEffect(() => {
+    let cancelled = false;
+    const loadExisting = async () => {
+      if (!token || !orderId || typeof orderId !== 'string' || !orderId.trim()) return;
+      if (!items.length) return;
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/mobile/reviews/order?orderId=${encodeURIComponent(orderId.trim())}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        const json = (await res.json().catch(() => null)) as
+          | {
+              productReviews?: Array<{
+                productId: string;
+                rating: number;
+                title?: string | null;
+                comment?: string | null;
+                imageUrls?: string[];
+              }>;
+              deliveryReview?: { deliveryRating?: number | null; deliveryComment?: string | null } | null;
+            }
+          | null;
+        if (!res.ok || !json) return;
+        if (cancelled) return;
+
+        type ExistingProductReview = {
+          productId: string;
+          rating: number;
+          title?: string | null;
+          comment?: string | null;
+          imageUrls?: string[];
+        };
+        const byProductId = new Map<string, ExistingProductReview>();
+        for (const r of json.productReviews ?? []) {
+          if (r?.productId) byProductId.set(String(r.productId), r);
+        }
+
+        setProductReviews((prev) =>
+          items.map((it, idx) => {
+            const existing = byProductId.get(String(it.productId));
+            if (!existing) return prev[idx] ?? defaultReviewState();
+            return {
+              rating: Number(existing.rating) || 0,
+              title: typeof existing.title === 'string' ? existing.title : '',
+              comment: typeof existing.comment === 'string' ? existing.comment : '',
+              images: Array.isArray(existing.imageUrls)
+                ? existing.imageUrls.filter((u: unknown): u is string => typeof u === 'string')
+                : [],
+            };
+          }),
+        );
+
+        if (json.deliveryReview) {
+          const dr = json.deliveryReview.deliveryRating;
+          const dc = json.deliveryReview.deliveryComment;
+          setDeliveryRating(typeof dr === 'number' ? dr : 0);
+          setDeliveryComment(typeof dc === 'string' ? dc : '');
+        }
+      } catch {
+        // best-effort only
+      }
+    };
+
+    void loadExisting();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, orderId, itemsKey, items.length]);
 
   const primaryBlue = '#0a61d7';
   const iconGray = '#6B7280';
@@ -220,21 +290,51 @@ export default function ProductReviewScreen() {
     });
   };
 
-  const addReviewPhotos = async (productIndex: number) => {
+  const appendReviewPhotoUrl = (productIndex: number, url: string) => {
+    setProductReviews((prev) => {
+      const next = [...prev];
+      const row = next[productIndex] ?? defaultReviewState();
+      const combined = [...(row.images ?? []), url].slice(0, MAX_PHOTOS_PER_PRODUCT);
+      next[productIndex] = { ...row, images: combined };
+      return next;
+    });
+  };
+
+  const addReviewPhotoFromCamera = async (productIndex: number) => {
     const review = productReviews[productIndex];
     const currentCount = review?.images?.length ?? 0;
     if (!review || currentCount >= MAX_PHOTOS_PER_PRODUCT) return;
-    const remaining = MAX_PHOTOS_PER_PRODUCT - currentCount;
     try {
       setUploadingPhotoIndex(productIndex);
-      const urls = await pickMultipleImages({
-        folder: 'reviews',
-        selectionLimit: remaining,
-      });
+      const url = await takePhoto({ folder: 'reviews', allowsEditing: false });
+      if (url) appendReviewPhotoUrl(productIndex, url);
+    } catch {
+      Alert.alert(
+        t('productReview.alerts.uploadFailedTitle'),
+        t('productReview.alerts.uploadFailedBody')
+      );
+    } finally {
+      setUploadingPhotoIndex(null);
+    }
+  };
+
+  const addReviewPhotoFromGallery = async (productIndex: number) => {
+    const review = productReviews[productIndex];
+    const currentCount = review?.images?.length ?? 0;
+    if (!review || currentCount >= MAX_PHOTOS_PER_PRODUCT) return;
+    const remaining = Math.max(0, MAX_PHOTOS_PER_PRODUCT - currentCount);
+    if (remaining === 0) return;
+    try {
+      setUploadingPhotoIndex(productIndex);
+      const urls = await pickMultipleImages({ folder: 'reviews', selectionLimit: remaining });
       if (urls.length > 0) {
-        const current = productReviews[productIndex]?.images ?? [];
-        const combined = [...current, ...urls].slice(0, MAX_PHOTOS_PER_PRODUCT);
-        updateProductReview(productIndex, 'images', combined);
+        setProductReviews((prev) => {
+          const next = [...prev];
+          const row = next[productIndex] ?? defaultReviewState();
+          const combined = [...(row.images ?? []), ...urls].slice(0, MAX_PHOTOS_PER_PRODUCT);
+          next[productIndex] = { ...row, images: combined };
+          return next;
+        });
       }
     } catch {
       Alert.alert(
@@ -368,9 +468,11 @@ export default function ProductReviewScreen() {
       >
         <View style={styles.contentCard}>
           {orderId ? (
-            <View style={styles.orderIdRow}>
-              <Text style={styles.orderIdLabel}>{t('productReview.order.label')}</Text>
-              <Text style={styles.orderIdValue}>{orderId}</Text>
+            <View style={styles.sectionCard}>
+              <View style={styles.orderIdRow}>
+                <Text style={styles.orderIdLabel}>{t('productReview.order.label')}</Text>
+                <Text style={styles.orderIdValue}>{orderId}</Text>
+              </View>
             </View>
           ) : null}
 
@@ -385,139 +487,156 @@ export default function ProductReviewScreen() {
                     {t('productReview.order.productXofY', { index: index + 1, total: items.length })}
                   </Text>
                 )}
-                <View style={styles.headerSection}>
-                  {imgUri ? (
-                    <Image source={{ uri: imgUri }} style={styles.productImage} />
-                  ) : (
-                    <View style={styles.productImagePlaceholder}>
-                      <Text style={styles.productInitials}>
-                        {(item.productName || 'P').charAt(0).toUpperCase()}
+
+                <View style={styles.sectionCard}>
+                  <View style={styles.headerSection}>
+                    {imgUri ? (
+                      <Image source={{ uri: imgUri }} style={styles.productImage} />
+                    ) : (
+                      <View style={styles.productImagePlaceholder}>
+                        <Text style={styles.productInitials}>
+                          {(item.productName || 'P').charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.productInfo}>
+                      <Text style={styles.productName} numberOfLines={2}>
+                        {item.productName || 'Product'}
                       </Text>
                     </View>
-                  )}
-                  <View style={styles.productInfo}>
-                    <Text style={styles.productName} numberOfLines={2}>
-                      {item.productName || 'Product'}
-                    </Text>
                   </View>
-                </View>
 
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>{t('productReview.sections.productLikeTitle')}</Text>
-                  <Text style={styles.sectionSubtitle}>
-                    {t('productReview.sections.productLikeSubtitle')}
-                  </Text>
-                  {renderStars(review.rating, (val) => updateProductReview(index, 'rating', val))}
-                </View>
-
-                <View style={styles.section}>
-                  <Text style={styles.inputLabel}>{t('productReview.sections.reviewTitleLabel')}</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    value={review.title}
-                    onChangeText={(t) => updateProductReview(index, 'title', t)}
-                    placeholder={t('productReview.sections.reviewTitlePlaceholder')}
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
-
-                <View style={styles.section}>
-                  <View style={styles.sectionHeaderRow}>
-                    <MessageSquare color={iconGray} size={18} />
-                    <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>
-                      {t('productReview.sections.detailedTitle')}
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>{t('productReview.sections.productLikeTitle')}</Text>
+                    <Text style={styles.sectionSubtitle}>
+                      {t('productReview.sections.productLikeSubtitle')}
                     </Text>
+                    {renderStars(review.rating, (val) => updateProductReview(index, 'rating', val))}
                   </View>
-                  <Text style={styles.sectionSubtitle}>
-                    {t('productReview.sections.detailedSubtitle')}
-                  </Text>
-                  <TextInput
-                    style={styles.textArea}
-                    value={review.comment}
-                    onChangeText={(c) => updateProductReview(index, 'comment', c)}
-                    placeholder={t('productReview.sections.detailedPlaceholder')}
-                    placeholderTextColor="#9ca3af"
-                    multiline
-                    numberOfLines={4}
-                    textAlignVertical="top"
-                  />
-                </View>
 
-                <View style={styles.section}>
-                  <Text style={styles.inputLabel}>
-                    {t('productReview.sections.photosLabel', { max: MAX_PHOTOS_PER_PRODUCT })}
-                  </Text>
-                  <Text style={styles.sectionSubtitle}>
-                    {t('productReview.sections.photosSubtitle')}
-                  </Text>
-                  <View style={styles.photoRow}>
-                    {(review.images ?? []).map((uri, imgIdx) => (
-                      <View key={imgIdx} style={styles.photoThumbWrap}>
-                        <Image source={{ uri }} style={styles.photoThumb} />
-                        <TouchableOpacity
-                          style={styles.photoRemove}
-                          onPress={() => removeReviewPhoto(index, imgIdx)}
-                          accessibilityLabel={t('productReview.a11y.removePhoto')}
-                          accessibilityRole="button"
-                        >
-                          <X size={14} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                    {(review.images?.length ?? 0) < MAX_PHOTOS_PER_PRODUCT && (
-                      <TouchableOpacity
-                        style={styles.photoAdd}
-                        onPress={() => addReviewPhotos(index)}
-                        disabled={uploadingPhotoIndex === index}
-                        accessibilityLabel={t('productReview.a11y.addPhotos')}
-                        accessibilityRole="button"
-                      >
-                        {uploadingPhotoIndex === index ? (
-                          <ActivityIndicator size="small" color={primaryBlue} />
-                        ) : (
-                          <ImagePlus size={24} color={iconGray} />
-                        )}
-                        <Text style={styles.photoAddText}>
-                          {(review.images?.length ?? 0) > 0
-                            ? t('productReview.photos.addMore')
-                            : t('productReview.photos.addPhotos')}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
+                  <View style={styles.section}>
+                    <Text style={styles.inputLabel}>{t('productReview.sections.reviewTitleLabel')}</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      value={review.title}
+                      onChangeText={(t) => updateProductReview(index, 'title', t)}
+                      placeholder={t('productReview.sections.reviewTitlePlaceholder')}
+                      placeholderTextColor="#9ca3af"
+                    />
+                  </View>
+
+                  <View style={styles.section}>
+                    <View style={styles.sectionHeaderRow}>
+                      <MessageSquare color={iconGray} size={18} />
+                      <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>
+                        {t('productReview.sections.detailedTitle')}
+                      </Text>
+                    </View>
+                    <Text style={styles.sectionSubtitle}>
+                      {t('productReview.sections.detailedSubtitle')}
+                    </Text>
+                    <TextInput
+                      style={styles.textArea}
+                      value={review.comment}
+                      onChangeText={(c) => updateProductReview(index, 'comment', c)}
+                      placeholder={t('productReview.sections.detailedPlaceholder')}
+                      placeholderTextColor="#9ca3af"
+                      multiline
+                      numberOfLines={4}
+                      textAlignVertical="top"
+                    />
+                  </View>
+
+                  <View style={styles.photoEvidenceSection}>
+                    <Text style={styles.photoEvidenceTitle}>
+                      {t('productReview.sections.photosLabel', { max: MAX_PHOTOS_PER_PRODUCT })}
+                    </Text>
+                    <Text style={styles.photoEvidenceHint}>
+                      {t('productReview.sections.photosSubtitle')}
+                    </Text>
+                    <View style={styles.photoRow}>
+                      {(review.images ?? []).map((uri, imgIdx) => (
+                        <View key={imgIdx} style={styles.photoThumbWrap}>
+                          <Image source={{ uri }} style={styles.photoThumb} />
+                          <TouchableOpacity
+                            style={styles.photoRemove}
+                            onPress={() => removeReviewPhoto(index, imgIdx)}
+                            accessibilityLabel={t('productReview.a11y.removePhoto')}
+                            accessibilityRole="button"
+                          >
+                            <X size={14} color="#fff" />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                      {(review.images?.length ?? 0) < MAX_PHOTOS_PER_PRODUCT && (
+                        <View style={styles.photoActionsRow}>
+                          <TouchableOpacity
+                            style={styles.photoAdd}
+                            onPress={() => addReviewPhotoFromCamera(index)}
+                            disabled={uploadingPhotoIndex === index}
+                            accessibilityLabel={t('productReview.a11y.camera')}
+                            accessibilityRole="button"
+                          >
+                            {uploadingPhotoIndex === index ? (
+                              <ActivityIndicator size="small" color={primaryBlue} />
+                            ) : (
+                              <Camera size={22} color={iconGray} />
+                            )}
+                            <Text style={styles.photoAddText}>{t('productReview.photos.camera')}</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.photoAdd}
+                            onPress={() => addReviewPhotoFromGallery(index)}
+                            disabled={uploadingPhotoIndex === index}
+                            accessibilityLabel={t('productReview.a11y.gallery')}
+                            accessibilityRole="button"
+                          >
+                            {uploadingPhotoIndex === index ? (
+                              <ActivityIndicator size="small" color={primaryBlue} />
+                            ) : (
+                              <ImagePlus size={22} color={iconGray} />
+                            )}
+                            <Text style={styles.photoAddText}>{t('productReview.photos.gallery')}</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </View>
               </View>
             );
           })}
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('productReview.sections.deliveryTitle')}</Text>
-            <Text style={styles.sectionSubtitle}>
-              {t('productReview.sections.deliverySubtitle')}
-            </Text>
-            {renderStars(deliveryRating, setDeliveryRating)}
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <MessageSquare color={iconGray} size={18} />
-              <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>
-                {t('productReview.sections.deliveryFeedbackTitle')}
+          <View style={[styles.sectionCard]}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t('productReview.sections.deliveryTitle')}</Text>
+              <Text style={styles.sectionSubtitle}>
+                {t('productReview.sections.deliverySubtitle')}
               </Text>
+              {renderStars(deliveryRating, setDeliveryRating)}
             </View>
-            <Text style={styles.sectionSubtitle}>
-              {t('productReview.sections.deliverySubtitle')}
-            </Text>
-            <TextInput
-              style={styles.textArea}
-              value={deliveryComment}
-              onChangeText={setDeliveryComment}
-              placeholder={t('productReview.sections.deliveryFeedbackPlaceholder')}
-              placeholderTextColor="#9ca3af"
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+
+            <View style={[styles.section, { marginBottom: 0 }]}>
+              <View style={styles.sectionHeaderRow}>
+                <MessageSquare color={iconGray} size={18} />
+                <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>
+                  {t('productReview.sections.deliveryFeedbackTitle')}
+                </Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>
+                {t('productReview.sections.deliverySubtitle')}
+              </Text>
+              <TextInput
+                style={styles.textArea}
+                value={deliveryComment}
+                onChangeText={setDeliveryComment}
+                placeholder={t('productReview.sections.deliveryFeedbackPlaceholder')}
+                placeholderTextColor="#9ca3af"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -552,11 +671,12 @@ export default function ProductReviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
+  container: { flex: 1, backgroundColor: '#F5F5F5' },
   scroll: { flex: 1 },
   contentCard: {
-    padding: 20,
-    backgroundColor: '#ffffff',
+    paddingHorizontal: 8,
+    paddingTop: 16,
+    paddingBottom: 24,
   },
   headerSection: {
     flexDirection: 'row',
@@ -611,10 +731,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    marginBottom: 0,
+    paddingBottom: 0,
   },
   orderIdLabel: {
     fontSize: 14,
@@ -627,9 +745,7 @@ const styles = StyleSheet.create({
   },
   productBlock: {
     marginBottom: 8,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    paddingBottom: 0,
   },
   productBlockLabel: {
     fontSize: 12,
@@ -649,6 +765,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 24,
   },
+  sectionCard: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 8,
+  },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -664,6 +785,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     marginBottom: 12,
+  },
+  photoEvidenceSection: {
+    marginTop: 8,
+    marginBottom: 24,
+    padding: 0,
+  },
+  photoEvidenceTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 6,
+  },
+  photoEvidenceHint: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 10,
+    lineHeight: 16,
+  },
+  photoActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
   },
   inputLabel: {
     fontSize: 14,
@@ -727,9 +870,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 8,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#d1d5db',
+    backgroundColor: '#f3f4f6',
     alignItems: 'center',
     justifyContent: 'center',
   },

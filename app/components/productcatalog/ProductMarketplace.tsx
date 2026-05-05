@@ -1066,12 +1066,24 @@ export default function ProductMarketplace({
         <Text style={[styles.sectionTitle, { color: textColor }]}>
           {t('product.sections.customerReviews')}
         </Text>
-        {totalReviewsFromApi > 0 && (
+        <TouchableOpacity
+          onPress={() => {
+            if (!productIdForReviews) return;
+            router.push({
+              pathname: '/components/productcatalog/ProductReviewsList',
+              params: { productId: productIdForReviews, productName: safeGetString(product.name) },
+            });
+          }}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={t('product.reviews.moreReviewsA11y')}
+          disabled={!productIdForReviews || totalReviewsFromApi === 0}
+          style={{ opacity: !productIdForReviews || totalReviewsFromApi === 0 ? 0.5 : 1 }}
+        >
           <Text style={[styles.viewAllText, { color: primaryColor }]}>
-            {totalReviewsFromApi}{' '}
-            {totalReviewsFromApi === 1 ? t('product.reviews.review') : t('product.reviews.reviews')}
+            {t('product.reviews.moreReviews')}
           </Text>
-        )}
+        </TouchableOpacity>
       </View>
 
       {reviewsLoading ? (
@@ -2076,6 +2088,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     paddingTop: 12,
+    paddingBottom: 12,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },

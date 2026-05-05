@@ -765,7 +765,8 @@
     },
     "actions": {
       "pay": "Pay",
-      "returnRefund": "Return/Refund"
+      "returnRefund": "Return/Refund",
+      "rate": "Rate"
     },
     "meta": {
       "expectedDelivery": "Expected delivery: {{date}}"
@@ -1086,7 +1087,9 @@
     },
     "reviews": {
       "review": "review",
-      "reviews": "reviews"
+      "reviews": "reviews",
+      "moreReviews": "More reviews",
+      "moreReviewsA11y": "Open more reviews"
     },
     "states": {
       "loadingReviews": "Loading reviews…",
@@ -1143,6 +1146,22 @@
       "weekAgo": "1 week ago",
       "weeksAgo": "{{count}} weeks ago",
       "recently": "Recently"
+    }
+  },
+  "productReviewsList": {
+    "title": "Reviews",
+    "titleWithName": "Reviews · {{productName}}",
+    "a11y": {
+      "back": "Go back",
+      "close": "Close",
+      "openImage": "Open review image"
+    },
+    "sections": {
+      "overall": "Overall rating",
+      "latest": "Latest reviews"
+    },
+    "states": {
+      "failed": "Failed to load reviews."
     }
   },
   "cart": {
@@ -1463,7 +1482,9 @@
       "back": "Back",
       "goBack": "Go back",
       "removePhoto": "Remove photo",
-      "addPhotos": "Add photos"
+      "addPhotos": "Add photos",
+      "camera": "Take photo with camera",
+      "gallery": "Choose photo from gallery"
     },
     "titles": {
       "rateOrder": "Rate Order",
@@ -1486,7 +1507,7 @@
       "detailedSubtitle": "Share what you liked, what could be better, and whether you would recommend it.",
       "detailedPlaceholder": "Write your review here...",
       "photosLabel": "Review photos (optional, max {{max}})",
-      "photosSubtitle": "Add clear photos of the product. You can select multiple at once.",
+      "photosSubtitle": "Add clear photos using the camera or your gallery.",
       "deliveryTitle": "How was the delivery experience?",
       "deliverySubtitle": "Rate the shipping, delivery time, and condition of the package.",
       "deliveryFeedbackTitle": "Delivery feedback (optional)",
@@ -1494,7 +1515,9 @@
     },
     "photos": {
       "addPhotos": "Add photos",
-      "addMore": "Add more"
+      "addMore": "Add more",
+      "camera": "Camera",
+      "gallery": "Gallery"
     },
     "alerts": {
       "pleaseWaitTitle": "Please wait",
@@ -1674,12 +1697,16 @@
       "photosHint": "Recommended for damaged, defective, not as described, or other reasons.",
       "addPhotos": "Add photos",
       "addMore": "Add more",
+      "camera": "Camera",
+      "gallery": "Gallery",
       "policyText": "We will review your request and may email you with return instructions or next steps. Refunds are issued to your original payment method.",
       "submit": "Submit request",
       "submitting": "Submitting…",
       "a11y": {
         "removePhoto": "Remove photo",
-        "addPhotos": "Add photos"
+        "addPhotos": "Add photos",
+        "camera": "Take photo with camera",
+        "gallery": "Choose photo from gallery"
       },
       "alerts": {
         "pleaseWaitTitle": "Please wait",
@@ -1873,6 +1900,7 @@
         "contactSupport": "Contact support",
         "orderReceived": "Order Received",
         "rate": "Rate",
+        "editReview": "Edit review",
         "backToOrders": "Back to Orders"
       },
       "estimatedDelivery": {

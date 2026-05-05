@@ -764,7 +764,8 @@
     },
     "actions": {
       "pay": "Bayar",
-      "returnRefund": "Retur/Refund"
+      "returnRefund": "Retur/Refund",
+      "rate": "Beri Nilai"
     },
     "meta": {
       "expectedDelivery": "Perkiraan tiba: {{date}}"
@@ -1084,7 +1085,9 @@
     },
     "reviews": {
       "review": "ulasan",
-      "reviews": "ulasan"
+      "reviews": "ulasan",
+      "moreReviews": "Lihat ulasan lainnya",
+      "moreReviewsA11y": "Buka halaman ulasan"
     },
     "states": {
       "loadingReviews": "Memuat ulasan…",
@@ -1141,6 +1144,22 @@
       "weekAgo": "1 minggu lalu",
       "weeksAgo": "{{count}} minggu lalu",
       "recently": "Baru-baru ini"
+    }
+  },
+  "productReviewsList": {
+    "title": "Ulasan",
+    "titleWithName": "Ulasan · {{productName}}",
+    "a11y": {
+      "back": "Kembali",
+      "close": "Tutup",
+      "openImage": "Buka gambar ulasan"
+    },
+    "sections": {
+      "overall": "Rating keseluruhan",
+      "latest": "Ulasan terbaru"
+    },
+    "states": {
+      "failed": "Gagal memuat ulasan."
     }
   },
   "cart": {
@@ -1461,7 +1480,9 @@
       "back": "Kembali",
       "goBack": "Kembali",
       "removePhoto": "Hapus foto",
-      "addPhotos": "Tambah foto"
+      "addPhotos": "Tambah foto",
+      "camera": "Ambil foto dengan kamera",
+      "gallery": "Pilih foto dari galeri"
     },
     "titles": {
       "rateOrder": "Beri rating pesanan",
@@ -1484,7 +1505,7 @@
       "detailedSubtitle": "Ceritakan apa yang Anda suka, apa yang bisa diperbaiki, dan apakah Anda merekomendasikannya.",
       "detailedPlaceholder": "Tulis ulasan Anda di sini…",
       "photosLabel": "Foto ulasan (opsional, maks {{max}})",
-      "photosSubtitle": "Tambahkan foto produk yang jelas. Anda bisa memilih beberapa sekaligus.",
+      "photosSubtitle": "Tambahkan foto yang jelas menggunakan kamera atau galeri.",
       "deliveryTitle": "Bagaimana pengalaman pengiriman?",
       "deliverySubtitle": "Beri rating pengiriman, waktu sampai, dan kondisi paket.",
       "deliveryFeedbackTitle": "Masukan pengiriman (opsional)",
@@ -1492,7 +1513,9 @@
     },
     "photos": {
       "addPhotos": "Tambah foto",
-      "addMore": "Tambah lagi"
+      "addMore": "Tambah lagi",
+      "camera": "Kamera",
+      "gallery": "Galeri"
     },
     "alerts": {
       "pleaseWaitTitle": "Mohon tunggu",
@@ -1672,12 +1695,16 @@
       "photosHint": "Disarankan untuk alasan rusak, cacat, tidak sesuai deskripsi, atau alasan lainnya.",
       "addPhotos": "Tambah foto",
       "addMore": "Tambah lagi",
+      "camera": "Kamera",
+      "gallery": "Galeri",
       "policyText": "Kami akan meninjau pengajuan Anda dan dapat mengirim email berisi instruksi retur atau langkah berikutnya. Refund dikirim ke metode pembayaran awal Anda.",
       "submit": "Kirim pengajuan",
       "submitting": "Mengirim…",
       "a11y": {
         "removePhoto": "Hapus foto",
-        "addPhotos": "Tambah foto"
+        "addPhotos": "Tambah foto",
+        "camera": "Ambil foto dengan kamera",
+        "gallery": "Pilih foto dari galeri"
       },
       "alerts": {
         "pleaseWaitTitle": "Mohon tunggu",
@@ -1871,6 +1898,7 @@
         "contactSupport": "Hubungi dukungan",
         "orderReceived": "Pesanan diterima",
         "rate": "Beri Nilai",
+        "editReview": "Ubah ulasan",
         "backToOrders": "Kembali ke Pesanan"
       },
       "estimatedDelivery": {
