@@ -1158,7 +1158,7 @@
     },
     "sections": {
       "overall": "Overall rating",
-      "latest": "Latest reviews"
+      "latest": "Latest Reviews"
     },
     "states": {
       "failed": "Failed to load reviews."
