@@ -501,6 +501,7 @@ export default function DistributorDetailScreen() {
         transparent
         animationType="none"
         onRequestClose={closeMenu}
+        statusBarTranslucent
       >
         <View style={styles.menuRoot}>
           <Pressable
@@ -623,11 +624,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   menuRoot: {
-    position: 'absolute',
-    top: -80,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
   },
   menuBackdrop: {
     flex: 1,

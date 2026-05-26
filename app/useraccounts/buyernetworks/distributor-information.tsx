@@ -618,7 +618,7 @@ export default function DistributorInformationScreen() {
       </Modal>
 
       {/* 3-dot menu */}
-      <Modal visible={menuVisible} transparent animationType="none" onRequestClose={closeMenu}>
+      <Modal visible={menuVisible} transparent animationType="none" onRequestClose={closeMenu} statusBarTranslucent>
         <View style={styles.menuRoot}>
           <Pressable
             style={styles.menuBackdrop}
@@ -803,11 +803,7 @@ const styles = StyleSheet.create({
   sheetRowTextActive: { color: primaryBlue },
 
   menuRoot: {
-    position: 'absolute',
-    top: -80,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
   },
   menuBackdrop: { flex: 1 },
   menuSheet: {
