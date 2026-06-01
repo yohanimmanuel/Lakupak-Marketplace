@@ -1758,6 +1758,8 @@
         "paymentSentBody": "We notified the distributor. Please complete your manual transfer using the bank details above.",
         "failedTitle": "Failed",
         "failedBody": "Could not send payment notification. Please try again.",
+        "updatedTitle": "Payment proof updated",
+        "updatedBody": "We notified the distributor about your updated receipt.",
         "unavailableTitle": "Unavailable",
         "unavailableBody": "Distributor details are not available for this order."
       },
@@ -1765,6 +1767,8 @@
         "viewDistributorDetails": "View distributor details",
         "view": "View",
         "pay": "Pay",
+        "editPaymentIntent": "Edit payment intent",
+        "updatePaymentIntent": "Update payment intent",
         "sending": "Sending…",
         "back": "Back"
       },
@@ -1775,7 +1779,8 @@
         "codBody": "COD orders are paid directly to the distributor, whether through cash, direct digital bank app transfer, or other method. The payment receiver will confirm your payment and update the payment status once it is received.",
         "bankTransferTitle": "Bank account (manual transfer)",
         "proofTitle": "Payment proof",
-        "proofHint": "Upload one transfer receipt (photo or PDF) so the distributor can verify your payment."
+        "proofHint": "Upload one transfer receipt (photo or PDF) so the distributor can verify your payment.",
+        "proofSubmittedHint": "Your payment intent was submitted. Tap Edit payment intent below to replace this receipt."
       },
       "labels": {
         "company": "Company",

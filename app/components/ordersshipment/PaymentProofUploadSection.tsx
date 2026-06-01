@@ -28,6 +28,8 @@ type Props = {
   onChange: (proof: PaymentProofAttachment | null) => void;
   uploading: boolean;
   onUploadingChange: (value: boolean) => void;
+  /** When true, show submitted proof without remove or add actions. */
+  locked?: boolean;
 };
 
 export default function PaymentProofUploadSection({
@@ -35,12 +37,13 @@ export default function PaymentProofUploadSection({
   onChange,
   uploading,
   onUploadingChange,
+  locked = false,
 }: Props) {
   const { t } = useTranslation();
   const token = useAuthStore((s) => s.token);
 
   const handleAddFromGallery = async () => {
-    if (proof) return;
+    if (locked || proof) return;
     try {
       onUploadingChange(true);
       const url = await pickImage({ folder: 'payment-proofs', allowsEditing: false });
@@ -56,7 +59,7 @@ export default function PaymentProofUploadSection({
   };
 
   const handleTakePhoto = async () => {
-    if (proof) return;
+    if (locked || proof) return;
     try {
       onUploadingChange(true);
       const url = await takePhoto({ folder: 'payment-proofs', allowsEditing: false });
@@ -72,7 +75,7 @@ export default function PaymentProofUploadSection({
   };
 
   const handlePickPdf = async () => {
-    if (proof) return;
+    if (locked || proof) return;
     if (!token) {
       Alert.alert(
         t('ordersFlow.common.errors.sessionExpiredTitle'),
@@ -130,16 +133,18 @@ export default function PaymentProofUploadSection({
             ) : (
               <Image source={{ uri: proof.url }} style={styles.thumb} />
             )}
-            <TouchableOpacity
-              style={styles.removeBtn}
-              onPress={() => onChange(null)}
-              accessibilityLabel={t('ordersFlow.paymentProof.a11y.remove')}
-              accessibilityRole="button"
-            >
-              <X size={14} color="#fff" />
-            </TouchableOpacity>
+            {!locked && (
+              <TouchableOpacity
+                style={styles.removeBtn}
+                onPress={() => onChange(null)}
+                accessibilityLabel={t('ordersFlow.paymentProof.a11y.remove')}
+                accessibilityRole="button"
+              >
+                <X size={14} color="#fff" />
+              </TouchableOpacity>
+            )}
           </View>
-        ) : (
+        ) : !locked ? (
           <View style={styles.actionsRow}>
             <TouchableOpacity
               style={styles.addBtn}
@@ -184,7 +189,7 @@ export default function PaymentProofUploadSection({
               <Text style={styles.addText}>{t('ordersFlow.paymentProof.pdf')}</Text>
             </TouchableOpacity>
           </View>
-        )}
+        ) : null}
       </View>
     </View>
   );

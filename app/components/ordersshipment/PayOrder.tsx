@@ -15,6 +15,10 @@ import {
   normalizeProofFileName,
   type PaymentProofAttachment,
 } from '../../../services/paymentReceiptUpload';
+import {
+  hasPaymentIntentSubmitted,
+  paymentProofFromOrder,
+} from '../../../utils/paymentProofOrder';
 
 type SellerBankDetails = {
   companyName: string;
@@ -32,6 +36,9 @@ type OrderDetails = {
   distributorId?: number | null;
   sellerUserId?: number | null;
   storeName?: string;
+  paymentProofUrls?: string[];
+  paymentProofFileNames?: string[];
+  paymentProofSubmittedAt?: string | null;
   user?: {
     company?: {
       businessDescription?: string | null;
@@ -54,6 +61,7 @@ export default function PayOrder() {
   const [bank, setBank] = useState<SellerBankDetails | null>(null);
   const [proof, setProof] = useState<PaymentProofAttachment | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
+  const [isEditingProof, setIsEditingProof] = useState(false);
 
   const apiBase = useMemo(() => (API_BASE_URL || '').replace(/\/$/, ''), []);
 
@@ -68,9 +76,15 @@ export default function PayOrder() {
     return (await res.json()) as OrderDetails;
   }, [apiBase, token]);
 
+  const syncProofFromOrder = useCallback((o: OrderDetails | null, editing: boolean) => {
+    if (!o || editing) return;
+    setProof(paymentProofFromOrder(o));
+  }, []);
+
   const reload = useCallback(async (orderId: string) => {
     const o = await fetchOrder(orderId);
     setOrder(o);
+    syncProofFromOrder(o, isEditingProof);
 
     const terms = (o?.paymentTerms ?? '').toString().toLowerCase();
     const cod = terms.includes('cod') || terms.includes('cash');
@@ -97,13 +111,16 @@ export default function PayOrder() {
     } else {
       setBank(null);
     }
-  }, [fetchOrder, token]);
+  }, [fetchOrder, token, isEditingProof, syncProofFromOrder]);
 
   const isCod = useMemo(() => isCodPaymentTerms(order?.paymentTerms), [order?.paymentTerms]);
   const isBankTransfer = useMemo(
     () => isBankTransferPaymentTerms(order?.paymentTerms),
     [order?.paymentTerms],
   );
+  const hasSubmittedIntent = useMemo(() => hasPaymentIntentSubmitted(order), [order]);
+  const isProofLocked = hasSubmittedIntent && !isEditingProof;
+  const showEditIntentButton = isBankTransfer && isProofLocked;
 
   // Prevent screenshots / screen recording while bank details are visible.
   useEffect(() => {
@@ -139,6 +156,7 @@ export default function PayOrder() {
         if (cancelled) return;
         // Use reload() but avoid extra fetchOrder call
         setOrder(o);
+        syncProofFromOrder(o, false);
 
         const terms = (o?.paymentTerms ?? '').toString().toLowerCase();
         const cod = terms.includes('cod') || terms.includes('cash');
@@ -174,7 +192,7 @@ export default function PayOrder() {
     return () => {
       cancelled = true;
     };
-  }, [params.orderId, token, fetchOrder]);
+  }, [params.orderId, token, fetchOrder, syncProofFromOrder]);
 
   // Subscribe to WebSocket for real-time order updates (same pattern as OrderDetails)
   useEffect(() => {
@@ -256,6 +274,8 @@ export default function PayOrder() {
       );
       return;
     }
+    const isUpdate = hasSubmittedIntent && isEditingProof;
+
     setSubmitting(true);
     try {
       const res = await fetch(`${apiBase}/api/mobile/orders/${encodeURIComponent(order.id)}/pay-intent`, {
@@ -264,20 +284,17 @@ export default function PayOrder() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(
-          isBankTransfer && proof?.url
+        body: JSON.stringify({
+          ...(isBankTransfer && proof?.url
             ? {
                 proofUrls: [proof.url],
                 ...(proof.fileName
-                  ? {
-                      proofFileNames: [
-                        normalizeProofFileName(proof.fileName),
-                      ],
-                    }
+                  ? { proofFileNames: [normalizeProofFileName(proof.fileName)] }
                   : {}),
               }
-            : {},
-        ),
+            : {}),
+          ...(isUpdate ? { updatePaymentIntent: true } : {}),
+        }),
       });
 
       if (!res.ok) {
@@ -285,17 +302,48 @@ export default function PayOrder() {
         throw new Error(text || `Pay request failed (${res.status})`);
       }
 
+      if (isUpdate) {
+        setIsEditingProof(false);
+        const orderKey = params.orderId;
+        if (orderKey && typeof orderKey === 'string') {
+          await reload(orderKey);
+        }
+        Alert.alert(
+          t('ordersFlow.payOrder.alerts.updatedTitle'),
+          t('ordersFlow.payOrder.alerts.updatedBody'),
+        );
+        return;
+      }
+
       Alert.alert(
         t('ordersFlow.payOrder.alerts.paymentSentTitle'),
-        t('ordersFlow.payOrder.alerts.paymentSentBody')
+        t('ordersFlow.payOrder.alerts.paymentSentBody'),
       );
       router.back();
-    } catch (e) {
+    } catch {
       Alert.alert(t('ordersFlow.payOrder.alerts.failedTitle'), t('ordersFlow.payOrder.alerts.failedBody'));
     } finally {
       setSubmitting(false);
     }
   };
+
+  const handleBottomPress = () => {
+    if (showEditIntentButton) {
+      setIsEditingProof(true);
+      return;
+    }
+    handlePay();
+  };
+
+  const bottomButtonLabel = submitting
+    ? t('ordersFlow.payOrder.buttons.sending')
+    : showEditIntentButton
+      ? t('ordersFlow.payOrder.buttons.editPaymentIntent')
+      : hasSubmittedIntent && isEditingProof
+        ? t('ordersFlow.payOrder.buttons.updatePaymentIntent')
+        : t('ordersFlow.payOrder.buttons.pay');
+
+  const bottomButtonDisabled = showEditIntentButton ? false : isPayDisabled;
 
   if (loading) {
     return (
@@ -426,12 +474,17 @@ export default function PayOrder() {
               {isBankTransfer && (
                 <View style={styles.proofSection}>
                   <Text style={styles.proofSectionTitle}>{t('ordersFlow.payOrder.sections.proofTitle')}</Text>
-                  <Text style={styles.proofSectionHint}>{t('ordersFlow.payOrder.sections.proofHint')}</Text>
+                  <Text style={styles.proofSectionHint}>
+                    {isProofLocked
+                      ? t('ordersFlow.payOrder.sections.proofSubmittedHint')
+                      : t('ordersFlow.payOrder.sections.proofHint')}
+                  </Text>
                   <PaymentProofUploadSection
                     proof={proof}
                     onChange={setProof}
                     uploading={uploadingProof}
                     onUploadingChange={setUploadingProof}
+                    locked={isProofLocked}
                   />
                 </View>
               )}
@@ -449,13 +502,23 @@ export default function PayOrder() {
       ) : (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 18) }]}>
           <TouchableOpacity
-            style={[styles.payButton, isPayDisabled ? styles.disabledButton : null]}
-            disabled={isPayDisabled}
-            onPress={handlePay}
-            accessibilityState={{ disabled: isPayDisabled }}
+            style={[
+              styles.payButton,
+              showEditIntentButton && styles.editIntentButton,
+              bottomButtonDisabled ? styles.disabledButton : null,
+            ]}
+            disabled={bottomButtonDisabled}
+            onPress={handleBottomPress}
+            accessibilityState={{ disabled: bottomButtonDisabled }}
           >
-            <Text style={[styles.payButtonText, isPayDisabled ? styles.disabledButtonText : null]}>
-              {submitting ? t('ordersFlow.payOrder.buttons.sending') : t('ordersFlow.payOrder.buttons.pay')}
+            <Text
+              style={[
+                styles.payButtonText,
+                showEditIntentButton && styles.editIntentButtonText,
+                bottomButtonDisabled ? styles.disabledButtonText : null,
+              ]}
+            >
+              {bottomButtonLabel}
             </Text>
           </TouchableOpacity>
         </View>
@@ -636,6 +699,14 @@ const styles = StyleSheet.create({
   disabledButtonText: {
     color: '#ffffff',
     opacity: 0.7,
+  },
+  editIntentButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#0a61d7',
+  },
+  editIntentButtonText: {
+    color: '#0a61d7',
   },
 });
 
