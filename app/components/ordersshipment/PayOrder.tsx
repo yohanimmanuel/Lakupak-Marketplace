@@ -9,6 +9,12 @@ import { websocketService } from '../../../services/websocket';
 import * as ScreenCapture from 'expo-screen-capture';
 import { ArrowLeft, Building2, FileText } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import PaymentProofUploadSection from './PaymentProofUploadSection';
+import { isBankTransferPaymentTerms, isCodPaymentTerms } from '../../../utils/orderPayment';
+import {
+  normalizeProofFileName,
+  type PaymentProofAttachment,
+} from '../../../services/paymentReceiptUpload';
 
 type SellerBankDetails = {
   companyName: string;
@@ -46,6 +52,8 @@ export default function PayOrder() {
   const [submitting, setSubmitting] = useState(false);
   const [order, setOrder] = useState<OrderDetails | null>(null);
   const [bank, setBank] = useState<SellerBankDetails | null>(null);
+  const [proof, setProof] = useState<PaymentProofAttachment | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
 
   const apiBase = useMemo(() => (API_BASE_URL || '').replace(/\/$/, ''), []);
 
@@ -91,10 +99,11 @@ export default function PayOrder() {
     }
   }, [fetchOrder, token]);
 
-  const isCod = useMemo(() => {
-    const terms = (order?.paymentTerms ?? '').toString().toLowerCase();
-    return terms.includes('cod') || terms.includes('cash');
-  }, [order?.paymentTerms]);
+  const isCod = useMemo(() => isCodPaymentTerms(order?.paymentTerms), [order?.paymentTerms]);
+  const isBankTransfer = useMemo(
+    () => isBankTransferPaymentTerms(order?.paymentTerms),
+    [order?.paymentTerms],
+  );
 
   // Prevent screenshots / screen recording while bank details are visible.
   useEffect(() => {
@@ -226,8 +235,27 @@ export default function PayOrder() {
     header: payOrderHeader,
   };
 
+  const isPayDisabled =
+    submitting ||
+    uploadingProof ||
+    (isBankTransfer && !proof?.url);
+
   const handlePay = async () => {
     if (!token || !order?.id) return;
+    if (isBankTransfer && !proof?.url) {
+      Alert.alert(
+        t('ordersFlow.paymentProof.alerts.requiredTitle'),
+        t('ordersFlow.paymentProof.alerts.requiredBody'),
+      );
+      return;
+    }
+    if (uploadingProof) {
+      Alert.alert(
+        t('ordersFlow.paymentProof.alerts.pleaseWaitTitle'),
+        t('ordersFlow.paymentProof.alerts.pleaseWaitBody'),
+      );
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch(`${apiBase}/api/mobile/orders/${encodeURIComponent(order.id)}/pay-intent`, {
@@ -236,7 +264,20 @@ export default function PayOrder() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify(
+          isBankTransfer && proof?.url
+            ? {
+                proofUrls: [proof.url],
+                ...(proof.fileName
+                  ? {
+                      proofFileNames: [
+                        normalizeProofFileName(proof.fileName),
+                      ],
+                    }
+                  : {}),
+              }
+            : {},
+        ),
       });
 
       if (!res.ok) {
@@ -381,6 +422,19 @@ export default function PayOrder() {
               <Text style={styles.hintText}>
                 {t('ordersFlow.payOrder.hints.bankPrivacy')}
               </Text>
+
+              {isBankTransfer && (
+                <View style={styles.proofSection}>
+                  <Text style={styles.proofSectionTitle}>{t('ordersFlow.payOrder.sections.proofTitle')}</Text>
+                  <Text style={styles.proofSectionHint}>{t('ordersFlow.payOrder.sections.proofHint')}</Text>
+                  <PaymentProofUploadSection
+                    proof={proof}
+                    onChange={setProof}
+                    uploading={uploadingProof}
+                    onUploadingChange={setUploadingProof}
+                  />
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -395,11 +449,12 @@ export default function PayOrder() {
       ) : (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 18) }]}>
           <TouchableOpacity
-            style={[styles.payButton, submitting ? styles.disabledButton : null]}
-            disabled={submitting}
+            style={[styles.payButton, isPayDisabled ? styles.disabledButton : null]}
+            disabled={isPayDisabled}
             onPress={handlePay}
+            accessibilityState={{ disabled: isPayDisabled }}
           >
-            <Text style={[styles.payButtonText, submitting ? styles.disabledButtonText : null]}>
+            <Text style={[styles.payButtonText, isPayDisabled ? styles.disabledButtonText : null]}>
               {submitting ? t('ordersFlow.payOrder.buttons.sending') : t('ordersFlow.payOrder.buttons.pay')}
             </Text>
           </TouchableOpacity>
@@ -535,6 +590,24 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 10,
     lineHeight: 16,
+  },
+  proofSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+  },
+  proofSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  proofSectionHint: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginBottom: 4,
+    lineHeight: 18,
   },
   bottomBar: {
     flexDirection: 'row',

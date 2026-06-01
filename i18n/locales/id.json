@@ -1771,7 +1771,9 @@
         "paymentTitle": "Pembayaran",
         "codTitle": "Cash on Delivery (COD)",
         "codBody": "Pesanan COD dibayar langsung ke distributor, baik melalui tunai, transfer via aplikasi bank digital, atau metode lain. Penerima pembayaran akan mengonfirmasi pembayaran Anda dan memperbarui status pembayaran setelah diterima.",
-        "bankTransferTitle": "Rekening bank (transfer manual)"
+        "bankTransferTitle": "Rekening bank (transfer manual)",
+        "proofTitle": "Bukti pembayaran",
+        "proofHint": "Unggah satu bukti transfer (foto atau PDF) agar distributor dapat memverifikasi pembayaran Anda."
       },
       "labels": {
         "company": "Perusahaan",
@@ -1785,8 +1787,27 @@
       "hints": {
         "bankPrivacy": "Bagikan info ini hanya saat pembayaran. Info ini disembunyikan dari halaman distributor publik dan checkout."
       }
-    }
-    ,
+    },
+    "paymentProof": {
+      "camera": "Kamera",
+      "gallery": "Galeri",
+      "pdf": "PDF",
+      "pdfLabel": "Bukti PDF",
+      "a11y": {
+        "camera": "Ambil foto bukti transfer",
+        "gallery": "Pilih bukti dari galeri",
+        "pdf": "Lampirkan PDF bukti transfer",
+        "remove": "Hapus bukti"
+      },
+      "alerts": {
+        "requiredTitle": "Bukti pembayaran wajib",
+        "requiredBody": "Unggah bukti transfer (foto atau PDF) sebelum memberi tahu distributor.",
+        "pleaseWaitTitle": "Mohon tunggu",
+        "pleaseWaitBody": "Bukti transfer masih diunggah.",
+        "uploadFailedTitle": "Gagal mengunggah",
+        "uploadFailedBody": "Tidak bisa mengunggah bukti transfer. Silakan coba lagi."
+      }
+    },
     "deliveryInfo": {
       "title": "Informasi Pengiriman",
       "loading": "Memuat…",

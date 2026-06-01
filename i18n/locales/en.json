@@ -1773,7 +1773,9 @@
         "paymentTitle": "Payment",
         "codTitle": "Cash on Delivery (COD)",
         "codBody": "COD orders are paid directly to the distributor, whether through cash, direct digital bank app transfer, or other method. The payment receiver will confirm your payment and update the payment status once it is received.",
-        "bankTransferTitle": "Bank account (manual transfer)"
+        "bankTransferTitle": "Bank account (manual transfer)",
+        "proofTitle": "Payment proof",
+        "proofHint": "Upload one transfer receipt (photo or PDF) so the distributor can verify your payment."
       },
       "labels": {
         "company": "Company",
@@ -1787,8 +1789,27 @@
       "hints": {
         "bankPrivacy": "Only share this info during payment. It’s hidden from public distributor pages and checkout."
       }
-    }
-    ,
+    },
+    "paymentProof": {
+      "camera": "Camera",
+      "gallery": "Gallery",
+      "pdf": "PDF",
+      "pdfLabel": "PDF receipt",
+      "a11y": {
+        "camera": "Take photo of receipt",
+        "gallery": "Choose receipt from gallery",
+        "pdf": "Attach PDF receipt",
+        "remove": "Remove receipt"
+      },
+      "alerts": {
+        "requiredTitle": "Payment proof required",
+        "requiredBody": "Please upload a transfer receipt (photo or PDF) before notifying the distributor.",
+        "pleaseWaitTitle": "Please wait",
+        "pleaseWaitBody": "Your receipt is still uploading.",
+        "uploadFailedTitle": "Upload failed",
+        "uploadFailedBody": "Could not upload your receipt. Please try again."
+      }
+    },
     "deliveryInfo": {
       "title": "Delivery Information",
       "loading": "Loading…",
