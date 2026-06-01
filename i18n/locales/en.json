@@ -2166,7 +2166,7 @@
         "locationLabel": "Pickup Location",
         "pickupDate": "Pickup Date",
         "pickupTime": "Pickup Time",
-        "confirmPickup": "Confirm Pickup"
+        "confirmPickup": "Confirm"
       }
     }
   }
