@@ -26,6 +26,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { websocketService } from '../services/websocket';
 import { useTranslation } from 'react-i18next';
+import { selectVariantOptionByVariantName } from '../utils/variantRules';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -139,37 +140,9 @@ export default function CartScreen() {
     }> };
     
     if (marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)) {
-      // Parse variantName string to match attributes
-      const variantAttributes: Record<string, string> = {};
-      if (item.variant && item.variant !== 'Default') {
-        item.variant.split(', ').forEach(part => {
-          const [key, ...valueParts] = part.split(': ');
-          if (key && valueParts.length > 0) {
-            variantAttributes[key.trim()] = valueParts.join(': ').trim();
-          }
-        });
-      }
-      
-      const matchingOption = marketplaceProduct.variantOptions.find(option => {
-        if (!option.attributes) return false;
-        
-        // Check if all variant attributes match, handling key spacing issues (e.g., 'Color ' vs 'Color')
-        return Object.entries(variantAttributes).every(([selectedKey, selectedValue]) => {
-          // Try exact match first
-          if (option.attributes?.[selectedKey] === selectedValue) return true;
-          
-          // Try trimmed key match (handles 'Color' vs 'Color ' issues from database)
-          const trimmedSelectedKey = selectedKey.trim();
-          const matchingKey = Object.keys(option.attributes).find(k => k.trim() === trimmedSelectedKey);
-          if (matchingKey && option.attributes[matchingKey] === selectedValue) return true;
-          
-          return false;
-        });
-      });
-      
-      if (matchingOption?.moq) {
-        return matchingOption.moq;
-      } else if (marketplaceProduct.variantOptions.length > 0 && marketplaceProduct.variantOptions[0]?.moq) {
+      const option = selectVariantOptionByVariantName(marketplaceProduct, item.variant);
+      if (option?.moq) return option.moq;
+      if (marketplaceProduct.variantOptions.length > 0 && marketplaceProduct.variantOptions[0]?.moq) {
         return marketplaceProduct.variantOptions[0].moq;
       }
     }

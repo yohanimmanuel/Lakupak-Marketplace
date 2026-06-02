@@ -18,6 +18,7 @@ import { MarketplaceProduct } from '../../../services/marketplace';
 import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { useTranslation } from 'react-i18next';
+import { matchesVariantAttributes } from '../../../utils/variantRules';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -202,12 +203,9 @@ export default function BuyNowModal({
         attributes: Record<string, string>;
       }>;
       
-      const matchingOption = options.find(option => {
-        if (!option.attributes) return false;
-        return Object.entries(selectedVariantOptions).every(([key, value]) => {
-          return option.attributes[key] === value;
-        });
-      });
+      const matchingOption = options.find((option) =>
+        matchesVariantAttributes(option.attributes, selectedVariantOptions),
+      );
       
       if (matchingOption) {
         return formatCurrency(matchingOption.sellingPrice);
@@ -246,31 +244,9 @@ export default function BuyNowModal({
       }>;
       
       // Find matching variant option based on selected attributes
-      const matchingOption = options.find(option => {
-        if (!option.attributes) return false;
-        
-        // Check if all selected variant options match this option's attributes
-        // Handle key matching with trimmed keys to account for spacing issues in database (e.g., 'Color ' vs 'Color')
-        const allMatch = Object.entries(selectedVariantOptions).every(([selectedKey, selectedValue]) => {
-          // Try exact match first
-          if (option.attributes[selectedKey] === selectedValue) return true;
-          
-          // Try trimmed key match (handles 'Color' vs 'Color ' issues from database)
-          const trimmedSelectedKey = selectedKey.trim();
-          const matchingKey = Object.keys(option.attributes).find(k => k.trim() === trimmedSelectedKey);
-          if (matchingKey && option.attributes[matchingKey] === selectedValue) return true;
-          
-          return false;
-        });
-        
-        // Also verify this option has the same number of attribute keys as selected
-        // This ensures we're matching the exact variant combination
-        const attributeKeys = Object.keys(option.attributes).map(k => k.trim());
-        const selectedKeys = Object.keys(selectedVariantOptions).map(k => k.trim());
-        const sameKeyCount = attributeKeys.length === selectedKeys.length;
-        
-        return allMatch && sameKeyCount;
-      });
+      const matchingOption = options.find((option) =>
+        matchesVariantAttributes(option.attributes, selectedVariantOptions),
+      );
       
       currentVariantOption = matchingOption || options.find(o => o.isDefault) || options[0];
       
