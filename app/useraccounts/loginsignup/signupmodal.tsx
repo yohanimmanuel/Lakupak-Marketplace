@@ -62,6 +62,27 @@ export default function SignUpModal() {
   const sheetAnim = useRef(new Animated.Value(0)).current; // 0 hidden, 1 visible
   const backdropAnim = useRef(new Animated.Value(0)).current; // 0 transparent, 1 opaque
 
+  // Simple step transition motion: fade + slide-in whenever the signup step changes.
+  const stepAnim = useRef(new Animated.Value(1)).current; // 0 start, 1 settled
+  useEffect(() => {
+    if (signupStep > 0) {
+      stepAnim.setValue(0);
+      Animated.timing(stepAnim, {
+        toValue: 1,
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [signupStep, stepAnim]);
+
+  const stepMotionStyle = {
+    opacity: stepAnim,
+    transform: [
+      { translateX: stepAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) },
+    ],
+  };
+
   const openCountryPicker = () => {
     setIsCountryPickerOpen(true);
   };
@@ -204,7 +225,7 @@ export default function SignUpModal() {
 
             {/* Step Indicator (hidden when keyboard open to preserve space) */}
             {signupStep > 0 && !isKeyboardVisible && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 32 }}>
+            <Animated.View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 32, opacity: stepAnim }}>
               {[1, 2, 3].map((step) => (
                 <View key={step} style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{
@@ -238,12 +259,12 @@ export default function SignUpModal() {
                   )}
                 </View>
               ))}
-            </View>
+            </Animated.View>
             )}
 
             {/* Step 1: Name & Email */}
             {signupStep === 1 && (
-              <View>
+              <Animated.View style={stepMotionStyle}>
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
                     {t('auth.signup.steps.fullName')}
@@ -303,12 +324,12 @@ export default function SignUpModal() {
                 >
                   <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t('auth.signup.steps.continue')}</Text>
                 </Pressable>
-              </View>
+              </Animated.View>
             )}
 
             {/* Step 2: Store Name & Bio */}
             {signupStep === 2 && (
-              <View>
+              <Animated.View style={stepMotionStyle}>
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
                     {t('auth.signup.steps.storeName')}
@@ -362,12 +383,12 @@ export default function SignUpModal() {
                 >
                   <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t('auth.signup.steps.continue')}</Text>
                 </Pressable>
-              </View>
+              </Animated.View>
             )}
 
             {/* Step 3: Username & Password */}
             {signupStep === 3 && (
-              <View>
+              <Animated.View style={stepMotionStyle}>
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
                     {t('auth.signup.steps.username')}
@@ -488,7 +509,7 @@ export default function SignUpModal() {
                 >
                   <Text style={{ color: '#111827', fontSize: 16, fontWeight: '600' }}>{t('auth.signup.phoneOtp.addPhoneNumber')}</Text>
                 </Pressable> */}
-              </View>
+              </Animated.View>
             )}
 
             {/* Step 4: Phone Number - Commented Out */}
