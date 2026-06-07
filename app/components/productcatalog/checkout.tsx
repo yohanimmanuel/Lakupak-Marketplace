@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -44,6 +44,8 @@ import { API_BASE_URL } from '../../../services/config';
 import { NotificationService } from '../../../services/notificationService';
 import { pushNotificationService } from '../../../services/pushNotifications';
 import { useTranslation } from 'react-i18next';
+import { useFocusEffect } from '@react-navigation/native';
+import { getMe } from '../../../services/user';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -261,18 +263,40 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
   ? distributorsInfoMap[activeDistributorId] ?? null
   : distributorsInfo[0] || null;
 
-  // Use real user data for delivery address
-  const addresses = [
+  const hasDeliveryAddress = Boolean(authUser?.chosenAddress?.trim());
+
+  const addresses = useMemo(() => [
     {
       id: 'default',
-      name: authUser?.name || t('ordersFlow.checkout.address.yourName'),
-      company: authUser?.storeName || t('ordersFlow.checkout.address.yourCompany'),
-      address: authUser?.chosenAddress || t('ordersFlow.checkout.address.yourAddress'),
-      city: authUser?.country || t('ordersFlow.checkout.address.yourCity'),
-      phone: authUser?.phone || t('ordersFlow.checkout.address.yourPhone'),
-      isDefault: true
-    }
-  ];
+      name: authUser?.name?.trim() || '',
+      company: authUser?.storeName?.trim() || '',
+      address: authUser?.chosenAddress?.trim() || '',
+      phone: authUser?.phone?.trim() || '',
+      isDefault: true,
+    },
+  ], [authUser]);
+
+  const openAddressEditor = () => {
+    router.push(
+      hasDeliveryAddress
+        ? '/useraccounts/userprofile/addresses'
+        : '/useraccounts/userprofile/edit-address',
+    );
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!token) return;
+      void (async () => {
+        try {
+          const me = await getMe(token);
+          await useAuthStore.getState().setUser(me);
+        } catch {
+          // Keep existing profile if refresh fails
+        }
+      })();
+    }, [token]),
+  );
 
   const paymentMethods: Array<{
     id: 'bank_transfer' | 'cod';
@@ -714,6 +738,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
 
   // Validate that all shipping requirements are met before allowing order placement
   const isOrderReady = useMemo(() => {
+    if (!hasDeliveryAddress) return false;
     if (isCartCheckout) {
       const groups = Object.entries(groupByDistributor(selectedCartItems));
       if (groups.length === 0) return false;
@@ -731,10 +756,21 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
         if (selectedShipping === 'buyer_courier') return !!buyerCourierMode;
       return true; // self_pickup
     }
-  }, [isCartCheckout, selectedShipping, selectedShippingByDistributor, sellerDeliveryMode, buyerCourierMode, sellerDeliveryModeByDist, buyerCourierModeByDist, selectedCartItems]);
+  }, [hasDeliveryAddress, isCartCheckout, selectedShipping, selectedShippingByDistributor, sellerDeliveryMode, buyerCourierMode, sellerDeliveryModeByDist, buyerCourierModeByDist, selectedCartItems]);
 
   const handlePlaceOrder = async () => {
     if (isPlacingOrder) return;
+    if (!hasDeliveryAddress) {
+      Alert.alert(
+        t('ordersFlow.checkout.address.missingAddressTitle'),
+        t('ordersFlow.checkout.address.missingAddressBody'),
+        [
+          { text: t('ordersFlow.checkout.alerts.cancel'), style: 'cancel' },
+          { text: t('ordersFlow.checkout.address.addAddressAction'), onPress: openAddressEditor },
+        ],
+      );
+      return;
+    }
     try {
       // Show loading state
     Alert.alert(
@@ -1207,22 +1243,36 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
 
         {/* Delivery Address */}
         <View style={styles.section}>
-          <View style={styles.addressCard}>
+          <View style={[styles.addressCard, !hasDeliveryAddress && styles.addressCardMissing]}>
             <View style={styles.sectionTitleContainer}>
-              <MapPin size={20} color="#0a61d7" />
+              <MapPin size={20} color={hasDeliveryAddress ? '#0a61d7' : '#d97706'} />
               <Text style={styles.sectionTitle}>{t('ordersFlow.checkout.sections.deliveryAddress')}</Text>
-              <TouchableOpacity>
-                <Text style={styles.editText}>{t('ordersFlow.checkout.edit')}</Text>
+              <TouchableOpacity onPress={openAddressEditor}>
+                <Text style={[styles.editText, !hasDeliveryAddress && styles.editTextMissing]}>
+                  {hasDeliveryAddress ? t('ordersFlow.checkout.edit') : t('ordersFlow.checkout.address.addAddressAction')}
+                </Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.addressName}>{addresses[0].name}</Text>
-            <Text style={styles.addressCompany}>{addresses[0].company}</Text>
-            <Text style={styles.addressText}>{addresses[0].address}</Text>
-            <Text style={styles.addressPhone}>{addresses[0].phone}</Text>
-            <View style={styles.defaultBadge}>
-              <CheckCircle size={16} color="#10b981" />
-              <Text style={styles.defaultText}>{t('ordersFlow.checkout.address.defaultAddress')}</Text>
-            </View>
+            {hasDeliveryAddress ? (
+              <>
+                {!!addresses[0].name && <Text style={styles.addressName}>{addresses[0].name}</Text>}
+                {!!addresses[0].company && <Text style={styles.addressCompany}>{addresses[0].company}</Text>}
+                <Text style={styles.addressText}>{addresses[0].address}</Text>
+                <Text style={[styles.addressPhone, !addresses[0].phone && styles.addressPhoneMissing]}>
+                  {addresses[0].phone || t('ordersFlow.checkout.address.noPhoneProvided')}
+                </Text>
+                <View style={styles.defaultBadge}>
+                  <CheckCircle size={16} color="#10b981" />
+                  <Text style={styles.defaultText}>{t('ordersFlow.checkout.address.defaultAddress')}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                {!!addresses[0].name && <Text style={styles.addressName}>{addresses[0].name}</Text>}
+                {!!addresses[0].company && <Text style={styles.addressCompany}>{addresses[0].company}</Text>}
+                <Text style={styles.addressNoticeText}>{t('ordersFlow.checkout.address.addAddressNotice')}</Text>
+              </>
+            )}
           </View>
         </View>
 
@@ -2207,6 +2257,9 @@ const styles = StyleSheet.create({
     color: '#0a61d7',
     fontWeight: '500',
   },
+  editTextMissing: {
+    color: '#92400e',
+  },
   businessCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -2267,6 +2320,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
   },
+  addressCardMissing: {
+    backgroundColor: '#fffbeb',
+  },
+  addressNoticeText: {
+    fontSize: 14,
+    color: '#92400e',
+    lineHeight: 20,
+    marginTop: 4,
+  },
   addressName: {
     fontSize: 16,
     fontWeight: '600',
@@ -2287,6 +2349,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     marginTop: 8,
+  },
+  addressPhoneMissing: {
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
   defaultBadge: {
     flexDirection: 'row',

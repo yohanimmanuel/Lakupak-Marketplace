@@ -16,6 +16,7 @@ export const AUTH_ERROR_CODE = {
   SIGNUP_MISSING_STORE: 'SIGNUP_MISSING_STORE',
   SIGNUP_MISSING_CREDENTIALS: 'SIGNUP_MISSING_CREDENTIALS',
   SIGNUP_WEAK_PASSWORD: 'SIGNUP_WEAK_PASSWORD',
+  SIGNUP_FAILED: 'SIGNUP_FAILED',
   FORGOT_PASSWORD_FAILED: 'FORGOT_PASSWORD_FAILED',
   VERIFICATION_CODE_REQUIRED: 'VERIFICATION_CODE_REQUIRED',
 } as const
@@ -161,6 +162,30 @@ export async function signupStep3(username: string, password: string): Promise<{
   }
 
   return { success: true, message: 'Step 3 completed' }
+}
+
+export async function registerAccount(params: {
+  name: string
+  email: string
+  storeName?: string
+  bio?: string
+  username: string
+  password: string
+  phone?: string
+  countryCode?: string
+}): Promise<{ token: string; user: { id: number; name?: string | null; email: string; address?: string | null } }> {
+  const res = await fetch(`${API_BASE_URL}/api/mobile/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+
+  if (!res.ok) {
+    if (res.status === 429) throwAuth(AUTH_ERROR_CODE.RATE_LIMITED)
+    throwAuth(AUTH_ERROR_CODE.SIGNUP_FAILED)
+  }
+
+  return res.json()
 }
 
 export async function requestForgotPassword(email: string): Promise<{ message: string }> {

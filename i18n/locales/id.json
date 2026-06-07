@@ -334,6 +334,10 @@
       "title": "Buat Akun",
       "subtitle": "Bergabung di Laku Marketplace dan mulai perjalanan Anda",
       "ctaCreateAccount": "Buat Akun",
+      "button": {
+        "idle": "Buat Akun",
+        "loading": "Membuat akun…"
+      },
       "alreadyHaveAccount": "Sudah punya akun? Masuk",
       "steps": {
         "fullName": "Nama Lengkap",
@@ -2086,7 +2090,12 @@
         "yourCompany": "Perusahaan Anda",
         "yourAddress": "Alamat Anda",
         "yourCity": "Kota Anda",
-        "yourPhone": "Telepon Anda"
+        "yourPhone": "Telepon Anda",
+        "noPhoneProvided": "Nomor telepon belum diisi",
+        "addAddressNotice": "Tambahkan alamat pengiriman di profil Anda sebelum dapat membuat pesanan.",
+        "addAddressAction": "Tambah alamat",
+        "missingAddressTitle": "Alamat pengiriman diperlukan",
+        "missingAddressBody": "Harap tambahkan alamat pengiriman sebelum membuat pesanan."
       },
       "shippingOptions": {
         "selfPickup": {

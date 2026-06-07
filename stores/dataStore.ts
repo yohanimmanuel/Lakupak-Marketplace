@@ -197,7 +197,9 @@ export const useDataStore = create<DataState>()(
           
           // Also update authStore so home page and other components see the updated user immediately
           const { setUser: setAuthUser } = useAuthStore.getState()
-          await setAuthUser(user)
+          if (user) {
+            await setAuthUser(user)
+          }
         } catch (error) {
           set({ isUserLoading: false })
           // Keep existing user data on error

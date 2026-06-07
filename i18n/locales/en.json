@@ -334,6 +334,10 @@
       "title": "Create Account",
       "subtitle": "Join Laku Marketplace and start your journey",
       "ctaCreateAccount": "Create Account",
+      "button": {
+        "idle": "Create Account",
+        "loading": "Creating account…"
+      },
       "alreadyHaveAccount": "Already have an account? Login",
       "steps": {
         "fullName": "Full Name",
@@ -2088,7 +2092,12 @@
         "yourCompany": "Your Company",
         "yourAddress": "Your Address",
         "yourCity": "Your City",
-        "yourPhone": "Your Phone"
+        "yourPhone": "Your Phone",
+        "noPhoneProvided": "No phone number provided",
+        "addAddressNotice": "Add a delivery address in your profile before you can place an order.",
+        "addAddressAction": "Add address",
+        "missingAddressTitle": "Delivery address required",
+        "missingAddressBody": "Please add a delivery address before placing your order."
       },
       "shippingOptions": {
         "selfPickup": {

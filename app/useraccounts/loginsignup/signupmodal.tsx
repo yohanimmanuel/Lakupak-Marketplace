@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, Animated, Easing, Alert, KeyboardAvoidingView, Platform, Keyboard, StatusBar, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
-import { AUTH_ERROR_CODE, getAuthErrorCode, requestOtp, verifyOtp, signupStep1, signupStep2, signupStep3 } from '../../../services/auth';
+import { AUTH_ERROR_CODE, getAuthErrorCode, requestOtp, verifyOtp, signupStep1, signupStep2, signupStep3, registerAccount } from '../../../services/auth';
 import { useAuthStore } from '../../../stores/authStore';
+import { useDataStore } from '../../../stores/dataStore';
+import { useCartStore } from '../../../stores/cartStore';
 import { ArrowLeft, Fingerprint, Shield, HelpCircle, X } from 'lucide-react-native';
 import { COUNTRIES, getFlagEmoji } from '../../../constants/countries';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +15,7 @@ export default function SignUpModal() {
   const { t } = useTranslation();
   const setToken = useAuthStore(s => s.setToken);
   const setUser = useAuthStore(s => s.setUser);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
   const [isCountryPickerOpen, setIsCountryPickerOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [fingerEnabled, setFingerEnabled] = useState(false);
@@ -441,6 +444,8 @@ export default function SignUpModal() {
                 </View>
                 <Pressable
                   onPress={async () => {
+                    if (isCreatingAccount) return;
+
                     if (!signupData.username.trim() || !signupData.password.trim() || !signupData.confirmPassword.trim()) {
                       Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingAllFields'));
                       return;
@@ -456,31 +461,51 @@ export default function SignUpModal() {
                       return;
                     }
                     
+                    setIsCreatingAccount(true);
                     try {
-                      // Complete signup without phone verification
                       await signupStep3(signupData.username.trim(), signupData.password);
-                      
-                      // Create account directly with username/password (skip phone verification)
-                      const result = await verifyOtp({
-                        phone: '+0000000000', // Dummy phone for testing - will be replaced by backend
-                        countryCode: 'US',
-                        code: '000000', // Dummy OTP code
-                        mode: 'signup',
-                        profile: {
-                          name: signupData.name,
-                          email: signupData.email,
-                          storeName: signupData.storeName,
-                          bio: signupData.bio,
-                          username: signupData.username,
-                          password: signupData.password
-                        }
+
+                      const phone = signupData.phone.trim();
+                      const result = await registerAccount({
+                        name: signupData.name.trim(),
+                        email: signupData.email.trim(),
+                        storeName: signupData.storeName.trim() || undefined,
+                        bio: signupData.bio.trim() || undefined,
+                        username: signupData.username.trim(),
+                        password: signupData.password,
+                        ...(phone
+                          ? {
+                              phone: `${signupData.countryDialCode}${phone}`,
+                              countryCode: signupData.countryCode,
+                            }
+                          : {}),
                       });
                       
                       await setToken(result.token);
-                      setUser(result.user);
-                      Alert.alert(t('auth.signup.accountCreatedTitle'), t('auth.signup.accountCreatedBody'));
+                      await setUser(result.user);
+
+                      const dataStore = useDataStore.getState();
+                      const cartStore = useCartStore.getState();
+
+                      dataStore.clearCache();
+                      dataStore.forceRefreshProducts();
+
                       router.replace('/(tabs)/home');
+
+                      setTimeout(async () => {
+                        try {
+                          await dataStore.loadUserData(result.token);
+                          cartStore.setUserId(result.user.id);
+                          await dataStore.loadOrdersData(true);
+                          dataStore.startAutoRefresh(result.token);
+                        } catch {
+                          // Silently handle background loading errors
+                        }
+                      }, 200);
+
+                      Alert.alert(t('auth.signup.accountCreatedTitle'), t('auth.signup.accountCreatedBody'));
                     } catch (error: unknown) {
+                      setIsCreatingAccount(false);
                       const code = getAuthErrorCode(error);
                       if (code === AUTH_ERROR_CODE.RATE_LIMITED) {
                         Alert.alert(t('auth.login.alerts.rateLimitedTitle'), t('auth.login.alerts.rateLimitedBody'));
@@ -497,9 +522,19 @@ export default function SignUpModal() {
                       Alert.alert(t('auth.signup.alerts.failedTitle'), t('auth.signup.alerts.genericBody'));
                     }
                   }}
-                  style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginBottom: 12 }}
+                  disabled={isCreatingAccount}
+                  style={{
+                    backgroundColor: isCreatingAccount ? '#93c5fd' : '#0a61d7',
+                    borderRadius: 12,
+                    paddingVertical: 16,
+                    alignItems: 'center',
+                    marginBottom: 12,
+                    opacity: isCreatingAccount ? 0.7 : 1,
+                  }}
                 >
-                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t('auth.signup.ctaCreateAccount')}</Text>
+                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>
+                    {isCreatingAccount ? t('auth.signup.button.loading') : t('auth.signup.button.idle')}
+                  </Text>
                 </Pressable>
 
                 {/* Add Phone Number Button - Commented Out */}

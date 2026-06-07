@@ -134,6 +134,10 @@ export async function getMe(token: string, userId?: number) {
         token
       );
       
+      if (!result.marketplaceUser) {
+        throw new Error('User not found');
+      }
+
       return result.marketplaceUser;
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Failed to fetch user';
