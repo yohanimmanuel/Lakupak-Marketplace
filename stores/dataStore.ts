@@ -77,6 +77,15 @@ export interface MarketplaceOrder {
     createdAt?: string | null;
     updatedAt?: string | null;
   }[];
+  seller?: {
+    name?: string | null
+    companyName?: string | null
+    companyAddress?: string | null
+    companyPhone?: string | null
+    companyEmail?: string | null
+    logo?: string | null
+    bannerImage?: string | null
+  } | null
   user?: {
     id?: number
     name?: string
@@ -87,6 +96,7 @@ export interface MarketplaceOrder {
     storeName?: string
     company?: {
       name?: string
+      companyName?: string
       logo?: string
       bannerImage?: string
       businessAddress?: string

@@ -77,7 +77,16 @@ export interface Order {
     email?: string;
     phone?: string;
   };
-  seller?: Record<string, unknown>;
+  seller?: {
+    name?: string | null;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+    shippingPreferences?: string | null;
+    logo?: string | null;
+    bannerImage?: string | null;
+  } | null;
   orderItems: OrderItem[];
   returnRequests?: {
     id: number;

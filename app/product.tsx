@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Share, StyleSheet } from 'react-native';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { View, Share, StyleSheet, ActivityIndicator, Text } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import * as Linking from 'expo-linking';
 import ProductMarketplace from './components/productcatalog/ProductMarketplace';
@@ -8,7 +8,7 @@ import { useDataStore } from '../stores/dataStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { useAuthStore } from '../stores/authStore';
 import { useMessagesStore } from '../stores/messagesStore';
-import type { MarketplaceProduct } from '../services/marketplace';
+import { marketplaceService, type MarketplaceProduct } from '../services/marketplace';
 import type { Product } from '../data/sampleProducts';
 import { openWhatsApp } from '../utils/whatsapp';
 import { useTranslation } from 'react-i18next';
@@ -21,42 +21,91 @@ export default function ProductModal() {
   const { products, forceRefreshProducts } = useDataStore();
   const { toggleLikedProduct } = useUserActivityStore();
   const likedProducts = useUserActivityStore(state => state.likedProducts);
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   const { t } = useTranslation();
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
-  
-  // Refresh products (and offers) when modal gains focus
+  const [fetchedProduct, setFetchedProduct] = useState<MarketplaceProduct | null>(null);
+  const [isLoadingProduct, setIsLoadingProduct] = useState(false);
+  const hasAutoOpenedBuyNow = useRef(false);
+
+  const productId = typeof params.productId === 'string' ? params.productId : '';
+  const shouldOpenBuyNow = params.openBuyNow === 'true';
+  const initialQuantity = useMemo(() => {
+    const raw = params.initialQuantity;
+    const parsed = parseInt(typeof raw === 'string' ? raw : '1', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  }, [params.initialQuantity]);
+  const initialVariantName = typeof params.variantName === 'string' ? params.variantName : undefined;
+
   useFocusEffect(
     useCallback(() => {
       forceRefreshProducts();
     }, [forceRefreshProducts])
   );
-  
-  // Also refresh when productId changes (when navigating between products)
+
   useEffect(() => {
-    if (params.productId) {
+    if (productId) {
       forceRefreshProducts();
     }
-  }, [params.productId, forceRefreshProducts]);
-  
-  // Find the product by ID from params - useMemo to ensure it updates when products array changes
+  }, [productId, forceRefreshProducts]);
+
   const product = useMemo(() => {
-    return products.find(p => p.id === params.productId);
-  }, [products, params.productId]);
-  
+    return products.find((p) => p.id === productId) || fetchedProduct;
+  }, [products, productId, fetchedProduct]);
+
+  useEffect(() => {
+    if (!productId || product) return;
+
+    let cancelled = false;
+    setIsLoadingProduct(true);
+    marketplaceService
+      .getProductById(productId, token || undefined)
+      .then((loaded) => {
+        if (!cancelled) setFetchedProduct(loaded);
+      })
+      .catch(() => {
+        if (!cancelled) setFetchedProduct(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingProduct(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, product, token]);
+
+  useEffect(() => {
+    hasAutoOpenedBuyNow.current = false;
+  }, [productId]);
+
+  useEffect(() => {
+    if (!product || !shouldOpenBuyNow || hasAutoOpenedBuyNow.current) return;
+    hasAutoOpenedBuyNow.current = true;
+    setShowBuyNowModal(true);
+  }, [product, shouldOpenBuyNow]);
+
   if (!product) {
-    return null;
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        {isLoadingProduct ? (
+          <ActivityIndicator size="large" color="#0a61d7" />
+        ) : (
+          <Text style={styles.loadingText}>{t('product.notFound', { defaultValue: 'Product not found' })}</Text>
+        )}
+      </View>
+    );
   }
 
   const handleClose = () => {
     router.back();
   };
 
-  const handleAddToCart = (product: ProductType) => {
+  const handleAddToCart = (_product: ProductType) => {
     // Add to cart functionality
   };
 
-  const handleBuyNow = (product: ProductType) => {
+  const handleBuyNow = (_product: ProductType) => {
     setShowBuyNowModal(true);
   };
 
@@ -104,36 +153,33 @@ export default function ProductModal() {
     }
   };
 
-  const handleToggleFavorite = async (productId: string) => {
+  const handleToggleFavorite = async (targetProductId: string) => {
     if (!user?.id) {
       return;
     }
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      await toggleLikedProduct(productId, product);
+    const targetProduct = products.find((p) => p.id === targetProductId) || fetchedProduct;
+    if (targetProduct) {
+      await toggleLikedProduct(targetProductId, targetProduct);
     }
   };
 
-  const handleBuyNowConfirm = (product: ProductType, quantity: number) => {
-    // Navigate to checkout with product details
+  const handleBuyNowConfirm = (targetProduct: ProductType, quantity: number) => {
     const checkoutParams = {
-      productId: product.id,
+      productId: targetProduct.id,
       quantity: quantity.toString(),
-      totalPrice: ((product.sellingPrice || 0) * quantity).toString(),
-      productName: product.name || 'Unknown Product',
-      productImage: product.images?.[0] || '',
-      unitPrice: (product.sellingPrice || 0).toString(),
-      originalPrice: ((product as MarketplaceProduct).originalSellingPrice || (product as Product).originalSellingPrice || 0).toString(),
-      packageType: product.packageType || 'Box',
-      piecesPerPackage: product.piecesPerPackage?.toString() || '1',
+      totalPrice: ((targetProduct.sellingPrice || 0) * quantity).toString(),
+      productName: targetProduct.name || 'Unknown Product',
+      productImage: targetProduct.images?.[0] || '',
+      unitPrice: (targetProduct.sellingPrice || 0).toString(),
+      originalPrice: ((targetProduct as MarketplaceProduct).originalSellingPrice || (targetProduct as Product).originalSellingPrice || 0).toString(),
+      packageType: targetProduct.packageType || 'Box',
+      piecesPerPackage: targetProduct.piecesPerPackage?.toString() || '1',
     };
-    
+
     router.push({
       pathname: '/components/productcatalog/checkout',
       params: checkoutParams,
     });
-    
-    // Don't close the modal - let it stay open as a bottom sheet
   };
 
   const handleCloseBuyNowModal = () => {
@@ -142,10 +188,8 @@ export default function ProductModal() {
 
   return (
     <View style={styles.container}>
-      {/* Background overlay for proper modal layering */}
       <View style={styles.backgroundOverlay} />
-      
-      {/* Product Content */}
+
       <ProductMarketplace
         product={product}
         onPress={() => {}}
@@ -161,12 +205,13 @@ export default function ProductModal() {
         onBackPress={handleClose}
       />
 
-      {/* Buy Now Modal */}
       <BuyNowModal
         visible={showBuyNowModal}
         product={product}
         onClose={handleCloseBuyNowModal}
         onConfirm={handleBuyNowConfirm}
+        initialQuantity={shouldOpenBuyNow ? initialQuantity : undefined}
+        initialVariantName={shouldOpenBuyNow ? initialVariantName : undefined}
       />
     </View>
   );
@@ -176,6 +221,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 15,
+    color: '#6b7280',
   },
   backgroundOverlay: {
     position: 'absolute',

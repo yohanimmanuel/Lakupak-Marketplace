@@ -448,8 +448,18 @@
       "noProducts": "Tidak ada produk"
     },
     "orderDateLabel": "Tanggal pesanan:",
+    "seeDetails": "Lihat detail",
+    "summaryLine_one": "{{count}} item • {{amount}}",
+    "summaryLine_other": "{{count}} item • {{amount}}",
     "distributorFallback": "Distributor",
     "unknownStatus": "Tidak diketahui",
+    "reorder": "Pesan lagi",
+    "reorderLoading": "Menambahkan item…",
+    "status": {
+      "received": "Selesai",
+      "packed": "Dikemas",
+      "failed": "Gagal"
+    },
     "empty": {
       "title": "Belum Ada Pesanan",
       "description": "Setelah Anda membuat pesanan pertama, Anda akan melihat update detail di sini seperti konfirmasi pesanan, status pengemasan, informasi pengiriman, dan notifikasi penerimaan. Kami akan memberi informasi di setiap langkah.",
@@ -769,7 +779,8 @@
     "actions": {
       "pay": "Bayar",
       "returnRefund": "Retur/Refund",
-      "rate": "Beri Nilai"
+      "rate": "Beri Nilai",
+      "reorder": "Pesan lagi"
     },
     "meta": {
       "expectedDelivery": "Perkiraan tiba: {{date}}"
@@ -1929,7 +1940,15 @@
         "orderReceived": "Pesanan diterima",
         "rate": "Beri Nilai",
         "editReview": "Ubah ulasan",
-        "backToOrders": "Kembali ke Pesanan"
+        "backToOrders": "Kembali ke Pesanan",
+        "reorder": "Pesan lagi"
+      },
+      "reorder": {
+        "noneAddedTitle": "Tidak dapat pesan lagi",
+        "noneAddedBody": "Produk dari pesanan ini sudah tidak tersedia.",
+        "partialTitle": "Beberapa item tidak tersedia",
+        "partialBody_one": "{{count}} produk tidak dapat ditambahkan dan dilewati.",
+        "partialBody_other": "{{count}} produk tidak dapat ditambahkan dan dilewati."
       },
       "estimatedDelivery": {
         "dateLabel": "Perkiraan tanggal tiba:",

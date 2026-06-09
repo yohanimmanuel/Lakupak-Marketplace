@@ -448,8 +448,18 @@
       "noProducts": "No products"
     },
     "orderDateLabel": "Order Date:",
+    "seeDetails": "See details",
+    "summaryLine_one": "{{count}} item • {{amount}}",
+    "summaryLine_other": "{{count}} items • {{amount}}",
     "distributorFallback": "Distributor",
     "unknownStatus": "Unknown",
+    "reorder": "Re-order",
+    "reorderLoading": "Adding items…",
+    "status": {
+      "received": "Completed",
+      "packed": "Packed",
+      "failed": "Failed"
+    },
     "empty": {
       "title": "No Orders Yet",
       "description": "Once you place your first order, you'll see detailed updates here including order confirmation, packing status, shipping information, and delivery notifications. We'll keep you informed every step of the way!",
@@ -770,7 +780,8 @@
     "actions": {
       "pay": "Pay",
       "returnRefund": "Return/Refund",
-      "rate": "Rate"
+      "rate": "Rate",
+      "reorder": "Re-order"
     },
     "meta": {
       "expectedDelivery": "Expected delivery: {{date}}"
@@ -1931,7 +1942,15 @@
         "orderReceived": "Order Received",
         "rate": "Rate",
         "editReview": "Edit review",
-        "backToOrders": "Back to Orders"
+        "backToOrders": "Back to Orders",
+        "reorder": "Re-order"
+      },
+      "reorder": {
+        "noneAddedTitle": "Cannot re-order",
+        "noneAddedBody": "The products from this order are no longer available.",
+        "partialTitle": "Some items unavailable",
+        "partialBody_one": "{{count}} product could not be added and was skipped.",
+        "partialBody_other": "{{count}} products could not be added and were skipped."
       },
       "estimatedDelivery": {
         "dateLabel": "Estimated delivery date:",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, TextInput, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Pressable, TextInput, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, MessageSquareText, Search, ChevronRight, Star, Package, Truck, CheckCircle, Clock, MapPin, Phone } from 'lucide-react-native';
@@ -12,6 +12,9 @@ import { formatCurrency } from '../../../utils/currencyUtils';
 import { Product } from '@/data/sampleProducts';
 import { useDataStore } from '../../../stores/dataStore';
 import { useTranslation } from 'react-i18next';
+import { getDistributorCompanyName } from '../../../utils/orderDistributor';
+import { isReorderEligible, resolveReorderNavigationTarget } from '../../../utils/reorderFromOrder';
+import { showReorderUnavailableAlert } from '../../../utils/reorderAlerts';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -87,6 +90,7 @@ export default function MyPurchasesModal() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
   const [orderHasReview, setOrderHasReview] = useState<Record<string, boolean>>({});
+  const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
 
   const isAuthenticated = !!token && !!authUser;
   const storeOrders = useDataStore(state => state.orders);
@@ -116,13 +120,14 @@ export default function MyPurchasesModal() {
     }
 
     const transformedOrders = storeOrders.map((order) => {
-      const fallbackStoreName = order.storeName || order.user?.company?.name || t('myPurchases.fallbackStore');
+      const distributorCompanyName =
+        getDistributorCompanyName(order) || t('myPurchases.fallbackStore');
       return {
         ...(order as unknown as Order),
         orderItems: (order.orderItems || []) as unknown as OrderItem[],
-        storeName: fallbackStoreName,
+        storeName: distributorCompanyName,
         seller: {
-          name: fallbackStoreName,
+          name: distributorCompanyName,
           avatar: order.user?.company?.logo,
           rating: 4.5,
           isOfficial: true,
@@ -329,6 +334,9 @@ export default function MyPurchasesModal() {
       buttons.push({ text: t('myPurchases.actions.returnRefund'), type: 'secondary', action: 'return' });
       buttons.push({ text: t('ordersFlow.orderDetails.actions.orderReceived'), type: 'primary', action: 'received' });
     } else if (order.orderStatus === 'Delivered' || order.orderStatus === 'Received') {
+      if (isReorderEligible(order.orderStatus)) {
+        buttons.push({ text: t('myPurchases.actions.reorder'), type: 'secondary', action: 'reorder' });
+      }
       buttons.push({ text: t('myPurchases.actions.returnRefund'), type: 'secondary', action: 'return' });
       buttons.push({
         text: orderHasReview[order.orderId] ? t('ordersFlow.orderDetails.actions.editReview') : t('tabsAccount.purchaseStatus.toRate'),
@@ -342,8 +350,51 @@ export default function MyPurchasesModal() {
     return buttons;
   };
 
+  const handleReorder = async (order: Order) => {
+    if (reorderingOrderId) return;
+
+    setReorderingOrderId(order.orderId);
+    try {
+      const { target } = await resolveReorderNavigationTarget({
+        order: {
+          orderStatus: order.orderStatus,
+          orderItems: order.orderItems.map((item) => ({
+            productId: item.productId,
+            productName: item.productName,
+            packageQuantity: item.packageQuantity,
+            variantName: item.variant,
+          })),
+        },
+        products,
+        token: token || undefined,
+      });
+
+      if (!target) {
+        showReorderUnavailableAlert(t);
+        return;
+      }
+
+      router.push({
+        pathname: '/product',
+        params: {
+          productId: target.productId,
+          openBuyNow: 'true',
+          initialQuantity: String(target.quantity),
+          variantName: target.variantName,
+        },
+      });
+    } catch {
+      showReorderUnavailableAlert(t);
+    } finally {
+      setReorderingOrderId(null);
+    }
+  };
+
   const handleAction = (order: Order, action: string) => {
     switch (action) {
+      case 'reorder':
+        handleReorder(order);
+        break;
       case 'pay':
         router.push(`/components/ordersshipment/PayOrder?orderId=${encodeURIComponent(order.orderId)}`);
         break;
@@ -579,7 +630,11 @@ export default function MyPurchasesModal() {
                 styles.actionButton,
                 button.action === 'rate' ? styles.ratePrimaryButton : button.type === 'primary' ? styles.primaryButton : styles.secondaryButton
               ]}
-              onPress={() => handleAction(order, button.action)}
+              onPress={(e) => {
+                e?.stopPropagation?.();
+                handleAction(order, button.action);
+              }}
+              disabled={button.action === 'reorder' && reorderingOrderId === order.orderId}
             >
               {button.action === 'rate' ? (
                 <>
@@ -729,6 +784,7 @@ export default function MyPurchasesModal() {
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {isLoading ? (
           <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0a61d7" />
             <Text style={styles.loadingText}>{t('myPurchases.loading')}</Text>
           </View>
         ) : !isAuthenticated ? (
@@ -936,12 +992,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   loadingContainer: {
-    padding: 24,
+    minHeight: 280,
+    paddingVertical: 64,
+    paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 14,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
   },

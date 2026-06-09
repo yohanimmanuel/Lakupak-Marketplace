@@ -18,7 +18,7 @@ import { MarketplaceProduct } from '../../../services/marketplace';
 import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { useTranslation } from 'react-i18next';
-import { matchesVariantAttributes } from '../../../utils/variantRules';
+import { matchesVariantAttributes, parseVariantNameToAttributes } from '../../../utils/variantRules';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -30,6 +30,8 @@ interface BuyNowModalProps {
   onClose: () => void;
   onConfirm: (product: ProductType, quantity: number) => void;
   mode?: 'buy' | 'cart';
+  initialQuantity?: number;
+  initialVariantName?: string;
 }
 
 export default function BuyNowModal({
@@ -38,6 +40,8 @@ export default function BuyNowModal({
   onClose,
   onConfirm,
   mode = 'buy',
+  initialQuantity,
+  initialVariantName,
 }: BuyNowModalProps) {
   const { t } = useTranslation();
   const { addItem } = useCartStore();
@@ -96,19 +100,22 @@ export default function BuyNowModal({
     if (visible) {
       // Only reset if product changed or modal just opened
       if (productChanged || modalJustOpened) {
-      // Reset quantity and animation value
-      setQuantity(1);
+      setQuantity(Math.max(1, initialQuantity ?? 1));
       setIsClosing(false);
       slideAnim.setValue(screenHeight);
-      
-      // Set default variant options for new structure
-      if (product && 'variants' in product && 'variantOptions' in product) {
+
+      const presetVariant = parseVariantNameToAttributes(initialVariantName);
+      const hasPresetVariant = Object.keys(presetVariant).length > 0;
+
+      if (hasPresetVariant) {
+        setSelectedVariantOptions(presetVariant);
+      } else if (product && 'variants' in product && 'variantOptions' in product) {
         const definitions = (product.variants || []) as unknown as Array<{
           id: number;
           variantType: string;
           options: string[] | Record<string, unknown>;
         }>;
-        
+
         const initialSelection: Record<string, string> = {};
         definitions.forEach(def => {
           const options = Array.isArray(def.options) ? def.options : [];
@@ -117,7 +124,7 @@ export default function BuyNowModal({
           }
         });
         setSelectedVariantOptions(initialSelection);
-        }
+      }
       }
       
       // Animate to 0 with smooth timing (only if modal just opened or product changed)
@@ -133,7 +140,7 @@ export default function BuyNowModal({
     // Update refs
     previousProductId.current = currentProductId;
     previousVisible.current = visible;
-  }, [visible, slideAnim, product]);
+  }, [visible, slideAnim, product, initialQuantity, initialVariantName]);
 
   // Pan responder for swipe down to close
   const panResponder = PanResponder.create({

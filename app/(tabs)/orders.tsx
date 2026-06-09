@@ -3,12 +3,12 @@ import {
   StyleSheet,
   View,
   ScrollView,
-  TouchableOpacity,
   Image,
   Dimensions,
   StatusBar,
   Text,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Link } from 'expo-router';
@@ -37,18 +37,23 @@ import { useAuthStore } from '../../stores/authStore';
 import { useDataStore, type MarketplaceOrder, type MarketplaceOrderItem } from '../../stores/dataStore';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { getDistributorCompanyName } from '../../utils/orderDistributor';
+import { isReorderEligible, resolveReorderNavigationTarget } from '../../utils/reorderFromOrder';
+import { showReorderUnavailableAlert } from '../../utils/reorderAlerts';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function OrdersScreen() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const token = useAuthStore(s => s.token);
   const authUser = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
   const orders = useDataStore(state => state.orders);
+  const products = useDataStore(state => state.products);
   const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
+  const [reorderingId, setReorderingId] = useState<string | null>(null);
   // notifications state no longer used; kept only if needed later
   // Local notification state no longer needed here; notifications now live in the Notifications tab
   const isAuthenticated = !!token && !!authUser;
@@ -107,13 +112,40 @@ export default function OrdersScreen() {
   };
 
 
-  const formatOrderDate = (order: MarketplaceOrder) => {
+  const locale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
+
+  const formatOrderDateTime = (order: MarketplaceOrder) => {
     const src = order.orderDate || order.createdAt || order.updatedAt;
     if (!src) return '';
     const d = new Date(src);
-    return Number.isNaN(d.getTime())
-      ? ''
-      : d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (Number.isNaN(d.getTime())) return '';
+    const datePart = d.toLocaleDateString(locale, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    const timePart = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
+    return `${datePart} • ${timePart}`;
+  };
+
+  const formatProductSummary = (order: MarketplaceOrder) => {
+    const items = order.orderItems ?? [];
+    if (items.length === 0) return t('tabsOrders.items.noProducts');
+    return items
+      .map((item) => {
+        const qty = item.packageQuantity && item.packageQuantity > 0 ? item.packageQuantity : 1;
+        const name = item.productName?.trim() || t('tabsOrders.items.noProducts');
+        return `${qty}x ${name}`;
+      })
+      .join(', ');
+  };
+
+  const getTotalItemCount = (order: MarketplaceOrder) => {
+    const items = order.orderItems ?? [];
+    if (items.length === 0) return 0;
+    const fromQty = items.reduce((sum, item) => sum + (item.packageQuantity ?? 1), 0);
+    return fromQty > 0 ? fromQty : items.length;
   };
 
   const getOrderStatusColor = (status?: string) => {
@@ -167,6 +199,38 @@ export default function OrdersScreen() {
     return '#111827';
   };
 
+  const handleReorder = async (order: MarketplaceOrder) => {
+    if (reorderingId) return;
+
+    setReorderingId(order.orderId);
+    try {
+      const { target } = await resolveReorderNavigationTarget({
+        order,
+        products,
+        token: token || undefined,
+      });
+
+      if (!target) {
+        showReorderUnavailableAlert(t);
+        return;
+      }
+
+      router.push({
+        pathname: '/product',
+        params: {
+          productId: target.productId,
+          openBuyNow: 'true',
+          initialQuantity: String(target.quantity),
+          variantName: target.variantName,
+        },
+      });
+    } catch {
+      showReorderUnavailableAlert(t);
+    } finally {
+      setReorderingId(null);
+    }
+  };
+
   const renderLoginPrompt = () => (
     <View style={styles.loginPromptContainer}>
       <View style={styles.loginPromptIcon}>
@@ -199,90 +263,115 @@ export default function OrdersScreen() {
         {isAuthenticated ? (
           isOrdersLoading ? (
             <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#0a61d7" />
               <Text style={styles.loadingText}>{t('tabsOrders.loading')}</Text>
             </View>
           ) : orders.length > 0 ? (
             orders.map((order: MarketplaceOrder) => {
-              const totalProducts =
-                Array.isArray(order.orderItems) && order.orderItems.length > 0
-                  ? order.orderItems.length
-                  : 0;
-              const itemsLabel =
-                totalProducts > 0
-                  ? t('tabsOrders.items.products', { count: totalProducts })
-                  : t('tabsOrders.items.noProducts');
-
-              const dateLabel = formatOrderDate(order);
+              const dateLabel = formatOrderDateTime(order);
               const statusBadgeStyle = getOrderStatusBadgeStyle(order.orderStatus);
               const firstImage = order.orderItems?.[0]?.images?.[0];
+              const distributorName =
+                getDistributorCompanyName(order) || t('tabsOrders.distributorFallback');
+              const productSummary = formatProductSummary(order);
+              const itemCount = getTotalItemCount(order);
+              const amountLabel =
+                order.totalAmount != null
+                  ? `Rp ${Math.round(order.totalAmount).toLocaleString('id-ID')}`
+                  : '';
+              const summaryLabel = t('tabsOrders.summaryLine', {
+                count: itemCount,
+                amount: amountLabel,
+              });
+
+              const openOrderDetails = () => {
+                router.push({
+                  pathname: '/components/ordersshipment/OrderDetails',
+                  params: { orderId: order.orderId },
+                });
+              };
 
               return (
-                <TouchableOpacity
-                  key={order.orderId}
-                  style={styles.orderCard}
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/components/ordersshipment/OrderDetails',
-                      params: { orderId: order.orderId },
-                    })
-                  }
-                >
-                  <View style={styles.orderCardInner}>
-                    <View style={styles.orderCardLeft}>
-                      <View style={styles.orderCardThumbWrap}>
-                        {firstImage ? (
-                          <Image
-                            source={{ uri: firstImage }}
-                            style={styles.orderCardThumb}
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <View style={styles.orderCardThumbPlaceholder}>
-                            <Package size={24} color="#9ca3af" />
-                          </View>
-                        )}
-                      </View>
-                      <View style={styles.orderCardBody}>
-                        <View style={styles.orderCardTopRow}>
-                          <Text style={styles.orderIdText}>{order.orderId}</Text>
+                <View key={order.orderId} style={styles.orderCard}>
+                  <View style={styles.orderCardMain}>
+                    <View style={styles.orderCardThumbWrap}>
+                      {firstImage ? (
+                        <Image
+                          source={{ uri: firstImage }}
+                          style={styles.orderCardThumb}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.orderCardThumbPlaceholder}>
+                          <Package size={24} color="#9ca3af" />
                         </View>
-                      <Text style={styles.orderDistributorText} numberOfLines={1}>
-                        {order.storeName || order.user?.company?.name || 'Distributor'}
-                      </Text>
-                      <Text style={styles.orderProductsText} numberOfLines={2}>
-                        {itemsLabel}
-                      </Text>
-                      <View style={styles.orderMetaRow}>
-                        <Text
-                          style={[
-                            styles.orderAmountText,
-                            { color: getOrderAmountColor(order.paymentStatus) },
-                          ]}
-                        >
-                          {order.totalAmount != null ? `Rp ${Math.round(order.totalAmount).toLocaleString('id-ID')}` : ''}
+                      )}
+                    </View>
+                    <View style={styles.orderCardBody}>
+                      <View style={styles.orderDistributorRow}>
+                        <Text style={styles.orderDistributorText} numberOfLines={2}>
+                          {distributorName}
                         </Text>
+                        <Pressable
+                          onPress={openOrderDetails}
+                          style={({ pressed }) => [
+                            styles.seeDetailsRow,
+                            pressed && styles.seeDetailsRowPressed,
+                          ]}
+                          hitSlop={8}
+                        >
+                          <Text style={styles.seeDetailsText}>{t('tabsOrders.seeDetails')}</Text>
+                          <ChevronRight size={16} color="#111827" />
+                        </Pressable>
                       </View>
                       {dateLabel ? (
-                        <View style={styles.orderDateRow}>
-                          <Text style={styles.orderDateLabel}>{t('tabsOrders.orderDateLabel')}</Text>
-                          <Text style={styles.orderDateText}>{dateLabel}</Text>
-                        </View>
+                        <Text style={styles.orderDateText} numberOfLines={2}>
+                          {dateLabel}
+                        </Text>
                       ) : null}
-                    </View>
-                    </View>
-                    <View style={styles.orderCardRight}>
+                      <Text style={styles.orderProductsText} numberOfLines={3}>
+                        {productSummary}
+                      </Text>
                       <View style={[styles.orderStatusPill, statusBadgeStyle]}>
                         <Text style={[styles.orderStatusPillText, { color: statusBadgeStyle.color }]}>
                           {order.orderStatus || t('tabsOrders.unknownStatus')}
                         </Text>
                       </View>
-                      <View style={styles.orderCardChevron}>
-                        <ChevronRight size={20} color="#9ca3af" />
-                      </View>
                     </View>
                   </View>
-                </TouchableOpacity>
+
+                  <View style={styles.orderCardFooter}>
+                    <Text
+                      style={[
+                        styles.orderSummaryText,
+                        { color: getOrderAmountColor(order.paymentStatus) },
+                      ]}
+                    >
+                      {summaryLabel}
+                    </Text>
+                    {isReorderEligible(order.orderStatus) ? (
+                      <Pressable
+                        onPress={() => handleReorder(order)}
+                        disabled={reorderingId === order.orderId}
+                        style={({ pressed }) => [
+                          styles.reorderButton,
+                          pressed && styles.reorderButtonPressed,
+                          reorderingId === order.orderId && styles.reorderButtonDisabled,
+                        ]}
+                        hitSlop={6}
+                      >
+                        {reorderingId === order.orderId ? (
+                          <ActivityIndicator size="small" color="#0a61d7" />
+                        ) : (
+                          <>
+                            <RotateCcw size={14} color="#0a61d7" />
+                            <Text style={styles.reorderButtonText}>{t('tabsOrders.reorder')}</Text>
+                          </>
+                        )}
+                      </Pressable>
+                    ) : null}
+                  </View>
+                </View>
               );
             })
           ) : (
@@ -378,12 +467,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   loadingContainer: {
-    padding: 24,
+    minHeight: 280,
+    paddingVertical: 64,
+    paddingHorizontal: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 14,
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6b7280',
     textAlign: 'center',
   },
@@ -394,21 +486,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  orderCardInner: {
+  seeDetailsRow: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    justifyContent: 'space-between',
-  },
-  orderCardLeft: {
-    flexDirection: 'row',
-    flex: 1,
-    minWidth: 0,
-  },
-  orderCardRight: {
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingLeft: 8,
+    alignItems: 'center',
+    gap: 2,
     paddingVertical: 2,
+    paddingHorizontal: 2,
+    flexShrink: 0,
+  },
+  seeDetailsRowPressed: {
+    opacity: 0.7,
+  },
+  seeDetailsText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  orderCardMain: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  orderDistributorRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 4,
   },
   orderCardThumbWrap: {
     width: 52,
@@ -419,6 +522,8 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     overflow: 'hidden',
     marginRight: 14,
+    marginTop: 2,
+    alignSelf: 'flex-start',
   },
   orderCardThumb: {
     width: '100%',
@@ -434,63 +539,75 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  orderCardChevron: {
-    marginLeft: 8,
-  },
-  orderCardTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  orderIdText: {
-    fontSize: 14,
+  orderDistributorText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 15,
     fontWeight: '700',
     color: '#111827',
   },
-  orderDistributorText: {
-    fontSize: 13,
-    color: '#374151',
-    marginBottom: 2,
-  },
   orderProductsText: {
     fontSize: 13,
-    color: '#6b7280',
-    marginBottom: 15,
-  },
-  orderMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  orderAmountText: {
-    fontSize: 13,
-    color: '#111827',
-    fontWeight: '600',
+    color: '#374151',
+    lineHeight: 18,
+    marginTop: 6,
   },
   orderStatusPill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
+    alignSelf: 'flex-start',
+    marginTop: 8,
   },
   orderStatusPillText: {
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
-  orderDateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  orderDateLabel: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginRight: 4,
-  },
   orderDateText: {
     fontSize: 12,
-    color: '#374151',
+    color: '#6b7280',
+    lineHeight: 16,
+  },
+  orderCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  orderSummaryText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  reorderButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#0a61d7',
+    backgroundColor: '#ffffff',
+    flexShrink: 0,
+  },
+  reorderButtonPressed: {
+    opacity: 0.75,
+  },
+  reorderButtonDisabled: {
+    opacity: 0.6,
+  },
+  reorderButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0a61d7',
   },
   noOrdersCard: {
     backgroundColor: '#f9fafb',
