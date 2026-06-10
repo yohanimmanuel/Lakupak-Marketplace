@@ -19,6 +19,7 @@ import { applyStoredUserPreferences } from '../utils/applyStoredUserPreferences'
 import { getPreferredLanguage, getLanguageForPublicOrGuestSession } from '../utils/preferences';
 import SuspendedAccountModal from '../components/SuspendedAccountModal';
 import AuthGuard from '../components/AuthGuard';
+import { logMobileEnvWarnings } from '../utils/validateEnv';
 
 import i18n from '../i18n';
 
@@ -40,6 +41,10 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
+
+  useEffect(() => {
+    logMobileEnvWarnings('marketplace');
+  }, []);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
