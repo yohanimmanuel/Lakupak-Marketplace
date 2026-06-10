@@ -1,5 +1,10 @@
-/** Matches OrderDetails distributor company resolution (`user.company`). */
+/**
+ * Resolves distributor company name for order list/detail UI.
+ * Prefer company fields — never use Order.storeName (that is the buyer's marketplace store).
+ */
 type DistributorOrderSource = {
+  /** Buyer store on the order record — do not use for distributor display. */
+  storeName?: string | null
   user?: {
     company?: {
       name?: string | null
@@ -12,15 +17,22 @@ type DistributorOrderSource = {
   } | null
 }
 
-export function getDistributorCompanyName(order: DistributorOrderSource): string | null {
-  const company = order.user?.company
-  if (company) {
-    const fromCompany = company.name?.trim() || company.companyName?.trim()
-    if (fromCompany) return fromCompany
-  }
+function pickCompanyLabel(
+  company?: { name?: string | null; companyName?: string | null } | null,
+): string | null {
+  if (!company) return null
+  return company.companyName?.trim() || company.name?.trim() || null
+}
 
-  const fromSeller = order.seller?.name?.trim() || order.seller?.companyName?.trim()
-  if (fromSeller) return fromSeller
+export function getDistributorCompanyName(order: DistributorOrderSource): string | null {
+  const fromSellerCompany = order.seller?.companyName?.trim()
+  if (fromSellerCompany) return fromSellerCompany
+
+  const fromUserCompany = pickCompanyLabel(order.user?.company)
+  if (fromUserCompany) return fromUserCompany
+
+  const fromSellerContact = order.seller?.name?.trim()
+  if (fromSellerContact) return fromSellerContact
 
   return null
 }
