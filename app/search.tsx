@@ -419,7 +419,6 @@ export default function SearchScreen() {
     if (userId) {
       loadRecentSearches();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]); // Only depend on userId - loadRecentSearches is stable and depends on userId/token
 
   // Handle initial query and category from URL params
