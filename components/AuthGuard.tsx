@@ -19,7 +19,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const isAuthenticated = !!token && !!user;
     const isAuthRoute = segments[0] === 'useraccounts';
     const authEntryScreens = new Set(['welcome', 'loginsignup']);
-    const isAuthEntryScreen = isAuthRoute && authEntryScreens.has(String(segments[1] ?? ''));
+    const authChildSegment = segments.slice(1)[0] ?? '';
+    const isAuthEntryScreen = isAuthRoute && authEntryScreens.has(String(authChildSegment));
 
     if (!isAuthenticated && !isAuthRoute) {
       router.replace('/useraccounts/welcome');
