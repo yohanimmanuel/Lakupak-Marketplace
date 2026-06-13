@@ -174,7 +174,8 @@
     "errors": {
       "failedToLoad": "Gagal memuat pesan.",
       "businessPhoneUnavailable": "Nomor telepon bisnis tidak tersedia.",
-      "sellerPhoneUnavailable": "Nomor telepon penjual tidak tersedia untuk produk ini."
+      "sellerPhoneUnavailable": "Nomor telepon penjual tidak tersedia untuk produk ini.",
+      "sellerPhoneUnavailableForOrder": "Nomor telepon distributor tidak tersedia untuk pesanan {{orderId}}."
     },
     "actions": {
       "retry": "Coba lagi"
@@ -184,7 +185,8 @@
     },
     "whatsapp": {
       "distributorMessage": "Halo {{name}}, saya ingin menanyakan produk Anda di Laku Marketplace.",
-      "productInquiry": "Halo, saya tertarik dengan \"{{productName}}\" di Laku Marketplace. Apakah masih tersedia?"
+      "productInquiry": "Halo, saya tertarik dengan \"{{productName}}\" di Laku Marketplace. Apakah masih tersedia?",
+      "orderUpdate": "Halo, saya ingin menanyakan update untuk pesanan {{orderId}} saya di Laku Marketplace. Terima kasih!"
     }
   },
   "map": {

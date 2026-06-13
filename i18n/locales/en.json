@@ -174,7 +174,8 @@
     "errors": {
       "failedToLoad": "Failed to load messages.",
       "businessPhoneUnavailable": "Business phone number is not available.",
-      "sellerPhoneUnavailable": "Seller phone number is not available for this product."
+      "sellerPhoneUnavailable": "Seller phone number is not available for this product.",
+      "sellerPhoneUnavailableForOrder": "Distributor phone number is not available for order {{orderId}}."
     },
     "actions": {
       "retry": "Retry"
@@ -184,7 +185,8 @@
     },
     "whatsapp": {
       "distributorMessage": "Hi {{name}}, I'd like to ask about your products on Laku Marketplace.",
-      "productInquiry": "Hi, I'm interested in \"{{productName}}\" on Laku Marketplace. Is it available?"
+      "productInquiry": "Hi, I'm interested in \"{{productName}}\" on Laku Marketplace. Is it available?",
+      "orderUpdate": "Hi, I'd like to ask for an update on my order {{orderId}} on Laku Marketplace. Thank you!"
     }
   },
   "map": {

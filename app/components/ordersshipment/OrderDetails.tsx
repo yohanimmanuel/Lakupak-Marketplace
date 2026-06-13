@@ -41,6 +41,8 @@ import { websocketService } from '../../../services/websocket';
 import { calculateOrderItemPromotion } from '../../../utils/promotionUtils';
 import OrderInvoiceModal from './OrderInvoiceModal';
 import { useTranslation } from 'react-i18next';
+import { openWhatsApp } from '../../../utils/whatsapp';
+import { useMessagesStore } from '../../../stores/messagesStore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -95,9 +97,9 @@ interface OrderCompanyInfo {
   industryType?: string;
   businessAddress?: string;
   pickupAddress?: string;
-  contactPerson?: string;
-  phone?: string;
-  email?: string;
+  businessPhone?: string;
+  businessEmail?: string;
+  logo?: string;
 }
 
 interface OrderUserInfo {
@@ -920,14 +922,12 @@ export default function OrderDetailsModal() {
     }
 
     const distributorCompanyName = company.name || company.companyName;
-    const distributorName = company.companyName;
     const industryType = company.industryType;
-    const contactPerson = company.contactPerson;
-    const phoneNumber = company.phone;
-    const email = company.email;
+    const phoneNumber = company.businessPhone;
+    const email = company.businessEmail;
     const address = company.pickupAddress || company.businessAddress;
 
-    if (!distributorCompanyName && !distributorName && !industryType && !contactPerson && !phoneNumber && !email && !address) {
+    if (!distributorCompanyName && !industryType && !phoneNumber && !email && !address) {
       return null;
     }
 
@@ -982,29 +982,11 @@ export default function OrderDetailsModal() {
             </View>
           )}
 
-          {distributorName && (
-            <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.distributor.labels.name')}:</Text>
-              <Text style={[styles.infoValue, styles.distributorValue]}>
-                {distributorName}
-              </Text>
-            </View>
-          )}
-
           {industryType && (
             <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.distributor.labels.industry')}:</Text>
               <Text style={[styles.infoValue, styles.distributorValue]}>
                 {industryType}
-              </Text>
-            </View>
-          )}
-
-          {contactPerson && (
-            <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.distributor.labels.contact')}:</Text>
-              <Text style={[styles.infoValue, styles.distributorValue]}>
-                {contactPerson}
               </Text>
             </View>
           )}
@@ -1041,6 +1023,41 @@ export default function OrderDetailsModal() {
     );
   };
 
+  const handleContactSeller = () => {
+    const company = orderData.user?.company;
+    const phone = typeof company?.businessPhone === 'string' ? company.businessPhone : '';
+    const distributorIdRaw =
+      orderData.userId ??
+      orderData.sellerId ??
+      orderData.distributorId ??
+      orderData.sellerUserId ??
+      null;
+    const distributorId = distributorIdRaw != null ? Number(distributorIdRaw) : Number.NaN;
+    const distributorName =
+      (company?.name || company?.companyName || '').trim() || 'Distributor';
+    const logoUrl = company?.logo ?? null;
+    const firstItem = orderData.orderItems?.[0];
+
+    if (Number.isFinite(distributorId)) {
+      useMessagesStore.getState().upsertConversation({
+        distributorId,
+        name: distributorName,
+        phone: phone || null,
+        logoUrl,
+        lastProductId: firstItem?.productId ? String(firstItem.productId) : null,
+        lastProductName: firstItem?.productName ?? firstItem?.name ?? null,
+      });
+    }
+
+    openWhatsApp({
+      phone,
+      text: t('messages.whatsapp.orderUpdate', { orderId: orderData.orderId }),
+      onErrorMessage: t('messages.errors.sellerPhoneUnavailableForOrder', {
+        orderId: orderData.orderId,
+      }),
+    });
+  };
+
   const renderSupportCenter = () => (
     <View style={styles.section}>
       <View style={styles.productCard}>
@@ -1067,7 +1084,7 @@ export default function OrderDetailsModal() {
         
         <View style={styles.supportDivider} />
         
-        <TouchableOpacity style={styles.supportItem}>
+        <TouchableOpacity style={styles.supportItem} onPress={handleContactSeller}>
           <MessageCircle size={20} color="#6b7280" />
           <View style={styles.supportContent}>
             <Text style={styles.supportTitle}>{t('ordersFlow.orderDetails.support.contactSeller')}</Text>
