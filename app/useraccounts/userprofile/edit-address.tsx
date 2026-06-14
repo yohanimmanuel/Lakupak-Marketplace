@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, TextInput, Pressable, Text, Alert, ScrollView, Switch } from 'react-native';
+import { View, Pressable, Text, Alert, ScrollView } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
@@ -11,8 +11,9 @@ import {
   updateMarketplaceAddress as updateAddress,
 } from '../../../services/user';
 import { useTranslation } from 'react-i18next';
-
-type AddressLabel = 'work' | 'store' | 'home';
+import AddressMapPreview from '../../components/address/AddressMapPreview';
+import AddressLocationFields from '../../components/address/AddressLocationFields';
+import AddressLabelOptions, { type AddressLabel } from '../../components/address/AddressLabelOptions';
 
 const normalizeLabel = (value?: string | null): AddressLabel => {
   if (value === 'work' || value === 'store' || value === 'home') {
@@ -26,7 +27,6 @@ export default function EditAddress() {
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
   const { t } = useTranslation();
-  const user = useAuthStore(s => s.user);
   const token = useAuthStore(s => s.token) as string | null;
   const setUser = useAuthStore(s => s.setUser);
   const params = useLocalSearchParams<{ id?: string }>();
@@ -44,7 +44,6 @@ export default function EditAddress() {
     }
   }, [params])
 
-  // Prefill when editing existing address
   useEffect(() => {
     const load = async () => {
       if (!token || !id) return
@@ -79,6 +78,7 @@ export default function EditAddress() {
     }
   };
 
+  const bottomBarPadding = Math.max(insets.bottom, 16);
 
   return (
     <>
@@ -102,57 +102,59 @@ export default function EditAddress() {
           ),
         }}
       />
-      <ScrollView style={{ flex: 1, backgroundColor: '#ffffff' }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={{ color: '#6B7280', marginBottom: 8 }}>{t('profile.editAddress.sectionTitle')}</Text>
-      <TextInput
-        value={fullName}
-        onChangeText={setFullName}
-        placeholder={t('profile.editAddress.fullName')}
-        placeholderTextColor="#9CA3AF"
-        style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, color: '#111827' }}
-      />
-      <TextInput
-        value={phone}
-        onChangeText={setPhone}
-        placeholder={t('profile.editAddress.phone')}
-        keyboardType="phone-pad"
-        placeholderTextColor="#9CA3AF"
-        style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, color: '#111827' }}
-      />
-      <TextInput
-        value={address}
-        onChangeText={setAddress}
-        placeholder={t('profile.editAddress.address')}
-        multiline
-        numberOfLines={3}
-        placeholderTextColor="#9CA3AF"
-        style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, minHeight: 90, color: '#111827' }}
-      />
-      <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, marginTop: 16 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={{ color: '#111827' }}>{t('profile.editAddress.setDefault')}</Text>
-          <Switch value={isDefault} onValueChange={setIsDefault} trackColor={{ true: '#0a61d733', false: '#e5e7eb' }} thumbColor={isDefault ? '#0a61d7' : '#f3f4f6'} />
-        </View>
-        <View style={{ marginTop: 12 }}>
-          <Text style={{ color: '#111827', marginBottom: 8 }}>{t('profile.editAddress.labelAs')}</Text>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {(['work','store','home'] as const).map(l => (
-              <Pressable key={l} onPress={() => setLabel(l)} style={{ flex: 1, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: label===l ? '#0a61d7' : '#e5e7eb', backgroundColor: label===l ? '#0a61d71a' : '#ffffff' }}>
-                <Text style={{ textAlign: 'center', color: label===l ? '#0a61d7' : '#111827', fontWeight: '600' }}>
-                  {t(`profile.editAddress.labels.${l}`)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+      <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 96 + bottomBarPadding }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={{ color: '#111827', fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
+            {t('profile.editAddress.shippingAddress')}
+          </Text>
+          <AddressMapPreview address={address} height={200} />
+          <AddressLocationFields
+            address={address}
+            fullName={fullName}
+            phone={phone}
+            onAddressChange={setAddress}
+            onFullNameChange={setFullName}
+            onPhoneChange={setPhone}
+          />
+          <AddressLabelOptions
+            isDefault={isDefault}
+            label={label}
+            onDefaultChange={setIsDefault}
+            onLabelChange={setLabel}
+          />
+        </ScrollView>
+
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            paddingHorizontal: 16,
+            paddingTop: 12,
+            paddingBottom: bottomBarPadding,
+            borderTopWidth: 1,
+            borderTopColor: '#F3F4F6',
+            backgroundColor: '#ffffff',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 3,
+            elevation: 5,
+          }}
+        >
+          <Pressable
+            onPress={onSave}
+            style={{ backgroundColor: '#0a61d7', paddingVertical: 14, borderRadius: 12, alignItems: 'center' }}
+          >
+            <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t('profile.common.save')}</Text>
+          </Pressable>
         </View>
       </View>
-      <View style={{ height: 16 }} />
-      <Pressable onPress={onSave} style={{ backgroundColor: '#0a61d7', paddingVertical: 12, borderRadius: 8 }}>
-        <Text style={{ color: '#ffffff', textAlign: 'center', fontWeight: '600' }}>{t('profile.common.save')}</Text>
-      </Pressable>
-    </ScrollView>
     </>
   );
 }
-
-

@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, Animated, Easing, Alert, KeyboardAvoidingView, Platform, Keyboard, StatusBar, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
-import { AUTH_ERROR_CODE, getAuthErrorCode, requestOtp, verifyOtp, signupStep1, signupStep2, signupStep3, registerAccount } from '../../../services/auth';
+import { AUTH_ERROR_CODE, getAuthErrorCode, requestOtp, verifyOtp, signupStep1, signupStep2, signupStepAddress, signupStep3, registerAccount } from '../../../services/auth';
+import AddressMapPreview from '../../components/address/AddressMapPreview';
+import AddressLocationFields from '../../components/address/AddressLocationFields';
+import AddressLabelOptions, { type AddressLabel } from '../../components/address/AddressLabelOptions';
 import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore } from '../../../stores/cartStore';
@@ -13,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 export default function SignUpModal() {
   const router = useRouter();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const setToken = useAuthStore(s => s.setToken);
   const setUser = useAuthStore(s => s.setUser);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
@@ -26,21 +30,28 @@ export default function SignUpModal() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
   
-  // Combined signup state - 0 = initial screen, 1-3 = signup steps
+  // Combined signup state - 0 = initial screen, 1-4 = signup steps
   const [signupStep, setSignupStep] = useState(0);
   const [signupData, setSignupData] = useState({
     name: '',
     email: '',
     storeName: '',
     bio: '',
+    address: '',
+    deliveryFullName: '',
+    deliveryPhone: '',
+    addressIsDefault: true,
+    addressLabel: 'home' as AddressLabel,
     username: '',
     password: '',
     confirmPassword: '',
     phone: '',
-    countryCode: 'SG',
-    countryDialCode: '+65',
-    countryFlag: getFlagEmoji('SG')
+    countryCode: 'ID',
+    countryDialCode: '+62',
+    countryFlag: getFlagEmoji('ID')
   });
 
   useEffect(() => {
@@ -52,15 +63,32 @@ export default function SignUpModal() {
     }).start();
   }, [fingerEnabled, fingerKnobAnim]);
 
-  // Keyboard visibility listeners to collapse non-essential sections
+  // Keyboard visibility + height so ScrollView can scroll above the keyboard
   useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', () => setIsKeyboardVisible(true));
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => setIsKeyboardVisible(false));
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setIsKeyboardVisible(true);
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+      setKeyboardHeight(0);
+    });
     return () => {
       showSub.remove();
       hideSub.remove();
     };
   }, []);
+
+  const scrollBottomPadding = useMemo(() => {
+    const base = Math.max(insets.bottom, 16) + 32;
+    if (Platform.OS === 'android' && keyboardHeight > 0) {
+      return base + keyboardHeight;
+    }
+    return base;
+  }, [insets.bottom, keyboardHeight]);
   
   const sheetAnim = useRef(new Animated.Value(0)).current; // 0 hidden, 1 visible
   const backdropAnim = useRef(new Animated.Value(0)).current; // 0 transparent, 1 opaque
@@ -78,6 +106,15 @@ export default function SignUpModal() {
       }).start();
     }
   }, [signupStep, stepAnim]);
+
+  useEffect(() => {
+    if (signupStep === 3) {
+      setSignupData((prev) => ({
+        ...prev,
+        deliveryFullName: prev.deliveryFullName || prev.name,
+      }));
+    }
+  }, [signupStep]);
 
   const stepMotionStyle = {
     opacity: stepAnim,
@@ -141,16 +178,12 @@ export default function SignUpModal() {
     <>
       <Stack.Screen options={{
         headerShown: false,
+        presentation: 'fullScreenModal',
+        contentStyle: { backgroundColor: '#ffffff', flex: 1 },
       }} />
       
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }} edges={['top']}>
+      <View style={{ flex: 1, backgroundColor: '#ffffff', paddingTop: insets.top }}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <KeyboardAvoidingView 
-          style={{ flex: 1 }} 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-        >
-          <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
           {/* Top Navigation Bar */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, backgroundColor: '#ffffff' }}>
             <Pressable 
@@ -174,10 +207,24 @@ export default function SignUpModal() {
           </View>
 
           {/* Main Content */}
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={0}
+          >
           <ScrollView 
-            style={{ flex: 1, backgroundColor: '#ffffff' }}
-            contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 40 }}
+            ref={scrollRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              paddingTop: 20,
+              paddingBottom: scrollBottomPadding,
+            }}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="none"
+            automaticallyAdjustKeyboardInsets
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
           >
 
             {/* Initial Welcome Screen */}
@@ -229,7 +276,7 @@ export default function SignUpModal() {
             {/* Step Indicator (hidden when keyboard open to preserve space) */}
             {signupStep > 0 && !isKeyboardVisible && (
             <Animated.View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 32, opacity: stepAnim }}>
-              {[1, 2, 3].map((step) => (
+              {[1, 2, 3, 4].map((step) => (
                 <View key={step} style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{
                     width: 32,
@@ -252,7 +299,7 @@ export default function SignUpModal() {
                       </Text>
                     )}
                   </View>
-                  {step < 3 && (
+                  {step < 4 && (
                     <View style={{
                       width: 20,
                       height: 2,
@@ -389,8 +436,62 @@ export default function SignUpModal() {
               </Animated.View>
             )}
 
-            {/* Step 3: Username & Password */}
+            {/* Step 3: Delivery Address */}
             {signupStep === 3 && (
+              <Animated.View style={stepMotionStyle}>
+                <Text style={{ color: '#111827', fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
+                  {t('profile.editAddress.shippingAddress')}
+                </Text>
+                <AddressMapPreview address={signupData.address} height={200} />
+                <AddressLocationFields
+                  address={signupData.address}
+                  fullName={signupData.deliveryFullName}
+                  phone={signupData.deliveryPhone}
+                  onAddressChange={(text) => setSignupData((prev) => ({ ...prev, address: text }))}
+                  onFullNameChange={(text) => setSignupData((prev) => ({ ...prev, deliveryFullName: text }))}
+                  onPhoneChange={(text) => setSignupData((prev) => ({ ...prev, deliveryPhone: text }))}
+                />
+                <AddressLabelOptions
+                  isDefault={signupData.addressIsDefault}
+                  label={signupData.addressLabel}
+                  onDefaultChange={(value) => setSignupData((prev) => ({ ...prev, addressIsDefault: value }))}
+                  onLabelChange={(label) => setSignupData((prev) => ({ ...prev, addressLabel: label }))}
+                />
+                <Pressable
+                  onPress={async () => {
+                    if (!signupData.address.trim()) {
+                      Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingAddress'));
+                      return;
+                    }
+                    if (!signupData.deliveryFullName.trim()) {
+                      Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingFullName'));
+                      return;
+                    }
+                    if (!signupData.deliveryPhone.trim()) {
+                      Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingPhone'));
+                      return;
+                    }
+
+                    try {
+                      await signupStepAddress(signupData.address.trim());
+                      setSignupStep(4);
+                    } catch (error: unknown) {
+                      if (getAuthErrorCode(error) === AUTH_ERROR_CODE.SIGNUP_MISSING_ADDRESS) {
+                        Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingAddress'));
+                        return;
+                      }
+                      Alert.alert(t('auth.signup.alerts.failedTitle'), t('auth.signup.alerts.genericBody'));
+                    }
+                  }}
+                  style={{ backgroundColor: '#0a61d7', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 24, marginBottom: 24 }}
+                >
+                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>{t('auth.signup.steps.continue')}</Text>
+                </Pressable>
+              </Animated.View>
+            )}
+
+            {/* Step 4: Username & Password */}
+            {signupStep === 4 && (
               <Animated.View style={stepMotionStyle}>
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
@@ -465,20 +566,21 @@ export default function SignUpModal() {
                     try {
                       await signupStep3(signupData.username.trim(), signupData.password);
 
-                      const phone = signupData.phone.trim();
+                      const deliveryPhone = signupData.deliveryPhone.trim();
                       const result = await registerAccount({
                         name: signupData.name.trim(),
-                        email: signupData.email.trim(),
+                        email: signupData.email.trim().toLowerCase(),
                         storeName: signupData.storeName.trim() || undefined,
                         bio: signupData.bio.trim() || undefined,
                         username: signupData.username.trim(),
                         password: signupData.password,
-                        ...(phone
-                          ? {
-                              phone: `${signupData.countryDialCode}${phone}`,
-                              countryCode: signupData.countryCode,
-                            }
-                          : {}),
+                        address: signupData.address.trim(),
+                        addressFullName: signupData.deliveryFullName.trim(),
+                        addressLabel: signupData.addressLabel,
+                        addressIsDefault: signupData.addressIsDefault,
+                        phone: deliveryPhone,
+                        countryCode: signupData.countryCode,
+                        countryDialCode: signupData.countryDialCode,
                       });
                       
                       await setToken(result.token);
@@ -517,6 +619,22 @@ export default function SignUpModal() {
                       }
                       if (code === AUTH_ERROR_CODE.SIGNUP_WEAK_PASSWORD) {
                         Alert.alert(t('auth.signup.alerts.weakPasswordTitle'), t('auth.signup.alerts.weakPasswordBody'));
+                        return;
+                      }
+                      if (code === AUTH_ERROR_CODE.SIGNUP_EMAIL_TAKEN) {
+                        Alert.alert(t('auth.signup.alerts.failedTitle'), t('auth.signup.alerts.emailTaken'));
+                        return;
+                      }
+                      if (code === AUTH_ERROR_CODE.SIGNUP_USERNAME_TAKEN) {
+                        Alert.alert(t('auth.signup.alerts.failedTitle'), t('auth.signup.alerts.usernameTaken'));
+                        return;
+                      }
+                      if (code === AUTH_ERROR_CODE.SIGNUP_PHONE_TAKEN) {
+                        Alert.alert(t('auth.signup.alerts.failedTitle'), t('auth.signup.alerts.phoneTaken'));
+                        return;
+                      }
+                      if (code === AUTH_ERROR_CODE.SIGNUP_MISSING_PHONE) {
+                        Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingPhone'));
                         return;
                       }
                       Alert.alert(t('auth.signup.alerts.failedTitle'), t('auth.signup.alerts.genericBody'));
@@ -663,7 +781,7 @@ export default function SignUpModal() {
 
             {/* Footer - Only show on step 0 */}
             {signupStep === 0 && (
-              <View style={{ alignItems: 'center', marginTop: 24 }}>
+              <View style={{ marginTop: 24 }}>
                 <Text style={{ color: '#6b7280', fontSize: 12, textAlign: 'center' }}>
                   {t('auth.signup.footer.byRegistering')}
                   <Text onPress={() => router.push('/useraccounts/consent/security-privacy')} style={{ color: '#0a61d7', textDecorationLine: 'underline' }}>
@@ -674,21 +792,9 @@ export default function SignUpModal() {
               </View>
             )}
 
-            {/* Footer - Show on steps 1-3 */}
-            {signupStep > 0 && (
-              <View style={{ alignItems: 'center', marginTop: 24 }}>
-                <Pressable onPress={() => router.push('/useraccounts/loginsignup/loginmodal')}>
-                  <Text style={{ color: '#6b7280', fontSize: 14 }}>
-                    {t('auth.signup.alreadyHaveAccount')}
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-
         </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+          </KeyboardAvoidingView>
+      </View>
 
       {menuOpen && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>

@@ -502,8 +502,9 @@ function RootLayoutNav() {
         <Stack.Screen
           name="useraccounts/loginsignup/signupmodal"
           options={{
-            presentation: 'modal',
+            presentation: 'fullScreenModal',
             headerShown: false,
+            contentStyle: { backgroundColor: '#ffffff', flex: 1 },
           }}
         />
         <Stack.Screen

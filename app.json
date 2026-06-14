@@ -27,6 +27,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "googleServicesFile": "./google-services.json"
     },
     "web": {

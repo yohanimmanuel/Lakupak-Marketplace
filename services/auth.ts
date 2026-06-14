@@ -14,9 +14,14 @@ export const AUTH_ERROR_CODE = {
   SIGNUP_MISSING_NAME_EMAIL: 'SIGNUP_MISSING_NAME_EMAIL',
   SIGNUP_INVALID_EMAIL: 'SIGNUP_INVALID_EMAIL',
   SIGNUP_MISSING_STORE: 'SIGNUP_MISSING_STORE',
+  SIGNUP_MISSING_ADDRESS: 'SIGNUP_MISSING_ADDRESS',
   SIGNUP_MISSING_CREDENTIALS: 'SIGNUP_MISSING_CREDENTIALS',
   SIGNUP_WEAK_PASSWORD: 'SIGNUP_WEAK_PASSWORD',
   SIGNUP_FAILED: 'SIGNUP_FAILED',
+  SIGNUP_EMAIL_TAKEN: 'SIGNUP_EMAIL_TAKEN',
+  SIGNUP_USERNAME_TAKEN: 'SIGNUP_USERNAME_TAKEN',
+  SIGNUP_PHONE_TAKEN: 'SIGNUP_PHONE_TAKEN',
+  SIGNUP_MISSING_PHONE: 'SIGNUP_MISSING_PHONE',
   FORGOT_PASSWORD_FAILED: 'FORGOT_PASSWORD_FAILED',
   VERIFICATION_CODE_REQUIRED: 'VERIFICATION_CODE_REQUIRED',
 } as const
@@ -152,6 +157,14 @@ export async function signupStep2(storeName: string, bio: string): Promise<{ suc
   return { success: true, message: 'Step 2 completed' }
 }
 
+export async function signupStepAddress(address: string): Promise<{ success: boolean; message?: string }> {
+  if (!address.trim()) {
+    throwAuth(AUTH_ERROR_CODE.SIGNUP_MISSING_ADDRESS)
+  }
+
+  return { success: true, message: 'Address step completed' }
+}
+
 export async function signupStep3(username: string, password: string): Promise<{ success: boolean; message?: string }> {
   if (!username.trim() || !password.trim()) {
     throwAuth(AUTH_ERROR_CODE.SIGNUP_MISSING_CREDENTIALS)
@@ -171,9 +184,14 @@ export async function registerAccount(params: {
   bio?: string
   username: string
   password: string
-  phone?: string
+  address: string
+  addressFullName?: string
+  addressLabel?: 'work' | 'store' | 'home'
+  addressIsDefault?: boolean
+  phone: string
   countryCode?: string
-}): Promise<{ token: string; user: { id: number; name?: string | null; email: string; address?: string | null } }> {
+  countryDialCode?: string
+}): Promise<{ token: string; user: { id: number; name?: string | null; email: string; chosenAddress?: string | null; address?: string | null } }> {
   const res = await fetch(`${API_BASE_URL}/api/mobile/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -181,11 +199,31 @@ export async function registerAccount(params: {
   })
 
   if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { code?: string; error?: string }
     if (res.status === 429) throwAuth(AUTH_ERROR_CODE.RATE_LIMITED)
+    if (res.status === 409) {
+      if (data.code === 'EMAIL_ALREADY_REGISTERED') throwAuth(AUTH_ERROR_CODE.SIGNUP_EMAIL_TAKEN)
+      if (data.code === 'USERNAME_ALREADY_TAKEN') throwAuth(AUTH_ERROR_CODE.SIGNUP_USERNAME_TAKEN)
+      if (data.code === 'PHONE_ALREADY_REGISTERED') throwAuth(AUTH_ERROR_CODE.SIGNUP_PHONE_TAKEN)
+    }
+    if (res.status === 400 && data.code === 'PHONE_REQUIRED') throwAuth(AUTH_ERROR_CODE.SIGNUP_MISSING_PHONE)
     throwAuth(AUTH_ERROR_CODE.SIGNUP_FAILED)
   }
 
-  return res.json()
+  const data = await res.json() as {
+    token: string
+    user: { id: number; name?: string | null; email: string; chosenAddress?: string | null; address?: string | null }
+  }
+
+  const chosenAddress = data.user.chosenAddress ?? data.user.address ?? ''
+  return {
+    token: data.token,
+    user: {
+      ...data.user,
+      chosenAddress,
+      address: chosenAddress,
+    },
+  }
 }
 
 export async function requestForgotPassword(email: string): Promise<{ message: string }> {
