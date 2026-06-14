@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { MapPin } from 'lucide-react-native';
+import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import { LakuTheme } from '@/constants/Colors';
 import MapComponent from '../ordersshipment/MapComponent';
@@ -20,7 +21,33 @@ export default function AddressMapPreview({
   const { t } = useTranslation();
   const [coordinates, setCoordinates] = useState<MapCoordinates | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [proximity, setProximity] = useState<[number, number] | undefined>();
   const trimmed = address.trim();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted' || cancelled) return;
+
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        if (!cancelled) {
+          setProximity([position.coords.longitude, position.coords.latitude]);
+        }
+      } catch {
+        // Proximity bias is optional — geocoding still works globally without it.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!trimmed) {
@@ -31,7 +58,7 @@ export default function AddressMapPreview({
     const timer = setTimeout(async () => {
       setIsGeocoding(true);
       try {
-        const result = await geocodeAddress(trimmed);
+        const result = await geocodeAddress(trimmed, proximity);
         setCoordinates(result.coordinates);
       } catch {
         setCoordinates(null);
@@ -41,7 +68,7 @@ export default function AddressMapPreview({
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [trimmed]);
+  }, [trimmed, proximity]);
 
   const markers = useMemo(() => {
     if (!coordinates) return [];

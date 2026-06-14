@@ -36,9 +36,14 @@ export function getOrderStatusMarkerColor(status: string): string {
 }
 
 /**
- * Geocode a single address using Mapbox Geocoding API with improved accuracy
+ * Forward-geocodes an address using Mapbox Geocoding v5.
+ * Global — no country restriction. Optional proximity biases toward a region
+ * when multiple places share the same name (same approach as Laku-Driver).
  */
-export async function geocodeAddress(address: string): Promise<GeocodeResult> {
+export async function geocodeAddress(
+  address: string,
+  proximity?: [number, number],
+): Promise<GeocodeResult> {
   if (!hasMapboxAccessToken()) {
     return { coordinates: null, address };
   }
@@ -47,9 +52,17 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
 
   try {
     const cleanedAddress = address.trim().replace(/\s+/g, ' ');
-    const encodedAddress = encodeURIComponent(cleanedAddress);
+    if (!cleanedAddress) {
+      return { coordinates: null, address };
+    }
 
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json?access_token=${accessToken}&limit=5&country=ID&types=address,poi,place,locality,neighborhood,district,postcode&proximity=112.7521,-7.2575`;
+    const encodedAddress = encodeURIComponent(cleanedAddress);
+    const proximityParam = proximity
+      ? `&proximity=${proximity[0]},${proximity[1]}`
+      : '';
+    const url =
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json` +
+      `?access_token=${accessToken}&limit=1${proximityParam}`;
 
     const response = await fetch(url);
 
@@ -58,9 +71,9 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
     }
 
     interface MapboxFeature {
-      center: [number, number];
-      place_name: string;
-      place_type?: string[];
+      center?: [number, number];
+      geometry?: { coordinates: [number, number] };
+      place_name?: string;
     }
 
     interface MapboxGeocodingResponse {
@@ -68,22 +81,19 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
     }
 
     const data: MapboxGeocodingResponse = await response.json();
+    const feature = data.features?.[0];
+    const coords = feature?.geometry?.coordinates ?? feature?.center;
 
-    if (data.features && data.features.length > 0) {
-      const addressMatch = data.features.find((feature) =>
-        feature.place_type?.includes('address') || feature.place_type?.includes('poi'),
-      );
-
-      const bestMatch = addressMatch || data.features[0];
-      const [longitude, latitude] = bestMatch.center;
-
-      return {
-        coordinates: { longitude, latitude },
-        address: bestMatch.place_name || address,
-      };
+    if (!feature || !coords) {
+      return { coordinates: null, address };
     }
 
-    return { coordinates: null, address };
+    const [longitude, latitude] = coords;
+
+    return {
+      coordinates: { longitude, latitude },
+      address: feature.place_name || address,
+    };
   } catch {
     return { coordinates: null, address };
   }
