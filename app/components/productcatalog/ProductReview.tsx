@@ -468,7 +468,7 @@ export default function ProductReviewScreen() {
       >
         <View style={styles.contentCard}>
           {orderId ? (
-            <View style={styles.sectionCard}>
+            <View style={[styles.sectionCard, styles.orderIdSection]}>
               <View style={styles.orderIdRow}>
                 <Text style={styles.orderIdLabel}>{t('productReview.order.label')}</Text>
                 <Text style={styles.orderIdValue}>{orderId}</Text>
@@ -482,13 +482,13 @@ export default function ProductReviewScreen() {
             const isMulti = items.length > 1;
             return (
               <View key={`${item.productId}-${index}`} style={styles.productBlock}>
-                {isMulti && (
-                  <Text style={styles.productBlockLabel}>
-                    {t('productReview.order.productXofY', { index: index + 1, total: items.length })}
-                  </Text>
-                )}
-
                 <View style={styles.sectionCard}>
+                  {isMulti && (
+                    <Text style={styles.productBlockLabel}>
+                      {t('productReview.order.productXofY', { index: index + 1, total: items.length })}
+                    </Text>
+                  )}
+
                   <View style={styles.headerSection}>
                     {imgUri ? (
                       <Image source={{ uri: imgUri }} style={styles.productImage} />
@@ -727,6 +727,9 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginTop: 12,
   },
+  orderIdSection: {
+    marginBottom: 8,
+  },
   orderIdRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -745,13 +748,12 @@ const styles = StyleSheet.create({
   },
   productBlock: {
     marginBottom: 8,
-    paddingBottom: 0,
   },
   productBlockLabel: {
     fontSize: 12,
     fontWeight: '600',
     color: '#6b7280',
-    marginBottom: 12,
+    marginBottom: 16,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
