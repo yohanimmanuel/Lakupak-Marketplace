@@ -111,7 +111,7 @@ export default function EditAddress() {
           <Text style={{ color: '#111827', fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
             {t('profile.editAddress.shippingAddress')}
           </Text>
-          <AddressMapPreview address={address} height={200} />
+          <AddressMapPreview address={address} />
           <AddressLocationFields
             address={address}
             fullName={fullName}

@@ -442,7 +442,7 @@ export default function SignUpModal() {
                 <Text style={{ color: '#111827', fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
                   {t('profile.editAddress.shippingAddress')}
                 </Text>
-                <AddressMapPreview address={signupData.address} height={200} />
+                <AddressMapPreview address={signupData.address} />
                 <AddressLocationFields
                   address={signupData.address}
                   fullName={signupData.deliveryFullName}

@@ -540,13 +540,11 @@ export default function DeliveryInformation() {
               markers={[{
                 id: order.id?.toString() || order.orderId,
                 coordinates: geocodeResult.coordinates,
-                label: `${order.orderId} - ${order.orderStatus}`,
-                color: getOrderStatusMarkerColor(order.orderStatus),
               }]}
               center={geocodeResult.coordinates}
               zoom={14}
               height={300}
-              showControls={true}
+              showRecenter
             />
           ) : (
             <View style={styles.mapPlaceholder}>

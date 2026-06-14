@@ -193,7 +193,7 @@
     "loading": "Loading map…",
     "errors": {
       "unavailable": "Map unavailable",
-      "missingToken": "Mapbox access token not configured. Please add EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN to your .env file.",
+      "missingToken": "Mapbox access token not configured. Add EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN to your .env file.",
       "noCoordinates": "No coordinates available",
       "requiresDevBuildTitle": "Map requires development build",
       "requiresDevBuildBody": "@rnmapbox/maps requires native code.\n\nRun:\nnpx expo run:android\nor\nnpx expo run:ios",
@@ -691,6 +691,7 @@
       "locationDetails": "Location Details",
       "mapLoading": "Locating address…",
       "mapEnterAddress": "Enter an address to preview on the map",
+      "mapHint": "The map updates as you type your delivery address",
       "mapNotFound": "Could not locate this address on the map",
       "setDefault": "Set as Default Address",
       "labelAs": "Label As:",

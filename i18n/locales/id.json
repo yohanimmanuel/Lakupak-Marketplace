@@ -193,7 +193,7 @@
     "loading": "Memuat peta…",
     "errors": {
       "unavailable": "Peta tidak tersedia",
-      "missingToken": "Token akses Mapbox belum dikonfigurasi. Silakan tambahkan EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ke file .env Anda.",
+      "missingToken": "Token akses Mapbox belum dikonfigurasi. Tambahkan EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ke file .env.",
       "noCoordinates": "Koordinat tidak tersedia",
       "requiresDevBuildTitle": "Peta memerlukan development build",
       "requiresDevBuildBody": "@rnmapbox/maps memerlukan native code.\n\nJalankan:\nnpx expo run:android\natau\nnpx expo run:ios",
@@ -691,6 +691,7 @@
       "locationDetails": "Detail Lokasi",
       "mapLoading": "Mencari lokasi…",
       "mapEnterAddress": "Masukkan alamat untuk pratinjau di peta",
+      "mapHint": "Peta akan diperbarui saat Anda mengetik alamat pengiriman",
       "mapNotFound": "Alamat tidak ditemukan di peta",
       "setDefault": "Jadikan alamat utama",
       "labelAs": "Label sebagai:",

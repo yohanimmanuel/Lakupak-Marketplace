@@ -1,3 +1,5 @@
+import { getMapboxAccessToken, hasMapboxAccessToken } from './mapboxConfig';
+
 export interface MapCoordinates {
   longitude: number;
   latitude: number;
@@ -7,8 +9,6 @@ export interface GeocodeResult {
   coordinates: MapCoordinates | null;
   address: string;
 }
-
-const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
 /**
  * Get map marker color based on order status
@@ -39,20 +39,20 @@ export function getOrderStatusMarkerColor(status: string): string {
  * Geocode a single address using Mapbox Geocoding API with improved accuracy
  */
 export async function geocodeAddress(address: string): Promise<GeocodeResult> {
-  if (!MAPBOX_ACCESS_TOKEN) {
+  if (!hasMapboxAccessToken()) {
     return { coordinates: null, address };
   }
+
+  const accessToken = getMapboxAccessToken();
 
   try {
     const cleanedAddress = address.trim().replace(/\s+/g, ' ');
     const encodedAddress = encodeURIComponent(cleanedAddress);
-    
-    // Use country bias for Indonesia and proximity bias for better accuracy
-    // Proximity: Surabaya, Indonesia (longitude, latitude)
-    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json?access_token=${MAPBOX_ACCESS_TOKEN}&limit=5&country=ID&types=address,poi,place,locality,neighborhood,district,postcode&proximity=112.7521,-7.2575`;
+
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json?access_token=${accessToken}&limit=5&country=ID&types=address,poi,place,locality,neighborhood,district,postcode&proximity=112.7521,-7.2575`;
 
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       return { coordinates: null, address };
     }
@@ -70,14 +70,13 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
     const data: MapboxGeocodingResponse = await response.json();
 
     if (data.features && data.features.length > 0) {
-      // Find the best match (prefer address type, then highest relevance)
-      const addressMatch = data.features.find((feature) => 
-        feature.place_type?.includes('address') || feature.place_type?.includes('poi')
+      const addressMatch = data.features.find((feature) =>
+        feature.place_type?.includes('address') || feature.place_type?.includes('poi'),
       );
-      
+
       const bestMatch = addressMatch || data.features[0];
       const [longitude, latitude] = bestMatch.center;
-      
+
       return {
         coordinates: { longitude, latitude },
         address: bestMatch.place_name || address,
@@ -89,4 +88,3 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
     return { coordinates: null, address };
   }
 }
-

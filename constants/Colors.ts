@@ -1,5 +1,18 @@
-const tintColorLight = '#0a61d7';
+const primaryBlue = '#0a61d7';
+const tintColorLight = primaryBlue;
 const tintColorDark = '#ffffff';
+
+export const LakuTheme = {
+  primary: primaryBlue,
+  inactive: '#6B7280',
+  text: '#111827',
+  textSecondary: '#6B7280',
+  background: '#f9fafb',
+  backgroundCard: '#ffffff',
+  border: '#e5e7eb',
+  mapFallback: '#0b1220',
+  mapScreen: '#e8eef5',
+} as const;
 
 export default {
   light: {

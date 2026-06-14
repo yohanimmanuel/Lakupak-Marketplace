@@ -1,41 +1,49 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Text, type ViewStyle } from 'react-native';
-import { MapCoordinates, getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  Text,
+  Pressable,
+  type ViewStyle,
+} from 'react-native';
+import { Crosshair, Navigation } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { LakuTheme } from '@/constants/Colors';
+import { MapCoordinates } from '../../../utils/mapboxUtils';
+import { getMapboxAccessToken, hasMapboxAccessToken } from '../../../utils/mapboxConfig';
+import AddressLocationMarker from '../map/AddressLocationMarker';
 
-const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+const MAP_STYLE_URL = 'mapbox://styles/mapbox/streets-v12';
+const INDONESIA_CENTER: [number, number] = [118.0, -2.5];
 
-type MapboxStyleURL = {
-  Street: string;
-  [key: string]: string;
-};
+type Coordinate = [number, number];
 
-interface MapboxDefaultExport {
-  StyleURL: MapboxStyleURL;
-  setAccessToken?: (token: string) => void;
-}
-
-type GenericMapboxProps = Record<string, unknown>;
-
-interface CameraHandle {
+type CameraHandle = {
   setCamera: (config: {
-    centerCoordinate: [number, number];
-    zoomLevel: number;
+    centerCoordinate?: Coordinate;
+    zoomLevel?: number;
     animationDuration?: number;
+    animationMode?: string;
   }) => void;
   fitBounds: (
-    coordinates: Array<[number, number]>,
+    coordinates: Coordinate[],
     options?: {
       padding?: { top: number; bottom: number; left: number; right: number };
       animationDuration?: number;
-    }
+    },
   ) => void;
-}
+};
 
-type MapboxMapViewProps = GenericMapboxProps & {
+type MapViewProps = {
   style?: object;
   styleURL?: string;
+  logoEnabled?: boolean;
+  attributionEnabled?: boolean;
+  scaleBarEnabled?: boolean;
+  compassEnabled?: boolean;
   onDidFinishLoadingMap?: () => void;
+  onTouchStart?: () => void;
   zoomEnabled?: boolean;
   scrollEnabled?: boolean;
   pitchEnabled?: boolean;
@@ -43,66 +51,80 @@ type MapboxMapViewProps = GenericMapboxProps & {
   children?: React.ReactNode;
 };
 
-type MapboxCameraProps = GenericMapboxProps & {
+type CameraProps = {
+  ref?: React.Ref<CameraHandle>;
   defaultSettings?: {
-    centerCoordinate: [number, number];
+    centerCoordinate: Coordinate;
     zoomLevel: number;
   };
-  children?: React.ReactNode;
 };
 
-type MapboxPointAnnotationProps = GenericMapboxProps & {
+type MarkerViewProps = {
   id: string;
-  coordinate: [number, number];
-  onSelected?: () => void;
+  coordinate: Coordinate;
+  anchor?: { x: number; y: number };
   children?: React.ReactNode;
 };
 
-type MapViewComponent = React.ComponentType<MapboxMapViewProps>;
-type CameraComponent = React.ComponentType<
-  MapboxCameraProps & React.RefAttributes<CameraHandle>
->;
-type PointAnnotationComponent = React.ComponentType<MapboxPointAnnotationProps>;
-
-type MapboxRuntimeModule = MapboxDefaultExport & {
-  default?: MapboxDefaultExport;
-  MapView: MapViewComponent;
-  Camera: CameraComponent;
-  PointAnnotation: PointAnnotationComponent;
+type MapboxExports = {
+  setAccessToken?: (token: string) => void;
+  MapView?: React.ComponentType<MapViewProps>;
+  Camera?: React.ComponentType<CameraProps>;
+  MarkerView?: React.ComponentType<MarkerViewProps>;
 };
 
-// Try to import native Mapbox module
-let Mapbox: MapboxDefaultExport | null = null;
-let MapView: MapViewComponent | null = null;
-let Camera: CameraComponent | null = null;
-let PointAnnotation: PointAnnotationComponent | null = null;
+function getMapboxExports(mod: unknown): MapboxExports | null {
+  if (typeof mod !== 'object' || mod === null) return null;
+  const record = mod as Record<string, unknown>;
+  const base = (typeof record.default === 'object' && record.default !== null
+    ? record.default
+    : record) as Record<string, unknown>;
+
+  const pickComponent = (key: string) => {
+    const value = base[key];
+    return typeof value === 'function' || (typeof value === 'object' && value !== null)
+      ? (value as React.ComponentType<unknown>)
+      : undefined;
+  };
+
+  return {
+    setAccessToken: typeof base.setAccessToken === 'function'
+      ? (base.setAccessToken as (token: string) => void)
+      : undefined,
+    MapView: pickComponent('MapView') as MapboxExports['MapView'],
+    Camera: pickComponent('Camera') as MapboxExports['Camera'],
+    MarkerView: pickComponent('MarkerView') as MapboxExports['MarkerView'],
+  };
+}
+
+let Mapbox: MapboxExports | null = null;
+let MapView: MapboxExports['MapView'] | null = null;
+let Camera: MapboxExports['Camera'] | null = null;
+let MarkerView: MapboxExports['MarkerView'] | null = null;
 let isMapboxAvailable = false;
 
 try {
-  const mapboxModule = require('@rnmapbox/maps') as MapboxRuntimeModule;
-  Mapbox = mapboxModule.default || mapboxModule;
-  MapView = mapboxModule.MapView;
-  Camera = mapboxModule.Camera;
-  PointAnnotation = mapboxModule.PointAnnotation;
-  
-  if (MAPBOX_ACCESS_TOKEN && Mapbox?.setAccessToken) {
-    Mapbox.setAccessToken(MAPBOX_ACCESS_TOKEN);
-  }
+  const mapboxModule = require('@rnmapbox/maps') as unknown;
+  const exports = getMapboxExports(mapboxModule);
+  if (exports) {
+    Mapbox = exports;
+    MapView = exports.MapView ?? null;
+    Camera = exports.Camera ?? null;
+    MarkerView = exports.MarkerView ?? null;
+    if (hasMapboxAccessToken()) {
+      Mapbox.setAccessToken?.(getMapboxAccessToken());
+    }
 
-  isMapboxAvailable = Boolean(
-    MAPBOX_ACCESS_TOKEN && Mapbox && MapView && Camera && PointAnnotation
-  );
-} catch (error) {
-  // Native module not available - requires development build
+    isMapboxAvailable = Boolean(hasMapboxAccessToken() && MapView && Camera && MarkerView);
+  }
+} catch {
   isMapboxAvailable = false;
 }
 
-
-interface MapMarker {
+export interface MapMarker {
   id: string;
   coordinates: MapCoordinates;
   label?: string;
-  color?: string;
 }
 
 interface MapComponentProps {
@@ -111,92 +133,83 @@ interface MapComponentProps {
   zoom?: number;
   height?: number;
   style?: ViewStyle | ViewStyle[];
-  showControls?: boolean;
+  showRecenter?: boolean;
   onMarkerClick?: (markerId: string) => void;
+  overlay?: React.ReactNode;
 }
 
 export default function MapComponent({
   markers = [],
   center,
-  zoom = 12,
-  height = 300,
+  zoom = 15,
+  height = 280,
   style,
-  showControls = true,
+  showRecenter = true,
   onMarkerClick,
+  overlay,
 }: MapComponentProps) {
   const { t } = useTranslation();
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [isCentered, setIsCentered] = useState(true);
   const cameraRef = useRef<CameraHandle | null>(null);
 
-  // Determine map center and initial zoom
-  const mapCenter = markers.length > 0 
-    ? markers[0].coordinates 
-    : center;
+  const focusCoordinate = useMemo(() => {
+    if (markers.length > 0) {
+      return [markers[0].coordinates.longitude, markers[0].coordinates.latitude] as Coordinate;
+    }
+    if (center) {
+      return [center.longitude, center.latitude] as Coordinate;
+    }
+    return INDONESIA_CENTER;
+  }, [markers, center]);
 
-  const initialZoom = markers.length > 1 ? zoom - 1 : zoom; // Zoom out slightly for multiple markers
+  const initialZoom = markers.length > 1 ? zoom - 1 : markers.length === 0 && !center ? 4.5 : zoom;
+
+  const recenterMap = useCallback(() => {
+    setIsCentered(true);
+    if (!cameraRef.current) return;
+
+    if (markers.length > 1) {
+      const coordinates = markers.map(
+        (marker) => [marker.coordinates.longitude, marker.coordinates.latitude] as Coordinate,
+      );
+      cameraRef.current.fitBounds(coordinates, {
+        padding: { top: 56, bottom: 56, left: 40, right: 40 },
+        animationDuration: 600,
+      });
+      return;
+    }
+
+    cameraRef.current.setCamera({
+      centerCoordinate: focusCoordinate,
+      zoomLevel: zoom,
+      animationDuration: 600,
+      animationMode: 'flyTo',
+    });
+  }, [focusCoordinate, markers, zoom]);
 
   useEffect(() => {
-    if (!mapLoaded || !cameraRef.current || !mapCenter) return;
+    if (!mapLoaded || !cameraRef.current || !isCentered) return;
+    recenterMap();
+  }, [isCentered, mapLoaded, markers, recenterMap]);
 
-    if (markers.length === 0) {
-      // No markers, center on provided center
-      cameraRef.current.setCamera({
-        centerCoordinate: [mapCenter.longitude, mapCenter.latitude],
-        zoomLevel: zoom,
-        animationDuration: 500,
-      });
-    } else if (markers.length === 1) {
-      // Single marker, center on it
-      const marker = markers[0];
-      cameraRef.current.setCamera({
-        centerCoordinate: [marker.coordinates.longitude, marker.coordinates.latitude],
-        zoomLevel: zoom,
-        animationDuration: 500,
-      });
-    } else if (markers.length > 1) {
-      // Multiple markers, fit bounds
-      const coordinates = markers.map(m => [m.coordinates.longitude, m.coordinates.latitude] as [number, number]);
-      cameraRef.current.fitBounds(coordinates, {
-        padding: { top: 50, bottom: 50, left: 50, right: 50 },
-        animationDuration: 500,
-      });
-    }
-  }, [markers, mapLoaded, mapCenter, zoom]);
-
-  // Check for required configuration
-  if (!MAPBOX_ACCESS_TOKEN) {
+  if (!hasMapboxAccessToken()) {
     return (
       <View style={[styles.container, { height }, style]}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{t('map.errors.unavailable')}</Text>
-          <Text style={styles.errorSubtext}>
-            {t('map.errors.missingToken')}
-          </Text>
+        <View style={styles.fallback}>
+          <Text style={styles.fallbackTitle}>{t('map.errors.unavailable')}</Text>
+          <Text style={styles.fallbackBody}>{t('map.errors.missingToken')}</Text>
         </View>
       </View>
     );
   }
 
-  if (!mapCenter) {
+  if (!isMapboxAvailable || !MapView || !Camera || !MarkerView) {
     return (
       <View style={[styles.container, { height }, style]}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{t('map.errors.unavailable')}</Text>
-          <Text style={styles.errorSubtext}>{t('map.errors.noCoordinates')}</Text>
-        </View>
-      </View>
-    );
-  }
-
-  // If native Mapbox is not available, show rebuild message
-  if (!isMapboxAvailable) {
-    return (
-      <View style={[styles.container, { height }, style]}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{t('map.errors.requiresDevBuildTitle')}</Text>
-          <Text style={styles.errorSubtext}>
-            {t('map.errors.requiresDevBuildBody')}
-          </Text>
+        <View style={styles.fallback}>
+          <Text style={styles.fallbackTitle}>{t('map.errors.requiresDevBuildTitle')}</Text>
+          <Text style={styles.fallbackBody}>{t('map.errors.requiresDevBuildBody')}</Text>
         </View>
       </View>
     );
@@ -204,173 +217,143 @@ export default function MapComponent({
 
   const MapViewComponent = MapView;
   const CameraComponent = Camera;
-  const PointAnnotationComponent = PointAnnotation;
+  const MarkerViewComponent = MarkerView;
 
-  if (!MapViewComponent || !CameraComponent || !PointAnnotationComponent || !Mapbox) {
-    return (
-      <View style={[styles.container, { height }, style]}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{t('map.errors.unavailable')}</Text>
-          <Text style={styles.errorSubtext}>{t('map.errors.componentsUnavailable')}</Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Native Mapbox is available - render interactive map
   return (
     <View style={[styles.container, { height }, style]}>
       <MapViewComponent
         style={styles.map}
-        styleURL={Mapbox.StyleURL.Street}
+        styleURL={MAP_STYLE_URL}
+        logoEnabled={false}
+        attributionEnabled={false}
+        scaleBarEnabled={false}
+        compassEnabled={false}
         onDidFinishLoadingMap={() => setMapLoaded(true)}
-        zoomEnabled={true}
-        scrollEnabled={true}
+        onTouchStart={() => setIsCentered(false)}
+        zoomEnabled
+        scrollEnabled
         pitchEnabled={false}
         rotateEnabled={false}
       >
         <CameraComponent
           ref={cameraRef}
           defaultSettings={{
-            centerCoordinate: [mapCenter.longitude, mapCenter.latitude],
+            centerCoordinate: focusCoordinate,
             zoomLevel: initialZoom,
           }}
         />
 
         {markers.map((marker) => (
-          <PointAnnotationComponent
+          <MarkerViewComponent
             key={marker.id}
             id={marker.id}
             coordinate={[marker.coordinates.longitude, marker.coordinates.latitude]}
-            onSelected={() => {
-              if (onMarkerClick) {
-                onMarkerClick(marker.id);
-              }
-            }}
+            anchor={{ x: 0.5, y: 0.5 }}
           >
-            <View style={styles.markerContainer}>
-              <View
-                style={[
-                  styles.markerCircle,
-                  { backgroundColor: marker.color || getOrderStatusMarkerColor('') },
-                ]}
-              />
-              {marker.label && (
-                <View style={styles.markerLabelContainer}>
-                  <Text style={styles.markerLabel}>{marker.label}</Text>
-                </View>
-              )}
-            </View>
-          </PointAnnotationComponent>
+            <Pressable
+              onPress={() => onMarkerClick?.(marker.id)}
+              disabled={!onMarkerClick}
+            >
+              <AddressLocationMarker />
+            </Pressable>
+          </MarkerViewComponent>
         ))}
       </MapViewComponent>
 
-      {!mapLoaded && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0a61d7" />
+      {!mapLoaded ? (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={LakuTheme.primary} />
           <Text style={styles.loadingText}>{t('map.loading')}</Text>
         </View>
-      )}
+      ) : null}
+
+      {overlay}
+
+      {showRecenter && markers.length > 0 ? (
+        <View style={styles.recenterFab}>
+          <Pressable
+            onPress={recenterMap}
+            hitSlop={12}
+            style={({ pressed }) => [
+              styles.fabInner,
+              pressed && styles.fabPressed,
+              isCentered && styles.fabActive,
+            ]}
+          >
+            {isCentered ? (
+              <Navigation size={18} color="#ffffff" fill="#ffffff" />
+            ) : (
+              <Crosshair size={20} color={LakuTheme.primary} />
+            )}
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: LakuTheme.mapScreen,
   },
   map: {
     flex: 1,
   },
-  loadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
   },
   loadingText: {
     marginTop: 8,
     fontSize: 14,
-    color: '#6B7280',
+    color: LakuTheme.textSecondary,
   },
-  errorContainer: {
+  fallback: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: LakuTheme.mapFallback,
   },
-  errorText: {
+  fallbackTitle: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  errorSubtext: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  fallbackContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#F9FAFB',
-  },
-  fallbackText: {
-    fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: '#ffffff',
     marginBottom: 8,
-  },
-  fallbackSubtext: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 16,
     textAlign: 'center',
   },
-  fallbackLink: {
+  fallbackBody: {
     fontSize: 14,
-    color: '#0a61d7',
-    fontWeight: '500',
-    textDecorationLine: 'underline',
+    color: 'rgba(255, 255, 255, 0.82)',
+    textAlign: 'center',
+    lineHeight: 20,
   },
-  markerContainer: {
-    flexDirection: 'row',
+  recenterFab: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 20,
+  },
+  fabInner: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'white',
-    borderRadius: 30,
-    paddingLeft: 4,
-    paddingRight: 8,
-    paddingVertical: 4,
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  markerCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 3,
-    borderColor: 'white',
+  fabPressed: {
+    opacity: 0.75,
   },
-  markerLabelContainer: {
-    marginLeft: 0,
-  },
-  markerLabel: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#000000',
+  fabActive: {
+    backgroundColor: LakuTheme.primary,
   },
 });
-
