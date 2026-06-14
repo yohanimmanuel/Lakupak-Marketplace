@@ -11,12 +11,14 @@ interface AddressMapPreviewProps {
   address: string;
   height?: number;
   showAddressBar?: boolean;
+  onScrollInteractionChange?: (active: boolean) => void;
 }
 
 export default function AddressMapPreview({
   address,
   height = 280,
   showAddressBar = true,
+  onScrollInteractionChange,
 }: AddressMapPreviewProps) {
   const { t } = useTranslation();
   const [coordinates, setCoordinates] = useState<MapCoordinates | null>(null);
@@ -117,6 +119,7 @@ export default function AddressMapPreview({
           zoom={coordinates ? 15 : 4.5}
           showRecenter={Boolean(coordinates)}
           overlay={overlay}
+          onScrollInteractionChange={onScrollInteractionChange}
         />
       </View>
       {showAddressBar && trimmed ? (
@@ -139,11 +142,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: LakuTheme.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
   },
   mapShell: {
     width: '100%',

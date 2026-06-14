@@ -44,6 +44,9 @@ type MapViewProps = {
   compassEnabled?: boolean;
   onDidFinishLoadingMap?: () => void;
   onTouchStart?: () => void;
+  onTouchEnd?: () => void;
+  onMapIdle?: () => void;
+  requestDisallowInterceptTouchEvent?: boolean;
   zoomEnabled?: boolean;
   scrollEnabled?: boolean;
   pitchEnabled?: boolean;
@@ -136,6 +139,8 @@ interface MapComponentProps {
   showRecenter?: boolean;
   onMarkerClick?: (markerId: string) => void;
   overlay?: React.ReactNode;
+  /** When true, parent ScrollViews should disable scrolling while the map is touched. */
+  onScrollInteractionChange?: (active: boolean) => void;
 }
 
 export default function MapComponent({
@@ -147,11 +152,25 @@ export default function MapComponent({
   showRecenter = true,
   onMarkerClick,
   overlay,
+  onScrollInteractionChange,
 }: MapComponentProps) {
   const { t } = useTranslation();
   const [mapLoaded, setMapLoaded] = useState(false);
   const [isCentered, setIsCentered] = useState(true);
   const cameraRef = useRef<CameraHandle | null>(null);
+  const mapInteractionRef = useRef(false);
+
+  const beginMapInteraction = useCallback(() => {
+    mapInteractionRef.current = true;
+    onScrollInteractionChange?.(true);
+    setIsCentered(false);
+  }, [onScrollInteractionChange]);
+
+  const endMapInteraction = useCallback(() => {
+    if (!mapInteractionRef.current) return;
+    mapInteractionRef.current = false;
+    onScrollInteractionChange?.(false);
+  }, [onScrollInteractionChange]);
 
   const focusCoordinate = useMemo(() => {
     if (markers.length > 0) {
@@ -220,7 +239,11 @@ export default function MapComponent({
   const MarkerViewComponent = MarkerView;
 
   return (
-    <View style={[styles.container, { height }, style]}>
+    <View
+      style={[styles.container, { height }, style]}
+      onTouchEnd={endMapInteraction}
+      onTouchCancel={endMapInteraction}
+    >
       <MapViewComponent
         style={styles.map}
         styleURL={MAP_STYLE_URL}
@@ -229,7 +252,9 @@ export default function MapComponent({
         scaleBarEnabled={false}
         compassEnabled={false}
         onDidFinishLoadingMap={() => setMapLoaded(true)}
-        onTouchStart={() => setIsCentered(false)}
+        onTouchStart={beginMapInteraction}
+        onMapIdle={endMapInteraction}
+        requestDisallowInterceptTouchEvent
         zoomEnabled
         scrollEnabled
         pitchEnabled={false}

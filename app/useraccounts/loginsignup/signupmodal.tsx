@@ -32,6 +32,7 @@ export default function SignUpModal() {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
   
   // Combined signup state - 0 = initial screen, 1-4 = signup steps
   const [signupStep, setSignupStep] = useState(0);
@@ -224,6 +225,7 @@ export default function SignUpModal() {
             keyboardDismissMode="none"
             automaticallyAdjustKeyboardInsets
             nestedScrollEnabled
+            scrollEnabled={scrollEnabled}
             showsVerticalScrollIndicator={false}
           >
 
@@ -442,7 +444,10 @@ export default function SignUpModal() {
                 <Text style={{ color: '#111827', fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
                   {t('profile.editAddress.shippingAddress')}
                 </Text>
-                <AddressMapPreview address={signupData.address} />
+                <AddressMapPreview
+                  address={signupData.address}
+                  onScrollInteractionChange={(active) => setScrollEnabled(!active)}
+                />
                 <AddressLocationFields
                   address={signupData.address}
                   fullName={signupData.deliveryFullName}

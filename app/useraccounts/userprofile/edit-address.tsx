@@ -36,6 +36,7 @@ export default function EditAddress() {
   const [address, setAddress] = useState<string>('');
   const [isDefault, setIsDefault] = useState<boolean>(true);
   const [label, setLabel] = useState<AddressLabel>('home');
+  const [scrollEnabled, setScrollEnabled] = useState(true);
 
   useEffect(() => {
     if (params.id) {
@@ -107,11 +108,16 @@ export default function EditAddress() {
           style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, paddingBottom: 96 + bottomBarPadding }}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={scrollEnabled}
+          nestedScrollEnabled
         >
           <Text style={{ color: '#111827', fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
             {t('profile.editAddress.shippingAddress')}
           </Text>
-          <AddressMapPreview address={address} />
+          <AddressMapPreview
+            address={address}
+            onScrollInteractionChange={(active) => setScrollEnabled(!active)}
+          />
           <AddressLocationFields
             address={address}
             fullName={fullName}
