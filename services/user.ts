@@ -1,6 +1,5 @@
 import { trackAsync, logError } from './monitoring'
 import { graphqlRequest, decodeToken } from './graphql'
-import { useAuthStore } from '../stores/authStore'
 
 export type MobileUser = {
   id: number
@@ -146,7 +145,8 @@ export async function getMe(token: string, userId?: number) {
         const reason =
           (error instanceof Error ? (error as Error & { reason?: string | null }).reason : null) ?? null;
         // Do not overwrite the reason with the code; prefer backend-provided suspension reason.
-        useAuthStore.getState().setSuspension(true, reason);
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../stores/authStore').useAuthStore.getState().setSuspension(true, reason);
         const err = new Error('ACCOUNT_SUSPENDED') as Error & { code?: string; reason?: string | null };
         err.code = 'ACCOUNT_SUSPENDED';
         err.reason = reason;

@@ -1,5 +1,12 @@
 import { API_BASE_URL } from './config';
-import { useAuthStore } from '../stores/authStore';
+
+import type { useAuthStore as UseAuthStoreType } from '../stores/authStore';
+
+function getAuthStore(): typeof UseAuthStoreType {
+  // Lazy load to avoid authStore -> user -> graphql -> authStore require cycle.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('../stores/authStore').useAuthStore;
+}
 
 interface GraphQLResponse<T> {
   data?: T;
@@ -39,7 +46,7 @@ export async function graphqlRequest<T>(
 ): Promise<T> {
   const shouldHandleSuspensionForToken = () => {
     // If logout already cleared/rotated the token, ignore late responses from in-flight requests.
-    const currentToken = useAuthStore.getState().token;
+    const currentToken = getAuthStore().getState().token;
     if (!token) return false;
     return currentToken === token;
   };
@@ -72,7 +79,7 @@ export async function graphqlRequest<T>(
       // If the body isn't JSON but indicates suspension, still trigger the UI flow.
       if (txt.includes('ACCOUNT_SUSPENDED')) {
         if (shouldHandleSuspensionForToken()) {
-          useAuthStore.getState().setSuspension(true, null);
+          getAuthStore().getState().setSuspension(true, null);
         }
         const err = new Error('ACCOUNT_SUSPENDED') as Error & { code?: string; reason?: string | null };
         err.code = 'ACCOUNT_SUSPENDED';
@@ -93,7 +100,7 @@ export async function graphqlRequest<T>(
     if (suspensionErr) {
       const reason = suspensionErr.extensions?.reason ?? null;
       if (shouldHandleSuspensionForToken()) {
-        useAuthStore.getState().setSuspension(true, reason);
+        getAuthStore().getState().setSuspension(true, reason);
       }
       const err = new Error('ACCOUNT_SUSPENDED') as Error & { code?: string; reason?: string | null };
       err.code = 'ACCOUNT_SUSPENDED';
@@ -111,7 +118,7 @@ export async function graphqlRequest<T>(
         null;
       // Trigger UI flow: 60s notice then redirect (handled globally)
       if (shouldHandleSuspensionForToken()) {
-        useAuthStore.getState().setSuspension(true, reason);
+        getAuthStore().getState().setSuspension(true, reason);
       }
       const err = new Error('ACCOUNT_SUSPENDED') as Error & { code?: string; reason?: string | null }
       err.code = 'ACCOUNT_SUSPENDED'

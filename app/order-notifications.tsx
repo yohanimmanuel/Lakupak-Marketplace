@@ -14,7 +14,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
 import { useDataStore } from '../stores/dataStore';
 import { NotificationService, Notification } from '../services/notificationService';
-import { OrderUpdateRow } from './components/notifications/OrderUpdateRow';
+import { OrderUpdateRow } from '../components/notifications/OrderUpdateRow';
 import { useTranslation } from 'react-i18next';
 import { getOrderPreviewStrings } from '../utils/orderNotificationI18n';
 

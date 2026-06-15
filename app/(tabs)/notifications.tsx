@@ -34,7 +34,7 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
 import { usePlatformAnnouncementsRealtimeStore } from '../../stores/platformAnnouncementsRealtimeStore';
-import { OrderUpdateRow } from '../components/notifications/OrderUpdateRow';
+import { OrderUpdateRow } from '../../components/notifications/OrderUpdateRow';
 import { useTranslation } from 'react-i18next';
 import { getOrderPreviewStrings } from '../../utils/orderNotificationI18n';
 

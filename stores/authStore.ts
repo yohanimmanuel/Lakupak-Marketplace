@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store'
 import { create } from 'zustand'
-import { getMe, type MobileUser } from '../services/user'
+import type { MobileUser } from '../services/user'
 
 type User = MobileUser
 
@@ -129,6 +129,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (t) {
       set({ token: t })
       try {
+        const { getMe } = await import('../services/user')
         const me = await getMe(t)
         set({ user: me })
       } catch (error) {
