@@ -13,13 +13,6 @@ module.exports = ({ config }) => {
         (p) => !(Array.isArray(p) && p[0] === '@rnmapbox/maps'),
       ) ?? []),
       [
-        'expo-location',
-        {
-          locationWhenInUsePermission:
-            'Allow Laku to use your location to show a more accurate map for your address.',
-        },
-      ],
-      [
         '@rnmapbox/maps',
         {
           RNMapboxMapsImpl: 'mapbox',

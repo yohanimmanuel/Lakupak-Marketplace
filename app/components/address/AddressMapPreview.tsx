@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { MapPin } from 'lucide-react-native';
-import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import { LakuTheme } from '@/constants/Colors';
 import MapComponent from '../ordersshipment/MapComponent';
@@ -23,54 +22,41 @@ export default function AddressMapPreview({
   const { t } = useTranslation();
   const [coordinates, setCoordinates] = useState<MapCoordinates | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [proximity, setProximity] = useState<[number, number] | undefined>();
   const trimmed = address.trim();
 
+  // Geocode the typed address only — no phone GPS. Same as Driver geocoding a stop
+  // address without proximity (Driver only passes GPS because the driver is near deliveries).
   useEffect(() => {
+    if (!trimmed) {
+      setCoordinates(null);
+      setIsGeocoding(false);
+      return;
+    }
+
     let cancelled = false;
+    setIsGeocoding(true);
 
     (async () => {
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted' || cancelled) return;
-
-        const position = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-
+        const result = await geocodeAddress(trimmed);
         if (!cancelled) {
-          setProximity([position.coords.longitude, position.coords.latitude]);
+          setCoordinates(result.coordinates);
         }
       } catch {
-        // Proximity bias is optional — geocoding still works globally without it.
+        if (!cancelled) {
+          setCoordinates(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsGeocoding(false);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    if (!trimmed) {
-      setCoordinates(null);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setIsGeocoding(true);
-      try {
-        const result = await geocodeAddress(trimmed, proximity);
-        setCoordinates(result.coordinates);
-      } catch {
-        setCoordinates(null);
-      } finally {
-        setIsGeocoding(false);
-      }
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [trimmed, proximity]);
+  }, [trimmed]);
 
   const markers = useMemo(() => {
     if (!coordinates) return [];

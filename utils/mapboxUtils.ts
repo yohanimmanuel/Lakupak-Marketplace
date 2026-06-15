@@ -36,60 +36,50 @@ export function getOrderStatusMarkerColor(status: string): string {
 }
 
 /**
- * Forward-geocodes an address using Mapbox Geocoding v5.
- * Global — no country restriction. Optional proximity biases toward a region
- * when multiple places share the same name (same approach as Laku-Driver).
+ * Forward-geocodes an address — same Mapbox call as Laku-Driver `mapboxApi.geocodeAddress`.
+ * Converts typed address text → [lng, lat]. No GPS required.
  */
 export async function geocodeAddress(
   address: string,
   proximity?: [number, number],
 ): Promise<GeocodeResult> {
-  if (!hasMapboxAccessToken()) {
+  const tk = getMapboxAccessToken();
+  if (!tk) {
     return { coordinates: null, address };
   }
 
-  const accessToken = getMapboxAccessToken();
-
   try {
-    const cleanedAddress = address.trim().replace(/\s+/g, ' ');
-    if (!cleanedAddress) {
+    const query = encodeURIComponent(address.trim());
+    if (!query) {
       return { coordinates: null, address };
     }
 
-    const encodedAddress = encodeURIComponent(cleanedAddress);
     const proximityParam = proximity
       ? `&proximity=${proximity[0]},${proximity[1]}`
       : '';
     const url =
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedAddress}.json` +
-      `?access_token=${accessToken}&limit=1${proximityParam}`;
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json` +
+      `?access_token=${tk}&limit=1${proximityParam}`;
 
-    const response = await fetch(url);
-
-    if (!response.ok) {
+    const res = await fetch(url);
+    if (!res.ok) {
       return { coordinates: null, address };
     }
 
-    interface MapboxFeature {
-      center?: [number, number];
-      geometry?: { coordinates: [number, number] };
-      place_name?: string;
-    }
+    const data = (await res.json()) as {
+      features?: {
+        geometry: { coordinates: [number, number] };
+        place_name?: string;
+      }[];
+    };
 
-    interface MapboxGeocodingResponse {
-      features?: MapboxFeature[];
-    }
-
-    const data: MapboxGeocodingResponse = await response.json();
     const feature = data.features?.[0];
-    const coords = feature?.geometry?.coordinates ?? feature?.center;
-
-    if (!feature || !coords) {
+    const coords = feature?.geometry.coordinates;
+    if (!coords) {
       return { coordinates: null, address };
     }
 
     const [longitude, latitude] = coords;
-
     return {
       coordinates: { longitude, latitude },
       address: feature.place_name || address,
