@@ -2243,7 +2243,10 @@
         "locationLabel": "Lokasi pengambilan",
         "pickupDate": "Tanggal pengambilan",
         "pickupTime": "Waktu pengambilan",
-        "confirmPickup": "Konfirmasi"
+        "confirmPickup": "Konfirmasi",
+        "copyAddress": "Salin alamat pengambilan",
+        "addressCopiedTitle": "Tersalin",
+        "addressCopiedBody": "Alamat pengambilan disalin ke clipboard"
       }
     }
   }

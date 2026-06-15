@@ -12,6 +12,7 @@ import {
   Platform,
   StatusBar,
   Animated,
+  Clipboard,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +32,7 @@ import {
   X,
   Gift,
   Banknote,
+  Copy,
 } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Product } from '../../../data/sampleProducts';
@@ -262,6 +264,20 @@ const distributorsInfoMap = useMemo(() => {
 const activeDistributorInfo = (isCartCheckout && activeDistributorId)
   ? distributorsInfoMap[activeDistributorId] ?? null
   : distributorsInfo[0] || null;
+
+const pickupLocationAddress =
+  activeDistributorInfo?.pickupAddress?.trim() ||
+  activeDistributorInfo?.businessAddress?.trim() ||
+  '';
+
+const copyPickupAddress = () => {
+  if (!pickupLocationAddress) return;
+  Clipboard.setString(pickupLocationAddress);
+  Alert.alert(
+    t('ordersFlow.checkout.pickupModal.addressCopiedTitle'),
+    t('ordersFlow.checkout.pickupModal.addressCopiedBody'),
+  );
+};
 
   const hasDeliveryAddress = Boolean(authUser?.chosenAddress?.trim());
 
@@ -2083,16 +2099,16 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
             <TouchableOpacity 
               activeOpacity={1}
               onPress={(e) => e.stopPropagation()}
-              style={{ flex: 1 }}
+              style={styles.pickupModalInner}
             >
-            <View style={styles.modalHeader}>
+            <View style={styles.pickupModalHeader}>
               <Text style={styles.modalTitle}>{t('ordersFlow.checkout.pickupModal.title')}</Text>
               <TouchableOpacity onPress={handlePickupClose}>
                 <X size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
             
-            <View style={styles.modalBody}>
+            <View style={styles.pickupModalBody}>
               <Text style={styles.modalSubtitle}>{t('ordersFlow.checkout.pickupModal.subtitle')}</Text>
               
               <View style={styles.pickupInfo}>
@@ -2100,12 +2116,26 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                 <Text style={styles.pickupAddress} numberOfLines={1} ellipsizeMode="tail">
                   {activeDistributorInfo?.companyName || t('ordersFlow.checkout.distributorDefaults.company')}
                 </Text>
-                <Text style={styles.pickupAddressDetail} numberOfLines={2} ellipsizeMode="tail">
-                  {activeDistributorInfo?.pickupAddress || activeDistributorInfo?.businessAddress || t('ordersFlow.checkout.distributorDefaults.addressNotAvailable')}
-                </Text>
+                <View style={styles.pickupAddressRow}>
+                  <Text style={styles.pickupAddressDetail} numberOfLines={1} ellipsizeMode="tail">
+                    {pickupLocationAddress || t('ordersFlow.checkout.distributorDefaults.addressNotAvailable')}
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.pickupCopyButton,
+                      !pickupLocationAddress && styles.pickupCopyButtonDisabled,
+                    ]}
+                    onPress={copyPickupAddress}
+                    disabled={!pickupLocationAddress}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('ordersFlow.checkout.pickupModal.copyAddress')}
+                  >
+                    <Copy size={18} color={pickupLocationAddress ? '#0a61d7' : '#9CA3AF'} />
+                  </TouchableOpacity>
+                </View>
               </View>
               
-              <View style={styles.dateTimeSection}>
+              <View style={styles.pickupDateTimeSection}>
                 <TouchableOpacity 
                   style={styles.dateTimeButton}
                   onPress={() => setShowDatePicker(true)}
@@ -2118,7 +2148,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={styles.dateTimeButton}
+                  style={[styles.dateTimeButton, styles.pickupDateTimeButtonLast]}
                   onPress={() => setShowTimeDropdown(!showTimeDropdown)}
                 >
                   <Clock size={20} color="#0a61d7" />
@@ -2166,7 +2196,7 @@ const activeDistributorInfo = (isCartCheckout && activeDistributorId)
               
             </View>
             
-            <View style={styles.modalFooter}>
+            <View style={[styles.modalFooter, styles.pickupModalFooter]}>
               <TouchableOpacity 
                 style={styles.cancelButton}
                 onPress={handlePickupClose}
@@ -2743,11 +2773,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    maxHeight: '95%',
+    overflow: 'hidden',
+  },
+  pickupModalInner: {
+    width: '100%',
+  },
+  pickupModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
     paddingTop: 20,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    minHeight: 520,
-    maxHeight: '95%',
+    paddingBottom: 15,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E2E8F0',
+  },
+  pickupModalBody: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -2790,9 +2835,23 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   pickupAddressDetail: {
+    flex: 1,
     fontSize: 14,
     color: '#6B7280',
     lineHeight: 20,
+  },
+  pickupAddressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pickupCopyButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+  },
+  pickupCopyButtonDisabled: {
+    backgroundColor: '#F3F4F6',
   },
   pickupAddressNote: {
     fontSize: 12,
@@ -2803,6 +2862,13 @@ const styles = StyleSheet.create({
   dateTimeSection: {
     marginBottom: 24,
     position: 'relative',
+  },
+  pickupDateTimeSection: {
+    marginBottom: 0,
+    position: 'relative',
+  },
+  pickupDateTimeButtonLast: {
+    marginBottom: 0,
   },
   dateTimeButton: {
     flexDirection: 'row',
@@ -2830,6 +2896,14 @@ const styles = StyleSheet.create({
   modalFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  pickupModalFooter: {
+    marginTop: 24,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E2E8F0',
   },
   cancelButton: {
     flex: 1,
