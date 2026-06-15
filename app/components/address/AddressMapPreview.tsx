@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { LakuTheme } from '@/constants/Colors';
 import MapComponent from '../ordersshipment/MapComponent';
-import { geocodeAddress, MapCoordinates } from '../../../utils/mapboxUtils';
+import { geocodeAddress, MapCoordinates } from '../../../services/geocode';
+import { useAuthStore } from '../../../stores/authStore';
 
 interface AddressMapPreviewProps {
   address: string;
@@ -20,43 +21,48 @@ export default function AddressMapPreview({
   onScrollInteractionChange,
 }: AddressMapPreviewProps) {
   const { t } = useTranslation();
+  const token = useAuthStore((s) => s.token);
   const [coordinates, setCoordinates] = useState<MapCoordinates | null>(null);
+  const [isApproximate, setIsApproximate] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const trimmed = address.trim();
+  const geocodeRequestRef = useRef(0);
 
-  // Geocode the typed address only — no phone GPS. Same as Driver geocoding a stop
-  // address without proximity (Driver only passes GPS because the driver is near deliveries).
+  // Wait until typing pauses, then geocode the full string (Driver geocodes saved addresses,
+  // not partial input). Ignore stale responses so out-of-order fetches cannot win.
   useEffect(() => {
     if (!trimmed) {
+      geocodeRequestRef.current += 1;
       setCoordinates(null);
+      setIsApproximate(false);
       setIsGeocoding(false);
       return;
     }
 
-    let cancelled = false;
     setIsGeocoding(true);
+    const timer = setTimeout(() => {
+      const requestId = ++geocodeRequestRef.current;
 
-    (async () => {
-      try {
-        const result = await geocodeAddress(trimmed);
-        if (!cancelled) {
+      void geocodeAddress(trimmed, token)
+        .then((result) => {
+          if (requestId !== geocodeRequestRef.current) return;
           setCoordinates(result.coordinates);
-        }
-      } catch {
-        if (!cancelled) {
-          setCoordinates(null);
-        }
-      } finally {
-        if (!cancelled) {
+          setIsApproximate(result.precision === 'approximate' || result.precision === 'area');
           setIsGeocoding(false);
-        }
-      }
-    })();
+        })
+        .catch(() => {
+          if (requestId !== geocodeRequestRef.current) return;
+          setCoordinates(null);
+          setIsApproximate(false);
+          setIsGeocoding(false);
+        });
+    }, 700);
 
     return () => {
-      cancelled = true;
+      clearTimeout(timer);
+      geocodeRequestRef.current += 1;
     };
-  }, [trimmed]);
+  }, [trimmed, token]);
 
   const markers = useMemo(() => {
     if (!coordinates) return [];
@@ -111,9 +117,16 @@ export default function AddressMapPreview({
       {showAddressBar && trimmed ? (
         <View style={styles.addressBar}>
           <View style={styles.addressDot} />
-          <Text style={styles.addressText} numberOfLines={2}>
-            {trimmed}
-          </Text>
+          <View style={styles.addressTextWrap}>
+            <Text style={styles.addressText} numberOfLines={2}>
+              {trimmed}
+            </Text>
+            {isApproximate && coordinates ? (
+              <Text style={styles.approximateHint}>
+                {t('profile.editAddress.mapApproximate')}
+              </Text>
+            ) : null}
+          </View>
         </View>
       ) : null}
     </View>
@@ -172,11 +185,19 @@ const styles = StyleSheet.create({
     marginTop: 5,
     backgroundColor: LakuTheme.primary,
   },
-  addressText: {
+  addressTextWrap: {
     flex: 1,
+  },
+  addressText: {
     fontSize: 14,
     color: LakuTheme.text,
     lineHeight: 20,
     fontWeight: '500',
+  },
+  approximateHint: {
+    marginTop: 4,
+    fontSize: 12,
+    color: LakuTheme.textSecondary,
+    lineHeight: 16,
   },
 });

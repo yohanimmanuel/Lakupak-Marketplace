@@ -693,6 +693,7 @@
       "mapEnterAddress": "Masukkan alamat untuk pratinjau di peta",
       "mapHint": "Peta akan diperbarui saat Anda mengetik alamat pengiriman",
       "mapNotFound": "Alamat tidak ditemukan di peta",
+      "mapApproximate": "Pin menunjukkan perkiraan lokasi — tambahkan detail alamat untuk akurasi lebih baik",
       "setDefault": "Jadikan alamat utama",
       "labelAs": "Label sebagai:",
       "labels": {

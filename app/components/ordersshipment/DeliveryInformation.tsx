@@ -26,7 +26,8 @@ import { API_BASE_URL } from '../../../services/config';
 import { websocketService } from '../../../services/websocket';
 import { useDataStore, MarketplaceOrder } from '../../../stores/dataStore';
 import MapComponent from './MapComponent';
-import { geocodeAddress, GeocodeResult, getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
+import { geocodeAddress, type GeocodeResult } from '../../../services/geocode';
+import { getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
 import ProductImageModal from '../productcatalog/ProductImageModal';
 import { useTranslation } from 'react-i18next';
 
@@ -131,7 +132,7 @@ export default function DeliveryInformation() {
 
     setIsGeocoding(true);
     try {
-      const result = await geocodeAddress(distributorAddress);
+      const result = await geocodeAddress(distributorAddress, token);
       setGeocodeResult(result);
     } catch (error) {
       setGeocodeResult(null);

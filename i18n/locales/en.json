@@ -693,6 +693,7 @@
       "mapEnterAddress": "Enter an address to preview on the map",
       "mapHint": "The map updates as you type your delivery address",
       "mapNotFound": "Could not locate this address on the map",
+      "mapApproximate": "Pin shows approximate area — add more address detail for better accuracy",
       "setDefault": "Set as Default Address",
       "labelAs": "Label As:",
       "labels": {
