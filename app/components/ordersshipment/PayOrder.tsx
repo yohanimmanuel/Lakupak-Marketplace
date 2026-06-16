@@ -25,6 +25,7 @@ type SellerBankDetails = {
   billingBankName: string | null;
   billingBankAccountName: string | null;
   billingBankAccountNumber: string | null;
+  buyerPaymentTermDays: number | null;
 };
 
 type OrderDetails = {
@@ -107,6 +108,7 @@ export default function PayOrder() {
         billingBankName: bankRes.billingBankName,
         billingBankAccountName: bankRes.billingBankAccountName,
         billingBankAccountNumber: bankRes.billingBankAccountNumber,
+        buyerPaymentTermDays: bankRes.buyerPaymentTermDays,
       });
     } else {
       setBank(null);
@@ -180,6 +182,7 @@ export default function PayOrder() {
             billingBankName: bankRes.billingBankName,
             billingBankAccountName: bankRes.billingBankAccountName,
             billingBankAccountNumber: bankRes.billingBankAccountNumber,
+            buyerPaymentTermDays: bankRes.buyerPaymentTermDays,
           });
         } else {
           setBank(null);
@@ -467,9 +470,19 @@ export default function PayOrder() {
               </Text>
             </View>
 
-              <Text style={styles.hintText}>
-                {t('ordersFlow.payOrder.hints.bankPrivacy')}
-              </Text>
+            {bank?.buyerPaymentTermDays != null && bank.buyerPaymentTermDays > 0 ? (
+              <>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>{t('ordersFlow.payOrder.labels.paymentTerm')}:</Text>
+                  <Text style={[styles.infoValue, styles.infoValueWide]}>
+                    {t('ordersFlow.payOrder.values.paymentTermDays', { count: bank.buyerPaymentTermDays })}
+                  </Text>
+                </View>
+                <Text style={styles.paymentTermDescriptionUnderLabel}>
+                  {t('ordersFlow.payOrder.hints.paymentTermDescription', { count: bank.buyerPaymentTermDays })}
+                </Text>
+              </>
+            ) : null}
 
               {isBankTransfer && (
                 <View style={styles.proofSection}>
@@ -488,6 +501,10 @@ export default function PayOrder() {
                   />
                 </View>
               )}
+
+              <Text style={styles.hintText}>
+                {t('ordersFlow.payOrder.hints.bankPrivacy')}
+              </Text>
             </View>
           </View>
         )}
@@ -627,6 +644,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     flex: 1,
     textAlign: 'right',
+    flexShrink: 1,
   },
   infoRowTopAligned: {
     flexDirection: 'row',
@@ -645,7 +663,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   infoValueWide: {
-    minWidth: 220,
+    minWidth: 0,
+    flexShrink: 1,
     textAlign: 'right',
   },
   hintText: {
@@ -671,6 +690,14 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     marginBottom: 4,
     lineHeight: 18,
+  },
+  paymentTermDescriptionUnderLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 10,
+    marginBottom: 0,
+    marginRight: 12,
+    lineHeight: 16,
   },
   bottomBar: {
     flexDirection: 'row',

@@ -1829,9 +1829,16 @@
         "method": "Method",
         "bank": "Bank",
         "accountName": "Account name",
-        "accountNumber": "Account number"
+        "accountNumber": "Account number",
+        "paymentTerm": "Term of payment"
+      },
+      "values": {
+        "paymentTermDays_one": "{{count}} day",
+        "paymentTermDays_other": "{{count}} days"
       },
       "hints": {
+        "paymentTermDescription_one": "Complete your payment within {{count}} day. Late payments may delay order processing.",
+        "paymentTermDescription_other": "Complete your payment within {{count}} days. Late payments may delay order processing.",
         "bankPrivacy": "Only share this info during payment. It’s hidden from public distributor pages and checkout."
       }
     },

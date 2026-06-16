@@ -678,6 +678,7 @@ export const marketplaceService = {
     billingBankName: string | null;
     billingBankAccountName: string | null;
     billingBankAccountNumber: string | null;
+    buyerPaymentTermDays: number | null;
   }> {
     const url = new URL(
       `${API_BASE_URL}/api/mobile/checkout/seller-bank/${encodeURIComponent(String(sellerUserId))}`
@@ -702,6 +703,10 @@ export const marketplaceService = {
       billingBankName: typeof obj.billingBankName === 'string' ? obj.billingBankName : null,
       billingBankAccountName: typeof obj.billingBankAccountName === 'string' ? obj.billingBankAccountName : null,
       billingBankAccountNumber: typeof obj.billingBankAccountNumber === 'string' ? obj.billingBankAccountNumber : null,
+      buyerPaymentTermDays:
+        typeof obj.buyerPaymentTermDays === 'number' && Number.isInteger(obj.buyerPaymentTermDays)
+          ? obj.buyerPaymentTermDays
+          : null,
     };
   },
 };

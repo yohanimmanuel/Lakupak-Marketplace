@@ -1827,9 +1827,16 @@
         "method": "Metode",
         "bank": "Bank",
         "accountName": "Nama rekening",
-        "accountNumber": "Nomor rekening"
+        "accountNumber": "Nomor rekening",
+        "paymentTerm": "Jangka waktu pembayaran"
+      },
+      "values": {
+        "paymentTermDays_one": "{{count}} hari",
+        "paymentTermDays_other": "{{count}} hari"
       },
       "hints": {
+        "paymentTermDescription_one": "Selesaikan pembayaran dalam {{count}} hari. Keterlambatan dapat menunda proses pesanan.",
+        "paymentTermDescription_other": "Selesaikan pembayaran dalam {{count}} hari. Keterlambatan dapat menunda proses pesanan.",
         "bankPrivacy": "Bagikan info ini hanya saat pembayaran. Info ini disembunyikan dari halaman distributor publik dan checkout."
       }
     },
