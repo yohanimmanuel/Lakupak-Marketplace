@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import AddressMapPreview from '../../components/address/AddressMapPreview';
 import AddressLocationFields from '../../components/address/AddressLocationFields';
 import AddressLabelOptions, { type AddressLabel } from '../../components/address/AddressLabelOptions';
+import type { GeocodePrecision } from '../../../services/geocode';
 
 const normalizeLabel = (value?: string | null): AddressLabel => {
   if (value === 'work' || value === 'store' || value === 'home') {
@@ -37,6 +38,9 @@ export default function EditAddress() {
   const [isDefault, setIsDefault] = useState<boolean>(true);
   const [label, setLabel] = useState<AddressLabel>('home');
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [savedAddressSnapshot, setSavedAddressSnapshot] = useState('');
+  const [savedCoordinates, setSavedCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [savedPrecision, setSavedPrecision] = useState<GeocodePrecision | null>(null);
 
   useEffect(() => {
     if (params.id) {
@@ -57,6 +61,21 @@ export default function EditAddress() {
           setAddress(cur.address ?? '')
           setIsDefault(Boolean(cur.isDefault))
           setLabel(normalizeLabel(cur.label))
+          const snapshot = (cur.address ?? '').trim()
+          setSavedAddressSnapshot(snapshot)
+          if (cur.latitude != null && cur.longitude != null) {
+            setSavedCoordinates({ latitude: cur.latitude, longitude: cur.longitude })
+            setSavedPrecision(
+              cur.geocodePrecision === 'exact' ||
+                cur.geocodePrecision === 'approximate' ||
+                cur.geocodePrecision === 'area'
+                ? cur.geocodePrecision
+                : null,
+            )
+          } else {
+            setSavedCoordinates(null)
+            setSavedPrecision(null)
+          }
         }
       } catch {}
     }
@@ -116,6 +135,14 @@ export default function EditAddress() {
           </Text>
           <AddressMapPreview
             address={address}
+            savedCoordinates={
+              address.trim() === savedAddressSnapshot && savedCoordinates
+                ? savedCoordinates
+                : null
+            }
+            savedPrecision={
+              address.trim() === savedAddressSnapshot ? savedPrecision : null
+            }
             onScrollInteractionChange={(active) => setScrollEnabled(!active)}
           />
           <AddressLocationFields

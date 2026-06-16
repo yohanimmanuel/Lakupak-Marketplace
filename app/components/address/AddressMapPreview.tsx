@@ -4,11 +4,14 @@ import { MapPin } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { LakuTheme } from '@/constants/Colors';
 import MapComponent from '../ordersshipment/MapComponent';
-import { geocodeAddress, MapCoordinates } from '../../../services/geocode';
+import { geocodeAddress, MapCoordinates, type GeocodePrecision } from '../../../services/geocode';
 import { useAuthStore } from '../../../stores/authStore';
 
 interface AddressMapPreviewProps {
   address: string;
+  /** Use stored coordinates when the address text still matches (avoids geocode API). */
+  savedCoordinates?: MapCoordinates | null;
+  savedPrecision?: GeocodePrecision | null;
   height?: number;
   showAddressBar?: boolean;
   onScrollInteractionChange?: (active: boolean) => void;
@@ -16,6 +19,8 @@ interface AddressMapPreviewProps {
 
 export default function AddressMapPreview({
   address,
+  savedCoordinates = null,
+  savedPrecision = null,
   height = 280,
   showAddressBar = true,
   onScrollInteractionChange,
@@ -35,6 +40,18 @@ export default function AddressMapPreview({
       geocodeRequestRef.current += 1;
       setCoordinates(null);
       setIsApproximate(false);
+      setIsGeocoding(false);
+      return;
+    }
+
+    if (
+      savedCoordinates &&
+      typeof savedCoordinates.latitude === 'number' &&
+      typeof savedCoordinates.longitude === 'number'
+    ) {
+      geocodeRequestRef.current += 1;
+      setCoordinates(savedCoordinates);
+      setIsApproximate(savedPrecision === 'approximate' || savedPrecision === 'area');
       setIsGeocoding(false);
       return;
     }
@@ -62,7 +79,7 @@ export default function AddressMapPreview({
       clearTimeout(timer);
       geocodeRequestRef.current += 1;
     };
-  }, [trimmed, token]);
+  }, [trimmed, token, savedCoordinates, savedPrecision]);
 
   const markers = useMemo(() => {
     if (!coordinates) return [];

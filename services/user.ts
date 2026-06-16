@@ -21,6 +21,9 @@ export type MobileAddress = {
   fullName?: string | null
   phone?: string | null
   address?: string | null
+  latitude?: number | null
+  longitude?: number | null
+  geocodePrecision?: string | null
   label?: string | null
   isDefault: boolean
   createdAt: string
@@ -49,6 +52,9 @@ const ADDRESS_FRAGMENT = `
   fullName
   phone
   address
+  latitude
+  longitude
+  geocodePrecision
   label
   isDefault
   createdAt
