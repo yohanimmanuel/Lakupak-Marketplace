@@ -4,6 +4,7 @@ import { Search, Clock } from 'lucide-react-native';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { API_BASE_URL } from '../../../services/config';
 import { useTranslation } from 'react-i18next';
+import { translateProductType } from '../../../utils/translateProductType';
 
 interface SearchSuggestionsProps {
   query: string;
@@ -131,7 +132,7 @@ export default function SearchSuggestions({
           >
             {renderIconOrImage(suggestion)}
             <Text style={styles.suggestionText} numberOfLines={1}>
-              {suggestion.text}
+              {suggestion.type === 'category' ? translateProductType(suggestion.text) : suggestion.text}
             </Text>
           </Pressable>
         ))}

@@ -14,6 +14,7 @@ import {
 // no header actions; close via outside press / filter icon toggle
 import { ChevronDown } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { translateProductType } from '../../../utils/translateProductType';
 
 export type ShippingOptionKey = 'selfPickup' | 'sellerDelivery' | 'buyerCourier';
 
@@ -402,7 +403,7 @@ export default function SearchFilterSheet({
                   {categoryShown.map((opt) => (
                     <Chip
                       key={opt}
-                      label={opt}
+                      label={translateProductType(opt)}
                       selected={local.category.includes(opt)}
                       onPress={() =>
                         setLocal((p) => {

@@ -2258,5 +2258,42 @@
         "addressCopiedBody": "Pickup address copied to clipboard"
       }
     }
+  },
+  "productTypes": {
+    "Food & Beverage": "Food & Beverage",
+    "Technology": "Technology",
+    "Fashion": "Fashion",
+    "Home & Garden": "Home & Garden",
+    "Sports": "Sports",
+    "Beauty": "Beauty",
+    "Books": "Books",
+    "Automotive": "Automotive",
+    "Health": "Health",
+    "Toys": "Toys",
+    "Office": "Office",
+    "Garden": "Garden",
+    "Jewelry": "Jewelry",
+    "Music": "Music",
+    "Pets": "Pets",
+    "Travel": "Travel",
+    "Art": "Art",
+    "Photography": "Photography",
+    "Gaming": "Gaming",
+    "Furniture": "Furniture",
+    "Tools": "Tools",
+    "Baby": "Baby",
+    "Outdoor": "Outdoor",
+    "Kitchen": "Kitchen",
+    "Bathroom": "Bathroom",
+    "Bedroom": "Bedroom",
+    "Living Room": "Living Room",
+    "Dining": "Dining",
+    "Storage": "Storage",
+    "Lighting": "Lighting",
+    "Decor": "Decor",
+    "Appliances": "Appliances",
+    "Cleaning": "Cleaning",
+    "Organization": "Organization",
+    "Safety": "Safety"
   }
 }

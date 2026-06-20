@@ -24,6 +24,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
 import { API_BASE_URL } from '../../../services/config';
 import { useTranslation } from 'react-i18next';
+import { translateProductType } from '../../../utils/translateProductType';
 // Removed theme color imports - using explicit colors
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -940,7 +941,12 @@ export default function ProductMarketplace({
           </Text>
         </View>
         <Text style={[styles.sectionSubtitle, { color: '#6B7280' }]}>
-          {t('product.moreInCategory', { category: safeGetString(product.category, t('product.labels.general')) })}
+          {t('product.moreInCategory', {
+            category: (() => {
+              const raw = safeGetString(product.category);
+              return raw ? translateProductType(raw) : t('product.labels.general');
+            })(),
+          })}
         </Text>
         
         {/* Product Grid Layout like home.tsx */}
@@ -1012,13 +1018,16 @@ export default function ProductMarketplace({
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>{t('product.details.type')}</Text>
           <Text style={[styles.detailValue, { color: textColor }]}>
-            {safeGetString(product.category, t('product.labels.general'))}
+            {(() => {
+              const raw = safeGetString(product.category);
+              return raw ? translateProductType(raw) : t('product.labels.general');
+            })()}
           </Text>
         </View>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>{t('product.details.category')}</Text>
           <Text style={[styles.detailValue, { color: textColor }]}>
-            {safeGetString(product.productCategory, 'Piece')}
+            {safeGetString(product.productCategory, t('product.labels.unknown'))}
           </Text>
         </View>
       </View>

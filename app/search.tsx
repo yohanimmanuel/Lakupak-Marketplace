@@ -30,6 +30,7 @@ import SearchFilterSheet, { type SearchFilters, type ShippingOptionKey } from '.
 import QuickFilterPanel, { type QuickFilterSection } from './components/searchengine/QuickFilterPanel';
 import { Product } from '../data/sampleProducts';
 import { useTranslation } from 'react-i18next';
+import { translateProductType } from '../utils/translateProductType';
 
 /** Higher = better match. Weak matches stay included but sink to the bottom. */
 function computeRelevanceScore(query: string, p: MarketplaceProduct): number {
@@ -841,7 +842,7 @@ export default function SearchScreen() {
         : t('search.chips.priceRange');
     const cat = filters.category?.length
       ? filters.category.length === 1
-        ? filters.category[0]
+        ? translateProductType(filters.category[0])
         : `${t('search.chips.category')} (${filters.category.length})`
       : t('search.chips.category');
     return { ship, ch, rating, price, cat };

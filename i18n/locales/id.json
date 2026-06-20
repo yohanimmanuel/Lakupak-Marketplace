@@ -2256,6 +2256,43 @@
         "addressCopiedBody": "Alamat pengambilan disalin ke clipboard"
       }
     }
+  },
+  "productTypes": {
+    "Food & Beverage": "Makanan & Minuman",
+    "Technology": "Teknologi",
+    "Fashion": "Fashion",
+    "Home & Garden": "Rumah & Taman",
+    "Sports": "Olahraga",
+    "Beauty": "Kecantikan",
+    "Books": "Buku",
+    "Automotive": "Otomotif",
+    "Health": "Kesehatan",
+    "Toys": "Mainan",
+    "Office": "Kantor",
+    "Garden": "Taman",
+    "Jewelry": "Perhiasan",
+    "Music": "Musik",
+    "Pets": "Hewan Peliharaan",
+    "Travel": "Perjalanan",
+    "Art": "Seni",
+    "Photography": "Fotografi",
+    "Gaming": "Gaming",
+    "Furniture": "Furnitur",
+    "Tools": "Peralatan",
+    "Baby": "Bayi",
+    "Outdoor": "Luar Ruangan",
+    "Kitchen": "Dapur",
+    "Bathroom": "Kamar Mandi",
+    "Bedroom": "Kamar Tidur",
+    "Living Room": "Ruang Tamu",
+    "Dining": "Ruang Makan",
+    "Storage": "Penyimpanan",
+    "Lighting": "Pencahayaan",
+    "Decor": "Dekorasi",
+    "Appliances": "Peralatan Rumah",
+    "Cleaning": "Kebersihan",
+    "Organization": "Organisasi",
+    "Safety": "Keamanan"
   }
 }
 

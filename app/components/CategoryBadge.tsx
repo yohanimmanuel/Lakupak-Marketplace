@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { translateProductType } from '../../utils/translateProductType';
 
 interface CategoryBadgeProps {
   name: string;
@@ -22,7 +23,7 @@ export default function CategoryBadge({ name, icon, onPress }: CategoryBadgeProp
         />
       </View>
       <Text style={styles.categoryName}>
-        {name}
+        {translateProductType(name)}
       </Text>
     </TouchableOpacity>
   );

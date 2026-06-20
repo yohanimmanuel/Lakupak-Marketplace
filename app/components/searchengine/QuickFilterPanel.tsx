@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Animated, Dimensions, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { SearchFilters, ShippingOptionKey } from './SearchFilterSheet';
 import { useTranslation } from 'react-i18next';
+import { translateProductType } from '../../../utils/translateProductType';
 
 export type QuickFilterSection = 'shippingOption' | 'salesChannel' | 'rating' | 'price' | 'category';
 
@@ -207,7 +208,7 @@ export default function QuickFilterPanel({
                       : categoryOptions.map((opt) => (
                           <Chip
                             key={opt}
-                            label={opt}
+                            label={translateProductType(opt)}
                             selected={filters.category.includes(opt)}
                             onPress={() => {
                               const next = new Set(filters.category);
