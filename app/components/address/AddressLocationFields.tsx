@@ -10,6 +10,7 @@ interface AddressLocationFieldsProps {
   onFullNameChange: (value: string) => void;
   onPhoneChange: (value: string) => void;
   onInputFocus?: (field: 'address' | 'fullName' | 'phone') => void;
+  onFieldLayout?: (field: 'address' | 'fullName' | 'phone', y: number) => void;
 }
 
 const fieldLabelStyle = {
@@ -41,6 +42,7 @@ export default function AddressLocationFields({
   onFullNameChange,
   onPhoneChange,
   onInputFocus,
+  onFieldLayout,
 }: AddressLocationFieldsProps) {
   const { t } = useTranslation();
 
@@ -50,7 +52,10 @@ export default function AddressLocationFields({
         {t('profile.editAddress.locationDetails')}
       </Text>
 
-      <View style={{ marginBottom: 16 }}>
+      <View
+        style={{ marginBottom: 16 }}
+        onLayout={(e) => onFieldLayout?.('address', e.nativeEvent.layout.y)}
+      >
         <Text style={fieldLabelStyle}>{t('profile.editAddress.address')}</Text>
         <View style={inputWrapperStyle}>
           <TextInput
@@ -67,7 +72,10 @@ export default function AddressLocationFields({
         </View>
       </View>
 
-      <View style={{ marginBottom: 16 }}>
+      <View
+        style={{ marginBottom: 16 }}
+        onLayout={(e) => onFieldLayout?.('fullName', e.nativeEvent.layout.y)}
+      >
         <Text style={fieldLabelStyle}>{t('profile.editAddress.fullName')}</Text>
         <View style={inputWrapperStyle}>
           <TextInput
@@ -82,7 +90,10 @@ export default function AddressLocationFields({
         </View>
       </View>
 
-      <View style={{ marginBottom: 16 }}>
+      <View
+        style={{ marginBottom: 16 }}
+        onLayout={(e) => onFieldLayout?.('phone', e.nativeEvent.layout.y)}
+      >
         <Text style={fieldLabelStyle}>{t('profile.editAddress.phone')}</Text>
         <View style={inputWrapperStyle}>
           <TextInput

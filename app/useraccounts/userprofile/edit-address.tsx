@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Pressable,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,11 +46,27 @@ export default function EditAddress() {
   const [address, setAddress] = useState<string>('');
   const [isDefault, setIsDefault] = useState<boolean>(true);
   const [label, setLabel] = useState<AddressLabel>('home');
-  const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [savedAddressSnapshot, setSavedAddressSnapshot] = useState('');
   const [savedCoordinates, setSavedCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
   const [savedPrecision, setSavedPrecision] = useState<GeocodePrecision | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const fieldScrollY = useRef<Partial<Record<'address' | 'fullName' | 'phone', number>>>({});
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (params.id) {
@@ -109,22 +126,26 @@ export default function EditAddress() {
 
   const bottomBarPadding = Math.max(insets.bottom, 16);
   const bottomBarHeight = 96 + bottomBarPadding;
+  const scrollBottomPadding = useMemo(() => {
+    const base = bottomBarHeight + 24;
+    if (Platform.OS === 'android' && keyboardHeight > 0) {
+      return base + keyboardHeight;
+    }
+    return base;
+  }, [bottomBarHeight, keyboardHeight]);
 
   const headerKeyboardOffset = Platform.OS === 'ios' ? Math.max(insets.top, 44) + 72 : 0;
 
   const scrollToFocusedField = (field: 'address' | 'fullName' | 'phone') => {
-    setScrollEnabled(true);
-    const delay = Platform.OS === 'ios' ? 300 : 100;
+    const delay = Platform.OS === 'ios' ? 250 : 100;
+    if (field === 'phone') {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), delay);
+      return;
+    }
+    const y = fieldScrollY.current[field];
+    if (y == null) return;
     setTimeout(() => {
-      if (field === 'phone') {
-        scrollRef.current?.scrollToEnd({ animated: true });
-        return;
-      }
-      const offsets: Record<'address' | 'fullName', number> = {
-        address: 280,
-        fullName: 420,
-      };
-      scrollRef.current?.scrollTo({ y: offsets[field], animated: true });
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 24), animated: true });
     }, delay);
   };
 
@@ -159,10 +180,10 @@ export default function EditAddress() {
           <ScrollView
             ref={scrollRef}
             style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 16, paddingBottom: bottomBarHeight }}
+            contentContainerStyle={{ padding: 16, paddingBottom: scrollBottomPadding }}
             keyboardShouldPersistTaps="always"
             keyboardDismissMode="none"
-            scrollEnabled={scrollEnabled}
+            automaticallyAdjustKeyboardInsets
             nestedScrollEnabled
             showsVerticalScrollIndicator={false}
           >
@@ -179,7 +200,6 @@ export default function EditAddress() {
             savedPrecision={
               address.trim() === savedAddressSnapshot ? savedPrecision : null
             }
-            onScrollInteractionChange={(active) => setScrollEnabled(!active)}
           />
           <AddressLocationFields
             address={address}
@@ -189,6 +209,9 @@ export default function EditAddress() {
             onFullNameChange={setFullName}
             onPhoneChange={setPhone}
             onInputFocus={scrollToFocusedField}
+            onFieldLayout={(field, y) => {
+              fieldScrollY.current[field] = y;
+            }}
           />
           <AddressLabelOptions
             isDefault={isDefault}
