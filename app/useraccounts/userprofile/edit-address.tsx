@@ -1,5 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Pressable, Text, Alert, ScrollView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Pressable,
+  Text,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
@@ -41,6 +49,7 @@ export default function EditAddress() {
   const [savedAddressSnapshot, setSavedAddressSnapshot] = useState('');
   const [savedCoordinates, setSavedCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
   const [savedPrecision, setSavedPrecision] = useState<GeocodePrecision | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (params.id) {
@@ -99,6 +108,25 @@ export default function EditAddress() {
   };
 
   const bottomBarPadding = Math.max(insets.bottom, 16);
+  const bottomBarHeight = 96 + bottomBarPadding;
+
+  const headerKeyboardOffset = Platform.OS === 'ios' ? Math.max(insets.top, 44) + 72 : 0;
+
+  const scrollToFocusedField = (field: 'address' | 'fullName' | 'phone') => {
+    setScrollEnabled(true);
+    const delay = Platform.OS === 'ios' ? 300 : 100;
+    setTimeout(() => {
+      if (field === 'phone') {
+        scrollRef.current?.scrollToEnd({ animated: true });
+        return;
+      }
+      const offsets: Record<'address' | 'fullName', number> = {
+        address: 280,
+        fullName: 420,
+      };
+      scrollRef.current?.scrollTo({ y: offsets[field], animated: true });
+    }, delay);
+  };
 
   return (
     <>
@@ -123,13 +151,21 @@ export default function EditAddress() {
         }}
       />
       <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
-        <ScrollView
+        <KeyboardAvoidingView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, paddingBottom: 96 + bottomBarPadding }}
-          keyboardShouldPersistTaps="handled"
-          scrollEnabled={scrollEnabled}
-          nestedScrollEnabled
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={headerKeyboardOffset}
         >
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: bottomBarHeight }}
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode="none"
+            scrollEnabled={scrollEnabled}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
           <Text style={{ color: '#111827', fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
             {t('profile.editAddress.shippingAddress')}
           </Text>
@@ -152,6 +188,7 @@ export default function EditAddress() {
             onAddressChange={setAddress}
             onFullNameChange={setFullName}
             onPhoneChange={setPhone}
+            onInputFocus={scrollToFocusedField}
           />
           <AddressLabelOptions
             isDefault={isDefault}
@@ -159,7 +196,8 @@ export default function EditAddress() {
             onDefaultChange={setIsDefault}
             onLabelChange={setLabel}
           />
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         <View
           style={{

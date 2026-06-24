@@ -1,6 +1,5 @@
 import { API_BASE_URL } from './config';
 import {
-  geocodeAddressLocal,
   type GeocodePrecision,
   type GeocodeResult,
   type MapCoordinates,
@@ -47,13 +46,12 @@ async function geocodeViaGoogleProxy(
 
 /**
  * Geocode a typed address for map preview.
- * Primary: Google Geocoding via Laku-Dashboard (accurate, especially in Indonesia).
- * Fallback: Mapbox + OpenStreetMap when the proxy is unavailable.
+ * Uses Google Geocoding via Laku-Dashboard — same source as saved buyer addresses.
+ * Does not fall back to Mapbox/OSM (those can return inaccurate pins in Indonesia).
  */
 export async function geocodeAddress(
   address: string,
   token?: string | null,
-  proximity?: [number, number],
 ): Promise<GeocodeResult> {
   const trimmed = address.trim();
   if (!trimmed) {
@@ -62,12 +60,12 @@ export async function geocodeAddress(
 
   try {
     const googleResult = await geocodeViaGoogleProxy(trimmed, token);
-    if (googleResult?.coordinates) {
+    if (googleResult !== null) {
       return googleResult;
     }
   } catch {
-    // Dashboard unreachable — use local fallback
+    // Dashboard unreachable
   }
 
-  return geocodeAddressLocal(trimmed, proximity);
+  return { coordinates: null, address: trimmed, precision: 'area' };
 }

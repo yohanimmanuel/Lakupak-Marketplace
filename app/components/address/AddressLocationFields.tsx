@@ -9,6 +9,7 @@ interface AddressLocationFieldsProps {
   onAddressChange: (value: string) => void;
   onFullNameChange: (value: string) => void;
   onPhoneChange: (value: string) => void;
+  onInputFocus?: (field: 'address' | 'fullName' | 'phone') => void;
 }
 
 const fieldLabelStyle = {
@@ -39,6 +40,7 @@ export default function AddressLocationFields({
   onAddressChange,
   onFullNameChange,
   onPhoneChange,
+  onInputFocus,
 }: AddressLocationFieldsProps) {
   const { t } = useTranslation();
 
@@ -54,6 +56,7 @@ export default function AddressLocationFields({
           <TextInput
             value={address}
             onChangeText={onAddressChange}
+            onFocus={() => onInputFocus?.('address')}
             placeholder={t('profile.editAddress.addressPlaceholder')}
             placeholderTextColor="#9CA3AF"
             multiline
@@ -70,6 +73,7 @@ export default function AddressLocationFields({
           <TextInput
             value={fullName}
             onChangeText={onFullNameChange}
+            onFocus={() => onInputFocus?.('fullName')}
             placeholder={t('profile.editAddress.fullNamePlaceholder')}
             placeholderTextColor="#9CA3AF"
             style={inputStyle}
@@ -84,6 +88,7 @@ export default function AddressLocationFields({
           <TextInput
             value={phone}
             onChangeText={onPhoneChange}
+            onFocus={() => onInputFocus?.('phone')}
             placeholder={t('profile.editAddress.phonePlaceholder')}
             placeholderTextColor="#9CA3AF"
             keyboardType="phone-pad"
