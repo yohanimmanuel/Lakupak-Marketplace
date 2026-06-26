@@ -10,6 +10,7 @@ import {
   Animated,
   PanResponder,
   StatusBar,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Minus, Plus, Gift } from 'lucide-react-native';
@@ -47,6 +48,8 @@ export default function BuyNowModal({
   const { addItem } = useCartStore();
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
+  const [piecesInput, setPiecesInput] = useState('1');
+  const [isEditingPieces, setIsEditingPieces] = useState(false);
   const [selectedVariantOptions, setSelectedVariantOptions] = useState<Record<string, string>>({});
   const [slideAnim] = useState(new Animated.Value(screenHeight));
   const [isClosing, setIsClosing] = useState(false);
@@ -380,6 +383,32 @@ export default function BuyNowModal({
     }
   }, []);
 
+  const commitPiecesInput = useCallback(() => {
+    setIsEditingPieces(false);
+    if (!computedValues) return;
+
+    const { piecesPerPackage, stock, moq, totalPieces } = computedValues;
+    const pp = Math.max(1, piecesPerPackage);
+    const minPackages = moq ? Math.ceil(moq / pp) : 1;
+    const maxPackages = Math.max(1, Math.floor(stock / pp));
+    const parsed = parseInt(piecesInput.replace(/\D/g, ''), 10);
+
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setPiecesInput(String(totalPieces));
+      return;
+    }
+
+    const packages = Math.max(minPackages, Math.min(Math.ceil(parsed / pp), maxPackages));
+    setQuantity(packages);
+    setPiecesInput(String(packages * pp));
+  }, [computedValues, piecesInput]);
+
+  useEffect(() => {
+    if (!isEditingPieces && computedValues) {
+      setPiecesInput(String(computedValues.totalPieces));
+    }
+  }, [computedValues?.totalPieces, isEditingPieces, computedValues]);
+
   const promotionInfo = useMemo(() => {
     if (!product?.promotionDetails || !computedValues) return null;
 
@@ -610,7 +639,18 @@ export default function BuyNowModal({
                   <View style={styles.quantitySeparator} />
                   
                   <View style={styles.quantityDisplay}>
-                    <Text style={styles.quantityValue}>{quantity}</Text>
+                    <TextInput
+                      style={styles.quantityInput}
+                      value={piecesInput}
+                      onChangeText={(text) => setPiecesInput(text.replace(/\D/g, ''))}
+                      onFocus={() => setIsEditingPieces(true)}
+                      onBlur={commitPiecesInput}
+                      onSubmitEditing={commitPiecesInput}
+                      keyboardType="number-pad"
+                      returnKeyType="done"
+                      selectTextOnFocus
+                      maxLength={6}
+                    />
                   </View>
                   
                   <View style={styles.quantitySeparator} />
@@ -872,18 +912,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   quantityDisplay: {
-    minWidth: 40,
+    minWidth: 48,
     height: 32,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
   },
-  quantityValue: {
+  quantityInput: {
+    minWidth: 36,
     fontSize: 14,
     fontWeight: '600',
     color: '#0a61d7',
     textAlign: 'center',
+    padding: 0,
   },
   moqWarning: {
     backgroundColor: '#FEF3C7',
