@@ -690,7 +690,7 @@
       "shippingAddress": "Alamat Pengiriman",
       "locationDetails": "Detail Lokasi",
       "mapLoading": "Mencari lokasi…",
-      "mapEnterAddress": "Masukkan alamat untuk pratinjau di peta",
+      "mapEnterAddress": "Masukkan alamat untuk lihat di peta",
       "mapHint": "Peta akan diperbarui saat Anda mengetik alamat pengiriman",
       "mapNotFound": "Alamat tidak ditemukan di peta",
       "mapApproximate": "Pin menunjukkan perkiraan lokasi — tambahkan detail alamat untuk akurasi lebih baik",
