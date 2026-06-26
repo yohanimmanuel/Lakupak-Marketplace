@@ -118,7 +118,7 @@ interface CartState {
   toggleSelect: (itemId: string) => void
   selectAll: () => void
   deselectAll: () => void
-  clearCart: () => void
+  clearCart: (options?: { trackAbandonment?: boolean }) => Promise<void>
   clearCartLocal: () => void
   setCartOpen: (isOpen: boolean) => void
   setUserId: (userId: number | null) => void
@@ -300,8 +300,8 @@ export const useCartStore = create<CartState>()(
         })
       },
 
-      clearCart: async () => {
-        const { items, isOnline } = get()
+      clearCart: async (options?: { trackAbandonment?: boolean }) => {
+        const { isOnline } = get()
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
         
@@ -312,7 +312,11 @@ export const useCartStore = create<CartState>()(
         if (currentUserId && isOnline) {
           try {
             const token = useAuthStore.getState().token;
-            await cartService.clearCart(currentUserId, token || undefined);
+            await cartService.clearCart(
+              currentUserId,
+              token || undefined,
+              options?.trackAbandonment
+            );
           } catch (error) {
             // Silently handle errors
           }

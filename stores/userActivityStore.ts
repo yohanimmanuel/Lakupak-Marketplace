@@ -128,8 +128,11 @@ export const useUserActivityStore = create<UserActivityState>()(
       },
 
       addViewedProduct: async (productId, productData) => {
+        const authUserId = useAuthStore.getState().user?.id ?? null
         const { currentUserId, viewedProducts } = get()
-        if (!currentUserId) return
+        const userId = currentUserId ?? authUserId
+        if (!userId) return
+        if (currentUserId !== userId) set({ currentUserId: userId })
 
         // Check if we need to reset viewed products for new day
         const today = new Date().toDateString()
@@ -148,19 +151,22 @@ export const useUserActivityStore = create<UserActivityState>()(
         const updatedViewedProducts = [productId, ...filtered].slice(0, 10)
         set({ viewedProducts: updatedViewedProducts })
 
-        // API call in background
+        // Always record a view event for seller analytics (no per-user cap)
         try {
           const token = useAuthStore.getState().token
-          await userActivityService.addViewed(currentUserId, productId, productData, token || undefined)
+          await userActivityService.addViewed(userId, productId, productData, token || undefined)
         } catch (error) {
-          // Revert on error
+          // Revert local recently-viewed list on error
           set({ viewedProducts: newViewedProducts })
         }
       },
 
       addOrderedProduct: async (productId, productData) => {
+        const authUserId = useAuthStore.getState().user?.id ?? null
         const { currentUserId, orderedProducts } = get()
-        if (!currentUserId) return
+        const userId = currentUserId ?? authUserId
+        if (!userId) return
+        if (currentUserId !== userId) set({ currentUserId: userId })
 
         // Optimistic update - update UI immediately
         if (!orderedProducts.includes(productId)) {
@@ -170,7 +176,7 @@ export const useUserActivityStore = create<UserActivityState>()(
         // API call in background
         try {
           const token = useAuthStore.getState().token
-          await userActivityService.addPurchased(currentUserId, productId, productData, undefined, token || undefined)
+          await userActivityService.addPurchased(userId, productId, productData, undefined, token || undefined)
         } catch (error) {
           // Revert on error
           set({ orderedProducts: orderedProducts.filter(id => id !== productId) })

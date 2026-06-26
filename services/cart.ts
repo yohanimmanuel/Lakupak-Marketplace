@@ -227,11 +227,11 @@ class CartService {
     }
   }
 
-  async clearCart(userId: number, token?: string): Promise<boolean> {
+  async clearCart(userId: number, token?: string, trackAbandonment?: boolean): Promise<boolean> {
     try {
       const query = `
-        mutation ClearCart($userId: Int!) {
-          clearCart(userId: $userId) {
+        mutation ClearCart($userId: Int!, $trackAbandonment: Boolean) {
+          clearCart(userId: $userId, trackAbandonment: $trackAbandonment) {
             success
             message
           }
@@ -240,7 +240,7 @@ class CartService {
       
       const result = await graphqlRequest<ClearCartResponse>(
         query,
-        { userId },
+        { userId, trackAbandonment },
         token
       );
       

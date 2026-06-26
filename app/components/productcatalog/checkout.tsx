@@ -1038,8 +1038,8 @@ const copyPickupAddress = () => {
                     createdOrders.push(createdOrder);
                   }
                   
-                  // Clear cart after all orders are created
-                  await cartStore.clearCart();
+                  // Clear cart after checkout — do not count purchased items as abandoned
+                  await cartStore.clearCart({ trackAbandonment: false });
                 } else {
                   // Single product checkout
                   const orderId = `LKO-${Date.now()}${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
