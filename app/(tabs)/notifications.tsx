@@ -328,6 +328,7 @@ export default function NotificationsScreen() {
             orderId: order.orderId,
             orderStatus: order.orderStatus,
             paymentStatus: order.paymentStatus,
+            returnItemsReceivedAt: order.returnItemsReceivedAt,
             returnRequests: order.returnRequests,
           },
           t,

@@ -75,6 +75,7 @@ export type OrderPreviewInput = {
   orderId: string;
   orderStatus?: string;
   paymentStatus?: string;
+  returnItemsReceivedAt?: string | null;
   returnRequests?: Array<{ status?: string }>;
 };
 
@@ -86,6 +87,18 @@ export function getOrderPreviewStrings(order: OrderPreviewInput, t: TFunction): 
     return {
       title: t('orderUpdates.status.paymentRequiredTitle'),
       message: t('orderUpdates.status.paymentRequiredBody', { orderId }),
+    };
+  }
+
+  if (
+    order.orderStatus === 'Returned' &&
+    order.returnItemsReceivedAt &&
+    Array.isArray(order.returnRequests) &&
+    order.returnRequests.some((rr) => rr.status === 'Accepted')
+  ) {
+    return {
+      title: t('orderUpdates.status.returnItemsReceivedTitle'),
+      message: t('orderUpdates.status.returnItemsReceivedBody', { orderId }),
     };
   }
 

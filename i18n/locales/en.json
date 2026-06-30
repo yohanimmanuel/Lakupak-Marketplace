@@ -569,6 +569,8 @@
       "returnSubmittedBody": "Your return request for order {{orderId}} has been submitted. We will process it and contact you if needed.",
       "returnRejectedTitle": "Return Request Declined",
       "returnRejectedBody": "Your return request for order {{orderId}} was declined by the distributor.",
+      "returnItemsReceivedTitle": "Return Items Received",
+      "returnItemsReceivedBody": "Your return items for order {{orderId}} have been received by the distributor.",
       "orderDeliveredTitle": "Order Delivered",
       "orderDeliveredBody": "Your order {{orderId}} has been successfully delivered!",
       "orderReceivedTitle": "Order Received",
@@ -2019,6 +2021,7 @@
       "returnRequest": {
         "pending": "You have requested a return. Please wait for distributor confirmation.",
         "accepted": "Your return request has been accepted. We are processing your return/refund.",
+        "acceptedReceived": "Your return request has been accepted. We have received your return items.",
         "rejected": "Your return request was rejected. If you need help, please contact support."
       },
       "shippingSchedule": {

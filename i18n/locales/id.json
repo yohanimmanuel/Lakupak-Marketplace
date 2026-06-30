@@ -569,6 +569,8 @@
       "returnSubmittedBody": "Pengajuan retur untuk pesanan {{orderId}} telah dikirim. Kami akan memprosesnya dan menghubungi Anda jika diperlukan.",
       "returnRejectedTitle": "Pengajuan retur ditolak",
       "returnRejectedBody": "Pengajuan retur untuk pesanan {{orderId}} ditolak oleh distributor.",
+      "returnItemsReceivedTitle": "Barang retur diterima",
+      "returnItemsReceivedBody": "Barang retur pesanan {{orderId}} sudah diterima distributor.",
       "orderDeliveredTitle": "Pesanan terkirim",
       "orderDeliveredBody": "Pesanan {{orderId}} telah berhasil terkirim.",
       "orderReceivedTitle": "Pesanan diterima",
@@ -2017,6 +2019,7 @@
       "returnRequest": {
         "pending": "Anda telah mengajukan retur. Mohon tunggu konfirmasi dari distributor.",
         "accepted": "Pengajuan retur Anda diterima. Kami sedang memproses retur/refund Anda.",
+        "acceptedReceived": "Pengajuan retur Anda diterima. Barang retur Anda sudah diterima kami.",
         "rejected": "Pengajuan retur Anda ditolak. Jika butuh bantuan, silakan hubungi dukungan."
       },
       "shippingSchedule": {

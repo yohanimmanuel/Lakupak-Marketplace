@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AlertCircle, ArrowLeft, Camera, ImagePlus, X } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
-import { pickImage, takePhoto } from '../../../services/imagePicker';
+import { pickMultipleImages, takePhoto } from '../../../services/imagePicker';
 import { useTranslation } from 'react-i18next';
 import { ShimmerIcon } from '../SkeletonLoader';
 
@@ -51,12 +51,13 @@ export default function ReturnRefundModal() {
   };
 
   const handleAddPhotoFromGallery = async () => {
-    if (imageUrls.length >= 5) return;
+    const remaining = 5 - imageUrls.length;
+    if (remaining <= 0) return;
     try {
       setUploadingPhotos(true);
-      const url = await pickImage({ folder: 'returns', allowsEditing: false });
-      if (url) {
-        setImageUrls((prev) => [...prev, url].slice(0, 5));
+      const urls = await pickMultipleImages({ folder: 'returns', selectionLimit: remaining });
+      if (urls.length > 0) {
+        setImageUrls((prev) => [...prev, ...urls].slice(0, 5));
       }
     } catch {
       Alert.alert(

@@ -70,6 +70,8 @@ export interface Order {
   updatedAt?: string;
   acceptedBy?: string;
   acceptedAt?: string;
+  returnItemsReceivedAt?: string | null;
+  returnCollectedAt?: string | null;
   buyer?: {
     buyerId?: string;
     storeName?: string;
@@ -164,6 +166,8 @@ class OrdersService {
               updatedAt
               acceptedBy
               acceptedAt
+              returnItemsReceivedAt
+              returnCollectedAt
               buyer {
                 buyerId
                 storeName

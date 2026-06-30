@@ -152,6 +152,8 @@ interface Order {
   shippingOptionMinDays?: number | null;
   shippingOptionMaxDays?: number | null;
   returnStatus?: 'Accepted' | 'Rejected' | null;
+  returnItemsReceivedAt?: string | null;
+  returnCollectedAt?: string | null;
   returnRequests?: {
     id?: number;
     status: 'Pending' | 'Accepted' | 'Rejected';
@@ -631,7 +633,9 @@ export default function OrderDetailsModal() {
                 {latestReturnRequest.status === 'Pending' &&
                   t('ordersFlow.orderDetails.returnRequest.pending')}
                 {latestReturnRequest.status === 'Accepted' &&
-                  t('ordersFlow.orderDetails.returnRequest.accepted')}
+                  (orderData.returnItemsReceivedAt
+                    ? t('ordersFlow.orderDetails.returnRequest.acceptedReceived')
+                    : t('ordersFlow.orderDetails.returnRequest.accepted'))}
                 {latestReturnRequest.status === 'Rejected' &&
                   t('ordersFlow.orderDetails.returnRequest.rejected')}
               </Text>

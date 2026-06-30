@@ -77,6 +77,7 @@ export interface MarketplaceOrder {
     createdAt?: string | null;
     updatedAt?: string | null;
   }[];
+  returnItemsReceivedAt?: string | null;
   seller?: {
     name?: string | null
     companyName?: string | null
