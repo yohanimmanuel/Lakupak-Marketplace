@@ -5,6 +5,7 @@ import { MarketplaceProduct } from '../../../services/marketplace';
 import { API_BASE_URL } from '../../../services/config';
 import { useTranslation } from 'react-i18next';
 import { translateProductType } from '../../../utils/translateProductType';
+import { productTypeMatchesQuery } from '../../../utils/resolveSearchQuery';
 
 interface SearchSuggestionsProps {
   query: string;
@@ -72,10 +73,10 @@ export default function SearchSuggestions({
         }
       }
 
-      // Categories
-      if (product.category && product.category.toLowerCase().includes(queryLower)) {
+      // Categories (match English DB value or localized label, e.g. "Makanan" → Food & Beverage)
+      if (product.category) {
         const category = product.category.trim();
-        if (!suggestionSet.has(category) && suggestionsWithType.length < 8) {
+        if (productTypeMatchesQuery(category, queryLower) && !suggestionSet.has(category) && suggestionsWithType.length < 8) {
           suggestionSet.add(category);
           suggestionsWithType.push({ text: category, type: 'category' });
         }

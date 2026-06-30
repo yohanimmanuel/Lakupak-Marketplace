@@ -11,6 +11,7 @@ import ProductMarketplace from '../../components/productcatalog/ProductMarketpla
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { Product } from '../../../data/sampleProducts';
 import { useTranslation } from 'react-i18next';
+import { ProductGridSkeleton } from '../../components/SkeletonLoader';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -26,12 +27,27 @@ export default function RecentlyViewedModal() {
   const { user } = useAuthStore();
   
   const [viewedProducts, setViewedProducts] = useState<MarketplaceProduct[]>([]);
+  const [isResolving, setIsResolving] = useState(true);
 
-  // Load user activities when component mounts
   useEffect(() => {
-    if (user?.id) {
-      loadUserActivities(user.id);
+    if (!user?.id) {
+      setIsResolving(false);
+      return;
     }
+    let cancelled = false;
+    setIsResolving(true);
+    (async () => {
+      try {
+        await loadUserActivities(user.id);
+      } finally {
+        if (!cancelled) {
+          requestAnimationFrame(() => setIsResolving(false));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, loadUserActivities]);
 
   // Refresh data when page comes into focus
@@ -43,11 +59,14 @@ export default function RecentlyViewedModal() {
     }, [user?.id, refreshUserActivities])
   );
 
-  // Update products immediately when store changes
+  // Update products only after initial resolve (avoid cached data skipping skeleton)
   useEffect(() => {
+    if (isResolving) return;
     const viewed = getViewedProducts(products);
     setViewedProducts(viewed);
-  }, [products, getViewedProducts, storeViewedProducts]);
+  }, [isResolving, products, getViewedProducts, storeViewedProducts]);
+
+  const showSkeleton = !!user?.id && isResolving;
 
   // Get related products from websocket-enabled products store
   const relatedProducts = React.useMemo(() => {
@@ -176,7 +195,9 @@ export default function RecentlyViewedModal() {
       
       <ScrollView style={styles.scrollView}>
 
-        {viewedProducts.length === 0 ? (
+        {showSkeleton ? (
+          <ProductGridSkeleton />
+        ) : viewedProducts.length === 0 ? (
           renderEmptyState()
         ) : (
           <View style={styles.productsGrid}>

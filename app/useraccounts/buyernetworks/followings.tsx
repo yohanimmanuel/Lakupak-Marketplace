@@ -7,6 +7,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { listFollowedDistributors, type FollowedDistributor } from '../../../services/distributorFollowing';
 import { API_BASE_URL } from '../../../services/config';
 import { useTranslation } from 'react-i18next';
+import { FollowingsListSkeleton } from '../../components/SkeletonLoader';
 
 const primaryBlue = '#0a61d7';
 
@@ -25,6 +26,7 @@ export default function FollowingsScreen() {
   const { t } = useTranslation();
 
   const [items, setItems] = useState<FollowedDistributor[]>([]);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,15 +36,19 @@ export default function FollowingsScreen() {
     async (silent = false) => {
       if (!token) {
         setItems([]);
+        setLoading(false);
         return;
       }
       if (!silent) setError(null);
+      if (!silent) setLoading(true);
       try {
         const data = await listFollowedDistributors(token);
         setItems(data);
         setError(null);
       } catch {
         setError(t('followingsPage.errors.failedToLoad'));
+      } finally {
+        if (!silent) setLoading(false);
       }
     },
     [token, t]
@@ -101,6 +107,8 @@ export default function FollowingsScreen() {
             <Text style={styles.emptyTitle}>{t('followingsPage.states.loginRequiredTitle')}</Text>
             <Text style={styles.emptyText}>{t('followingsPage.states.loginRequiredBody')}</Text>
           </View>
+        ) : loading && items.length === 0 ? (
+          <FollowingsListSkeleton />
         ) : items.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>{t('followingsPage.states.emptyTitle')}</Text>

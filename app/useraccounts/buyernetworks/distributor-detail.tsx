@@ -89,6 +89,7 @@ export default function DistributorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token, user: authUser } = useAuthStore();
   const storeOrders = useDataStore(state => state.orders);
+  const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const products = useDataStore(state => state.products);
   const [distributor, setDistributor] = useState<Distributor | null>(null);
@@ -114,7 +115,8 @@ export default function DistributorDetailScreen() {
     if (id && authUser?.id && token) {
       loadDistributorData(parseInt(id), storeOrders);
     } else {
-      setIsLoading(false);
+      // Wait for auth hydration to avoid flashing the not-found state.
+      if (!id) setIsLoading(false);
     }
   }, [id, authUser?.id, token, storeOrders, products]);
 
@@ -132,6 +134,8 @@ export default function DistributorDetailScreen() {
       }) as OrderResponse[];
 
       if (distributorOrders.length === 0) {
+        // Orders may still be loading (websocket/refresh). Keep skeleton until we know for sure.
+        if (isOrdersLoading) return;
         setDistributor(null);
         setOrders([]);
         return;

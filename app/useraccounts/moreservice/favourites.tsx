@@ -11,6 +11,7 @@ import ProductMarketplace from '../../components/productcatalog/ProductMarketpla
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { Product } from '../../../data/sampleProducts';
 import { useTranslation } from 'react-i18next';
+import { ProductGridSkeleton } from '../../components/SkeletonLoader';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -25,12 +26,27 @@ export default function FavouritesModal() {
   const { user } = useAuthStore();
   
   const [likedProducts, setLikedProducts] = useState<MarketplaceProduct[]>([]);
+  const [isResolving, setIsResolving] = useState(true);
 
-  // Load user activities when component mounts
   useEffect(() => {
-    if (user?.id) {
-      loadUserActivities(user.id);
+    if (!user?.id) {
+      setIsResolving(false);
+      return;
     }
+    let cancelled = false;
+    setIsResolving(true);
+    (async () => {
+      try {
+        await loadUserActivities(user.id);
+      } finally {
+        if (!cancelled) {
+          requestAnimationFrame(() => setIsResolving(false));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, loadUserActivities]);
 
   // Refresh data when page comes into focus
@@ -42,11 +58,14 @@ export default function FavouritesModal() {
     }, [user?.id, refreshUserActivities])
   );
 
-  // Update products immediately when store changes
+  // Update products only after initial resolve (avoid cached data skipping skeleton)
   useEffect(() => {
+    if (isResolving) return;
     const liked = getLikedProducts(products);
     setLikedProducts(liked);
-  }, [products, getLikedProducts, storeLikedProducts]);
+  }, [isResolving, products, getLikedProducts, storeLikedProducts]);
+
+  const showSkeleton = !!user?.id && isResolving;
 
   // Get related products from websocket-enabled products store
   const relatedProducts = React.useMemo(() => {
@@ -176,7 +195,9 @@ export default function FavouritesModal() {
       
       <ScrollView style={styles.scrollView}>
 
-        {likedProducts.length === 0 ? (
+        {showSkeleton ? (
+          <ProductGridSkeleton />
+        ) : likedProducts.length === 0 ? (
           renderEmptyState()
         ) : (
           <View style={styles.productsGrid}>

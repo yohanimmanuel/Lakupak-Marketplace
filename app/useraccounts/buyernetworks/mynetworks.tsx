@@ -88,9 +88,10 @@ export default function MyNetworksScreen() {
   const iconGray = '#6B7280';
   const { t, i18n } = useTranslation();
   const locale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
+  const canLoad = !!token && !!authUser?.id;
 
   useEffect(() => {
-    if (!authUser?.id || !token) {
+    if (!canLoad) {
       setDistributors([]);
       setIsLoading(false);
       return;
@@ -226,7 +227,7 @@ export default function MyNetworksScreen() {
     };
 
     loadDistributors();
-  }, [authUser?.id, token, orders, products]);
+  }, [canLoad, orders, products]);
 
   useEffect(() => {
     if (authUser?.id && token) {
@@ -264,7 +265,7 @@ export default function MyNetworksScreen() {
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primaryBlue} />}
       >
-        {(isLoading || isOrdersLoading) && distributors.length === 0 ? (
+        {(isLoading || isOrdersLoading) && distributors.length === 0 && canLoad ? (
           <MyNetworksListSkeleton />
         ) : distributors.length === 0 ? (
           <View style={styles.emptyContainer}>

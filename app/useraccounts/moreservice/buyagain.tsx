@@ -11,6 +11,7 @@ import ProductMarketplace from '../../components/productcatalog/ProductMarketpla
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { Product } from '../../../data/sampleProducts';
 import { useTranslation } from 'react-i18next';
+import { ProductGridSkeleton } from '../../components/SkeletonLoader';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -25,16 +26,35 @@ export default function BuyAgainModal() {
   const { user, token } = useAuthStore();
   
   const [orderedProducts, setOrderedProducts] = useState<MarketplaceProduct[]>([]);
+  const [isResolving, setIsResolving] = useState(true);
 
-  // Load orders when component mounts
   useEffect(() => {
-    if (user?.id && token) {
-      loadOrdersData(false);
+    if (!user?.id || !token) {
+      setIsResolving(false);
+      return;
     }
+    let cancelled = false;
+    setIsResolving(true);
+    (async () => {
+      try {
+        await loadOrdersData(false);
+      } finally {
+        if (!cancelled) {
+          requestAnimationFrame(() => setIsResolving(false));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, token, loadOrdersData]);
 
-  // Extract ordered products from orders
+  const showSkeleton = !!user?.id && isResolving;
+
+  // Extract ordered products from orders after initial resolve
   useEffect(() => {
+    if (isResolving) return;
+
     if (orders.length > 0 && products.length > 0) {
       // Get unique product IDs from orders
       const orderProductIds = orders.flatMap(order => 
@@ -51,7 +71,7 @@ export default function BuyAgainModal() {
     } else {
       setOrderedProducts([]);
     }
-  }, [orders, products]);
+  }, [isResolving, orders, products]);
 
   // Get related products from websocket-enabled products store
   const relatedProducts = React.useMemo(() => {
@@ -187,7 +207,9 @@ export default function BuyAgainModal() {
       
       <ScrollView style={styles.scrollView}>
 
-        {orderedProducts.length === 0 ? (
+        {showSkeleton ? (
+          <ProductGridSkeleton />
+        ) : orderedProducts.length === 0 ? (
           renderEmptyState()
         ) : (
           <View style={styles.productsGrid}>

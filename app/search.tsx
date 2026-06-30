@@ -2,17 +2,16 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Filter, Search as SearchIcon, X, ChevronDown } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft, Filter, ChevronDown } from 'lucide-react-native';
 import { useAuthStore } from '../stores/authStore';
 import { useDataStore } from '../stores/dataStore';
 import { useCartStore } from '../stores/cartStore';
@@ -25,12 +24,14 @@ import PopularCategories from './components/searchengine/PopularCategories';
 import TopBrands from './components/searchengine/TopBrands';
 import TopDistributors from './components/searchengine/TopDistributors';
 import SearchResults from './components/searchengine/SearchResults';
+import SearchInputBar, { type SearchInputBarHandle } from './components/searchengine/SearchInputBar';
 import SearchSuggestions from './components/searchengine/SearchSuggestions';
 import SearchFilterSheet, { type SearchFilters, type ShippingOptionKey } from './components/searchengine/SearchFilterSheet';
 import QuickFilterPanel, { type QuickFilterSection } from './components/searchengine/QuickFilterPanel';
 import { Product } from '../data/sampleProducts';
 import { useTranslation } from 'react-i18next';
 import { translateProductType } from '../utils/translateProductType';
+import { resolveSearchQuery, resolveProductTypeKey } from '../utils/resolveSearchQuery';
 
 /** Higher = better match. Weak matches stay included but sink to the bottom. */
 function computeRelevanceScore(query: string, p: MarketplaceProduct): number {
@@ -60,8 +61,8 @@ function computeRelevanceScore(query: string, p: MarketplaceProduct): number {
 }
 
 export default function SearchScreen() {
-  const HEADER_TOP_PADDING = 33;
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const params = useLocalSearchParams();
   const token = useAuthStore(s => s.token);
@@ -86,8 +87,9 @@ export default function SearchScreen() {
     [allProducts]
   );
 
-  // Search state
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  // composeQuery drives suggestions UI; input text lives inside SearchInputBar only.
+  const [composeQuery, setComposeQuery] = useState('');
+  const [inputSeed, setInputSeed] = useState('');
   const [activeQuery, setActiveQuery] = useState<string>('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [isLoadingSearchHistory, setIsLoadingSearchHistory] = useState(false);
@@ -108,8 +110,8 @@ export default function SearchScreen() {
   const [filtersSection, setFiltersSection] = useState<import('./components/searchengine/SearchFilterSheet').SearchFilterSection>('all');
   const [quickFilterSection, setQuickFilterSection] = useState<QuickFilterSection | null>(null);
   // Used to anchor dropdowns/sheets under specific header rows.
-  const [searchBarOffset, setSearchBarOffset] = useState(HEADER_TOP_PADDING);
-  const [headerOffset, setHeaderOffset] = useState(HEADER_TOP_PADDING);
+  const [searchBarOffset, setSearchBarOffset] = useState(insets.top + 12);
+  const [headerOffset, setHeaderOffset] = useState(insets.top + 12);
   const [filters, setFilters] = useState<SearchFilters>({
     shippedFrom: [],
     shippingOption: [],
@@ -230,12 +232,9 @@ export default function SearchScreen() {
   }, [filteredResults, selectedSort, activeQuery]);
 
   // Debounce timer
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<TextInput>(null);
-  const isDistributorSearchRef = useRef(false);
-  const isClearingRef = useRef(false);
-  const isManualEditingRef = useRef(false);
-  const suppressNextParamsEffectRef = useRef(false);
+  const searchInputRef = useRef<SearchInputBarHandle>(null);
+  const didBootstrapFromRouteRef = useRef(false);
+  const searchRequestIdRef = useRef(0);
   const lastDidYouMeanAppliedFromQueryRef = useRef<string>('');
 
   const loadRecentSearches = useCallback(async () => {
@@ -257,6 +256,25 @@ export default function SearchScreen() {
     }
   }, [userId, token]);
 
+  const openSearchPage = useCallback(
+    (params: { q?: string; category?: string }) => {
+      const q = params.q?.trim();
+      if (!q && !params.category) return;
+
+      Keyboard.dismiss();
+      searchRequestIdRef.current += 1;
+
+      router.push({
+        pathname: '/search',
+        params: {
+          q: q || undefined,
+          category: params.category && params.category !== 'All' ? params.category : undefined,
+        },
+      });
+    },
+    [router],
+  );
+
   const performSearch = useCallback(async (
     query: string,
     category: string = selectedCategory,
@@ -272,21 +290,31 @@ export default function SearchScreen() {
       return;
     }
 
+    const requestId = ++searchRequestIdRef.current;
+    const { displayQuery, apiQuery, category: resolvedCategory } = resolveSearchQuery(query);
+    const effectiveCategory =
+      category !== 'All'
+        ? (resolveProductTypeKey(category) ?? category)
+        : resolvedCategory;
+
     try {
       if (page === 1) {
         setLoading(true);
       }
 
       const result = await marketplaceService.getProducts({
-        search: query.trim(),
-        category: category !== 'All' ? category : undefined,
+        search: apiQuery.trim(),
+        category: effectiveCategory,
         page,
         limit: 50,
         token: token || undefined,
       });
+
+      // Drop stale responses from an older committed search.
+      if (requestId !== searchRequestIdRef.current) return;
       // Filter results by company/distributor name if query matches a distributor name
       let filteredProducts = result.products;
-      const queryLower = query.trim().toLowerCase();
+      const queryLower = displayQuery.toLowerCase();
       const matchingDistributor = topDistributors.find(d => d.name.toLowerCase().trim() === queryLower);
       
       if (matchingDistributor) {
@@ -345,7 +373,7 @@ export default function SearchScreen() {
       if (!append && !matchingDistributor) {
         const suggestion = typeof result.didYouMean === 'string' ? result.didYouMean.trim() : '';
         const prevQ = String(lastDidYouMeanAppliedFromQueryRef.current || '').trim().toLowerCase();
-        const curQ = query.trim().toLowerCase();
+        const curQ = displayQuery.toLowerCase();
         const sugQ = suggestion.trim().toLowerCase();
         // Suppress "reverse" suggestions (after applying didYouMean, don't suggest the original typo back).
         if (suggestion && sugQ !== curQ && (!prevQ || sugQ !== prevQ)) {
@@ -356,7 +384,7 @@ export default function SearchScreen() {
       }
       setCurrentPage(page);
       setHasMore(matchingDistributor ? false : page < result.pagination.totalPages);
-      setActiveQuery(query);
+      setActiveQuery(displayQuery);
 
 
       // Shopee-style "category pills": prefer server facets (productType), fallback to local scan.
@@ -377,37 +405,27 @@ export default function SearchScreen() {
 
       // Save to recent searches (only on first page)
       if (page === 1 && userId) {
-        await searchHistoryService.addRecentSearch(userId, query.trim(), token || undefined);
+        await searchHistoryService.addRecentSearch(userId, displayQuery, token || undefined);
         await loadRecentSearches();
       }
 
-      // Update URL params for both q and category
-      if (page === 1) {
-        const params: { q?: string; category?: string } = { q: query.trim() };
-        // Clear category param if category is 'All' or not specified, otherwise set it
-        if (category && category !== 'All') {
-          params.category = category;
-        } else {
-          params.category = undefined; // Remove category param
-        }
-        suppressNextParamsEffectRef.current = true;
-        router.setParams(params);
-        // Also update selectedCategory state to match the category param
-        if (category && category !== 'All') {
-          setSelectedCategory(category);
-        } else {
-          setSelectedCategory('All');
-        }
+      if (effectiveCategory) {
+        setSelectedCategory(effectiveCategory);
+      } else if (page === 1) {
+        setSelectedCategory('All');
       }
     } catch (error) {
+      if (requestId !== searchRequestIdRef.current) return;
       setSearchResults([]);
       setTotalCount(0);
       setDidYouMean(null);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === searchRequestIdRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, [selectedCategory, selectedSort, token, userId, loadRecentSearches, router, topDistributors, allProducts]);
+  }, [selectedCategory, selectedSort, token, userId, loadRecentSearches, topDistributors, allProducts]);
 
   // Load recent searches on mount and when user changes
   // Clear immediately when userId changes, then load new data
@@ -422,173 +440,82 @@ export default function SearchScreen() {
     }
   }, [userId]); // Only depend on userId - loadRecentSearches is stable and depends on userId/token
 
-  // Handle initial query and category from URL params
+  // Seed this screen once from route params (new router.push entry). Never re-sync params → input while typing.
   useEffect(() => {
-    // Don't process if we're in the middle of clearing
-    if (isClearingRef.current) {
+    if (didBootstrapFromRouteRef.current) return;
+    didBootstrapFromRouteRef.current = true;
+
+    const paramQ = typeof params.q === 'string' ? params.q.trim() : '';
+    const paramCat = typeof params.category === 'string' ? params.category.trim() : '';
+    if (!paramQ && !paramCat) return;
+
+    if (paramCat) {
+      const categoryKey = resolveProductTypeKey(paramCat) ?? paramCat;
+      setSelectedCategory(categoryKey);
+      setFilters((p) => ({ ...p, category: [categoryKey] }));
+      const displayQ = paramQ || translateProductType(categoryKey);
+      setInputSeed(displayQ);
+      setComposeQuery(displayQ);
+      setActiveQuery(displayQ);
+      void performSearch(displayQ, categoryKey, 'relevance', 1);
       return;
     }
 
-    if (suppressNextParamsEffectRef.current) {
-      suppressNextParamsEffectRef.current = false;
-      return;
-    }
-    
-    // Don't process if user is manually editing the search input
-    if (isManualEditingRef.current) {
-      return;
-    }
-    
-    // Handle category parameter (filtering) without overwriting the user's search term.
-    // If there's also a q param, category should ONLY narrow results.
-    if (params.category && typeof params.category === 'string') {
-      const categoryName = params.category;
-      setSelectedCategory(categoryName);
-      setFilters((p) => ({ ...p, category: [categoryName] }));
-
-      if (params.q && typeof params.q === 'string' && params.q.trim()) {
-        if (params.q !== searchQuery || activeQuery !== params.q || selectedCategory !== categoryName) {
-          setSearchQuery(params.q);
-          setActiveQuery(params.q);
-          performSearch(params.q, categoryName, 'relevance', 1);
-        }
-        isDistributorSearchRef.current = false;
-        return;
-      }
-
-      // If no q param exists, treat category param as a category-browse entry point.
-      setSearchQuery(categoryName);
-      setActiveQuery(categoryName);
-      performSearch(categoryName, categoryName, 'relevance', 1);
-      isDistributorSearchRef.current = false;
-      return;
-    }
-    
-    // Only process if params.q exists and is different from current query
-    if (params.q && typeof params.q === 'string' && !isDistributorSearchRef.current) {
-      // Only update if the query actually changed
-      if (params.q !== searchQuery) {
-        setSearchQuery(params.q);
-        setActiveQuery(params.q);
-        performSearch(params.q, 'All', 'relevance', 1);
-      }
-    }
-    // Don't auto-clear when params.q is undefined - only clear when explicitly cleared via handleClearSearch
-    // Reset the flag after processing
-    isDistributorSearchRef.current = false;
-  }, [params.q, params.category, performSearch, searchQuery]);
+    setInputSeed(paramQ);
+    setComposeQuery(paramQ);
+    setActiveQuery(paramQ);
+    void performSearch(paramQ, 'All', 'relevance', 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only bootstrap for this stack entry
+  }, []);
 
 
-  const handleSearchFocus = () => {
-    // When search bar is focused, show suggestions (not results)
-    // Clear activeQuery and results, but keep searchQuery
+  const handleSearchFocus = useCallback(() => {
+    searchRequestIdRef.current += 1;
+
     if (activeQuery || searchResults.length > 0) {
-      isManualEditingRef.current = true;
       setActiveQuery('');
       setSearchResults([]);
       setTotalCount(0);
       setDidYouMean(null);
       setLoading(false);
     }
-  };
+  }, [activeQuery, searchResults.length]);
 
-  const handleSearchChange = (text: string) => {
-    // Mark that user is manually editing
-    isManualEditingRef.current = true;
-    
-    setSearchQuery(text);
-
-    // Clear any pending debounce
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
+  const handleComposeChange = useCallback((text: string) => {
+    setComposeQuery(text);
 
     if (!text.trim()) {
-      // Clear results if query is empty
       setSearchResults([]);
       setTotalCount(0);
       setActiveQuery('');
       setLoading(false);
-      // Clear URL params to prevent useEffect from re-triggering
-      router.setParams({ q: undefined });
-      // Keep isManualEditingRef as true to prevent useEffect from restoring the query
-    } else {
-      // When typing, always show suggestions (clear active query if exists)
-      if (activeQuery) {
-        setActiveQuery('');
-        setSearchResults([]);
-        setTotalCount(0);
-        setLoading(false);
-      }
-    }
-    // Don't perform search here - only show suggestions
-  };
-
-  const handleSearchSubmit = () => {
-    if (searchQuery.trim()) {
-      // Reset manual editing flag when search is submitted
-      isManualEditingRef.current = false;
-      
-      // Clear category filter when user submits manual query
-      setSelectedCategory('All');
-      
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-      // Clear previous results and show loading immediately
+    } else if (activeQuery) {
+      setActiveQuery('');
       setSearchResults([]);
       setTotalCount(0);
-      setLoading(true);
-      // Perform search with 'All' category (no category filter for manual queries)
-      performSearch(searchQuery.trim(), 'All', selectedSort, 1);
+      setLoading(false);
     }
-  };
+  }, [activeQuery]);
+
+  const handleSearchSubmit = useCallback((text: string) => {
+    const q = text.trim();
+    if (!q) return;
+
+    setSelectedCategory('All');
+    openSearchPage({ q });
+  }, [openSearchPage]);
 
   const handleSuggestionPress = (suggestion: string) => {
-    isManualEditingRef.current = false; // Reset manual editing flag when selecting suggestion
-    setSearchQuery(suggestion);
-    setSearchResults([]);
-    setTotalCount(0);
-    setLoading(true);
-    performSearch(suggestion, selectedCategory, selectedSort, 1);
-  };
-
-  const handleClearSearch = () => {
-    isClearingRef.current = true;
-    isManualEditingRef.current = false; // Reset manual editing flag when clearing
-    setSearchQuery('');
-    setActiveQuery('');
-    setSearchResults([]);
-    setTotalCount(0);
-    setSelectedCategory('All');
-    setSelectedSort('relevance');
-    setFilters({
-      shippedFrom: [],
-      shippingOption: [],
-      salesChannel: [],
-      ratingMin: null,
-      minPrice: '',
-      maxPrice: '',
-      category: [],
-    });
-    // Clear both q and category URL params
-    router.setParams({ q: undefined, category: undefined });
-    inputRef.current?.focus();
-    // Reset the flag after a short delay to allow URL params to update
-    setTimeout(() => {
-      isClearingRef.current = false;
-    }, 200);
+    const categoryKey = resolveProductTypeKey(suggestion);
+    if (categoryKey) {
+      openSearchPage({ q: translateProductType(categoryKey), category: categoryKey });
+      return;
+    }
+    openSearchPage({ q: suggestion });
   };
 
   const handleRecentSearchPress = (query: string) => {
-    Keyboard.dismiss();
-    isManualEditingRef.current = false; // Reset manual editing flag when selecting recent search
-    setSearchQuery(query);
-    setActiveQuery(query); // Set immediately to prevent suggestions
-    setSearchResults([]);
-    setTotalCount(0);
-    setLoading(true);
-    performSearch(query, selectedCategory, selectedSort, 1);
+    openSearchPage({ q: query });
   };
 
   const handleRemoveRecentSearch = async (query: string) => {
@@ -616,135 +543,15 @@ export default function SearchScreen() {
   };
 
   const handleCategoryPress = (categoryName: string) => {
-    Keyboard.dismiss();
-    isManualEditingRef.current = false; // Reset manual editing flag when selecting category
-    setSearchQuery(categoryName);
-    setActiveQuery(categoryName); // Set immediately to prevent suggestions
-    setSearchResults([]);
-    setTotalCount(0);
-    setLoading(true);
-    performSearch(categoryName, 'All', selectedSort, 1);
+    const categoryKey = resolveProductTypeKey(categoryName) ?? categoryName;
+    openSearchPage({
+      q: translateProductType(categoryKey),
+      category: categoryKey,
+    });
   };
 
-  const handleDistributorPress = async (distributorName: string) => {
-    Keyboard.dismiss();
-    // Set flag to prevent useEffect from overwriting results
-    isDistributorSearchRef.current = true;
-    isManualEditingRef.current = false; // Reset manual editing flag when selecting distributor
-    
-    setSearchQuery(distributorName);
-    setActiveQuery(distributorName); // Set immediately to prevent suggestions
-    setSearchResults([]);
-    setTotalCount(0);
-    setLoading(true);
-    
-    try {
-      // First, try API search
-      const result = await marketplaceService.getProducts({
-        search: distributorName.trim(),
-        page: 1,
-        limit: 50,
-        token: token || undefined,
-      });
-
-      // Filter API results to match distributor exactly
-      const filteredResults = result.products.filter(product => {
-        const companyName = product.seller?.company?.name?.toLowerCase().trim();
-        const searchName = distributorName.toLowerCase().trim();
-        return companyName === searchName;
-      });
-
-      if (filteredResults.length > 0) {
-        // Use filtered API results
-        let sortedProducts = [...filteredResults];
-        if (selectedSort === 'price_low') {
-          sortedProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
-        } else if (selectedSort === 'price_high') {
-          sortedProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
-        }
-
-        setSearchResults(sortedProducts);
-        setTotalCount(filteredResults.length);
-        setAvailableCategories(Array.from(new Set(sortedProducts.map(p => p.category).filter(Boolean))));
-        setCurrentPage(1);
-        setHasMore(false);
-      } else {
-        // Fallback to client-side filtering from cached products
-        const cachedFiltered = allProducts.filter(product => {
-          const companyName = product.seller?.company?.name?.toLowerCase().trim();
-          const searchName = distributorName.toLowerCase().trim();
-          return companyName === searchName;
-        });
-
-        if (cachedFiltered.length > 0) {
-          let sortedProducts = [...cachedFiltered];
-          if (selectedSort === 'price_low') {
-            sortedProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
-          } else if (selectedSort === 'price_high') {
-            sortedProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
-          }
-
-          setSearchResults(sortedProducts);
-          setTotalCount(sortedProducts.length);
-          setAvailableCategories(Array.from(new Set(sortedProducts.map(p => p.category).filter(Boolean))));
-          setCurrentPage(1);
-          setHasMore(false);
-        } else {
-          // No results found
-          setSearchResults([]);
-          setTotalCount(0);
-          setAvailableCategories([]);
-          setCurrentPage(1);
-          setHasMore(false);
-        }
-      }
-
-      // Save to recent searches
-      if (userId) {
-        await searchHistoryService.addRecentSearch(userId, distributorName.trim(), token || undefined);
-        await loadRecentSearches();
-      }
-
-      // Update URL params to show distributor name in search bar
-      // Do this after search completes to avoid triggering useEffect during search
-      router.setParams({ q: distributorName.trim() });
-      
-      // Reset flag after a delay to allow URL params to update
-      setTimeout(() => {
-        isDistributorSearchRef.current = false;
-      }, 100);
-    } catch (error) {
-      // On error, try client-side filtering
-      const cachedFiltered = allProducts.filter(product => {
-        const companyName = product.seller?.company?.name?.toLowerCase().trim();
-        const searchName = distributorName.toLowerCase().trim();
-        return companyName === searchName;
-      });
-
-      if (cachedFiltered.length > 0) {
-        let sortedProducts = [...cachedFiltered];
-        if (selectedSort === 'price_low') {
-          sortedProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
-        } else if (selectedSort === 'price_high') {
-          sortedProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
-        }
-
-        setSearchResults(sortedProducts);
-        setTotalCount(sortedProducts.length);
-        setAvailableCategories(Array.from(new Set(sortedProducts.map(p => p.category).filter(Boolean))));
-      } else {
-        setSearchResults([]);
-        setTotalCount(0);
-        setAvailableCategories([]);
-      }
-      setCurrentPage(1);
-      setHasMore(false);
-      
-      // Reset flag in case of error
-      isDistributorSearchRef.current = false;
-    } finally {
-      setLoading(false);
-    }
+  const handleDistributorPress = (distributorName: string) => {
+    openSearchPage({ q: distributorName });
   };
 
   const handleCategoryFilter = (category: string) => {
@@ -811,8 +618,8 @@ export default function SearchScreen() {
     [searchResults, toggleLikedProduct]
   );
 
-  const showInitialState = !searchQuery.trim() && !activeQuery && searchResults.length === 0 && !loading;
-  const showSuggestions = searchQuery.trim() && !activeQuery && searchResults.length === 0 && !loading;
+  const showInitialState = !composeQuery.trim() && !activeQuery && searchResults.length === 0 && !loading;
+  const showSuggestions = composeQuery.trim() && !activeQuery && searchResults.length === 0 && !loading;
   const showResults = activeQuery || searchResults.length > 0 || loading;
   const isPrice = selectedSort === 'price_low' || selectedSort === 'price_high';
   const priceAsc = selectedSort !== 'price_high';
@@ -850,157 +657,144 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          header: () => (
-            <View style={styles.headerContainer} onLayout={(e) => setHeaderOffset(e.nativeEvent.layout.height)}>
-              <View
-                style={styles.header}
-                onLayout={(e) => setSearchBarOffset(e.nativeEvent.layout.height + HEADER_TOP_PADDING)}
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <View
+        style={[styles.headerContainer, { paddingTop: insets.top }]}
+        onLayout={(e) => setHeaderOffset(e.nativeEvent.layout.height)}
+      >
+        <View
+          style={styles.header}
+          onLayout={(e) => setSearchBarOffset(e.nativeEvent.layout.height + insets.top)}
+        >
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <ArrowLeft color="#0a61d7" size={24} />
+          </Pressable>
+
+          <SearchInputBar
+            ref={searchInputRef}
+            seedText={inputSeed}
+            placeholder={t('search.placeholder')}
+            onChangeText={handleComposeChange}
+            onFocus={handleSearchFocus}
+            onSubmit={handleSearchSubmit}
+          />
+
+          {showResults ? (
+            <Pressable
+              onPress={() => {
+                setFiltersSection('all');
+                setQuickFilterSection(null);
+                setFiltersOpen((v) => !v);
+              }}
+              style={styles.filterButton}
+              hitSlop={10}
+            >
+              <Filter color="#0a61d7" size={20} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        {showResults ? (
+          <View style={styles.filterTabsWrap}>
+            <View style={styles.filterTabsRow}>
+              <Pressable onPress={() => handleSortChange('relevance')} style={styles.filterTabBtn} accessibilityRole="button">
+                <Text style={[styles.filterTabText, selectedSort === 'relevance' && styles.filterTabTextActive]}>
+                  {t('search.sort.relevance')}
+                </Text>
+                {selectedSort === 'relevance' ? <View style={styles.filterUnderlineFull} /> : null}
+              </Pressable>
+              <Pressable onPress={() => handleSortChange('newest')} style={styles.filterTabBtn} accessibilityRole="button">
+                <Text style={[styles.filterTabText, selectedSort === 'newest' && styles.filterTabTextActive]}>
+                  {t('search.sort.latest')}
+                </Text>
+                {selectedSort === 'newest' ? <View style={styles.filterUnderlineFull} /> : null}
+              </Pressable>
+              <Pressable onPress={() => handleSortChange('top_sales')} style={styles.filterTabBtn} accessibilityRole="button">
+                <Text style={[styles.filterTabText, selectedSort === 'top_sales' && styles.filterTabTextActive]}>
+                  {t('search.sort.topSales')}
+                </Text>
+                {selectedSort === 'top_sales' ? <View style={styles.filterUnderlineFull} /> : null}
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  if (isPrice) {
+                    handleSortChange(priceAsc ? 'price_high' : 'price_low');
+                    return;
+                  }
+                  handleSortChange('price_low');
+                }}
+                style={styles.filterTabBtn}
+                accessibilityRole="button"
               >
-                <Pressable onPress={() => router.back()} style={styles.backButton}>
-                  <ArrowLeft color="#0a61d7" size={24} />
-                </Pressable>
-
-                <View style={styles.searchBar}>
-                  <SearchIcon color="#6B7280" size={20} />
-                  <TextInput
-                    ref={inputRef}
-                    value={searchQuery}
-                    onChangeText={handleSearchChange}
-                    onFocus={handleSearchFocus}
-                    onSubmitEditing={handleSearchSubmit}
-                    placeholder={t('search.placeholder')}
-                    style={styles.searchInput}
-                    placeholderTextColor="#6B7280"
-                    returnKeyType="search"
+                <View style={styles.filterTabInline}>
+                  <Text style={[styles.filterTabText, isPrice && styles.filterTabTextActive]}>
+                    {t('search.sort.price')}
+                  </Text>
+                  <ChevronDown
+                    size={14}
+                    color={isPrice ? '#0a61d7' : '#6b7280'}
+                    style={{ transform: [{ rotate: isPrice && !priceAsc ? '180deg' : '0deg' }] }}
                   />
-                  {searchQuery ? (
-                    <Pressable onPress={handleClearSearch} style={styles.clearButton}>
-                      <X color="#6B7280" size={20} />
-                    </Pressable>
-                  ) : null}
                 </View>
-
-                {showResults ? (
-                  <Pressable
-                    onPress={() => {
-                      setFiltersSection('all');
-                      setQuickFilterSection(null);
-                      setFiltersOpen((v) => !v);
-                    }}
-                    style={styles.filterButton}
-                    hitSlop={10}
-                  >
-                    <Filter color="#0a61d7" size={20} />
-                  </Pressable>
-                ) : null}
-              </View>
-
-              {showResults ? (
-                <View style={styles.filterTabsWrap}>
-                  <View style={styles.filterTabsRow}>
-                    <Pressable onPress={() => handleSortChange('relevance')} style={styles.filterTabBtn} accessibilityRole="button">
-                      <Text style={[styles.filterTabText, selectedSort === 'relevance' && styles.filterTabTextActive]}>
-                        {t('search.sort.relevance')}
-                      </Text>
-                      {selectedSort === 'relevance' ? <View style={styles.filterUnderlineFull} /> : null}
-                    </Pressable>
-                    <Pressable onPress={() => handleSortChange('newest')} style={styles.filterTabBtn} accessibilityRole="button">
-                      <Text style={[styles.filterTabText, selectedSort === 'newest' && styles.filterTabTextActive]}>
-                        {t('search.sort.latest')}
-                      </Text>
-                      {selectedSort === 'newest' ? <View style={styles.filterUnderlineFull} /> : null}
-                    </Pressable>
-                    <Pressable onPress={() => handleSortChange('top_sales')} style={styles.filterTabBtn} accessibilityRole="button">
-                      <Text style={[styles.filterTabText, selectedSort === 'top_sales' && styles.filterTabTextActive]}>
-                        {t('search.sort.topSales')}
-                      </Text>
-                      {selectedSort === 'top_sales' ? <View style={styles.filterUnderlineFull} /> : null}
-                    </Pressable>
-                    <Pressable
-                      onPress={() => {
-                        if (isPrice) {
-                          handleSortChange(priceAsc ? 'price_high' : 'price_low');
-                          return;
-                        }
-                        handleSortChange('price_low');
-                      }}
-                      style={styles.filterTabBtn}
-                      accessibilityRole="button"
-                    >
-                      <View style={styles.filterTabInline}>
-                        <Text style={[styles.filterTabText, isPrice && styles.filterTabTextActive]}>
-                          {t('search.sort.price')}
-                        </Text>
-                        <ChevronDown
-                          size={14}
-                          color={isPrice ? '#0a61d7' : '#6b7280'}
-                          style={{ transform: [{ rotate: isPrice && !priceAsc ? '180deg' : '0deg' }] }}
-                        />
-                      </View>
-                      {isPrice ? <View style={styles.filterUnderlineFull} /> : null}
-                    </Pressable>
-                  </View>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.quickFiltersRow}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    <Pressable
-                      onPress={() => {
-                        setQuickFilterSection((prev) => (prev === 'salesChannel' ? null : 'salesChannel'));
-                      }}
-                      style={styles.quickFilterChip}
-                    >
-                      <Text style={styles.quickFilterText}>{quickFilterLabel.ch}</Text>
-                      <ChevronDown size={14} color="#6b7280" />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => {
-                        setQuickFilterSection((prev) => (prev === 'shippingOption' ? null : 'shippingOption'));
-                      }}
-                      style={styles.quickFilterChip}
-                    >
-                      <Text style={styles.quickFilterText}>{quickFilterLabel.ship}</Text>
-                      <ChevronDown size={14} color="#6b7280" />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => {
-                        setQuickFilterSection((prev) => (prev === 'rating' ? null : 'rating'));
-                      }}
-                      style={styles.quickFilterChip}
-                    >
-                      <Text style={styles.quickFilterText}>{quickFilterLabel.rating}</Text>
-                      <ChevronDown size={14} color="#6b7280" />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => {
-                        setQuickFilterSection((prev) => (prev === 'price' ? null : 'price'));
-                      }}
-                      style={styles.quickFilterChip}
-                    >
-                      <Text style={styles.quickFilterText}>{quickFilterLabel.price}</Text>
-                      <ChevronDown size={14} color="#6b7280" />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => {
-                        setQuickFilterSection((prev) => (prev === 'category' ? null : 'category'));
-                      }}
-                      style={styles.quickFilterChip}
-                    >
-                      <Text style={styles.quickFilterText}>{quickFilterLabel.cat}</Text>
-                      <ChevronDown size={14} color="#6b7280" />
-                    </Pressable>
-                  </ScrollView>
-
-                </View>
-              ) : null}
+                {isPrice ? <View style={styles.filterUnderlineFull} /> : null}
+              </Pressable>
             </View>
-          ),
-        }}
-      />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickFiltersRow}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Pressable
+                onPress={() => {
+                  setQuickFilterSection((prev) => (prev === 'salesChannel' ? null : 'salesChannel'));
+                }}
+                style={styles.quickFilterChip}
+              >
+                <Text style={styles.quickFilterText}>{quickFilterLabel.ch}</Text>
+                <ChevronDown size={14} color="#6b7280" />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setQuickFilterSection((prev) => (prev === 'shippingOption' ? null : 'shippingOption'));
+                }}
+                style={styles.quickFilterChip}
+              >
+                <Text style={styles.quickFilterText}>{quickFilterLabel.ship}</Text>
+                <ChevronDown size={14} color="#6b7280" />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setQuickFilterSection((prev) => (prev === 'rating' ? null : 'rating'));
+                }}
+                style={styles.quickFilterChip}
+              >
+                <Text style={styles.quickFilterText}>{quickFilterLabel.rating}</Text>
+                <ChevronDown size={14} color="#6b7280" />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setQuickFilterSection((prev) => (prev === 'price' ? null : 'price'));
+                }}
+                style={styles.quickFilterChip}
+              >
+                <Text style={styles.quickFilterText}>{quickFilterLabel.price}</Text>
+                <ChevronDown size={14} color="#6b7280" />
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setQuickFilterSection((prev) => (prev === 'category' ? null : 'category'));
+                }}
+                style={styles.quickFilterChip}
+              >
+                <Text style={styles.quickFilterText}>{quickFilterLabel.cat}</Text>
+                <ChevronDown size={14} color="#6b7280" />
+              </Pressable>
+            </ScrollView>
+          </View>
+        ) : null}
+      </View>
 
       <QuickFilterPanel
         visible={!!quickFilterSection}
@@ -1057,7 +851,7 @@ export default function SearchScreen() {
           keyboardDismissMode="on-drag"
         >
           <SearchSuggestions
-            query={searchQuery}
+            query={composeQuery}
             recentSearches={recentSearches}
             products={allProducts}
             onSuggestionPress={handleSuggestionPress}
@@ -1074,17 +868,10 @@ export default function SearchScreen() {
           onDidYouMeanPress={(suggestion) => {
             const nextQ = suggestion.trim();
             if (!nextQ) return;
-            // Shopee-style: navigate to a fresh search page entry for the suggestion.
-            // This avoids state races where the input/pill sometimes doesn't reflect the suggestion.
-            Keyboard.dismiss();
-            setDidYouMean(null);
-            lastDidYouMeanAppliedFromQueryRef.current = (activeQuery || searchQuery || '').trim();
-            router.push({
-              pathname: '/search',
-              params: {
-                q: nextQ,
-                category: selectedCategory && selectedCategory !== 'All' ? selectedCategory : undefined,
-              },
+            lastDidYouMeanAppliedFromQueryRef.current = (activeQuery || composeQuery || '').trim();
+            openSearchPage({
+              q: nextQ,
+              category: selectedCategory && selectedCategory !== 'All' ? selectedCategory : undefined,
             });
           }}
           onProductPress={handleProductPress}
@@ -1145,7 +932,6 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: '#ffffff',
-    paddingTop: 33,
   },
   header: {
     flexDirection: 'row',
@@ -1158,18 +944,6 @@ const styles = StyleSheet.create({
     padding: 4,
     marginRight: 8,
     marginLeft: -4,
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 22,
-    paddingHorizontal: 12,
-    height: 40,
-    marginLeft: 4,
   },
   filterButton: {
     marginLeft: 10,
@@ -1223,17 +997,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#111827',
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 15,
-    color: '#111827',
-    paddingVertical: 0,
-  },
-  clearButton: {
-    padding: 4,
-    marginLeft: 4,
   },
   content: {
     flex: 1,

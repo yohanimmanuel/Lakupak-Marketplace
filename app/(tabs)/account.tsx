@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Image, RefreshControl } from 'react-native';
-import { User as UserIcon, MapPin, WalletMinimal, Truck, PackageCheck, Star, ChevronRight, RotateCcw, Gift, Tag, DollarSign, Wallet, Heart, Clock, RotateCw, Ticket, Users } from 'lucide-react-native';
+import { User as UserIcon, MapPin, WalletMinimal, Truck, PackageCheck, Star, ChevronRight, RotateCcw, Gift, Tag, DollarSign, Wallet, Heart, Clock, RotateCw, Users } from 'lucide-react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import { API_BASE_URL } from '../../services/config';
 import type { MarketplaceProduct } from '../../services/marketplace';
 import { useDataStore } from '../../stores/dataStore';
 import { useTranslation } from 'react-i18next';
+import { AccountProfileSkeleton } from '../components/SkeletonLoader';
 
 // Normalize relative image paths to absolute URLs
 const normalizeUrl = (url?: string | null): string | undefined => {
@@ -49,6 +50,7 @@ export default function AccountScreen() {
   const orders = useDataStore(state => state.orders);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const loadUserData = useDataStore(state => state.loadUserData);
+  const isUserLoading = useDataStore(state => state.isUserLoading);
   const forceRefreshProducts = useDataStore(state => state.forceRefreshProducts);
   const products = useDataStore(state => state.products);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,6 +58,12 @@ export default function AccountScreen() {
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    if (token) {
+      loadUserData(token);
+    }
+  }, [token, loadUserData]);
 
   useEffect(() => {
     if (token && user?.id) {
@@ -120,6 +128,7 @@ export default function AccountScreen() {
   }, [orders, products, token, user?.id]);
 
   const isAuthenticated = !!token && !!user;
+  const showProfileSkeleton = !!token && isUserLoading && !refreshing;
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -161,6 +170,9 @@ export default function AccountScreen() {
   );
 
   const renderUserSection = () => {
+    if (showProfileSkeleton) {
+      return <AccountProfileSkeleton />;
+    }
     if (isAuthenticated) {
       return (
         <View style={{ backgroundColor: '#ffffff', padding: 26, marginBottom: 10 }}>
@@ -445,7 +457,7 @@ export default function AccountScreen() {
             </Link>
             
             <Link href="/useraccounts/moreservice/buyagain" asChild>
-              <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, marginBottom: 12 }}>
+              <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                   <RotateCw color="#22c55e" size={20} />
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>{t('tabsAccount.services.buyAgain')}</Text>
@@ -453,7 +465,8 @@ export default function AccountScreen() {
                 <ChevronRight color={iconGray} size={18} />
               </Pressable>
             </Link>
-            
+
+            {/* Vouchers — hidden until feature is ready
             <Link href="/useraccounts/moreservice/getvouchers" asChild>
               <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
@@ -463,6 +476,7 @@ export default function AccountScreen() {
                 <ChevronRight color={iconGray} size={18} />
               </Pressable>
             </Link>
+            */}
           </>
         ) : (
           <>
@@ -482,14 +496,15 @@ export default function AccountScreen() {
               <ChevronRight color={iconGray} size={18} />
             </View>
             
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <RotateCw color="#22c55e" size={20} />
                 <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginLeft: 12 }}>{t('tabsAccount.services.buyAgain')}</Text>
               </View>
               <ChevronRight color={iconGray} size={18} />
             </View>
-            
+
+            {/* Vouchers — hidden until feature is ready
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <Ticket color={primaryBlue} size={20} />
@@ -497,6 +512,7 @@ export default function AccountScreen() {
               </View>
               <ChevronRight color={iconGray} size={18} />
             </View>
+            */}
           </>
         )}
       </View>

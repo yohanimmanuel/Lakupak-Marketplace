@@ -8,6 +8,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { getMarketplaceAddresses, deleteMarketplaceAddress, MobileAddress } from '../../../services/user';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
+import { AddressesListSkeleton } from '../../components/SkeletonLoader';
 
 type Address = MobileAddress
 
@@ -18,26 +19,34 @@ export default function AddressesList() {
   const { t } = useTranslation();
   const token = useAuthStore(s => s.token) as string | null;
   const [list, setList] = useState<Address[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deleteMode, setDeleteMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
 
-  const load = useCallback(async () => {
-    if (!token) return;
+  const load = useCallback(async (silent = false) => {
+    if (!token) {
+      setList([]);
+      setLoading(false);
+      return;
+    }
+    if (!silent) setLoading(true);
     try {
       const data = await getMarketplaceAddresses(token)
       setList(data ?? [])
     } catch (error) {
       setList([])
+    } finally {
+      setLoading(false);
     }
-  }, [token]); // Wrapped in useCallback with token dependency
+  }, [token]);
 
-  useEffect(() => { load() }, [load]) // Now load is stable, so we can include it
+  useEffect(() => { load() }, [load])
 
   // Refresh whenever screen gets focus (after returning from edit)
   useFocusEffect(
     useCallback(() => {
-      load()
-    }, [token])
+      load(true)
+    }, [load])
   )
 
 
@@ -94,6 +103,10 @@ export default function AddressesList() {
       <View style={{ flex: 1, backgroundColor: '#ffffff' }}>
         <ScrollView contentContainerStyle={{ padding: 16 }}>
         <Text style={{ color: '#6B7280', marginBottom: 8 }}>{t('profile.addresses.label')}</Text>
+        {loading ? (
+          <AddressesListSkeleton />
+        ) : (
+          <>
         {(list || []).map((a) => (
           <View key={a.id} style={{ borderWidth: 1, borderColor: selectedIds.has(a.id) && deleteMode ? '#0a61d7' : '#e5e7eb', backgroundColor: selectedIds.has(a.id) && deleteMode ? '#0a61d70d' : '#ffffff', borderRadius: 12, padding: 14, marginBottom: 12 }}>
             {deleteMode && (
@@ -130,6 +143,8 @@ export default function AddressesList() {
             </View>
           </Pressable>
         </Link>
+          </>
+        )}
       </ScrollView>
       {deleteMode && (
         <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#f3f4f6', backgroundColor: '#ffffff' }}>

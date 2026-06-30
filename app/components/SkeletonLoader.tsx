@@ -696,6 +696,26 @@ export function RecentSearchesSkeleton({ count = 4 }: { count?: number }) {
   );
 }
 
+/** Followed distributors list skeleton (Followings page). */
+export function FollowingsListSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <SkeletonTree>
+      <View style={styles.followingsSkeletonList}>
+        {Array.from({ length: count }, (_, i) => (
+          <View key={i} style={styles.followingsSkeletonRow}>
+            <ShimmerBone style={styles.followingsSkeletonAvatar} />
+            <View style={styles.followingsSkeletonTextCol}>
+              <ShimmerBone style={styles.followingsSkeletonTitle} />
+              <ShimmerBone style={styles.followingsSkeletonSubtitle} />
+            </View>
+            <ShimmerBone style={styles.followingsSkeletonChevron} />
+          </View>
+        ))}
+      </View>
+    </SkeletonTree>
+  );
+}
+
 /** Edit profile screen skeleton. */
 export function EditProfileSkeleton() {
   return (
@@ -814,12 +834,31 @@ export function NotificationsTabSkeleton() {
   );
 }
 
-/** Account tab profile header skeleton (optional, for future use). */
+/** Account tab profile header skeleton. */
 export function AccountProfileSkeleton() {
   return (
-    <View style={styles.accountProfileSection}>
-      <UserInfoSkeleton />
-    </View>
+    <SkeletonTree>
+      <View style={styles.accountProfileSection}>
+        <UserInfoSkeleton />
+      </View>
+    </SkeletonTree>
+  );
+}
+
+/** Saved address card skeleton (Addresses list). */
+export function AddressesListSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <SkeletonTree>
+      <View style={styles.addressesListSkeleton}>
+        {Array.from({ length: count }, (_, i) => (
+          <View key={i} style={styles.addressCardSkeleton}>
+            <ShimmerBone style={styles.addressCardNameLine} />
+            <ShimmerBone style={styles.addressCardAddressLine} />
+            <ShimmerBone style={styles.addressCardAddressLineShort} />
+          </View>
+        ))}
+      </View>
+    </SkeletonTree>
   );
 }
 
@@ -1181,6 +1220,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     padding: 26,
     marginBottom: 10,
+  },
+  addressesListSkeleton: {
+    gap: 12,
+  },
+  addressCardSkeleton: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    padding: 14,
+    backgroundColor: '#ffffff',
+    gap: 8,
+  },
+  addressCardNameLine: {
+    height: 14,
+    width: '55%',
+  },
+  addressCardAddressLine: {
+    height: 12,
+    width: '90%',
+  },
+  addressCardAddressLineShort: {
+    height: 12,
+    width: '70%',
   },
   orderNotificationsBox: {
     backgroundColor: '#ffffff',
@@ -1975,6 +2037,41 @@ const styles = StyleSheet.create({
     height: 14,
   },
   recentSearchRemove: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+  },
+  followingsSkeletonList: {
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  followingsSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+  },
+  followingsSkeletonAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  followingsSkeletonTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  followingsSkeletonTitle: {
+    height: 14,
+    width: '65%',
+  },
+  followingsSkeletonSubtitle: {
+    height: 12,
+    width: '40%',
+  },
+  followingsSkeletonChevron: {
     width: 18,
     height: 18,
     borderRadius: 9,

@@ -14,6 +14,7 @@ import ProductMarketplace from '../components/productcatalog/ProductMarketplace'
 import CategoryBadge from '../components/CategoryBadge';
 import { ProductGridSkeleton } from '../components/SkeletonLoader';
 import { generateDynamicCategories } from '../../utils/categoryUtils';
+import { translateProductType } from '../../utils/translateProductType';
 
 // Hooks
 import { useAuthStore } from '../../stores/authStore';
@@ -114,10 +115,12 @@ export default function CategoriesScreen() {
   }, [user?.id, products, toggleLikedProduct]);
 
   const handleCategoryPress = useCallback((categoryName: string) => {
-    // Navigate to search page with category filter to show filtered results
     router.push({
       pathname: '/search',
-      params: { category: categoryName }
+      params: {
+        category: categoryName,
+        q: translateProductType(categoryName),
+      },
     });
   }, [router]);
 
