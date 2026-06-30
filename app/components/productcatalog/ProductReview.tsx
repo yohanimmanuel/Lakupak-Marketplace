@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Image,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -19,6 +18,7 @@ import { API_BASE_URL } from '../../../services/config';
 import { pickImage, pickMultipleImages, takePhoto } from '../../../services/imagePicker';
 import { useAuthStore } from '../../../stores/authStore';
 import { useTranslation } from 'react-i18next';
+import { ShimmerIcon } from '../SkeletonLoader';
 
 export interface OrderReviewItem {
   productId: string;
@@ -578,7 +578,7 @@ export default function ProductReviewScreen() {
                             accessibilityRole="button"
                           >
                             {uploadingPhotoIndex === index ? (
-                              <ActivityIndicator size="small" color={primaryBlue} />
+                              <ShimmerIcon size={22} />
                             ) : (
                               <Camera size={22} color={iconGray} />
                             )}
@@ -592,7 +592,7 @@ export default function ProductReviewScreen() {
                             accessibilityRole="button"
                           >
                             {uploadingPhotoIndex === index ? (
-                              <ActivityIndicator size="small" color={primaryBlue} />
+                              <ShimmerIcon size={22} />
                             ) : (
                               <ImagePlus size={22} color={iconGray} />
                             )}

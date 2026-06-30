@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Pressable } from 'react-native';
 import ProductMarketplace from '../productcatalog/ProductMarketplace';
-import ProductCardSkeleton from './ProductCardSkeleton';
+import { ProductGridSkeleton } from '../SkeletonLoader';
 import { Product } from '../../../data/sampleProducts';
 import { useTranslation } from 'react-i18next';
 
@@ -79,20 +79,7 @@ export default function SearchResults({
         ) : null}
 
         {loading && products.length === 0 ? (
-          <View style={styles.skeletonContainer}>
-            <View style={styles.skeletonRow}>
-              <ProductCardSkeleton />
-              <ProductCardSkeleton />
-            </View>
-            <View style={styles.skeletonRow}>
-              <ProductCardSkeleton />
-              <ProductCardSkeleton />
-            </View>
-            <View style={styles.skeletonRow}>
-              <ProductCardSkeleton />
-              <ProductCardSkeleton />
-            </View>
-          </View>
+          <ProductGridSkeleton rowsPerColumn={3} style={styles.skeletonGrid} />
         ) : products.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyTitle}>{t('search.results.emptyTitle')}</Text>
@@ -193,14 +180,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     backgroundColor: '#f9fafb',
   },
-  skeletonContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+  skeletonGrid: {
+    paddingTop: 8,
+    paddingBottom: 20,
   },
   emptyContainer: {
     justifyContent: 'center',

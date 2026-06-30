@@ -10,6 +10,7 @@ import * as ScreenCapture from 'expo-screen-capture';
 import { ArrowLeft, Building2, FileText } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import PaymentProofUploadSection from './PaymentProofUploadSection';
+import { PayOrderSkeleton } from '../SkeletonLoader';
 import { isBankTransferPaymentTerms, isCodPaymentTerms } from '../../../utils/orderPayment';
 import {
   normalizeProofFileName,
@@ -353,9 +354,13 @@ export default function PayOrder() {
       <View style={styles.container}>
         <Stack.Screen options={payOrderScreenOptions} />
         <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{t('ordersFlow.payOrder.loading')}</Text>
-        </View>
+        <ScrollView
+          style={styles.content}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <PayOrderSkeleton />
+        </ScrollView>
       </View>
     );
   }

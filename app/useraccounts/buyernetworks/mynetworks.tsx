@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../../../services/config';
 import type { MarketplaceProduct } from '../../../services/marketplace';
 import { useDataStore } from '../../../stores/dataStore';
 import { useTranslation } from 'react-i18next';
+import { MyNetworksListSkeleton } from '../../components/SkeletonLoader';
 
 interface Distributor {
   id: number;
@@ -263,10 +264,8 @@ export default function MyNetworksScreen() {
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primaryBlue} />}
       >
-        {isLoading || isOrdersLoading ? (
-          <View style={styles.loading}>
-            <Text style={styles.loadingText}>{t('myNetworks.states.loading')}</Text>
-          </View>
+        {(isLoading || isOrdersLoading) && distributors.length === 0 ? (
+          <MyNetworksListSkeleton />
         ) : distributors.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Users color={iconGray} size={48} />
@@ -348,8 +347,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f9fafb' },
   scroll: { flex: 1 },
   listContent: { padding: 16 },
-  loading: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  loadingText: { fontSize: 14, color: '#6b7280' },
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: '#111827', marginTop: 16, marginBottom: 8 },
   emptyText: { fontSize: 14, color: '#6b7280', textAlign: 'center' },

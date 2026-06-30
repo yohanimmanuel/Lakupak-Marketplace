@@ -5,9 +5,9 @@ import {
   ScrollView,
   Text,
   StatusBar,
-  ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import { OrderNotificationsListSkeleton } from './components/SkeletonLoader';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
@@ -141,9 +141,13 @@ export default function OrderNotificationsScreen() {
           <Text style={styles.muted}>{t('orderUpdates.states.signIn')}</Text>
         </View>
       ) : loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={primaryBlue} />
-        </View>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <OrderNotificationsListSkeleton />
+        </ScrollView>
       ) : !hasRows ? (
         <View style={styles.centered}>
           <Text style={styles.muted}>{t('orderUpdates.states.empty')}</Text>
@@ -213,9 +217,6 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   orderListSection: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
     backgroundColor: '#ffffff',
     overflow: 'hidden',
   },

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { LakuTheme } from '@/constants/Colors';
 import MapComponent from '../ordersshipment/MapComponent';
+import { MapShimmerOverlay } from '../SkeletonLoader';
 import { geocodeAddress, MapCoordinates, type GeocodePrecision } from '../../../services/geocode';
 import { useAuthStore } from '../../../stores/authStore';
 
@@ -89,9 +90,9 @@ export default function AddressMapPreview({
   const overlay = (() => {
     if (isGeocoding) {
       return (
-        <View style={styles.messageOverlay}>
-          <ActivityIndicator color="#ffffff" />
-          <Text style={styles.messageText}>{t('profile.editAddress.mapLoading')}</Text>
+        <View style={styles.geocodeOverlay}>
+          <MapShimmerOverlay />
+          <Text style={styles.geocodeLoadingText}>{t('profile.editAddress.mapLoading')}</Text>
         </View>
       );
     }
@@ -170,6 +171,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     backgroundColor: 'rgba(11, 18, 32, 0.42)',
     zIndex: 10,
+  },
+  geocodeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    zIndex: 10,
+  },
+  geocodeLoadingText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 18,
+    zIndex: 11,
   },
   messageTitle: {
     marginTop: 10,

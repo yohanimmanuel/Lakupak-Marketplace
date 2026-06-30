@@ -1,22 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, TextInput, ScrollView, Image, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, TextInput, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, MessageSquareText, Search, ChevronRight, Star, Package, Truck, CheckCircle, Clock, MapPin, Phone } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
-import { marketplaceService, MarketplaceProduct } from '../../../services/marketplace';
-import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
-import { useCartStore } from '../../../stores/cartStore';
+import { MyPurchasesListSkeleton } from '../../components/SkeletonLoader';
 import { formatCurrency } from '../../../utils/currencyUtils';
-import { Product } from '@/data/sampleProducts';
 import { useDataStore } from '../../../stores/dataStore';
 import { useTranslation } from 'react-i18next';
 import { getDistributorCompanyName } from '../../../utils/orderDistributor';
 import { isReorderEligible, resolveReorderNavigationTarget } from '../../../utils/reorderFromOrder';
 import { showReorderUnavailableAlert } from '../../../utils/reorderAlerts';
-
-const { width: screenWidth } = Dimensions.get('window');
 
 interface OrderItem {
   productId: string;
@@ -73,12 +68,6 @@ export default function MyPurchasesModal() {
   const token = useAuthStore(s => s.token);
   const authUser = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
-  
-  // Cart store hooks
-  const { addItem } = useCartStore();
-  
-  // Local state for liked products (simplified)
-  const [likedProducts, setLikedProducts] = useState<string[]>([]);
   
   const primaryBlue = '#0a61d7';
   const inactiveGrey = '#6B7280';
@@ -203,47 +192,6 @@ export default function MyPurchasesModal() {
       cancelled = true;
     };
   }, [orders, token, isAuthenticated, orderHasReview]);
-
-  // Get related products from websocket-enabled products store
-  const relatedProducts = React.useMemo(() => {
-    if (products.length === 0) return [];
-    
-    // Get order product IDs to exclude (if there are orders)
-    const orderProductIds = orders.length > 0
-      ? orders.flatMap(order => 
-          order.orderItems.map(item => item.productId)
-        )
-      : [];
-    
-    // Get categories from order items (if there are orders)
-    let category: string | undefined;
-    if (orders.length > 0) {
-      const categories = [...new Set(
-        orders.flatMap(order => 
-          order.orderItems
-            .map(item => {
-              // Try to get category from product if available, otherwise use first word
-              const orderProduct = products.find(p => p.id === item.productId);
-              return orderProduct?.category || item.productName.split(' ')[0];
-            })
-            .filter(Boolean)
-        )
-      )].filter(Boolean);
-      category = categories[0];
-    }
-    
-    // Filter products by category (if available) and exclude order products
-    let filtered = products.filter(product => !orderProductIds.includes(product.id));
-    
-    if (category) {
-      const categoryFiltered = filtered.filter(product => product.category === category);
-      if (categoryFiltered.length > 0) {
-        filtered = categoryFiltered;
-      }
-    }
-    
-    return filtered.slice(0, 4);
-  }, [products, orders]);
 
   const getFilteredOrders = () => {
     let filtered = orders;
@@ -464,32 +412,6 @@ export default function MyPurchasesModal() {
     });
   };
 
-  // Handler functions for related products
-  const handleAddToCart = (product: Product | MarketplaceProduct, quantity: number = 1) => {
-    addItem(product, quantity);
-  };
-
-  const handleBuyNow = (product: Product | MarketplaceProduct, quantity: number = 1) => {
-    addItem(product, quantity);
-    router.push('/cart');
-  };
-
-  const handleChatSeller = () => {
-    router.push('/messages');
-  };
-
-  const handleShare = () => {
-    // Share functionality placeholder
-  };
-
-  const handleToggleFavorite = (productId: string) => {
-    setLikedProducts(prev => 
-      prev.includes(productId) 
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  };
-
   const TabItem = ({ label, value }: { label: string; value: typeof activeTab }) => {
     const isActive = activeTab === value;
           return (
@@ -672,67 +594,6 @@ export default function MyPurchasesModal() {
     </View>
   );
 
-  const renderYouMayAlsoLike = () => {
-    if (relatedProducts.length === 0) return null;
-
-    return (
-      <View style={styles.youMayAlsoLikeSection}>
-        <View style={styles.sectionDivider}>
-          <View style={styles.dividerLine} />
-            <Text style={styles.sectionTitle}>{t('moreService.common.youMayAlsoLike')}</Text>
-          <View style={styles.dividerLine} />
-        </View>
-        
-        <View style={styles.relatedProductsGrid}>
-          <View style={styles.leftColumn}>
-            {relatedProducts.filter((_, index) => index % 2 === 0).map((product) => (
-              <View key={product.id} style={styles.productItem}>
-                <ProductMarketplace
-                  product={product}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/product',
-                      params: { productId: product.id }
-                    });
-                  }}
-                  onAddToCart={handleAddToCart}
-                  onBuyNow={handleBuyNow}
-                  onChatSeller={handleChatSeller}
-                  onShare={handleShare}
-                  onToggleFavorite={() => handleToggleFavorite(product.id)}
-                  isFavorite={likedProducts.includes(product.id)}
-                  type="card"
-                />
-              </View>
-            ))}
-          </View>
-          <View style={styles.rightColumn}>
-            {relatedProducts.filter((_, index) => index % 2 === 1).map((product) => (
-              <View key={product.id} style={styles.productItem}>
-                <ProductMarketplace
-                  product={product}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/product',
-                      params: { productId: product.id }
-                    });
-                  }}
-                  onAddToCart={handleAddToCart}
-                  onBuyNow={handleBuyNow}
-                  onChatSeller={handleChatSeller}
-                  onShare={handleShare}
-                  onToggleFavorite={() => handleToggleFavorite(product.id)}
-                  isFavorite={likedProducts.includes(product.id)}
-                  type="card"
-                />
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-    );
-  };
-
   return (
     <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
       <Stack.Screen options={{
@@ -783,9 +644,15 @@ export default function MyPurchasesModal() {
       {/* Content */}
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0a61d7" />
-            <Text style={styles.loadingText}>{t('myPurchases.loading')}</Text>
+          <View
+            accessible
+            accessibilityRole="progressbar"
+            accessibilityLabel={t('myPurchases.loading')}
+            accessibilityLiveRegion="polite"
+          >
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <MyPurchasesListSkeleton />
+            </View>
           </View>
         ) : !isAuthenticated ? (
           <View style={styles.emptyState}>
@@ -802,8 +669,6 @@ export default function MyPurchasesModal() {
         ) : (
           renderEmptyState()
         )}
-
-        {renderYouMayAlsoLike()}
       </ScrollView>
     </View>
   );
@@ -991,19 +856,6 @@ const styles = StyleSheet.create({
   ordersContainer: {
     paddingVertical: 8,
   },
-  loadingContainer: {
-    minHeight: 280,
-    paddingVertical: 64,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
   emptyState: {
     padding: 32,
     alignItems: 'center',
@@ -1021,40 +873,6 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 20,
-  },
-  youMayAlsoLikeSection: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-    marginBottom: 8, // Narrower gap between sections
-  },
-  sectionDivider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginHorizontal: 16,
-  },
-  relatedProductsGrid: {
-    flexDirection: 'row',
-    gap: 8, // Narrower gap between columns
-  },
-  leftColumn: {
-    flex: 1,
-  },
-  rightColumn: {
-    flex: 1,
-  },
-  productItem: {
-    marginBottom: 4, // Narrower gap between items
   },
 });
 

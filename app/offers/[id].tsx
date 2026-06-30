@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  ActivityIndicator,
   StyleSheet,
   Image,
   ImageBackground,
@@ -17,6 +16,7 @@ import { marketplaceService, type MarketplaceHomeOfferPayload } from '../../serv
 import { useAuthStore } from '../../stores/authStore';
 import { SALE_BANNER_UNIFORM_HEIGHT } from '../components/paymentcheckout/SaleBanner';
 import { useTranslation } from 'react-i18next';
+import { OfferDetailSkeleton } from '../components/SkeletonLoader';
 
 const primaryBlue = '#0a61d7';
 
@@ -97,9 +97,7 @@ export default function HomeOfferDetailScreen() {
       />
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={primaryBlue} />
-        </View>
+        <OfferDetailSkeleton />
       ) : err ? (
         <View style={styles.centered}>
           <Text style={styles.errText}>{err}</Text>

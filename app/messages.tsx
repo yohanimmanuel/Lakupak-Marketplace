@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Pressable, ScrollView, RefreshControl, Image, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, Pressable, ScrollView, RefreshControl, Image } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useTranslation } from 'react-i18next';
 import { openWhatsApp } from '../utils/whatsapp';
 import { useMessagesStore, type Conversation } from '../stores/messagesStore';
+import { MessagesListSkeleton } from './components/SkeletonLoader';
 
 export default function MessagesScreen() {
   const router = useRouter();
@@ -107,10 +108,8 @@ export default function MessagesScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           showsVerticalScrollIndicator={false}
         >
-          {loading ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator size="small" color={primaryBlue} />
-            </View>
+          {loading && items.length === 0 ? (
+            <MessagesListSkeleton />
           ) : items.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>{t('messages.list.emptyTitle')}</Text>
@@ -175,7 +174,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#ffffff' },
   body: { flex: 1, backgroundColor: '#f9fafb' },
 
-  loadingWrap: { paddingTop: 26, alignItems: 'center' },
   list: { paddingHorizontal: 16, gap: 10 },
   row: {
     flexDirection: 'row',

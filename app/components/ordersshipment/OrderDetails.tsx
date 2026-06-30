@@ -42,6 +42,7 @@ import { calculateOrderItemPromotion } from '../../../utils/promotionUtils';
 import OrderInvoiceModal from './OrderInvoiceModal';
 import { useTranslation } from 'react-i18next';
 import { openWhatsApp } from '../../../utils/whatsapp';
+import { OrderDetailsSkeleton } from '../SkeletonLoader';
 import { useMessagesStore } from '../../../stores/messagesStore';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -1421,9 +1422,9 @@ export default function OrderDetailsModal() {
       <View style={styles.container}>
         <Stack.Screen options={orderDetailsScreenOptions} />
         <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>{t('ordersFlow.orderDetails.loading')}</Text>
-        </View>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          <OrderDetailsSkeleton />
+        </ScrollView>
       </View>
     );
   }

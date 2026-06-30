@@ -29,6 +29,7 @@ import MapComponent from './MapComponent';
 import { geocodeAddress, type GeocodeResult } from '../../../services/geocode';
 import { getOrderStatusMarkerColor } from '../../../utils/mapboxUtils';
 import ProductImageModal from '../productcatalog/ProductImageModal';
+import { DeliveryInformationSkeleton } from '../SkeletonLoader';
 import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
@@ -224,10 +225,30 @@ export default function DeliveryInformation() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{t('ordersFlow.deliveryInfo.loading')}</Text>
-        </View>
+        <Stack.Screen
+          options={{
+            presentation: 'modal',
+            header: () => (
+              <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 44) + 8 }]}>
+                <View style={styles.headerContent}>
+                  <TouchableOpacity
+                    onPress={() => router.back()}
+                    hitSlop={10}
+                    accessibilityLabel={t('ordersFlow.common.a11y.goBack')}
+                    accessibilityRole="button"
+                  >
+                    <ArrowLeft color={primaryBlue} size={24} />
+                  </TouchableOpacity>
+                  <Text style={styles.headerTitle}>{t('ordersFlow.deliveryInfo.title')}</Text>
+                </View>
+              </View>
+            ),
+          }}
+        />
+        <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <DeliveryInformationSkeleton />
+        </ScrollView>
       </View>
     );
   }

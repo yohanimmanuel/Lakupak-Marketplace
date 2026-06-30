@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Clock, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { RecentSearchesSkeleton } from '../SkeletonLoader';
 
 interface RecentSearchesProps {
   searches: string[];
@@ -19,15 +20,17 @@ export default function RecentSearches({
   isLoading = false,
 }: RecentSearchesProps) {
   const { t } = useTranslation();
-  // Show loading indicator while fetching search history
   if (isLoading) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>{t('search.recentSearches.title')}</Text>
+          <Pressable onPress={onClearAll} style={styles.clearButton}>
+            <Text style={styles.clearButtonText}>{t('search.recentSearches.clearAll')}</Text>
+          </Pressable>
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#0a61d7" />
+        <View style={styles.searchList}>
+          <RecentSearchesSkeleton />
         </View>
       </View>
     );
@@ -126,11 +129,6 @@ const styles = StyleSheet.create({
   removeButton: {
     padding: 4,
     marginLeft: 8,
-  },
-  loadingContainer: {
-    paddingVertical: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
 

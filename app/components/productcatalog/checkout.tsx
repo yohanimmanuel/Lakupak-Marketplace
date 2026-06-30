@@ -48,6 +48,7 @@ import { pushNotificationService } from '../../../services/pushNotifications';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { getMe } from '../../../services/user';
+import { CheckoutSkeleton } from '../SkeletonLoader';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -88,6 +89,7 @@ export default function CheckoutScreen() {
   
   // Get product cache; read auth user directly from auth store (avoids stale user after logout/login)
   const { products } = useDataStore();
+  const isProductsLoading = useDataStore(s => s.isProductsLoading);
   const authUser = useAuthStore(s => s.user);
   
   // Get auth token
@@ -215,6 +217,7 @@ const distributorGroups = useMemo(
   const [pickupSlideAnim] = useState(new Animated.Value(screenHeight));
   const [isDeliveryClosing, setIsDeliveryClosing] = useState(false);
   const [isPickupClosing, setIsPickupClosing] = useState(false);
+  const [isProfileRefreshing, setIsProfileRefreshing] = useState(!!token);
   
   // Get distributor/company information
   const getDistributorInfo = (product: MarketplaceProduct): DistributorInfo => {
@@ -302,17 +305,40 @@ const copyPickupAddress = () => {
 
   useFocusEffect(
     useCallback(() => {
-      if (!token) return;
+      if (!token) {
+        setIsProfileRefreshing(false);
+        return;
+      }
+
+      let active = true;
+      const requestedToken = token;
+
+      setIsProfileRefreshing(true);
       void (async () => {
         try {
-          const me = await getMe(token);
+          const me = await getMe(requestedToken);
+          if (!active) return;
+          if (useAuthStore.getState().token !== requestedToken) return;
           await useAuthStore.getState().setUser(me);
         } catch {
           // Keep existing profile if refresh fails
+        } finally {
+          if (active) {
+            setIsProfileRefreshing(false);
+          }
         }
       })();
+
+      return () => {
+        active = false;
+      };
     }, [token]),
   );
+
+  const waitingForProduct = !isCartCheckout && !!productId && !product;
+  const showCheckoutSkeleton =
+    (!!token && isProfileRefreshing) ||
+    (waitingForProduct && isProductsLoading);
 
   const paymentMethods: Array<{
     id: 'bank_transfer' | 'cod';
@@ -754,6 +780,7 @@ const copyPickupAddress = () => {
 
   // Validate that all shipping requirements are met before allowing order placement
   const isOrderReady = useMemo(() => {
+    if (showCheckoutSkeleton) return false;
     if (!hasDeliveryAddress) return false;
     if (isCartCheckout) {
       const groups = Object.entries(groupByDistributor(selectedCartItems));
@@ -772,10 +799,10 @@ const copyPickupAddress = () => {
         if (selectedShipping === 'buyer_courier') return !!buyerCourierMode;
       return true; // self_pickup
     }
-  }, [hasDeliveryAddress, isCartCheckout, selectedShipping, selectedShippingByDistributor, sellerDeliveryMode, buyerCourierMode, sellerDeliveryModeByDist, buyerCourierModeByDist, selectedCartItems]);
+  }, [showCheckoutSkeleton, hasDeliveryAddress, isCartCheckout, selectedShipping, selectedShippingByDistributor, sellerDeliveryMode, buyerCourierMode, sellerDeliveryModeByDist, buyerCourierModeByDist, selectedCartItems]);
 
   const handlePlaceOrder = async () => {
-    if (isPlacingOrder) return;
+    if (isPlacingOrder || showCheckoutSkeleton) return;
     if (!hasDeliveryAddress) {
       Alert.alert(
         t('ordersFlow.checkout.address.missingAddressTitle'),
@@ -1211,6 +1238,10 @@ const copyPickupAddress = () => {
         contentContainerStyle={{ paddingBottom: 100 }} // Add space for sticky bottom bar
         showsVerticalScrollIndicator={false}
       >
+        {showCheckoutSkeleton ? (
+          <CheckoutSkeleton />
+        ) : (
+        <>
         {/* Business Information - Always show distributor info */}
         {distributorsInfo.length > 0 && (
           <View style={[styles.section]}>
@@ -1852,6 +1883,8 @@ const copyPickupAddress = () => {
             {t('ordersFlow.checkout.terms')}
           </Text>
         </View>
+        </>
+        )}
       </ScrollView>
       
       {/* Bottom Action Bar - Sticky */}

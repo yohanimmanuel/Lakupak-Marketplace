@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,8 +9,8 @@ import {
   Text,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { Link } from 'expo-router';
 import {
   AlertCircle,
@@ -40,6 +40,7 @@ import { useTranslation } from 'react-i18next';
 import { getDistributorCompanyName } from '../../utils/orderDistributor';
 import { isReorderEligible, resolveReorderNavigationTarget } from '../../utils/reorderFromOrder';
 import { showReorderUnavailableAlert } from '../../utils/reorderAlerts';
+import { OrdersListSkeleton } from '../components/SkeletonLoader';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -54,6 +55,7 @@ export default function OrdersScreen() {
   const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   // notifications state no longer used; kept only if needed later
   // Local notification state no longer needed here; notifications now live in the Notifications tab
   const isAuthenticated = !!token && !!authUser;
@@ -85,6 +87,19 @@ export default function OrdersScreen() {
     } else {
     // Only load if we don't have orders yet (initial load)
     loadOrdersData(false);
+    }
+  }, [isAuthenticated, authUser?.id, loadOrdersData]);
+
+  const showOrdersSkeleton =
+    refreshing || (isOrdersLoading && orders.length === 0);
+
+  const handleRefresh = useCallback(async () => {
+    if (!isAuthenticated || !authUser?.id) return;
+    setRefreshing(true);
+    try {
+      await loadOrdersData(true);
+    } finally {
+      setRefreshing(false);
     }
   }, [isAuthenticated, authUser?.id, loadOrdersData]);
 
@@ -259,13 +274,23 @@ export default function OrdersScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          isAuthenticated ? (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#0a61d7"
+              colors={['#0a61d7']}
+            />
+          ) : undefined
+        }
+      >
         {isAuthenticated ? (
-          isOrdersLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#0a61d7" />
-              <Text style={styles.loadingText}>{t('tabsOrders.loading')}</Text>
-            </View>
+          showOrdersSkeleton ? (
+            <OrdersListSkeleton />
           ) : orders.length > 0 ? (
             orders.map((order: MarketplaceOrder) => {
               const dateLabel = formatOrderDateTime(order);

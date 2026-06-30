@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Share, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import { View, Share, StyleSheet, Text } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import * as Linking from 'expo-linking';
 import ProductMarketplace from './components/productcatalog/ProductMarketplace';
@@ -12,6 +12,7 @@ import { marketplaceService, type MarketplaceProduct } from '../services/marketp
 import type { Product } from '../data/sampleProducts';
 import { openWhatsApp } from '../utils/whatsapp';
 import { useTranslation } from 'react-i18next';
+import { ProductDetailSkeleton } from './components/SkeletonLoader';
 
 type ProductType = MarketplaceProduct | { id: string; name: string; sellingPrice?: number; images?: string[]; packageType?: string; piecesPerPackage?: number; };
 
@@ -87,11 +88,13 @@ export default function ProductModal() {
 
   if (!product) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
+      <View style={styles.container}>
         {isLoadingProduct ? (
-          <ActivityIndicator size="large" color="#0a61d7" />
+          <ProductDetailSkeleton />
         ) : (
-          <Text style={styles.loadingText}>{t('product.notFound', { defaultValue: 'Product not found' })}</Text>
+          <View style={[styles.container, styles.loadingContainer]}>
+            <Text style={styles.loadingText}>{t('product.notFound', { defaultValue: 'Product not found' })}</Text>
+          </View>
         )}
       </View>
     );

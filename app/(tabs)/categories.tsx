@@ -12,18 +12,7 @@ import { Text, View } from '../components/Themed';
 // Components
 import ProductMarketplace from '../components/productcatalog/ProductMarketplace';
 import CategoryBadge from '../components/CategoryBadge';
-// import { SkeletonLoader, ProductSkeleton } from '../components/SkeletonLoader';
-
-// Temporary skeleton component
-const ProductSkeleton = () => (
-  <View style={{ backgroundColor: '#ffffff', borderRadius: 8, padding: 12, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}>
-    <View style={{ width: '100%', height: 120, backgroundColor: '#e5e7eb', borderRadius: 6, marginBottom: 8 }} />
-    <View style={{ paddingHorizontal: 4 }}>
-      <View style={{ height: 16, backgroundColor: '#e5e7eb', borderRadius: 4, marginBottom: 6 }} />
-      <View style={{ height: 14, backgroundColor: '#e5e7eb', borderRadius: 4, width: '60%' }} />
-    </View>
-  </View>
-);
+import { ProductGridSkeleton } from '../components/SkeletonLoader';
 import { generateDynamicCategories } from '../../utils/categoryUtils';
 
 // Hooks
@@ -225,24 +214,7 @@ export default function CategoriesScreen() {
         </View>
 
         {/* Loading State with Skeleton */}
-        {loading && (
-          <View style={styles.productsContainer}>
-            <View style={styles.leftColumn}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={styles.productItem}>
-                  <ProductSkeleton />
-                </View>
-              ))}
-            </View>
-            <View style={styles.rightColumn}>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={styles.productItem}>
-                  <ProductSkeleton />
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
+        {loading && <ProductGridSkeleton />}
 
         {/* Error State */}
         {error && !loading && (

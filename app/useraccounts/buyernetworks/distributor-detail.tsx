@@ -9,6 +9,7 @@ import { API_BASE_URL } from '../../../services/config';
 import type { MarketplaceProduct } from '../../../services/marketplace';
 import { useDataStore, type MarketplaceOrder } from '../../../stores/dataStore';
 import { useTranslation } from 'react-i18next';
+import { DistributorDetailSkeleton } from '../../components/SkeletonLoader';
 
 // Normalize relative image paths to absolute URLs
 const normalizeUrl = (url?: string | null): string | undefined => {
@@ -308,9 +309,7 @@ export default function DistributorDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.centered}>
-          <Text style={styles.muted}>{t('buyerNetworks.distributorDetail.loading')}</Text>
-        </View>
+        <DistributorDetailSkeleton />
       </SafeAreaView>
     );
   }

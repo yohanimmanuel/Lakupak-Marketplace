@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  ActivityIndicator,
   Alert,
   StyleSheet,
 } from 'react-native';
@@ -20,6 +19,7 @@ import {
   type PaymentProofAttachment,
 } from '../../../services/paymentReceiptUpload';
 import { useAuthStore } from '../../../stores/authStore';
+import { ShimmerIcon } from '../SkeletonLoader';
 
 const primaryBlue = '#0a61d7';
 
@@ -154,7 +154,7 @@ export default function PaymentProofUploadSection({
               accessibilityRole="button"
             >
               {uploading ? (
-                <ActivityIndicator size="small" color={primaryBlue} />
+                <ShimmerIcon size={22} />
               ) : (
                 <Camera size={22} color="#6b7280" />
               )}
@@ -168,7 +168,7 @@ export default function PaymentProofUploadSection({
               accessibilityRole="button"
             >
               {uploading ? (
-                <ActivityIndicator size="small" color={primaryBlue} />
+                <ShimmerIcon size={22} />
               ) : (
                 <ImagePlus size={22} color="#6b7280" />
               )}
@@ -182,7 +182,7 @@ export default function PaymentProofUploadSection({
               accessibilityRole="button"
             >
               {uploading ? (
-                <ActivityIndicator size="small" color={primaryBlue} />
+                <ShimmerIcon size={22} />
               ) : (
                 <FileText size={22} color="#6b7280" />
               )}

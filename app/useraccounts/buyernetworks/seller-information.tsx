@@ -22,6 +22,7 @@ import {
 } from 'lucide-react-native';
 import { API_BASE_URL } from '../../../services/config';
 import { useTranslation } from 'react-i18next';
+import { SellerInformationSkeleton } from '../../components/SkeletonLoader';
 
 const primaryBlue = '#0a61d7';
 const iconGray = '#6B7280';
@@ -161,9 +162,7 @@ export default function SellerInformationScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
-        <View style={styles.centered}>
-          <Text style={styles.muted}>{t('buyerNetworks.sellerInformation.states.loading')}</Text>
-        </View>
+        <SellerInformationSkeleton />
       </SafeAreaView>
     );
   }

@@ -21,6 +21,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { pickMultipleImages } from '../../../services/imagePicker';
 import { useTranslation } from 'react-i18next';
+import { ShimmerIcon } from '../../components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
@@ -293,7 +294,7 @@ export default function ReportDistributorModal() {
                   accessibilityRole="button"
                 >
                   {uploadingPhotos ? (
-                    <ActivityIndicator size="small" color={primaryBlue} />
+                    <ShimmerIcon size={24} />
                   ) : (
                     <ImagePlus size={24} color="#6b7280" />
                   )}

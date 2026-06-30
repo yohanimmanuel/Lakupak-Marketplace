@@ -25,6 +25,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { InvoicePreviewSkeleton } from '../SkeletonLoader';
 import {
   buildOrderInvoiceHtml,
   buildOrderInvoicePlainText,
@@ -213,6 +214,7 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
   const borderColor = isDark ? '#333333' : '#e5e5e5';
 
   const [busy, setBusy] = useState(false);
+  const [webViewReady, setWebViewReady] = useState(false);
   const [logoDataUri, setLogoDataUri] = useState<string | null>(null);
   const rasterRef = useRef<ViewShot>(null);
   const { t } = useTranslation();
@@ -247,6 +249,10 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
     () => (order ? buildOrderInvoiceHtml(order, { logoUri, logoDataUri }) : ''),
     [order, logoUri, logoDataUri]
   );
+
+  useEffect(() => {
+    if (visible) setWebViewReady(false);
+  }, [visible, html]);
 
   const runPdf = useCallback(async () => {
     if (!order) return;
@@ -421,6 +427,11 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
         </View>
 
         <View style={styles.imageContainer}>
+          {!webViewReady ? (
+            <View style={styles.webViewSkeletonWrap}>
+              <InvoicePreviewSkeleton />
+            </View>
+          ) : null}
           <WebView
             originWhitelist={['*']}
             source={{ html, baseUrl: 'https://laku.app' }}
@@ -429,6 +440,7 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
             nestedScrollEnabled
             showsVerticalScrollIndicator
             setBuiltInZoomControls={Platform.OS === 'android'}
+            onLoadEnd={() => setWebViewReady(true)}
           />
         </View>
 
@@ -505,6 +517,10 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     backgroundColor: '#f9fafb',
+  },
+  webViewSkeletonWrap: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
   },
   web: {
     flex: 1,

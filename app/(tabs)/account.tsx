@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Image } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, ScrollView, Pressable, Image, RefreshControl } from 'react-native';
 import { User as UserIcon, MapPin, WalletMinimal, Truck, PackageCheck, Star, ChevronRight, RotateCcw, Gift, Tag, DollarSign, Wallet, Heart, Clock, RotateCw, Ticket, Users } from 'lucide-react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
@@ -48,7 +48,10 @@ export default function AccountScreen() {
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
   const orders = useDataStore(state => state.orders);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
+  const loadUserData = useDataStore(state => state.loadUserData);
+  const forceRefreshProducts = useDataStore(state => state.forceRefreshProducts);
   const products = useDataStore(state => state.products);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     hydrate();
@@ -118,6 +121,22 @@ export default function AccountScreen() {
 
   const isAuthenticated = !!token && !!user;
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (token && user?.id) {
+        useDataStore.setState({ userLastUpdated: null });
+        await Promise.all([
+          loadUserData(token),
+          loadOrdersData(true),
+          forceRefreshProducts(),
+        ]);
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [token, user?.id, loadUserData, loadOrdersData, forceRefreshProducts]);
+
   const renderLoginPrompt = () => (
     <View style={{ backgroundColor: '#ffffff', padding: 26, marginBottom: 10, alignItems: 'center' }}>
       <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#e5e7eb', marginBottom: 16 }}>
@@ -175,7 +194,17 @@ export default function AccountScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: '#f9fafb' }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          tintColor={primaryBlue}
+          colors={[primaryBlue]}
+        />
+      }
+    >
       {/* Section 1: User Section */}
       {renderUserSection()}
 

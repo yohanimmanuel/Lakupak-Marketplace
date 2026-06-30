@@ -6,7 +6,6 @@ import {
   Image,
   TouchableOpacity,
   StatusBar,
-  ActivityIndicator,
   Linking,
   StyleSheet,
 } from 'react-native';
@@ -20,6 +19,7 @@ import {
 } from '../../../../services/latestUpdatesService';
 import { useAuthStore } from '../../../../stores/authStore';
 import { useTranslation } from 'react-i18next';
+import { ArticleDetailSkeleton } from '../../SkeletonLoader';
 
 const primaryBlue = '#0a61d7';
 
@@ -103,9 +103,7 @@ export default function LatestUpdateDetailScreen() {
       />
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={primaryBlue} />
-        </View>
+        <ArticleDetailSkeleton />
       ) : err || !item ? (
         <View style={styles.center}>
           <Text style={styles.err}>{err || t('latestUpdatesDetail.states.notFound')}</Text>

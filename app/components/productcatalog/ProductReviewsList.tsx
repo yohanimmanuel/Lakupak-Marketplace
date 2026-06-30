@@ -15,6 +15,7 @@ import { ArrowLeft, Star } from 'lucide-react-native';
 import { API_BASE_URL } from '../../../services/config';
 import { useTranslation } from 'react-i18next';
 import ProductImageModal from './ProductImageModal';
+import { ProductReviewsListSkeleton } from '../SkeletonLoader';
 
 type ProductReviewItem = {
   id: number;
@@ -234,10 +235,7 @@ export default function ProductReviewsList() {
       />
 
       {loading ? (
-        <View style={styles.centerState}>
-          <ActivityIndicator color={primaryBlue} />
-          <Text style={styles.centerText}>{t('product.states.loadingReviews')}</Text>
-        </View>
+        <ProductReviewsListSkeleton />
       ) : error ? (
         <View style={styles.centerState}>
           <Text style={styles.centerText}>{t('productReviewsList.states.failed')}</Text>

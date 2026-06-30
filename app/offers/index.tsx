@@ -3,7 +3,6 @@ import {
   View,
   ScrollView,
   Pressable,
-  ActivityIndicator,
   StyleSheet,
   RefreshControl,
   Text,
@@ -18,6 +17,7 @@ import SaleBanner, { SALE_BANNER_UNIFORM_HEIGHT } from '../components/paymentche
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
 import { useTranslation } from 'react-i18next';
+import { OffersListSkeleton } from '../components/SkeletonLoader';
 
 const primaryColor = '#0a61d7';
 
@@ -81,9 +81,7 @@ export default function SpecialOffersListScreen() {
       {headerBar}
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       {!listReady && token ? (
-        <View style={[styles.centered, styles.bodyFill]}>
-          <ActivityIndicator size="large" color={primaryColor} />
-        </View>
+        <OffersListSkeleton />
       ) : !token ? (
         <View style={[styles.centered, styles.bodyFill]}>
           <ThemedText style={styles.muted}>{t('offers.states.signInToView')}</ThemedText>

@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   View,
   StyleSheet,
-  ActivityIndicator,
   Text,
   Pressable,
   type ViewStyle,
@@ -13,6 +12,7 @@ import { LakuTheme } from '@/constants/Colors';
 import { MapCoordinates } from '../../../utils/mapboxUtils';
 import { getMapboxAccessToken, hasMapboxAccessToken } from '../../../utils/mapboxConfig';
 import AddressLocationMarker from '../map/AddressLocationMarker';
+import { MapShimmerOverlay } from '../SkeletonLoader';
 
 const MAP_STYLE_URL = 'mapbox://styles/mapbox/streets-v12';
 const INDONESIA_CENTER: [number, number] = [118.0, -2.5];
@@ -287,7 +287,7 @@ export default function MapComponent({
 
       {!mapLoaded ? (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={LakuTheme.primary} />
+          <MapShimmerOverlay />
           <Text style={styles.loadingText}>{t('map.loading')}</Text>
         </View>
       ) : null}
@@ -329,12 +329,13 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    zIndex: 10,
   },
   loadingText: {
     marginTop: 8,
     fontSize: 14,
     color: LakuTheme.textSecondary,
+    zIndex: 11,
   },
   fallback: {
     flex: 1,

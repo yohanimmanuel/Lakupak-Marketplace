@@ -24,6 +24,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
 import { API_BASE_URL } from '../../../services/config';
 import { useTranslation } from 'react-i18next';
+import { ProductReviewsInlineSkeleton } from '../SkeletonLoader';
 import { translateProductType } from '../../../utils/translateProductType';
 // Removed theme color imports - using explicit colors
 
@@ -1096,9 +1097,7 @@ export default function ProductMarketplace({
       </View>
 
       {reviewsLoading ? (
-        <View style={styles.noReviewsContainer}>
-          <Text style={[styles.noReviewsTitle, { color: textColor }]}>{t('product.states.loadingReviews')}</Text>
-        </View>
+        <ProductReviewsInlineSkeleton />
       ) : totalReviewsFromApi === 0 ? (
         <View style={styles.noReviewsContainer}>
           <Ionicons name="chatbubbles-outline" size={30} color="#9CA3AF" />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, Image, Alert } from 'react-native';
 import { Stack, useRouter, Link, type LinkProps } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronRight, Camera, ArrowLeft } from 'lucide-react-native';
@@ -7,6 +7,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { updateMe } from '../../../services/user';
 import { pickImage, takePhoto } from '../../../services/imagePicker';
 import { useTranslation } from 'react-i18next';
+import { EditProfileSkeleton, ShimmerBone, ShimmerIcon } from '../../components/SkeletonLoader';
 
 export default function EditProfileModal() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function EditProfileModal() {
   const { t } = useTranslation();
   const user = useAuthStore(s => s.user);
   const token = useAuthStore(s => s.token);
+  const hasHydrated = useAuthStore(s => s.hasHydrated);
   const setUser = useAuthStore(s => s.setUser);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -107,12 +109,25 @@ export default function EditProfileModal() {
           ),
         }}
       />
+      {!hasHydrated || (!user && !!token) ? (
+        <EditProfileSkeleton />
+      ) : (
       <ScrollView style={{ flex: 1, backgroundColor: '#ffffff' }}>
       {/* Profile Image Banner */}
       <View style={{ height: 160, backgroundColor: user?.bannerImage ? 'transparent' : '#0a61d7', position: 'relative', justifyContent: 'center', alignItems: 'center' }}>
         {user?.bannerImage && (
           <Image source={{ uri: user.bannerImage }} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }} />
         )}
+        {user?.image ? (
+          <Image source={{ uri: user.image }} style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: '#ffffff' }} />
+        ) : (
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#ffffff' }}>
+            <Text style={{ color: '#0a61d7', fontSize: 24, fontWeight: '600' }}>
+              {user?.username?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'U'}
+            </Text>
+          </View>
+        )}
+        {isUploading ? <ShimmerBone style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 0, zIndex: 1 }} /> : null}
         {user?.image ? (
           <Image source={{ uri: user.image }} style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: '#ffffff' }} />
         ) : (
@@ -148,7 +163,7 @@ export default function EditProfileModal() {
           accessibilityState={{ busy: isUploading }}
         >
           {isUploading ? (
-            <ActivityIndicator size="small" color="#0a61d7" />
+            <ShimmerIcon size={20} />
           ) : (
             <Camera color="#0a61d7" size={20} />
           )}
@@ -164,6 +179,7 @@ export default function EditProfileModal() {
       <Row title={t('profile.editProfile.rows.address')} value={user?.chosenAddress} href={{ pathname: '/useraccounts/userprofile/addresses' }} />
       <Row title={t('profile.editProfile.rows.country')} value={user?.country} href={{ pathname: '/useraccounts/userprofile/edit-country' }} />
     </ScrollView>
+      )}
     </>
   );
 }

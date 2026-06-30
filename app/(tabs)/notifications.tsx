@@ -6,8 +6,8 @@ import {
   Image,
   StatusBar,
   Text,
-  ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -37,11 +37,17 @@ import { usePlatformAnnouncementsRealtimeStore } from '../../stores/platformAnno
 import { OrderUpdateRow } from '../../components/notifications/OrderUpdateRow';
 import { useTranslation } from 'react-i18next';
 import { getOrderPreviewStrings } from '../../utils/orderNotificationI18n';
+import { NotificationsTabSkeleton } from '../components/SkeletonLoader';
 
 const MISSING_ORDER_TIMESTAMP_FALLBACK = '1970-01-01T00:00:00.000Z';
 const warnedOrderIds = new Set<string>();
 const ORDER_PREVIEW_LIMIT = 5;
 const primaryBlue = '#0a61d7';
+
+function isStillAuthenticatedUser(requestUserId: number): boolean {
+  const { token, user } = useAuthStore.getState();
+  return !!token && user?.id === requestUserId;
+}
 
 /** Fixed marketplace “Latest updates” filters (must match admin `PlatformAnnouncement.category` values, case-insensitive). */
 type LatestUpdateTabId = 'all' | 'update' | 'promotion' | 'maintenance' | 'policy';
@@ -93,9 +99,12 @@ export default function NotificationsScreen() {
   const [orderNotifications, setOrderNotifications] = useState<Notification[]>([]);
   const [error, setError] = useState<string | null>(null);
   const orders = useDataStore((state) => state.orders);
+  const loadOrdersData = useDataStore((state) => state.loadOrdersData);
 
   const [latestUpdates, setLatestUpdates] = useState<PlatformAnnouncement[]>([]);
-  const [latestLoading, setLatestLoading] = useState(false);
+  const [latestLoading, setLatestLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
   const [latestError, setLatestError] = useState<string | null>(null);
   const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<number>>(new Set());
   const [dismissedAnnouncementIds, setDismissedAnnouncementIds] = useState<Set<number>>(new Set());
@@ -109,26 +118,30 @@ export default function NotificationsScreen() {
     hydrate();
   }, [hydrate]);
 
-  useEffect(() => {
+  const loadAlerts = useCallback(async () => {
     if (!isAuthenticated || !authUser?.id) {
       setAlerts([]);
       setError(null);
       return;
     }
 
-    const loadNotifications = async () => {
-      try {
-        const storedNotifications = await NotificationService.getNotifications(authUser.id);
-        const nonOrderNotifications = storedNotifications.filter((n) => n.type !== 'order');
-        setAlerts(nonOrderNotifications);
-      } catch {
-        setError(t('tabsNotifications.errors.loadFailed'));
-        setAlerts([]);
-      }
-    };
-
-    loadNotifications();
+    const requestUserId = authUser.id;
+    try {
+      const storedNotifications = await NotificationService.getNotifications(requestUserId);
+      if (!isStillAuthenticatedUser(requestUserId)) return;
+      const nonOrderNotifications = storedNotifications.filter((n) => n.type !== 'order');
+      setAlerts(nonOrderNotifications);
+      setError(null);
+    } catch {
+      if (!isStillAuthenticatedUser(requestUserId)) return;
+      setError(t('tabsNotifications.errors.loadFailed'));
+      setAlerts([]);
+    }
   }, [isAuthenticated, authUser?.id, t]);
+
+  useEffect(() => {
+    loadAlerts();
+  }, [loadAlerts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,6 +184,41 @@ export default function NotificationsScreen() {
   useEffect(() => {
     loadLatestUpdates();
   }, [loadLatestUpdates]);
+
+  useEffect(() => {
+    if (!latestLoading && !refreshing) {
+      setHasInitiallyLoaded(true);
+    }
+  }, [latestLoading, refreshing]);
+
+  const showPageSkeleton = refreshing || (!hasInitiallyLoaded && latestLoading);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const tasks: Promise<void>[] = [loadLatestUpdates()];
+      if (isAuthenticated && authUser?.id) {
+        const requestUserId = authUser.id;
+        tasks.push(loadAlerts());
+        tasks.push(loadOrdersData(true));
+        tasks.push(
+          getReadAnnouncementIds(requestUserId).then((ids) => {
+            if (!isStillAuthenticatedUser(requestUserId)) return;
+            setReadAnnouncementIds(ids);
+          }),
+        );
+        tasks.push(
+          getDismissedAnnouncementIds(requestUserId).then((dismissed) => {
+            if (!isStillAuthenticatedUser(requestUserId)) return;
+            setDismissedAnnouncementIds(dismissed);
+          }),
+        );
+      }
+      await Promise.all(tasks);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadLatestUpdates, loadAlerts, isAuthenticated, authUser?.id, loadOrdersData]);
 
   useEffect(() => {
     const s = usePlatformAnnouncementsRealtimeStore.getState();
@@ -362,7 +410,19 @@ export default function NotificationsScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={primaryBlue}
+            colors={[primaryBlue]}
+          />
+        }
       >
+        {showPageSkeleton ? (
+          <NotificationsTabSkeleton />
+        ) : (
+          <>
         {error && (
           <View style={styles.errorBanner}>
             <Text style={styles.errorBannerText}>{error}</Text>
@@ -481,14 +541,7 @@ export default function NotificationsScreen() {
               })}
             </ScrollView>
 
-            {latestLoading && (
-              <View style={styles.latestLoadingRow}>
-                <ActivityIndicator size="small" color={primaryBlue} />
-                <Text style={styles.latestLoadingText}>{t('tabsNotifications.latestUpdates.loading')}</Text>
-              </View>
-            )}
-
-            {latestError && !latestLoading && (
+            {latestError && (
               <View style={styles.latestErrorBanner}>
                 <Text style={styles.errorBannerText}>{latestError}</Text>
               </View>
@@ -513,9 +566,7 @@ export default function NotificationsScreen() {
                 <Text style={styles.latestEmpty}>{t('tabsNotifications.latestUpdates.dismissedAll')}</Text>
               )}
 
-            {!latestLoading &&
-              !latestError &&
-              visibleFilteredLatestUpdates.map((item) => {
+            {visibleFilteredLatestUpdates.map((item) => {
                 const read = readAnnouncementIds.has(item.id);
                 const timeLabel = formatAnnouncementTime(item.publishedAt, item.createdAt);
                 const rowTab = announcementCategoryToTabId(item.category);
@@ -574,6 +625,8 @@ export default function NotificationsScreen() {
               })}
           </View>
         </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );

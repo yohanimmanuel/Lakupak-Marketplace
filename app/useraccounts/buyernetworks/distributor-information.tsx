@@ -10,6 +10,7 @@ import { websocketService } from '../../../services/websocket';
 import { useAuthStore } from '../../../stores/authStore';
 import { followDistributor, isFollowingDistributor, unfollowDistributor } from '../../../services/distributorFollowing';
 import { useTranslation } from 'react-i18next';
+import { ProductGridSkeleton } from '../../components/SkeletonLoader';
 
 const primaryBlue = '#0a61d7';
 const { height: screenHeight } = Dimensions.get('window');
@@ -521,11 +522,13 @@ export default function DistributorInformationScreen() {
           contentContainerStyle={{ paddingTop: 12, paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}
         >
-          {!loading && visibleProducts.length === 0 ? (
+          {loading ? (
+            <ProductGridSkeleton rowsPerColumn={4} style={{ paddingBottom: 8 }} />
+          ) : visibleProducts.length === 0 ? (
             <View style={styles.emptyBlock}>
               <Text style={styles.muted}>{t('buyerNetworks.distributorInformation.empty.noProducts')}</Text>
             </View>
-          ) : visibleProducts.length === 0 ? null : (
+          ) : (
             <View style={styles.productsGrid}>
               <View style={styles.productsCol}>
                 {visibleProducts

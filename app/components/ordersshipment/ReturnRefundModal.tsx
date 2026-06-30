@@ -20,6 +20,7 @@ import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { pickImage, takePhoto } from '../../../services/imagePicker';
 import { useTranslation } from 'react-i18next';
+import { ShimmerIcon } from '../SkeletonLoader';
 
 const RETURN_REASON_IDS = [
   'wrong_item',
@@ -287,7 +288,7 @@ export default function ReturnRefundModal() {
                     accessibilityRole="button"
                   >
                     {uploadingPhotos ? (
-                      <ActivityIndicator size="small" color={primaryBlue} />
+                      <ShimmerIcon size={22} />
                     ) : (
                       <Camera size={22} color="#6b7280" />
                     )}
@@ -301,7 +302,7 @@ export default function ReturnRefundModal() {
                     accessibilityRole="button"
                   >
                     {uploadingPhotos ? (
-                      <ActivityIndicator size="small" color={primaryBlue} />
+                      <ShimmerIcon size={22} />
                     ) : (
                       <ImagePlus size={22} color="#6b7280" />
                     )}
