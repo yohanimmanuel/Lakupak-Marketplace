@@ -246,9 +246,9 @@ export default function MyPurchasesModal() {
       case 'Pending':
         return '#f59e0b';
       case 'Cancelled':
-      return '#ef4444';
+        return '#ef4444';
       case 'Returned':
-        return '#6b7280';
+        return '#c2410c';
       default:
         return '#6b7280';
     }

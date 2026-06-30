@@ -176,8 +176,9 @@ export default function OrdersScreen() {
         return '#f59e0b';
       case 'cancelled':
       case 'failed':
-      case 'returned':
         return '#ef4444';
+      case 'returned':
+        return '#c2410c';
       default:
         return '#6b7280';
     }
@@ -201,7 +202,7 @@ export default function OrdersScreen() {
       case 'cancelled':
         return { backgroundColor: '#fff1f2', color: '#be123c' };
       case 'returned':
-        return { backgroundColor: '#f3f4f6', color: '#4b5563' };
+        return { backgroundColor: '#ffedd5', color: '#c2410c' };
       default:
         return { backgroundColor: '#f3f4f6', color: '#6b7280' };
     }
