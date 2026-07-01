@@ -460,7 +460,8 @@
     "loading": "Loading your orders…",
     "items": {
       "products": "{{count}} products",
-      "noProducts": "No products"
+      "noProducts": "No products",
+      "freePieces": "+{{count}} free"
     },
     "orderDateLabel": "Order Date:",
     "seeDetails": "See details",

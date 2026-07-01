@@ -41,6 +41,10 @@ import { getDistributorCompanyName } from '../../utils/orderDistributor';
 import { isReorderEligible, resolveReorderNavigationTarget } from '../../utils/reorderFromOrder';
 import { showReorderUnavailableAlert } from '../../utils/reorderAlerts';
 import { OrdersListSkeleton } from '../components/SkeletonLoader';
+import {
+  buildOrderItemDisplayLines,
+  getOrderItemCountSummary,
+} from '../../utils/orderItemDisplay';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -144,23 +148,10 @@ export default function OrdersScreen() {
     return `${datePart} • ${timePart}`;
   };
 
-  const formatProductSummary = (order: MarketplaceOrder) => {
+  const buildOrderProductLines = (order: MarketplaceOrder) => {
     const items = order.orderItems ?? [];
-    if (items.length === 0) return t('tabsOrders.items.noProducts');
-    return items
-      .map((item) => {
-        const qty = item.packageQuantity && item.packageQuantity > 0 ? item.packageQuantity : 1;
-        const name = item.productName?.trim() || t('tabsOrders.items.noProducts');
-        return `${qty}x ${name}`;
-      })
-      .join(', ');
-  };
-
-  const getTotalItemCount = (order: MarketplaceOrder) => {
-    const items = order.orderItems ?? [];
-    if (items.length === 0) return 0;
-    const fromQty = items.reduce((sum, item) => sum + (item.packageQuantity ?? 1), 0);
-    return fromQty > 0 ? fromQty : items.length;
+    if (items.length === 0) return [];
+    return buildOrderItemDisplayLines(items, t('tabsOrders.items.noProducts'));
   };
 
   const getOrderStatusColor = (status?: string) => {
@@ -299,14 +290,14 @@ export default function OrdersScreen() {
               const firstImage = order.orderItems?.[0]?.images?.[0];
               const distributorName =
                 getDistributorCompanyName(order) || t('tabsOrders.distributorFallback');
-              const productSummary = formatProductSummary(order);
-              const itemCount = getTotalItemCount(order);
+              const productLines = buildOrderProductLines(order);
+              const itemSummary = getOrderItemCountSummary(order.orderItems ?? []);
               const amountLabel =
                 order.totalAmount != null
                   ? `Rp ${Math.round(order.totalAmount).toLocaleString('id-ID')}`
                   : '';
               const summaryLabel = t('tabsOrders.summaryLine', {
-                count: itemCount,
+                count: itemSummary.total,
                 amount: amountLabel,
               });
 
@@ -355,9 +346,29 @@ export default function OrdersScreen() {
                           {dateLabel}
                         </Text>
                       ) : null}
-                      <Text style={styles.orderProductsText} numberOfLines={3}>
-                        {productSummary}
-                      </Text>
+                      {productLines.length > 0 ? (
+                        <View style={styles.orderProductsList}>
+                          {productLines.map((line, index) => (
+                            <View key={`${order.orderId}-item-${index}`} style={styles.orderProductLine}>
+                              <Text style={styles.orderProductsText} numberOfLines={2}>
+                                {line.orderedQuantity}x {line.name}
+                              </Text>
+                              {line.freePieces > 0 ? (
+                                <View style={styles.orderProductFreeBadge}>
+                                  <Gift size={12} color="#9333EA" />
+                                  <Text style={styles.orderProductFreeText}>
+                                    +{t('ordersFlow.orderDetails.product.freePieces', { count: line.freePieces })}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          ))}
+                        </View>
+                      ) : (
+                        <Text style={[styles.orderProductsText, { marginTop: 6 }]}>
+                          {t('tabsOrders.items.noProducts')}
+                        </Text>
+                      )}
                       <View style={[styles.orderStatusPill, statusBadgeStyle]}>
                         <Text style={[styles.orderStatusPillText, { color: statusBadgeStyle.color }]}>
                           {order.orderStatus || t('tabsOrders.unknownStatus')}
@@ -572,11 +583,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
+  orderProductsList: {
+    marginTop: 6,
+    gap: 8,
+  },
+  orderProductLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
   orderProductsText: {
     fontSize: 13,
     color: '#374151',
     lineHeight: 18,
-    marginTop: 6,
+  },
+  orderProductFreeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 0,
+  },
+  orderProductFreeText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#9333EA',
+    fontWeight: '600',
   },
   orderStatusPill: {
     paddingHorizontal: 10,

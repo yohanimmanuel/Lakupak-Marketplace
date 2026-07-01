@@ -32,6 +32,7 @@ export interface MarketplaceOrderItem {
   discountAmount?: number | null
   promotionDetailsSnapshot?: string | null
   variantNameSnapshot?: string | null
+  moqSnapshot?: number | null
   productDeleted?: boolean
   product?: {
     userId?: number | null

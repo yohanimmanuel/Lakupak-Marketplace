@@ -460,7 +460,8 @@
     "loading": "Memuat pesanan Anda…",
     "items": {
       "products": "{{count}} produk",
-      "noProducts": "Tidak ada produk"
+      "noProducts": "Tidak ada produk",
+      "freePieces": "+{{count}} gratis"
     },
     "orderDateLabel": "Tanggal pesanan:",
     "seeDetails": "Lihat detail",
