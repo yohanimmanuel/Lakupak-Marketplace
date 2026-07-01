@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -116,6 +116,7 @@ export default function ProductMarketplace({
   const [reviewImageModalVisible, setReviewImageModalVisible] = useState(false);
   const [reviewImageModalImages, setReviewImageModalImages] = useState<string[]>([]);
   const [reviewImageModalInitialIndex, setReviewImageModalInitialIndex] = useState(0);
+  const trackedViewProductIdRef = useRef<string | null>(null);
 
   // Safe value getters to prevent undefined/null errors
   const safeGetString = (value: unknown, fallback: string = ''): string => {
@@ -262,15 +263,17 @@ export default function ProductMarketplace({
     ? safeGetString(images[currentImageIndex] || images[0])
     : null;
 
-  // Track viewed product when component mounts (for full view only)
+  // Track product page view once per detail open (not on card tap — that would double-count with navigation).
+  const originalPriceForTracking = getOriginalSellingPrice();
   useEffect(() => {
-    if (type === 'full' && user?.id) {
-      // Only track if it's a MarketplaceProduct (has all required fields)
-      if ('originalPrice' in product && typeof product.originalPrice === 'number') {
-        addViewedProduct(safeGetString(product.id), product as MarketplaceProduct);
-      }
-    }
-  }, [product.id, type, addViewedProduct, product, user?.id]);
+    if (type !== 'full' || !user?.id) return;
+    const productId = safeGetString(product.id);
+    if (!productId || trackedViewProductIdRef.current === productId) return;
+    if (originalPriceForTracking <= 0 && getSellingPrice() <= 0) return; // wait for pricing data to load
+
+    trackedViewProductIdRef.current = productId;
+    addViewedProduct(productId, product as MarketplaceProduct);
+  }, [product.id, type, user?.id, originalPriceForTracking]);
 
   // Fetch product reviews by productId for Customer Reviews section
   const productIdForReviews = safeGetString(product.id) || (product as { productId?: string }).productId || '';
@@ -345,11 +348,6 @@ export default function ProductMarketplace({
   };
 
   const handleCardPress = () => {
-    // Track viewed product when user clicks on it
-    if (user?.id && 'originalPrice' in product && typeof product.originalPrice === 'number') {
-      addViewedProduct(safeGetString(product.id), product as MarketplaceProduct);
-    }
-    
     if (onPress) {
       onPress(product);
     } else {
