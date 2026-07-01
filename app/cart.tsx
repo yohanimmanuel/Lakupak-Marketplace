@@ -29,6 +29,8 @@ import { resolveVariantMoq, resolveVariantPricing } from '../utils/variantRules'
 import { getDistributorDisplayName, resolveDistributorId } from '../utils/cartDistributor';
 import QuantitySelector from './components/productcatalog/QuantitySelector';
 
+const KEYBOARD_BOTTOM_GAP = 5;
+
 export default function CartScreen() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -64,7 +66,7 @@ export default function CartScreen() {
 
     const showSub = Keyboard.addListener(showEvent, (event) => {
       Animated.timing(keyboardOffset, {
-        toValue: event.endCoordinates.height,
+        toValue: event.endCoordinates.height + KEYBOARD_BOTTOM_GAP,
         duration: Platform.OS === 'ios' ? event.duration ?? 250 : 250,
         useNativeDriver: true,
       }).start();

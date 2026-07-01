@@ -26,6 +26,7 @@ import { calculateProductPromotion } from '../../../utils/promotionUtils';
 import QuantitySelector from './QuantitySelector';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const KEYBOARD_BOTTOM_GAP = 10;
 
 type ProductType = Product | MarketplaceProduct;
 
@@ -104,7 +105,7 @@ export default function BuyNowModal({
 
     const showSub = Keyboard.addListener(showEvent, (event) => {
       Animated.timing(keyboardOffset, {
-        toValue: event.endCoordinates.height,
+        toValue: event.endCoordinates.height + KEYBOARD_BOTTOM_GAP,
         duration: Platform.OS === 'ios' ? event.duration ?? 250 : 250,
         useNativeDriver: true,
       }).start();
