@@ -1212,6 +1212,8 @@
       "subtitle": "Yuk, cari promo menarik sekarang!"
     },
     "selectAll": "Semua",
+    "deleteA11y": "Hapus dari keranjang",
+    "moqWarning": "Minimal pembelian: {{moq}} pcs (Anda punya {{have}})",
     "saved": "Hemat {{amount}}",
     "loginPrompt": {
       "title": "Buat akun untuk dapat manfaat pesanan pertama!",
@@ -1226,6 +1228,7 @@
     },
     "checkout": {
       "moqNotMet": "Minimal pembelian belum terpenuhi",
+      "noSelection": "Pilih minimal satu item di keranjang untuk checkout.",
       "cta": "Checkout ({{count}})"
     }
   },

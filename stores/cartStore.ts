@@ -116,8 +116,11 @@ interface CartState {
   removeItem: (itemId: string) => void
   updateQuantity: (itemId: string, quantity: number) => void
   toggleSelect: (itemId: string) => void
+  setItemSelected: (itemId: string, selected: boolean) => void
+  setItemsSelected: (itemIds: string[], selected: boolean) => void
   selectAll: () => void
   deselectAll: () => void
+  removeItems: (itemIds: string[]) => Promise<void>
   clearCart: (options?: { trackAbandonment?: boolean }) => Promise<void>
   clearCartLocal: () => void
   setCartOpen: (isOpen: boolean) => void
@@ -152,6 +155,28 @@ const convertDatabaseToCartItem = (dbItem: DatabaseUserActivity | { id: number; 
     variant: metadata.variant || 'Default',
     addedAt: metadata.addedAt || new Date(dbItem.createdAt).getTime()
   };
+};
+
+const parseDbCartItemId = (itemId: string): number | null => {
+  if (!itemId.startsWith('db-')) return null;
+  const dbId = parseInt(itemId.replace('db-', ''), 10);
+  return Number.isNaN(dbId) ? null : dbId;
+};
+
+const syncCartItemSelectionToDatabase = async (
+  item: CartItem,
+  selected: boolean,
+  isOnline: boolean,
+): Promise<void> => {
+  if (!isOnline) return;
+
+  const authState = useAuthStore.getState();
+  const dbId = parseDbCartItemId(item.id);
+  if (!dbId) return;
+
+  await cartService.updateCartItem(dbId, undefined, selected, authState.token || undefined).catch(() => {
+    // Silently handle errors
+  });
 };
 
 // Helper function to sync cart item to database
@@ -278,26 +303,65 @@ export const useCartStore = create<CartState>()(
       },
 
       toggleSelect: (itemId) => {
-        const { items } = get()
+        const state = get();
+        const item = state.items.find((entry) => entry.id === itemId);
+        if (!item) return;
+        get().setItemSelected(itemId, !item.selected);
+      },
+
+      setItemSelected: (itemId, selected) => {
+        const state = get();
+        const item = state.items.find((entry) => entry.id === itemId);
+        if (!item || item.selected === selected) return;
+
         set({
-          items: items.map(item =>
-            item.id === itemId ? { ...item, selected: !item.selected } : item
-          )
-        })
+          items: state.items.map((entry) =>
+            entry.id === itemId ? { ...entry, selected } : entry,
+          ),
+        });
+
+        void syncCartItemSelectionToDatabase(item, selected, state.isOnline);
+      },
+
+      setItemsSelected: (itemIds, selected) => {
+        const state = get();
+        const idSet = new Set(itemIds);
+        const changedItems = state.items.filter((entry) => idSet.has(entry.id) && entry.selected !== selected);
+
+        if (changedItems.length === 0) return;
+
+        set({
+          items: state.items.map((entry) =>
+            idSet.has(entry.id) ? { ...entry, selected } : entry,
+          ),
+        });
+
+        changedItems.forEach((entry) => {
+          void syncCartItemSelectionToDatabase(entry, selected, state.isOnline);
+        });
       },
 
       selectAll: () => {
-        const { items } = get()
-        set({
-          items: items.map(item => ({ ...item, selected: true }))
-        })
+        const { items } = get();
+        const allSelected = items.length > 0 && items.every((item) => item.selected);
+        get().setItemsSelected(
+          items.map((item) => item.id),
+          !allSelected,
+        );
       },
 
       deselectAll: () => {
-        const { items } = get()
-        set({
-          items: items.map(item => ({ ...item, selected: false }))
-        })
+        const { items } = get();
+        get().setItemsSelected(
+          items.map((item) => item.id),
+          false,
+        );
+      },
+
+      removeItems: async (itemIds) => {
+        for (const itemId of itemIds) {
+          get().removeItem(itemId);
+        }
       },
 
       clearCart: async (options?: { trackAbandonment?: boolean }) => {
@@ -369,17 +433,36 @@ export const useCartStore = create<CartState>()(
       },
 
       loadFromDatabase: async () => {
-        const { isOnline } = get()
+        const { isOnline, items: previousItems } = get()
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
         const token = authState.token
         
         if (!currentUserId || !isOnline) return
 
+        const previousSelectionById = new Map(previousItems.map((item) => [item.id, item.selected]));
+        const previousSelectionByKey = new Map(
+          previousItems.map((item) => [
+            `${item.product.id}::${item.variant ?? 'Default'}`,
+            item.selected,
+          ]),
+        );
+
         set({ isLoading: true })
         try {
           const cartItems = await cartService.getCart(currentUserId, token || undefined)
-          const convertedItems = cartItems.map(convertDatabaseToCartItem)
+          const convertedItems = cartItems.map(convertDatabaseToCartItem).map((item) => {
+            if (previousSelectionById.has(item.id)) {
+              return { ...item, selected: previousSelectionById.get(item.id)! };
+            }
+
+            const key = `${item.product.id}::${item.variant ?? 'Default'}`;
+            if (previousSelectionByKey.has(key)) {
+              return { ...item, selected: previousSelectionByKey.get(key)! };
+            }
+
+            return item;
+          });
           set({ items: convertedItems })
         } catch (error) {
           // Silently handle errors

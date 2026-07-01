@@ -1,36 +1,33 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   Image,
   StyleSheet,
-  Dimensions,
   Pressable,
   Alert,
+  Animated,
+  Keyboard,
+  Platform,
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
+import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Stack, useRouter } from 'expo-router';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, MessageSquareText, Minus, Plus, ShoppingBag, Package, Star, Truck, MapPin, ChevronDown, Trash2, User as UserIcon } from 'lucide-react-native';
-import { Product } from '../data/sampleProducts';
-import { MarketplaceProduct, marketplaceService } from '../services/marketplace';
+import { ArrowLeft, MessageSquareText, ShoppingBag, ChevronDown, Trash2, User as UserIcon, ChevronRight, Store } from 'lucide-react-native';
+import { MarketplaceProduct } from '../services/marketplace';
 import { formatCurrency } from '../utils/currencyUtils';
 import { calculateProductPromotion } from '../utils/promotionUtils';
-import ProductMarketplace from './components/productcatalog/ProductMarketplace';
-import BuyNowModal from './components/productcatalog/BuyNowModal';
 import { useCartStore, CartItem } from '../stores/cartStore';
 import { useDataStore } from '../stores/dataStore';
 import { useAuthStore } from '../stores/authStore';
-import { useUserActivityStore } from '../stores/userActivityStore';
 import { websocketService } from '../services/websocket';
 import { useTranslation } from 'react-i18next';
 import { resolveVariantMoq, resolveVariantPricing } from '../utils/variantRules';
-
-const { width: screenWidth } = Dimensions.get('window');
-
-type ProductType = Product | MarketplaceProduct;
+import { getDistributorDisplayName, resolveDistributorId } from '../utils/cartDistributor';
+import QuantitySelector from './components/productcatalog/QuantitySelector';
 
 export default function CartScreen() {
   const router = useRouter();
@@ -52,18 +49,40 @@ export default function CartScreen() {
   // Cart store - use single subscription to ensure re-renders
   const cartStore = useCartStore();
   const cartItems = cartStore.items;
-  const { removeItem, updateQuantity, toggleSelect, selectAll, getSelectedItems, getTotalPrice, getTotalSaved, getSelectedItemCount, clearCart, initializeCart, loadFromDatabase } = cartStore;
+  const { removeItem, updateQuantity, toggleSelect, setItemsSelected, selectAll, getSelectedItems, getTotalPrice, getTotalSaved, getSelectedItemCount, clearCart, initializeCart, loadFromDatabase } = cartStore;
 
   
   // Data store for products
   const { products } = useDataStore();
   
-  // User activity store for favorites
-  const { toggleLikedProduct } = useUserActivityStore();
-  const likedProducts = useUserActivityStore(state => state.likedProducts);
-  
-  const [showBuyNowModal, setShowBuyNowModal] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(null);
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
+
+  // Lift checkout bar above the keyboard while quantity is being edited
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      Animated.timing(keyboardOffset, {
+        toValue: event.endCoordinates.height,
+        duration: Platform.OS === 'ios' ? event.duration ?? 250 : 250,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (event) => {
+      Animated.timing(keyboardOffset, {
+        toValue: 0,
+        duration: Platform.OS === 'ios' ? event.duration ?? 250 : 250,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardOffset]);
 
   // Clear any test data on mount - use useRef to track if already initialized
   const hasInitialized = useRef(false);
@@ -105,34 +124,38 @@ export default function CartScreen() {
     };
   }, [isAuthenticated, token]); // loadFromDatabase removed - using store method directly
 
-  // Get related products from websocket-enabled products store
-  const relatedProducts = React.useMemo(() => {
-    if (products.length === 0) return [];
-
-    // Get categories from cart items, or use a default category
-    const categories = cartItems.length > 0 
-      ? [...new Set(cartItems.map(item => item.product.category).filter(Boolean))]
-      : ['Fashion']; // Default category if no cart items
-    
-    // Filter products by category and exclude cart items
-    const cartProductIds = cartItems.map(item => item.product.id);
-    const filtered = products
-      .filter(p => p.category === (categories[0] || 'Fashion'))
-      .filter(p => !cartProductIds.includes(p.id))
-      .slice(0, 4);
-    
-    // If no products in the same category, show any available products
-    if (filtered.length === 0) {
-      const anyProducts = products
-        .filter(p => !cartProductIds.includes(p.id))
-        .slice(0, 4);
-      return anyProducts;
-    }
-    return filtered;
-  }, [cartItems, products]);
-
   const getItemMOQ = (item: CartItem): number | null =>
-    resolveVariantMoq(item.product as MarketplaceProduct, item.variant);
+    resolveVariantMoq(getItemProduct(item), item.variant);
+
+  const getItemStockPieces = (item: CartItem): number => {
+    const product = getItemProduct(item);
+    const { option } = resolveVariantPricing(
+      product,
+      item.variant,
+      product.sellingPrice || 0,
+    );
+    const variantStock = (option as { stockQuantity?: number } | null)?.stockQuantity;
+    if (typeof variantStock === 'number' && variantStock >= 0) return variantStock;
+    return 999999;
+  };
+
+  const renderMoqWarning = (item: CartItem, piecesPerPackage: number) => {
+    if (!item.selected) return null;
+
+    const moq = getItemMOQ(item);
+    if (moq === null) return null;
+
+    const totalPieces = item.quantity * piecesPerPackage;
+    if (totalPieces >= moq) return null;
+
+    return (
+      <View style={styles.moqWarningContainer}>
+        <Text style={styles.moqWarningText}>
+          {t('cart.moqWarning', { moq, have: totalPieces })}
+        </Text>
+      </View>
+    );
+  };
 
   // Check if all selected items meet MOQ requirements
   const validateMOQ = (): { isValid: boolean; invalidItems: Array<{ item: CartItem; moq: number; currentPieces: number }> } => {
@@ -156,14 +179,6 @@ export default function CartScreen() {
     };
   };
 
-  const handleQuantityChange = (itemId: string, change: number) => {
-    const item = cartItems.find(item => item.id === itemId);
-    if (item) {
-      const newQuantity = Math.max(1, item.quantity + change);
-      updateQuantity(itemId, newQuantity);
-    }
-  };
-
   const handleSelectItem = (itemId: string) => {
     toggleSelect(itemId);
   };
@@ -172,37 +187,83 @@ export default function CartScreen() {
     selectAll();
   };
 
-  const handleAddToCart = (product: ProductType, quantity: number = 1) => {
-    useCartStore.getState().addItem(product, quantity);
+  const handleSelectDistributor = (items: CartItem[]) => {
+    const allSelected = items.length > 0 && items.every((item) => item.selected);
+    setItemsSelected(
+      items.map((item) => item.id),
+      !allSelected,
+    );
   };
 
-  const handleBuyNow = (product: ProductType, quantity?: number) => {
-    // Add product to cart using cart store
-    useCartStore.getState().addItem(product, quantity || 1, 'Default');
-  };
+  const renderCheckbox = (selected: boolean, onPress: () => void, style?: object) => (
+    <TouchableOpacity style={[styles.checkbox, style]} onPress={onPress} hitSlop={8}>
+      <View style={[styles.checkboxInner, selected && styles.checkboxSelected]}>
+        {selected ? <Text style={styles.checkmark}>✓</Text> : null}
+      </View>
+    </TouchableOpacity>
+  );
 
-  const handleChatSeller = () => {
-    // TODO: Implement chat seller functionality
-  };
-
-  const handleShare = () => {
-    // TODO: Implement share functionality
-  };
-
-  const handleToggleFavorite = async (productId: string) => {
-    if (!authUser?.id) {
-      return;
+  const getDistributorUserId = (items: CartItem[]): number | null => {
+    for (const item of items) {
+      const userId = getItemProduct(item).userId;
+      if (typeof userId === 'number' && userId > 0) return userId;
     }
-    const product = relatedProducts.find(p => p.id === productId) || products.find(p => p.id === productId);
-    if (product) {
-      await toggleLikedProduct(productId, product);
-    }
+    return null;
+  };
+
+  const openDistributorInformation = (items: CartItem[], name: string) => {
+    const userId = getDistributorUserId(items);
+    if (!userId) return;
+
+    router.push({
+      pathname: '/useraccounts/buyernetworks/distributor-information',
+      params: { id: String(userId), name },
+    });
   };
 
   const selectedItems = getSelectedItems();
   const totalPrice = getTotalPrice();
   const totalSaved = getTotalSaved();
   const selectedItemCount = getSelectedItemCount();
+
+  const getItemProduct = useCallback(
+    (item: CartItem): MarketplaceProduct => {
+      const productId = item.product?.id;
+      if (productId) {
+        const fresh = products.find((p) => p.id === productId);
+        if (fresh) return fresh as MarketplaceProduct;
+      }
+      return item.product as MarketplaceProduct;
+    },
+    [products],
+  );
+
+  const distributorGroups = useMemo(() => {
+    const grouped = new Map<string, { name: string; items: CartItem[] }>();
+
+    cartItems.forEach((item) => {
+      const product = getItemProduct(item);
+      const distributorId = resolveDistributorId(product);
+      const distributorName = getDistributorDisplayName(
+        product,
+        t('tabsOrders.distributorFallback'),
+      );
+
+      const existing = grouped.get(distributorId);
+      if (existing) {
+        existing.items.push(item);
+        return;
+      }
+
+      grouped.set(distributorId, { name: distributorName, items: [item] });
+    });
+
+    return Array.from(grouped.entries()).map(([id, group]) => ({
+      id,
+      name: group.name,
+      items: group.items,
+    }));
+  }, [cartItems, getItemProduct, t]);
   
   // Validate MOQ for selected items
   const moqValidation = validateMOQ();
@@ -241,185 +302,145 @@ export default function CartScreen() {
     </View>
   );
 
-  const renderCartItem = (item: CartItem) => (
-    <View key={item.id} style={styles.cartItem}>
-      <View style={styles.cartItemHeader}>
-        <TouchableOpacity
-          style={styles.checkbox}
-          onPress={() => handleSelectItem(item.id)}
-        >
-          <View style={[styles.checkboxInner, item.selected && styles.checkboxSelected]}>
-            {item.selected && <Text style={styles.checkmark}>✓</Text>}
-          </View>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => removeItem(item.id)}
-        >
-          <Trash2 size={20} color="#EF4444" />
-        </TouchableOpacity>
-      </View>
+  const renderCartItem = (item: CartItem) => {
+    const marketplaceProduct = getItemProduct(item);
+    const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+    const { unitPrice, originalPrice } = resolveVariantPricing(
+      marketplaceProduct,
+      item.variant,
+      marketplaceProduct.sellingPrice || (item.product as { price?: number }).price || 0,
+    );
+    const lineTotal = unitPrice * item.quantity * piecesPerPackage;
+    const lineOriginalTotal = originalPrice * item.quantity * piecesPerPackage;
+    const hasDiscount = originalPrice > unitPrice;
+    const promotionGift = calculateProductPromotion(
+      marketplaceProduct,
+      item.quantity,
+      item.variant,
+    );
 
-      <TouchableOpacity 
-        style={styles.productInfo}
-        onPress={() => {
-          router.push({
-            pathname: '/product',
-            params: { productId: item.product.id }
-          });
-        }}
+    return (
+    <View key={item.id} style={styles.cartItemWrapper}>
+      <ReanimatedSwipeable
+        friction={2}
+        overshootRight={false}
+        containerStyle={styles.swipeContainer}
+        childrenContainerStyle={styles.swipeChild}
+        renderRightActions={() => (
+          <View style={styles.swipeDeleteBg}>
+            <TouchableOpacity
+              style={styles.swipeDeleteBtn}
+              onPress={() => removeItem(item.id)}
+              accessibilityRole="button"
+              accessibilityLabel={t('cart.deleteA11y')}
+            >
+              <Trash2 size={22} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        )}
       >
-        <Image
-          source={{ uri: item.product.images?.[0] || 'https://via.placeholder.com/150' }}
-          style={styles.productImage}
-        />
-        
-        <View style={styles.productDetails}>
-          <Text style={styles.productName} numberOfLines={2}>
-            {item.product.name}
-          </Text>
-          
-          <View style={styles.variantContainer}>
-            <Text style={styles.variantText}>{item.variant}</Text>
-            <ChevronDown size={16} color="#6B7280" />
-          </View>
-          
-          {/* MOQ Warning for selected items */}
-          {item.selected && (() => {
-            const moq = getItemMOQ(item);
-            if (moq !== null) {
-              const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
-              const totalPieces = item.quantity * piecesPerPackage;
-              if (totalPieces < moq) {
-                return (
-                  <View style={styles.moqWarningContainer}>
-                    <Text style={styles.moqWarningText}>
-                      Minimum order: {moq} pieces (you have {totalPieces})
-                    </Text>
-                  </View>
-                );
-              }
-            }
-            return null;
-          })()}
-          
-          <View style={styles.priceQuantityRow}>
-            <View style={styles.quantityControls}>
+        <View style={styles.cartItem}>
+          {renderCheckbox(item.selected, () => handleSelectItem(item.id), styles.itemCheckboxTopRight)}
+
+          <View style={styles.cartItemMainRow}>
+            <Image
+              source={{ uri: item.product.images?.[0] || 'https://via.placeholder.com/150' }}
+              style={styles.productImage}
+            />
+
+            <View style={styles.productDetails}>
               <TouchableOpacity
-                style={styles.quantityButton}
-                onPress={() => handleQuantityChange(item.id, -1)}
+                style={styles.productDetailsTop}
+                activeOpacity={0.85}
+                onPress={() => {
+                  router.push({
+                    pathname: '/product',
+                    params: { productId: item.product.id },
+                  });
+                }}
               >
-                <Minus size={16} color="#111827" />
+                <Text style={styles.productName} numberOfLines={2}>
+                  {item.product.name}
+                </Text>
+
+                <View style={styles.variantContainer}>
+                  <Text style={styles.variantText}>{item.variant}</Text>
+                  <ChevronDown size={14} color="#6B7280" />
+                </View>
               </TouchableOpacity>
-              <View style={{alignItems: 'center'}}>
-                <Text style={styles.quantityText}>{item.quantity}</Text>
-                {(() => {
-                  const promotionGift = calculateProductPromotion(
-                    item.product as MarketplaceProduct,
-                    item.quantity,
-                    item.variant,
-                  );
 
-                  if (!promotionGift?.freeQty) return null;
-
-                  return (
+              <View style={styles.priceQtyRow}>
+                <TouchableOpacity
+                  style={styles.priceBlock}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    router.push({
+                      pathname: '/product',
+                      params: { productId: item.product.id },
+                    });
+                  }}
+                >
+                  {hasDiscount ? (
+                    <>
+                      <Text style={styles.originalLinePrice}>{formatCurrency(lineOriginalTotal)}</Text>
+                      <Text style={styles.price}>{formatCurrency(lineTotal)}</Text>
+                    </>
+                  ) : (
+                    <Text style={styles.price}>{formatCurrency(lineTotal)}</Text>
+                  )}
+                  {promotionGift?.freeQty ? (
                     <Text style={styles.promotionGiftText}>
                       +{promotionGift.freeQty} Free pieces
                     </Text>
-                  );
-                })()}
-              </View>
-              <TouchableOpacity
-                style={styles.quantityButton}
-                onPress={() => handleQuantityChange(item.id, 1)}
-              >
-                <Plus size={16} color="#111827" />
-              </TouchableOpacity>
-            </View>
-            
-            <View style={styles.priceContainer}>
-              <Text style={styles.price}>
-                {(() => {
-                  const marketplaceProduct = item.product as MarketplaceProduct;
-                  const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-                  const { unitPrice } = resolveVariantPricing(
-                    marketplaceProduct,
-                    item.variant,
-                    (item.product as { price?: number }).price || item.product.sellingPrice || 0,
-                  );
+                  ) : null}
+                </TouchableOpacity>
 
-                  return formatCurrency(unitPrice * item.quantity * piecesPerPackage);
-                })()}
-              </Text>
-            </View>
+                <View style={styles.qtyPickerWrap}>
+                  <QuantitySelector
+                    size="compact"
+                    packageQuantity={item.quantity}
+                    piecesPerPackage={piecesPerPackage}
+                    stockPieces={getItemStockPieces(item)}
+                    moq={getItemMOQ(item)}
+                    onPackageQuantityChange={(packages) => updateQuantity(item.id, packages)}
+                  />
+                </View>
+              </View>
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
+      </ReanimatedSwipeable>
 
+      {renderMoqWarning(item, piecesPerPackage)}
     </View>
-  );
+    );
+  };
 
-  const renderYouMayAlsoLike = () => {
-    // Don't show section if no related products
-    if (relatedProducts.length === 0) {
-      return null;
-    }
+  const renderDistributorGroup = (group: { id: string; name: string; items: CartItem[] }) => {
+    const allSelectedInGroup = group.items.length > 0 && group.items.every((item) => item.selected);
+    const canOpenDistributorInfo = getDistributorUserId(group.items) !== null;
 
     return (
-      <View style={styles.youMayAlsoLikeSection}>
-        <View style={styles.sectionDivider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.sectionTitle}>{t('product.youMayAlsoLike')}</Text>
-          <View style={styles.dividerLine} />
+      <View key={group.id} style={styles.distributorGroup}>
+        <View style={styles.distributorHeader}>
+          {renderCheckbox(allSelectedInGroup, () => handleSelectDistributor(group.items))}
+          <Store size={16} color="#111827" />
+          <Text style={styles.distributorName} numberOfLines={1}>
+            {group.name}
+          </Text>
+          <TouchableOpacity
+            style={styles.distributorChevronBtn}
+            onPress={() => openDistributorInformation(group.items, group.name)}
+            disabled={!canOpenDistributorInfo}
+            activeOpacity={0.7}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={group.name}
+          >
+            <ChevronRight size={16} color="#9CA3AF" />
+          </TouchableOpacity>
         </View>
-        
-        <View style={styles.relatedProductsGrid}>
-          <View style={styles.leftColumn}>
-            {relatedProducts.filter((_, index) => index % 2 === 0).map((product) => (
-              <View key={product.id} style={styles.relatedProductItem}>
-                <ProductMarketplace
-                  product={product}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/product',
-                      params: { productId: product.id }
-                    });
-                  }}
-                  onAddToCart={handleAddToCart}
-                  onBuyNow={handleBuyNow}
-                  onChatSeller={handleChatSeller}
-                  onShare={handleShare}
-                  onToggleFavorite={handleToggleFavorite}
-                  isFavorite={likedProducts.includes(String(product.id))}
-                  type="card"
-                />
-              </View>
-            ))}
-          </View>
-          <View style={styles.rightColumn}>
-            {relatedProducts.filter((_, index) => index % 2 === 1).map((product) => (
-              <View key={product.id} style={styles.relatedProductItem}>
-                <ProductMarketplace
-                  product={product}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/product',
-                      params: { productId: product.id }
-                    });
-                  }}
-                  onAddToCart={handleAddToCart}
-                  onBuyNow={handleBuyNow}
-                  onChatSeller={handleChatSeller}
-                  onShare={handleShare}
-                  onToggleFavorite={handleToggleFavorite}
-                  isFavorite={likedProducts.includes(String(product.id))}
-                  type="card"
-                />
-              </View>
-            ))}
-          </View>
-        </View>
+        {group.items.map((item) => renderCartItem(item))}
       </View>
     );
   };
@@ -490,7 +511,6 @@ export default function CartScreen() {
         <View style={styles.container}>
           <ScrollView style={styles.scrollView}>
             {renderEmptyCart()}
-            {renderYouMayAlsoLike()}
           </ScrollView>
         </View>
       </>
@@ -523,23 +543,32 @@ export default function CartScreen() {
         }}
       />
       <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        {cartItems.map(renderCartItem)}
-        {renderYouMayAlsoLike()}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {distributorGroups.map(renderDistributorGroup)}
       </ScrollView>
 
-      {/* Bottom Checkout Section */}
-      <View style={styles.checkoutSection}>
+      <Animated.View
+        style={[
+          styles.checkoutSection,
+          {
+            transform: [{ translateY: Animated.multiply(keyboardOffset, -1) }],
+          },
+        ]}
+      >
         <View style={styles.checkoutFooter}>
           <TouchableOpacity
             style={styles.selectAllButton}
             onPress={handleSelectAll}
           >
-            <View style={[styles.checkbox, styles.selectAllCheckbox]}>
-              <View style={[styles.checkboxInner, selectedItems.length === cartItems.length && cartItems.length > 0 && styles.checkboxSelected]}>
-                {selectedItems.length === cartItems.length && cartItems.length > 0 && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-            </View>
+            {renderCheckbox(
+              selectedItems.length === cartItems.length && cartItems.length > 0,
+              handleSelectAll,
+              styles.selectAllCheckbox,
+            )}
             <Text style={styles.selectAllText}>{t('cart.selectAll')}</Text>
           </TouchableOpacity>
 
@@ -570,7 +599,12 @@ export default function CartScreen() {
             }}
             disabled={!canCheckout}
           >
-            <Text style={[styles.checkoutButtonText, !canCheckout && styles.checkoutButtonTextDisabled]}>
+            <Text
+              style={[styles.checkoutButtonText, !canCheckout && styles.checkoutButtonTextDisabled]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
               {canCheckout 
                 ? t('cart.checkout.cta', { count: selectedItemCount })
                 : moqValidation.invalidItems.length > 0
@@ -580,16 +614,7 @@ export default function CartScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Buy Now Modal */}
-      <BuyNowModal
-        visible={showBuyNowModal}
-        product={selectedProduct}
-        onClose={() => setShowBuyNowModal(false)}
-        onConfirm={handleBuyNow}
-        mode="cart"
-      />
+      </Animated.View>
       </View>
     </>
   );
@@ -617,6 +642,63 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 0,
+    paddingBottom: 8,
+  },
+  cartItemWrapper: {
+    flexGrow: 0,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+  },
+  distributorGroup: {
+    flexGrow: 0,
+    backgroundColor: '#ffffff',
+    marginHorizontal: 12,
+    marginTop: 8,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  distributorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
+    gap: 8,
+  },
+  distributorChevronBtn: {
+    padding: 4,
+  },
+  distributorName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  swipeContainer: {
+    flexGrow: 0,
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
+  },
+  swipeChild: {
+    flexGrow: 0,
+    backgroundColor: '#ffffff',
+  },
+  swipeDeleteBg: {
+    width: 88,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#EF4444',
+  },
+  swipeDeleteBtn: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
   emptyCartContainer: {
     justifyContent: 'center',
     alignItems: 'center',
@@ -641,20 +723,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cartItem: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 8,
-    padding: 16,
-  },
-  cartItemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
     position: 'relative',
+    flexGrow: 0,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  itemCheckboxTopRight: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 2,
+  },
+  cartItemMainRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  priceQtyRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginTop: 15,
+    width: '100%',
+  },
+  qtyPickerWrap: {
+    flexShrink: 0,
+    marginLeft: 'auto',
   },
   checkbox: {
-    marginRight: 12,
+    marginRight: 0,
   },
   checkboxInner: {
     width: 20,
@@ -677,63 +772,34 @@ const styles = StyleSheet.create({
   selectAllCheckbox: {
     marginRight: 8,
   },
-  sellerInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sellerName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-    marginRight: 8,
-  },
-  liveBadge: {
-    backgroundColor: '#EF4444',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  liveText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  savingsInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  savingsText: {
-    fontSize: 12,
-    color: '#0a61d7',
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  productInfo: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
   productImage: {
-    width: 80,
-    height: 80,
+    width: 88,
+    height: 88,
     borderRadius: 8,
     marginRight: 12,
+    backgroundColor: '#F3F4F6',
   },
   productDetails: {
     flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    alignSelf: 'flex-start',
+  },
+  productDetailsTop: {
+    paddingRight: 28,
   },
   productName: {
     fontSize: 14,
     fontWeight: '500',
     color: '#111827',
-    marginBottom: 8,
+    marginBottom: 4,
     lineHeight: 18,
   },
   variantContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 0,
   },
   variantText: {
     fontSize: 12,
@@ -756,50 +822,28 @@ const styles = StyleSheet.create({
     color: '#0a61d7',
     fontWeight: '600',
   },
-  priceQuantityRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  priceBlock: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'flex-start',
+    paddingRight: 8,
   },
-  quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  originalLinePrice: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
   },
-  quantityButton: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quantityText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginHorizontal: 12,
+  price: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0a61d7',
   },
   promotionGiftText: {
     fontSize: 11,
     fontWeight: '600',
     color: '#9333EA',
-    marginTop: 2,
-  },
-  priceContainer: {
-    alignItems: 'flex-end',
-  },
-  deleteButton: {
-    padding: 8,
-    position: 'absolute',
-    top: 0,
-    right: 0,
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111827',
+    marginTop: 4,
   },
   priceAfterVoucher: {
     fontSize: 10,
@@ -819,46 +863,13 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontWeight: '500',
   },
-  youMayAlsoLikeSection: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-    backgroundColor: '#f9fafb',
-  },
-  sectionDivider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E5E7EB',
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginHorizontal: 16,
-  },
-  relatedProductsGrid: {
-    flexDirection: 'row',
-    gap: 8, // Narrower gap between columns
-  },
-  leftColumn: {
-    flex: 1,
-  },
-  rightColumn: {
-    flex: 1,
-  },
-  relatedProductItem: {
-    marginBottom: 4, // Narrower gap between items
-  },
   checkoutSection: {
-    backgroundColor: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    paddingBottom: 18,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderTopColor: '#F3F4F6',
+    backgroundColor: '#ffffff',
   },
   checkoutFooter: {
     flexDirection: 'row',
@@ -877,7 +888,6 @@ const styles = StyleSheet.create({
   totalContainer: {
     alignItems: 'center',
     flex: 1,
-    marginBottom: 12,
   },
   totalPrice: {
     fontSize: 18,
@@ -889,8 +899,10 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   checkoutButton: {
+    flexShrink: 1,
+    maxWidth: '42%',
     backgroundColor: '#0a61d7',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
   },
@@ -960,10 +972,10 @@ const styles = StyleSheet.create({
   moqWarningContainer: {
     backgroundColor: '#FEF3C7',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 6,
-    marginBottom: 8,
-    marginTop: 4,
+    marginHorizontal: 12,
+    marginBottom: 10,
   },
   moqWarningText: {
     fontSize: 12,

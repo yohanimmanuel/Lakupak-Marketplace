@@ -1214,6 +1214,8 @@
       "subtitle": "Browse our awesome deals now!"
     },
     "selectAll": "All",
+    "deleteA11y": "Remove from cart",
+    "moqWarning": "Minimum order: {{moq}} pieces (you have {{have}})",
     "saved": "Saved {{amount}}",
     "loginPrompt": {
       "title": "Create an account to win first-order benefits!",
@@ -1228,6 +1230,7 @@
     },
     "checkout": {
       "moqNotMet": "MOQ Not Met",
+      "noSelection": "Select at least one item in your cart to check out.",
       "cta": "Check Out ({{count}})"
     }
   },

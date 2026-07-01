@@ -10,12 +10,11 @@ import {
   Animated,
   PanResponder,
   StatusBar,
-  TextInput,
   Keyboard,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Minus, Plus, Gift } from 'lucide-react-native';
+import { Gift } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
@@ -24,46 +23,11 @@ import { formatCurrency } from '../../../utils/currencyUtils';
 import { useTranslation } from 'react-i18next';
 import { matchesVariantAttributes, parseVariantNameToAttributes } from '../../../utils/variantRules';
 import { calculateProductPromotion } from '../../../utils/promotionUtils';
+import QuantitySelector from './QuantitySelector';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 type ProductType = Product | MarketplaceProduct;
-
-/** Clamp typed piece count to available stock (Shopee-style: reject overflow digits). */
-function clampPiecesToStock(rawDigits: string, stock: number): { display: string; parsed: number } {
-  if (!rawDigits) return { display: '', parsed: 0 };
-
-  let parsed = parseInt(rawDigits, 10);
-  if (!Number.isFinite(parsed) || parsed < 0) return { display: '', parsed: 0 };
-  if (parsed > stock) parsed = stock;
-
-  return { display: String(parsed), parsed };
-}
-
-function piecesToLivePackageQuantity(
-  parsed: number,
-  piecesPerPackage: number,
-  stock: number,
-): number {
-  if (parsed <= 0) return 0;
-  const pp = Math.max(1, piecesPerPackage);
-  const maxPackages = Math.max(1, Math.floor(stock / pp));
-  return Math.min(Math.ceil(parsed / pp), maxPackages);
-}
-
-function normalizeCommittedPieces(
-  parsed: number,
-  piecesPerPackage: number,
-  stock: number,
-  moq: number | null,
-): { packages: number; pieces: number } {
-  const pp = Math.max(1, piecesPerPackage);
-  const minPackages = moq ? Math.ceil(moq / pp) : 1;
-  const maxPackages = Math.max(1, Math.floor(stock / pp));
-  const clampedPieces = Math.min(Math.max(parsed, 0), stock);
-  const packages = Math.max(minPackages, Math.min(Math.ceil(clampedPieces / pp), maxPackages));
-  return { packages, pieces: packages * pp };
-}
 
 interface BuyNowModalProps {
   visible: boolean;
@@ -89,17 +53,11 @@ export default function BuyNowModal({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [quantity, setQuantity] = useState(1);
-  const [piecesInput, setPiecesInput] = useState('1');
-  const [isEditingPieces, setIsEditingPieces] = useState(false);
   const [selectedVariantOptions, setSelectedVariantOptions] = useState<Record<string, string>>({});
   const [slideAnim] = useState(new Animated.Value(screenHeight));
   const keyboardOffset = useRef(new Animated.Value(0)).current;
   const [isClosing, setIsClosing] = useState(false);
   
-  // Refs for long-press functionality
-  const longPressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-  const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // Track previous product ID to prevent unnecessary resets
   const previousProductId = useRef<string | null>(null);
   const previousVisible = useRef<boolean>(false);
@@ -169,7 +127,6 @@ export default function BuyNowModal({
   useEffect(() => {
     if (!visible) {
       keyboardOffset.setValue(0);
-      setIsEditingPieces(false);
       Keyboard.dismiss();
     }
   }, [visible, keyboardOffset]);
@@ -433,95 +390,6 @@ export default function BuyNowModal({
     return { definitions: [], options: [] };
   }, [product]);
 
-  // Quantity handlers with long-press support (must run unconditionally — hooks rules)
-  const startLongPress = useCallback((increment: boolean) => {
-    const pp = computedValues?.piecesPerPackage ?? 1;
-    const st = computedValues?.stock ?? 0;
-    const changeQuantity = () => {
-      setQuantity((prev) => {
-        const newQty = increment ? prev + 1 : Math.max(1, prev - 1);
-        const newTotalPieces = newQty * pp;
-        return newTotalPieces <= st ? newQty : prev;
-      });
-    };
-
-    changeQuantity();
-
-    longPressTimeout.current = setTimeout(() => {
-      longPressInterval.current = setInterval(changeQuantity, 100);
-    }, 500);
-  }, [computedValues]);
-
-  const stopLongPress = useCallback(() => {
-    if (longPressTimeout.current) {
-      clearTimeout(longPressTimeout.current);
-      longPressTimeout.current = null;
-    }
-    if (longPressInterval.current) {
-      clearInterval(longPressInterval.current);
-      longPressInterval.current = null;
-    }
-  }, []);
-
-  const commitPiecesInput = useCallback(() => {
-    setIsEditingPieces(false);
-    if (!computedValues) return;
-
-    const { piecesPerPackage, stock, moq } = computedValues;
-    const parsed = parseInt(piecesInput.replace(/\D/g, ''), 10);
-
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      const { packages, pieces } = normalizeCommittedPieces(0, piecesPerPackage, stock, moq);
-      setQuantity(packages);
-      setPiecesInput(String(pieces));
-      return;
-    }
-
-    const { packages, pieces } = normalizeCommittedPieces(
-      parsed,
-      piecesPerPackage,
-      stock,
-      moq,
-    );
-    setQuantity(packages);
-    setPiecesInput(String(pieces));
-  }, [computedValues, piecesInput]);
-
-  const handlePiecesInputChange = useCallback(
-    (text: string) => {
-      if (!computedValues) {
-        setPiecesInput(text.replace(/\D/g, ''));
-        return;
-      }
-
-      const { piecesPerPackage, stock } = computedValues;
-      const { display, parsed } = clampPiecesToStock(text.replace(/\D/g, ''), stock);
-
-      setPiecesInput(display);
-      setQuantity(piecesToLivePackageQuantity(parsed, piecesPerPackage, stock));
-    },
-    [computedValues],
-  );
-
-  // Re-clamp when switching to a variant with lower stock
-  useEffect(() => {
-    if (!computedValues) return;
-
-    const { stock, piecesPerPackage, moq } = computedValues;
-    const parsed = parseInt(piecesInput.replace(/\D/g, ''), 10);
-    if (!Number.isFinite(parsed) || parsed <= 0 || parsed <= stock) return;
-
-    const { packages, pieces } = normalizeCommittedPieces(stock, piecesPerPackage, stock, moq);
-    setQuantity(packages);
-    setPiecesInput(String(pieces));
-  }, [computedValues?.stock, selectedVariantOptions]);
-
-  useEffect(() => {
-    if (!isEditingPieces && computedValues) {
-      setPiecesInput(String(computedValues.totalPieces));
-    }
-  }, [computedValues?.totalPieces, isEditingPieces, computedValues]);
-
   const promotionInfo = useMemo(() => {
     if (!product?.promotionDetails || !computedValues) return null;
 
@@ -724,50 +592,15 @@ export default function BuyNowModal({
                 )}
                 
                 {/* Segmented Quantity Selector */}
-                <View style={styles.quantitySelector}>
-                  <TouchableOpacity
-                    style={[
-                      styles.quantityButtonLeft,
-                      quantity <= 1 && styles.quantityButtonDisabled
-                    ]}
-                    onPressIn={() => startLongPress(false)}
-                    onPressOut={stopLongPress}
-                    disabled={quantity <= 1}
-                  >
-                    <Minus size={14} color={quantity <= 1 ? '#D1D5DB' : '#6B7280'} />
-                  </TouchableOpacity>
-                  
-                  <View style={styles.quantitySeparator} />
-                  
-                  <View style={styles.quantityDisplay}>
-                    <TextInput
-                      style={styles.quantityInput}
-                      value={piecesInput}
-                      onChangeText={handlePiecesInputChange}
-                      onFocus={() => setIsEditingPieces(true)}
-                      onBlur={commitPiecesInput}
-                      onSubmitEditing={commitPiecesInput}
-                      keyboardType="number-pad"
-                      returnKeyType="done"
-                      selectTextOnFocus
-                      maxLength={6}
-                    />
-                  </View>
-                  
-                  <View style={styles.quantitySeparator} />
-                  
-                  <TouchableOpacity
-                    style={[
-                      styles.quantityButtonRight,
-                      totalPieces >= stock && styles.quantityButtonDisabled
-                    ]}
-                    onPressIn={() => startLongPress(true)}
-                    onPressOut={stopLongPress}
-                    disabled={totalPieces >= stock}
-                  >
-                    <Plus size={14} color={totalPieces >= stock ? '#D1D5DB' : '#6B7280'} />
-                  </TouchableOpacity>
-                </View>
+                {computedValues ? (
+                  <QuantitySelector
+                    packageQuantity={quantity}
+                    piecesPerPackage={computedValues.piecesPerPackage}
+                    stockPieces={computedValues.stock}
+                    moq={computedValues.moq}
+                    onPackageQuantityChange={setQuantity}
+                  />
+                ) : null}
               </View>
             </View>
             

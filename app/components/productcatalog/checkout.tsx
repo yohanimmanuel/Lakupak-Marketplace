@@ -779,6 +779,16 @@ const copyPickupAddress = () => {
               if (isPlacingOrder) return;
               setIsPlacingOrder(true);
               try {
+                const itemsToCheckout = useCartStore.getState().getSelectedItems();
+                if (itemsToCheckout.length === 0) {
+                  Alert.alert(
+                    t('ordersFlow.checkout.alerts.errorTitle'),
+                    t('cart.checkout.noSelection'),
+                  );
+                  setIsPlacingOrder(false);
+                  return;
+                }
+
                 // Generate required fields using marketplace user data
     const buyerId = `LKB-${authUser?.id?.toString().padStart(8, '0') || Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
                 const orderDate = new Date().toISOString();
@@ -788,7 +798,7 @@ const copyPickupAddress = () => {
                 
                 if (isCartCheckout) {
                   // Cart checkout - create separate orders for each distributor
-                  const distributorGroups = groupByDistributor(selectedCartItems);
+                  const distributorGroups = groupByDistributor(itemsToCheckout);
                   
                   for (const [distributorId, items] of Object.entries(distributorGroups)) {
                     // Generate unique order ID for each distributor
@@ -905,8 +915,8 @@ const copyPickupAddress = () => {
                     createdOrders.push(createdOrder);
                   }
                   
-                  // Clear cart after checkout — do not count purchased items as abandoned
-                  await cartStore.clearCart({ trackAbandonment: false });
+                  // Remove only checked-out items; keep unchecked cart lines
+                  await cartStore.removeItems(itemsToCheckout.map((item) => item.id));
                 } else {
                   // Single product checkout
                   const orderId = `LKO-${Date.now()}${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
