@@ -11,19 +11,59 @@ import {
   PanResponder,
   StatusBar,
   TextInput,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Minus, Plus, Gift } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { useTranslation } from 'react-i18next';
 import { matchesVariantAttributes, parseVariantNameToAttributes } from '../../../utils/variantRules';
+import { calculateProductPromotion } from '../../../utils/promotionUtils';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 type ProductType = Product | MarketplaceProduct;
+
+/** Clamp typed piece count to available stock (Shopee-style: reject overflow digits). */
+function clampPiecesToStock(rawDigits: string, stock: number): { display: string; parsed: number } {
+  if (!rawDigits) return { display: '', parsed: 0 };
+
+  let parsed = parseInt(rawDigits, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) return { display: '', parsed: 0 };
+  if (parsed > stock) parsed = stock;
+
+  return { display: String(parsed), parsed };
+}
+
+function piecesToLivePackageQuantity(
+  parsed: number,
+  piecesPerPackage: number,
+  stock: number,
+): number {
+  if (parsed <= 0) return 0;
+  const pp = Math.max(1, piecesPerPackage);
+  const maxPackages = Math.max(1, Math.floor(stock / pp));
+  return Math.min(Math.ceil(parsed / pp), maxPackages);
+}
+
+function normalizeCommittedPieces(
+  parsed: number,
+  piecesPerPackage: number,
+  stock: number,
+  moq: number | null,
+): { packages: number; pieces: number } {
+  const pp = Math.max(1, piecesPerPackage);
+  const minPackages = moq ? Math.ceil(moq / pp) : 1;
+  const maxPackages = Math.max(1, Math.floor(stock / pp));
+  const clampedPieces = Math.min(Math.max(parsed, 0), stock);
+  const packages = Math.max(minPackages, Math.min(Math.ceil(clampedPieces / pp), maxPackages));
+  return { packages, pieces: packages * pp };
+}
 
 interface BuyNowModalProps {
   visible: boolean;
@@ -47,11 +87,13 @@ export default function BuyNowModal({
   const { t } = useTranslation();
   const { addItem } = useCartStore();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [quantity, setQuantity] = useState(1);
   const [piecesInput, setPiecesInput] = useState('1');
   const [isEditingPieces, setIsEditingPieces] = useState(false);
   const [selectedVariantOptions, setSelectedVariantOptions] = useState<Record<string, string>>({});
   const [slideAnim] = useState(new Animated.Value(screenHeight));
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
   const [isClosing, setIsClosing] = useState(false);
   
   // Refs for long-press functionality
@@ -82,6 +124,9 @@ export default function BuyNowModal({
   // Close handler with animation - memoized
   const handleClose = useCallback(() => {
     if (isClosing) return; // Prevent multiple close calls
+
+    Keyboard.dismiss();
+    keyboardOffset.setValue(0);
     
     setIsClosing(true);
     Animated.timing(slideAnim, {
@@ -92,7 +137,42 @@ export default function BuyNowModal({
       setIsClosing(false);
       onClose();
     });
-  }, [isClosing, slideAnim, onClose]);
+  }, [isClosing, slideAnim, keyboardOffset, onClose]);
+
+  // Lift modal above the keyboard while quantity is being edited
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      Animated.timing(keyboardOffset, {
+        toValue: event.endCoordinates.height,
+        duration: Platform.OS === 'ios' ? event.duration ?? 250 : 250,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (event) => {
+      Animated.timing(keyboardOffset, {
+        toValue: 0,
+        duration: Platform.OS === 'ios' ? event.duration ?? 250 : 250,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardOffset]);
+
+  useEffect(() => {
+    if (!visible) {
+      keyboardOffset.setValue(0);
+      setIsEditingPieces(false);
+      Keyboard.dismiss();
+    }
+  }, [visible, keyboardOffset]);
 
   // Animation handlers - only reset when product changes or modal first opens
   React.useEffect(() => {
@@ -387,21 +467,54 @@ export default function BuyNowModal({
     setIsEditingPieces(false);
     if (!computedValues) return;
 
-    const { piecesPerPackage, stock, moq, totalPieces } = computedValues;
-    const pp = Math.max(1, piecesPerPackage);
-    const minPackages = moq ? Math.ceil(moq / pp) : 1;
-    const maxPackages = Math.max(1, Math.floor(stock / pp));
+    const { piecesPerPackage, stock, moq } = computedValues;
     const parsed = parseInt(piecesInput.replace(/\D/g, ''), 10);
 
     if (!Number.isFinite(parsed) || parsed <= 0) {
-      setPiecesInput(String(totalPieces));
+      const { packages, pieces } = normalizeCommittedPieces(0, piecesPerPackage, stock, moq);
+      setQuantity(packages);
+      setPiecesInput(String(pieces));
       return;
     }
 
-    const packages = Math.max(minPackages, Math.min(Math.ceil(parsed / pp), maxPackages));
+    const { packages, pieces } = normalizeCommittedPieces(
+      parsed,
+      piecesPerPackage,
+      stock,
+      moq,
+    );
     setQuantity(packages);
-    setPiecesInput(String(packages * pp));
+    setPiecesInput(String(pieces));
   }, [computedValues, piecesInput]);
+
+  const handlePiecesInputChange = useCallback(
+    (text: string) => {
+      if (!computedValues) {
+        setPiecesInput(text.replace(/\D/g, ''));
+        return;
+      }
+
+      const { piecesPerPackage, stock } = computedValues;
+      const { display, parsed } = clampPiecesToStock(text.replace(/\D/g, ''), stock);
+
+      setPiecesInput(display);
+      setQuantity(piecesToLivePackageQuantity(parsed, piecesPerPackage, stock));
+    },
+    [computedValues],
+  );
+
+  // Re-clamp when switching to a variant with lower stock
+  useEffect(() => {
+    if (!computedValues) return;
+
+    const { stock, piecesPerPackage, moq } = computedValues;
+    const parsed = parseInt(piecesInput.replace(/\D/g, ''), 10);
+    if (!Number.isFinite(parsed) || parsed <= 0 || parsed <= stock) return;
+
+    const { packages, pieces } = normalizeCommittedPieces(stock, piecesPerPackage, stock, moq);
+    setQuantity(packages);
+    setPiecesInput(String(pieces));
+  }, [computedValues?.stock, selectedVariantOptions]);
 
   useEffect(() => {
     if (!isEditingPieces && computedValues) {
@@ -412,26 +525,13 @@ export default function BuyNowModal({
   const promotionInfo = useMemo(() => {
     if (!product?.promotionDetails || !computedValues) return null;
 
-    const { piecesPerPackage, moq } = computedValues;
-    const totalPieces = quantity * piecesPerPackage;
-    const moqValue = moq;
+    const promotionGift = calculateProductPromotion(
+      product,
+      quantity,
+      computedValues.variantName,
+    );
 
-    const minQty = product.promotionDetails.minQuantity || 1;
-    const freeQty = product.promotionDetails.freeQuantity || 0;
-
-    if (!moqValue) {
-      const completeSets = Math.floor(totalPieces / minQty);
-      const totalFreeItems = completeSets * freeQty;
-      return totalFreeItems > 0 ? totalFreeItems : null;
-    }
-
-    if (totalPieces < moqValue) return null;
-
-    const quantityAboveMOQ = totalPieces - moqValue;
-    const completeSets = Math.floor(quantityAboveMOQ / minQty);
-    const totalFreeItems = completeSets * freeQty;
-
-    return totalFreeItems > 0 ? totalFreeItems : null;
+    return promotionGift?.freeQty ?? null;
   }, [product, quantity, computedValues]);
 
   const handleConfirm = useCallback(() => {
@@ -519,7 +619,8 @@ export default function BuyNowModal({
           style={[
             styles.modalContainer,
             {
-              transform: [{ translateY: slideAnim }],
+              paddingBottom: Math.max(insets.bottom, 16),
+              transform: [{ translateY: Animated.subtract(slideAnim, keyboardOffset) }],
             },
           ]}
           {...panResponder.panHandlers}
@@ -642,7 +743,7 @@ export default function BuyNowModal({
                     <TextInput
                       style={styles.quantityInput}
                       value={piecesInput}
-                      onChangeText={(text) => setPiecesInput(text.replace(/\D/g, ''))}
+                      onChangeText={handlePiecesInputChange}
                       onFocus={() => setIsEditingPieces(true)}
                       onBlur={commitPiecesInput}
                       onSubmitEditing={commitPiecesInput}
@@ -720,7 +821,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: screenHeight * 0.85,
-    paddingBottom: 20,
   },
   dragHandle: {
     width: 40,

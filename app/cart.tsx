@@ -26,7 +26,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { websocketService } from '../services/websocket';
 import { useTranslation } from 'react-i18next';
-import { selectVariantOptionByVariantName } from '../utils/variantRules';
+import { resolveVariantMoq, resolveVariantPricing } from '../utils/variantRules';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -131,24 +131,8 @@ export default function CartScreen() {
     return filtered;
   }, [cartItems, products]);
 
-  // Helper function to get MOQ for a cart item
-  const getItemMOQ = (item: CartItem): number | null => {
-    const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
-      id: number;
-      moq?: number;
-      attributes: Record<string, string>;
-    }> };
-    
-    if (marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)) {
-      const option = selectVariantOptionByVariantName(marketplaceProduct, item.variant);
-      if (option?.moq) return option.moq;
-      if (marketplaceProduct.variantOptions.length > 0 && marketplaceProduct.variantOptions[0]?.moq) {
-        return marketplaceProduct.variantOptions[0].moq;
-      }
-    }
-    
-    return null;
-  };
+  const getItemMOQ = (item: CartItem): number | null =>
+    resolveVariantMoq(item.product as MarketplaceProduct, item.variant);
 
   // Check if all selected items meet MOQ requirements
   const validateMOQ = (): { isValid: boolean; invalidItems: Array<{ item: CartItem; moq: number; currentPieces: number }> } => {
@@ -331,78 +315,19 @@ export default function CartScreen() {
               <View style={{alignItems: 'center'}}>
                 <Text style={styles.quantityText}>{item.quantity}</Text>
                 {(() => {
-                  // Calculate promotion using MOQ-aware logic (matches BuyNowModal)
-                  const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
-                    id: number;
-                    moq?: number;
-                    attributes: Record<string, string>;
-                  }> };
-                  
-                  if (!marketplaceProduct.promotionDetails) return null;
-                  
-                  const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-                  const totalPieces = item.quantity * piecesPerPackage;
-                  
-                  // Get MOQ from selected variantOption
-                  let moq: number | null = null;
-                  if (marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)) {
-                    // Parse variantName string to match attributes
-                    const variantAttributes: Record<string, string> = {};
-                    if (item.variant && item.variant !== 'Default') {
-                      item.variant.split(', ').forEach(part => {
-                        const [key, ...valueParts] = part.split(': ');
-                        if (key && valueParts.length > 0) {
-                          variantAttributes[key.trim()] = valueParts.join(': ').trim();
-                        }
-                      });
-                    }
-                    
-                    const matchingOption = marketplaceProduct.variantOptions.find(option => {
-                      if (!option.attributes) return false;
-                      
-                      // Check if all variant attributes match, handling key spacing issues (e.g., 'Color ' vs 'Color')
-                      return Object.entries(variantAttributes).every(([selectedKey, selectedValue]) => {
-                        // Try exact match first
-                        if (option.attributes?.[selectedKey] === selectedValue) return true;
-                        
-                        // Try trimmed key match (handles 'Color' vs 'Color ' issues from database)
-                        const trimmedSelectedKey = selectedKey.trim();
-                        const matchingKey = Object.keys(option.attributes).find(k => k.trim() === trimmedSelectedKey);
-                        if (matchingKey && option.attributes[matchingKey] === selectedValue) return true;
-                        
-                        return false;
-                      }) && Object.keys(variantAttributes).length === Object.keys(option.attributes || {}).length;
-                    });
-                    
-                    if (matchingOption?.moq) {
-                      moq = matchingOption.moq;
-                    }
-                  }
-                  
-                  // Calculate promotion using BuyNowModal logic
-                  const minQty = marketplaceProduct.promotionDetails.minQuantity || 1;
-                  const freeQty = marketplaceProduct.promotionDetails.freeQuantity || 0;
-                  
-                  let totalFreeItems = 0;
-                  if (!moq) {
-                    // No MOQ: calculate from total quantity
-                    const completeSets = Math.floor(totalPieces / minQty);
-                    totalFreeItems = completeSets * freeQty;
-                  } else if (totalPieces >= moq) {
-                    // MOQ exists and met: calculate from quantity above MOQ
-                    const quantityAboveMOQ = totalPieces - moq;
-                    const completeSets = Math.floor(quantityAboveMOQ / minQty);
-                    totalFreeItems = completeSets * freeQty;
-                  }
-                  
-                  if (totalFreeItems > 0) {
-                    return (
-                      <Text style={styles.promotionGiftText}>
-                        +{totalFreeItems} Free pieces
-                      </Text>
-                    );
-                  }
-                  return null;
+                  const promotionGift = calculateProductPromotion(
+                    item.product as MarketplaceProduct,
+                    item.quantity,
+                    item.variant,
+                  );
+
+                  if (!promotionGift?.freeQty) return null;
+
+                  return (
+                    <Text style={styles.promotionGiftText}>
+                      +{promotionGift.freeQty} Free pieces
+                    </Text>
+                  );
                 })()}
               </View>
               <TouchableOpacity
@@ -416,61 +341,14 @@ export default function CartScreen() {
             <View style={styles.priceContainer}>
               <Text style={styles.price}>
                 {(() => {
-                  // Get variant-specific pricing - use new variantOptions structure first
-                  const marketplaceProduct = item.product as MarketplaceProduct & { variantOptions?: Array<{
-                    id: number;
-                    sellingPrice: number;
-                    originalSellingPrice?: number | string;
-                    attributes: Record<string, string>;
-                  }> };
-                  let unitPrice = 0;
-                  let piecesPerPackage = 1;
-                  
-                  // Try new variantOptions structure first
-                  if (marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)) {
-                    // Parse variantName string (format: "Color: Red, Size: Large") to match attributes
-                    const variantAttributes: Record<string, string> = {};
-                    if (item.variant && item.variant !== 'Default') {
-                      item.variant.split(', ').forEach(part => {
-                        const [key, ...valueParts] = part.split(': ');
-                        if (key && valueParts.length > 0) {
-                          variantAttributes[key.trim()] = valueParts.join(': ').trim();
-                        }
-                      });
-                    }
-                    
-                    // Find matching variantOption by attributes
-                    const matchingOption = marketplaceProduct.variantOptions.find(option => {
-                      if (!option.attributes) return false;
-                      return Object.entries(variantAttributes).every(([key, value]) => {
-                        return option.attributes?.[key] === value;
-                      });
-                    });
-                    
-                    if (matchingOption) {
-                      unitPrice = typeof matchingOption.sellingPrice === 'string' 
-                        ? parseFloat(matchingOption.sellingPrice) 
-                        : matchingOption.sellingPrice || 0;
-                    } else if (marketplaceProduct.variantOptions.length > 0) {
-                      // Fallback to first variantOption
-                      const firstOption = marketplaceProduct.variantOptions[0];
-                      unitPrice = typeof firstOption.sellingPrice === 'string' 
-                        ? parseFloat(firstOption.sellingPrice) 
-                        : firstOption.sellingPrice || 0;
-                    }
-                  } else if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
-                    // Legacy: Find the selected variant
-                    const selectedVariant = marketplaceProduct.variants.find(v => v.variantName === item.variant) || marketplaceProduct.variants[0];
-                    unitPrice = selectedVariant.sellingPrice || 0;
-                  } else {
-                    // Fallback to product-level pricing
-                    unitPrice = (item.product as { price?: number }).price || item.product.sellingPrice || 0;
-                  }
-                  
-                  // Get piecesPerPackage from product level (piece-based system)
-                  piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-                  
-                  // Calculate total price: unitPrice * quantity * piecesPerPackage
+                  const marketplaceProduct = item.product as MarketplaceProduct;
+                  const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
+                  const { unitPrice } = resolveVariantPricing(
+                    marketplaceProduct,
+                    item.variant,
+                    (item.product as { price?: number }).price || item.product.sellingPrice || 0,
+                  );
+
                   return formatCurrency(unitPrice * item.quantity * piecesPerPackage);
                 })()}
               </Text>

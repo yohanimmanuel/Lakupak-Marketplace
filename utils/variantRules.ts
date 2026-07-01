@@ -16,6 +16,7 @@ export type ProductWithVariantOptions<T extends VariantOptionLike = VariantOptio
     variantName?: string | null;
     sellingPrice?: number | null;
     originalSellingPrice?: number | null;
+    moq?: number | null;
   }> | null;
 };
 
@@ -102,5 +103,60 @@ export function variantOriginalPrice(option: VariantOptionLike | null | undefine
   if (!option) return fallbackUnit;
   const orig = toNumber(option.originalSellingPrice);
   return orig > 0 ? orig : fallbackUnit;
+}
+
+/** Resolve unit/original price for a cart/checkout line from variantOptions or legacy variants. */
+export function resolveVariantPricing(
+  product: ProductWithVariantOptions,
+  variantName: string | null | undefined,
+  productPriceFallback?: number,
+): {
+  option: VariantOptionLike | null;
+  unitPrice: number;
+  originalPrice: number;
+  variantOptionId?: number;
+} {
+  if (product.variantOptions && Array.isArray(product.variantOptions) && product.variantOptions.length > 0) {
+    const option = selectVariantOptionByVariantName(product, variantName);
+    const unitPrice = variantUnitPrice(option);
+    const originalPrice = variantOriginalPrice(option, unitPrice);
+    return {
+      option: option ?? null,
+      unitPrice,
+      originalPrice,
+      variantOptionId: option?.id,
+    };
+  }
+
+  if (product.variants && product.variants.length > 0) {
+    const selectedVariant =
+      product.variants.find((v) => v.variantName === variantName) || product.variants[0];
+    const unitPrice = selectedVariant?.sellingPrice || 0;
+    const originalPrice = selectedVariant?.originalSellingPrice || unitPrice;
+    return { option: null, unitPrice, originalPrice };
+  }
+
+  const unitPrice = product.sellingPrice ?? productPriceFallback ?? 0;
+  const originalPrice = toNumber(product.originalSellingPrice) || unitPrice;
+  return { option: null, unitPrice, originalPrice };
+}
+
+/** Resolve MOQ (in pieces) for the selected variant, or null when none applies. */
+export function resolveVariantMoq(
+  product: ProductWithVariantOptions,
+  variantName: string | null | undefined,
+): number | null {
+  if (product.variantOptions && Array.isArray(product.variantOptions) && product.variantOptions.length > 0) {
+    const option = selectVariantOptionByVariantName(product, variantName);
+    return option?.moq ?? null;
+  }
+
+  if (product.variants && product.variants.length > 0) {
+    const selectedVariant =
+      product.variants.find((v) => v.variantName === variantName) || product.variants[0];
+    return selectedVariant?.moq ?? null;
+  }
+
+  return null;
 }
 

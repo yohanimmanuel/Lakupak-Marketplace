@@ -5,7 +5,7 @@ import { Product } from '../data/sampleProducts'
 import { MarketplaceProduct } from '../services/marketplace'
 import { useAuthStore } from './authStore'
 import { cartService } from '../services/cart'
-import { selectVariantOptionByVariantName, variantOriginalPrice, variantUnitPrice } from '../utils/variantRules'
+import { resolveVariantPricing } from '../utils/variantRules'
 
 type CartProductSnapshot = {
   id: string;
@@ -446,19 +446,13 @@ export const useCartStore = create<CartState>()(
       getTotalPrice: () => {
         const { getSelectedItems } = get()
         return getSelectedItems().reduce((total, item) => {
-          const marketplaceProduct = item.product as MarketplaceProduct & {
-            variantOptions?: Array<{ id: number; sellingPrice?: number | string; originalSellingPrice?: number | string; moq?: number; attributes?: Record<string, string>; isDefault?: boolean }>;
-          };
-
+          const marketplaceProduct = item.product as MarketplaceProduct;
           const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-          const option = selectVariantOptionByVariantName(marketplaceProduct, item.variant);
-          const unitPrice =
-            marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)
-              ? variantUnitPrice(option)
-              : marketplaceProduct.variants && marketplaceProduct.variants.length > 0
-                ? (marketplaceProduct.variants.find((v) => v.variantName === item.variant) || marketplaceProduct.variants[0])?.sellingPrice || 0
-                : item.product.sellingPrice || 0;
-
+          const { unitPrice } = resolveVariantPricing(
+            marketplaceProduct,
+            item.variant,
+            item.product.sellingPrice || 0,
+          );
           return total + (unitPrice * item.quantity * piecesPerPackage);
         }, 0)
       },
@@ -466,30 +460,14 @@ export const useCartStore = create<CartState>()(
       getTotalSaved: () => {
         const { getSelectedItems } = get()
         return getSelectedItems().reduce((total, item) => {
-          const marketplaceProduct = item.product as MarketplaceProduct & {
-            variantOptions?: Array<{ id: number; sellingPrice?: number | string; originalSellingPrice?: number | string; moq?: number; attributes?: Record<string, string>; isDefault?: boolean }>;
-          };
-
+          const marketplaceProduct = item.product as MarketplaceProduct;
           const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-
-          if (marketplaceProduct.variantOptions && Array.isArray(marketplaceProduct.variantOptions)) {
-            const option = selectVariantOptionByVariantName(marketplaceProduct, item.variant);
-            const unitPrice = variantUnitPrice(option);
-            const originalPrice = variantOriginalPrice(option, unitPrice);
-            return total + ((originalPrice - unitPrice) * item.quantity * piecesPerPackage);
-          }
-
-          if (marketplaceProduct.variants && marketplaceProduct.variants.length > 0) {
-            const selectedVariant =
-              marketplaceProduct.variants.find((v) => v.variantName === item.variant) || marketplaceProduct.variants[0];
-            const unitPrice = selectedVariant?.sellingPrice || 0;
-            const originalPrice = selectedVariant?.originalSellingPrice || selectedVariant?.sellingPrice || 0;
-            return total + ((originalPrice - unitPrice) * item.quantity * piecesPerPackage);
-          }
-
-          const unitPrice = item.product.sellingPrice || 0;
-          const originalPrice = marketplaceProduct.originalSellingPrice || unitPrice;
-          return total + ((Number(originalPrice) - unitPrice) * item.quantity * piecesPerPackage);
+          const { unitPrice, originalPrice } = resolveVariantPricing(
+            marketplaceProduct,
+            item.variant,
+            item.product.sellingPrice || 0,
+          );
+          return total + ((originalPrice - unitPrice) * item.quantity * piecesPerPackage);
         }, 0)
       },
 

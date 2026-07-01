@@ -2,6 +2,8 @@
  * Utility functions for promotion calculations that respect MOQ requirements
  */
 
+import { resolveVariantMoq } from './variantRules';
+
 export interface PromotionDetails {
   minQuantity: number;
   freeQuantity: number;
@@ -148,48 +150,9 @@ export function calculateProductPromotion(
   const piecesPerPackage = product.piecesPerPackage || 1;
   const totalPieces = quantityInPackages * piecesPerPackage;
   
-  // Get MOQ from selected variant - use new variantOptions structure first
-  let moq: number | null = null;
-  
-  // Try new variantOptions structure first
-  if (variantName && variantName !== 'Default' && product.variantOptions && Array.isArray(product.variantOptions)) {
-    // Parse variantName string (format: "Color: Red, Size: Large") to match attributes
-    const variantAttributes: Record<string, string> = {};
-    variantName.split(', ').forEach(part => {
-      const [key, ...valueParts] = part.split(': ');
-      if (key && valueParts.length > 0) {
-        variantAttributes[key.trim()] = valueParts.join(': ').trim();
-      }
-    });
-    
-    // Find matching variantOption by attributes
-    const matchingOption = product.variantOptions.find(option => {
-      if (!option.attributes) return false;
-      
-      // Check if all variant attributes match, handling key spacing issues (e.g., 'Color ' vs 'Color')
-      return Object.entries(variantAttributes).every(([selectedKey, selectedValue]) => {
-        // Try exact match first
-        if (option.attributes?.[selectedKey] === selectedValue) return true;
-        
-        // Try trimmed key match (handles 'Color' vs 'Color ' issues from database)
-        const trimmedSelectedKey = selectedKey.trim();
-        const matchingKey = Object.keys(option.attributes).find(k => k.trim() === trimmedSelectedKey);
-        if (matchingKey && option.attributes[matchingKey] === selectedValue) return true;
-        
-        return false;
-      }) && Object.keys(variantAttributes).length === Object.keys(option.attributes || {}).length;
-    });
-    
-    if (matchingOption?.moq) {
-      moq = matchingOption.moq;
-    }
-  } else if (variantName && product.variants && product.variants.length > 0) {
-    // Legacy: Find the selected variant by variantName
-    const selectedVariant = product.variants.find(v => v.variantName === variantName);
-    moq = selectedVariant?.moq || null;
-  }
-  
-  // Calculate promotion in pieces
+  const moq =
+    variantName && variantName !== 'Default' ? resolveVariantMoq(product, variantName) : null;
+
   return calculatePromotionGift(
     product.promotionDetails,
     totalPieces,
