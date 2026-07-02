@@ -312,8 +312,6 @@ export default function CartScreen() {
       item.variant,
       marketplaceProduct.sellingPrice || (item.product as { price?: number }).price || 0,
     );
-    const lineTotal = unitPrice * item.quantity * piecesPerPackage;
-    const lineOriginalTotal = originalPrice * item.quantity * piecesPerPackage;
     const hasDiscount = originalPrice > unitPrice;
     const promotionGift = calculateProductPromotion(
       marketplaceProduct,
@@ -384,11 +382,11 @@ export default function CartScreen() {
                 >
                   {hasDiscount ? (
                     <>
-                      <Text style={styles.originalLinePrice}>{formatCurrency(lineOriginalTotal)}</Text>
-                      <Text style={styles.price}>{formatCurrency(lineTotal)}</Text>
+                      <Text style={styles.originalLinePrice}>{formatCurrency(originalPrice)}</Text>
+                      <Text style={styles.price}>{formatCurrency(unitPrice)}</Text>
                     </>
                   ) : (
-                    <Text style={styles.price}>{formatCurrency(lineTotal)}</Text>
+                    <Text style={styles.price}>{formatCurrency(unitPrice)}</Text>
                   )}
                   {promotionGift?.freeQty ? (
                     <Text style={styles.promotionGiftText}>

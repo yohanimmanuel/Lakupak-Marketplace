@@ -1,6 +1,7 @@
 import { calculateOrderItemPromotion } from './promotionUtils';
 
 export type OrderItemDisplaySource = {
+  productId?: string | null;
   productName?: string | null;
   productNameSnapshot?: string | null;
   packageQuantity?: number | null;
@@ -50,11 +51,26 @@ export function buildOrderItemDisplayLines(
   items: OrderItemDisplaySource[],
   nameFallback: string,
 ): Array<{ name: string; orderedQuantity: number; freePieces: number }> {
-  return items.map((item) => ({
-    name: getOrderItemDisplayName(item, nameFallback),
-    orderedQuantity: getOrderItemOrderedQuantity(item),
-    freePieces: getOrderItemPromotionFreePieces(item),
-  }));
+  const grouped = new Map<string, { name: string; orderedQuantity: number; freePieces: number }>();
+
+  items.forEach((item, index) => {
+    const productId = item.productId?.trim();
+    const key = productId || `__no_product_id__${index}`;
+    const name = getOrderItemDisplayName(item, nameFallback);
+    const orderedQuantity = getOrderItemOrderedQuantity(item);
+    const freePieces = getOrderItemPromotionFreePieces(item);
+
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.orderedQuantity += orderedQuantity;
+      existing.freePieces += freePieces;
+      return;
+    }
+
+    grouped.set(key, { name, orderedQuantity, freePieces });
+  });
+
+  return Array.from(grouped.values());
 }
 
 export function getOrderTotalOrderedPieces(items: OrderItemDisplaySource[]): number {
