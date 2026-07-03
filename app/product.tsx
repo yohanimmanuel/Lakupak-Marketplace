@@ -168,6 +168,7 @@ export default function ProductModal() {
 
   const handleBuyNowConfirm = (targetProduct: ProductType, quantity: number) => {
     const checkoutParams = {
+      checkoutSource: 'direct' as const,
       productId: targetProduct.id,
       quantity: quantity.toString(),
       totalPrice: ((targetProduct.sellingPrice || 0) * quantity).toString(),

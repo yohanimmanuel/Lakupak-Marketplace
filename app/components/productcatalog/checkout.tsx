@@ -50,12 +50,18 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getMe } from '../../../services/user';
 import { CheckoutSkeleton } from '../SkeletonLoader';
 import { resolveVariantPricing } from '../../../utils/variantRules';
+import {
+  extractCreatedOrderId,
+  generateCheckoutOrderId,
+  rollbackCheckoutOrders,
+} from '../../../utils/checkoutOrderHelpers';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 type ProductType = Product | MarketplaceProduct;
 
 type CheckoutParams = {
+  checkoutSource?: 'cart' | 'direct';
   productId?: string;
   quantity?: string;
   totalPrice?: string;
@@ -137,8 +143,14 @@ export default function CheckoutScreen() {
   const packageType = params.packageType || t('ordersFlow.checkout.defaults.box');
   const piecesPerPackage = parseInt(params.piecesPerPackage || '1');
 
-  // Determine if this is a cart checkout or single product checkout
-  const isCartCheckout = selectedCartItems.length > 0 && !productId;
+  // Determine checkout mode from explicit source param (avoids cart/direct ambiguity)
+  const checkoutSource =
+    params.checkoutSource === 'cart' || params.checkoutSource === 'direct'
+      ? params.checkoutSource
+      : params.productId
+        ? 'direct'
+        : 'cart';
+  const isCartCheckout = checkoutSource === 'cart' && selectedCartItems.length > 0;
   
   // Get the actual product data (for single product checkout) - memoized to update when products change
   const product = useMemo(() => products.find(p => p.id === productId), [products, productId]);
@@ -811,10 +823,13 @@ const copyPickupAddress = () => {
                 if (isCartCheckout) {
                   // Cart checkout - create separate orders for each distributor
                   const distributorGroups = groupByDistributor(itemsToCheckout);
-                  
-                  for (const [distributorId, items] of Object.entries(distributorGroups)) {
-                    // Generate unique order ID for each distributor
-                    const orderId = `LKO-${Date.now()}${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
+                  const createdOrderIds: string[] = [];
+                  const groupEntries = Object.entries(distributorGroups);
+
+                  try {
+                    for (let groupIndex = 0; groupIndex < groupEntries.length; groupIndex++) {
+                      const [distributorId, items] = groupEntries[groupIndex];
+                      const orderId = generateCheckoutOrderId(groupIndex);
                     
                     // Calculate totals for this distributor's items
                     const distributorSubtotal = items.reduce((total, item) => {
@@ -926,13 +941,26 @@ const copyPickupAddress = () => {
 
                     const createdOrder = await response.json();
                     createdOrders.push(createdOrder);
+                    const persistedOrderId =
+                      extractCreatedOrderId(createdOrder) ?? orderId;
+                    createdOrderIds.push(persistedOrderId);
+                    }
+
+                    // Remove only checked-out items after all distributor orders succeed
+                    await cartStore.removeItems(itemsToCheckout.map((item) => item.id));
+                  } catch (checkoutError) {
+                    if (createdOrderIds.length > 0 && token && authUser?.id) {
+                      await rollbackCheckoutOrders(
+                        createdOrderIds,
+                        token,
+                        authUser.id,
+                      );
+                    }
+                    throw checkoutError;
                   }
-                  
-                  // Remove only checked-out items; keep unchecked cart lines
-                  await cartStore.removeItems(itemsToCheckout.map((item) => item.id));
                 } else {
                   // Single product checkout
-                  const orderId = `LKO-${Date.now()}${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
+                  const orderId = generateCheckoutOrderId();
                   
                   const toISODate = (dateValue: Date | null | undefined) => dateValue ? dateValue.toISOString() : null;
                   const toTimeComponent = (dateValue: Date | null | undefined) => {
@@ -1051,6 +1079,8 @@ const copyPickupAddress = () => {
                         : t('ordersFlow.checkout.notifications.orderPlacedBodySingle', { orderId })
                     );
                   } catch (_) { /* best-effort */ }
+
+                  void useDataStore.getState().forceRefreshOrders();
 
                   // Navigate to payment success page with the first order's details
                   router.push({
@@ -1190,13 +1220,19 @@ const copyPickupAddress = () => {
         {/* Order Details & Shipping Method */}
         {isCartCheckout ? (
           // Cart checkout - show separate sections for each distributor
-          Object.entries(distributorGroups).map(([distributorId, items]) => {
+          Object.entries(distributorGroups).map(([distributorId, items], groupIndex) => {
             const firstProduct = items[0].product as MarketplaceProduct;
             const distributorInfo = getDistributorInfo(firstProduct);
             const shippingOptions = getAvailableShippingOptions(firstProduct);
             
             return (
-              <View key={distributorId} style={[styles.section, styles.distributorSection]}>
+              <View
+                key={distributorId}
+                style={[
+                  styles.section,
+                  groupIndex === 0 ? styles.distributorSectionFirst : styles.distributorSection,
+                ]}
+              >
                 <View style={styles.productCard}>
                   <View style={styles.sectionTitleContainer}>
                     <Package size={20} color="#0a61d7" />
@@ -2040,8 +2076,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 8,
   },
+  distributorSectionFirst: {
+    marginTop: 8,
+  },
   distributorSection: {
-    marginTop: 16,
+    marginTop: 8,
   },
   sectionHeader: {
     flexDirection: 'row',

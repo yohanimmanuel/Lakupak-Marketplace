@@ -33,6 +33,29 @@ function isSuspensionError(error: unknown): boolean {
   return false
 }
 
+function isTransientAuthError(error: unknown): boolean {
+  if (error instanceof TypeError) return true
+  if (!(error instanceof Error)) return false
+  const msg = error.message
+  return (
+    msg.includes('Network request failed') ||
+    msg.includes('Failed to fetch') ||
+    /HTTP error! status: 5\d\d/.test(msg)
+  )
+}
+
+function isInvalidAuthTokenError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const msg = error.message
+  return (
+    /HTTP error! status: (401|403)/.test(msg) ||
+    msg.includes('UNAUTHENTICATED') ||
+    msg.includes('FORBIDDEN') ||
+    msg.includes('User not found') ||
+    msg.includes('Unable to extract userId from token')
+  )
+}
+
 async function clearUserScopedStores() {
   await Promise.all([
     (async () => {
@@ -133,11 +156,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const me = await getMe(t)
         set({ user: me })
       } catch (error) {
-        // If we can't get user, clear token unless the error is a suspension error.
-        // (Suspension is handled by a blocking modal + countdown.)
         const suspensionActive = get().suspension.active
         const preserveToken = isSuspensionError(error) || suspensionActive
-        if (!preserveToken) {
+        if (!preserveToken && isInvalidAuthTokenError(error) && !isTransientAuthError(error)) {
           await SecureStore.deleteItemAsync('auth_token')
           set({ token: null })
         }

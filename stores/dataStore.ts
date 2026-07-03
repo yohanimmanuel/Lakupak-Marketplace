@@ -126,6 +126,7 @@ interface DataState {
   // Orders data
   orders: MarketplaceOrder[]
   ordersLastUpdated: number | null
+  ordersLoadError: string | null
 
   /** Published special offers for home carousel and /offers list. */
   homeOffers: MarketplaceHomeOfferPayload[]
@@ -174,6 +175,7 @@ export const useDataStore = create<DataState>()(
       productsLastUpdated: null,
       orders: [],
       ordersLastUpdated: null,
+      ordersLoadError: null,
       homeOffers: [],
       isUserLoading: false,
       isProductsLoading: false,
@@ -258,8 +260,7 @@ export const useDataStore = create<DataState>()(
         const userId = authState.user?.id
 
         if (!token || !userId) {
-          // Clear orders if no valid user/token
-          set({ orders: [], ordersLastUpdated: null, isOrdersLoading: false })
+          set({ orders: [], ordersLastUpdated: null, ordersLoadError: null, isOrdersLoading: false })
           return
         }
 
@@ -279,7 +280,7 @@ export const useDataStore = create<DataState>()(
           // If user mismatch, force refresh
         }
 
-        set({ isOrdersLoading: true })
+        set({ isOrdersLoading: true, ordersLoadError: null })
         try {
           const result = await ordersService.getOrders(userId, 1, 100, token || undefined)
           const orders: MarketplaceOrder[] = result.orders as MarketplaceOrder[]
@@ -292,14 +293,25 @@ export const useDataStore = create<DataState>()(
           set({
             orders,
             ordersLastUpdated: now,
+            ordersLoadError: null,
             isOrdersLoading: false
           })
           } else {
-            // User changed during load - don't set orders
-            set({ orders: [], ordersLastUpdated: null, isOrdersLoading: false })
+            set({ orders: [], ordersLastUpdated: null, ordersLoadError: null, isOrdersLoading: false })
           }
         } catch (error) {
-          set({ isOrdersLoading: false })
+          const message = error instanceof Error ? error.message : 'Failed to load orders'
+          const { ordersLastUpdated: previousUpdated } = get()
+          set({
+            isOrdersLoading: false,
+            ordersLoadError: message,
+            ...(forceRefresh
+              ? { orders: [], ordersLastUpdated: null }
+              : {
+                  ordersLastUpdated:
+                    previousUpdated != null ? previousUpdated - CACHE_DURATION : null,
+                }),
+          })
         }
       },
 
@@ -364,7 +376,7 @@ export const useDataStore = create<DataState>()(
 
         const authState = useAuthStore.getState()
         const token = authState.token
-        const userId = authState.user?.id || get().user?.id
+        const userId = authState.user?.id
 
         if (!token || !userId) return
 
@@ -655,6 +667,7 @@ export const useDataStore = create<DataState>()(
           isProductsLoading: false,
           orders: [],
           ordersLastUpdated: null,
+          ordersLoadError: null,
           isOrdersLoading: false,
           pollingInterval: null,
           isPolling: false,
@@ -680,6 +693,7 @@ export const useDataStore = create<DataState>()(
           productsLastUpdated: null,
           orders: [], // CRITICAL: Clear orders immediately on logout
            ordersLastUpdated: null,
+          ordersLoadError: null,
           homeOffers: [],
           isUserLoading: false,
           isProductsLoading: false,

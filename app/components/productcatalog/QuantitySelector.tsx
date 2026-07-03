@@ -13,6 +13,8 @@ type QuantitySelectorProps = {
   stockPieces: number;
   moq?: number | null;
   onPackageQuantityChange: (packages: number) => void;
+  /** When true, parent quantity updates while typing (e.g. Buy Now MOQ/button state). */
+  syncParentWhileEditing?: boolean;
   size?: 'default' | 'compact';
 };
 
@@ -22,6 +24,7 @@ export default function QuantitySelector({
   stockPieces,
   moq = null,
   onPackageQuantityChange,
+  syncParentWhileEditing = false,
   size = 'default',
 }: QuantitySelectorProps) {
   const pp = Math.max(1, piecesPerPackage);
@@ -104,9 +107,11 @@ export default function QuantitySelector({
     (text: string) => {
       const { display, parsed } = clampPiecesToStock(text.replace(/\D/g, ''), stock);
       setPiecesInput(display);
-      onPackageQuantityChange(piecesToLivePackageQuantity(parsed, pp, stock));
+      if (syncParentWhileEditing) {
+        onPackageQuantityChange(piecesToLivePackageQuantity(parsed, pp, stock));
+      }
     },
-    [pp, stock, onPackageQuantityChange],
+    [stock, syncParentWhileEditing, pp, onPackageQuantityChange],
   );
 
   const atMin = packageQuantity <= 1;

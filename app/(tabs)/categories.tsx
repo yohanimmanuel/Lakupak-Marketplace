@@ -95,14 +95,22 @@ export default function CategoriesScreen() {
 
 
   const handleBuyNow = useCallback((product: Product, quantity?: number) => {
-    if (quantity) {
-      // Handle buy now with quantity
-      // TODO: Implement buy now logic
-    } else {
-      // Handle buy now without quantity (full view)
-      // TODO: Implement buy now logic
+    if (quantity && quantity > 0) {
+      router.push({
+        pathname: '/product',
+        params: {
+          productId: product.id,
+          openBuyNow: 'true',
+          initialQuantity: String(quantity),
+        },
+      });
+      return;
     }
-  }, []);
+    router.push({
+      pathname: '/product',
+      params: { productId: product.id, openBuyNow: 'true' },
+    });
+  }, [router]);
 
   const handleToggleFavorite = useCallback(async (productId: string) => {
     if (!user?.id) {

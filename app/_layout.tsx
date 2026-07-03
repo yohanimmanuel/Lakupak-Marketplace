@@ -140,9 +140,6 @@ function RootLayoutNav() {
       const currentToken = useAuthStore.getState().token;
       const currentUser = useAuthStore.getState().user;
       
-      // Initialize cart immediately after auth
-      initializeCart();
-      
       // Load user activities (liked products, viewed products, etc.) if user is logged in
       if (currentUser?.id) {
         await loadUserActivities(currentUser.id);
@@ -311,8 +308,10 @@ function RootLayoutNav() {
   useEffect(() => {
     const reloadUserData = async () => {
       if (!token || !user?.id) {
-        // User logged out - stop auto-refresh
         stopAutoRefresh();
+        if (hasHydrated) {
+          useCartStore.getState().initializeCart();
+        }
         return;
       }
 
@@ -337,7 +336,7 @@ function RootLayoutNav() {
     };
 
     reloadUserData();
-  }, [user?.id, token, initializeCart, loadUserActivities, refreshAllData, startAutoRefresh, stopAutoRefresh]);
+  }, [user?.id, token, hasHydrated, initializeCart, loadUserActivities, refreshAllData, startAutoRefresh, stopAutoRefresh]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

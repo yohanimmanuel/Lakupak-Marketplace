@@ -44,6 +44,7 @@ import { useTranslation } from 'react-i18next';
 import { openWhatsApp } from '../../../utils/whatsapp';
 import { OrderDetailsSkeleton } from '../SkeletonLoader';
 import { useMessagesStore } from '../../../stores/messagesStore';
+import { resolveDistributorUserId } from '../../../utils/orderSellerUserId';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -162,6 +163,7 @@ interface Order {
     createdAt?: string;
   }[];
   /** Seller / distributor identifiers from API (order-level fallbacks for distributor detail link) */
+  distributorUserId?: number | string | null;
   userId?: number | string | null;
   sellerId?: number | string | null;
   distributorId?: number | string | null;
@@ -937,14 +939,8 @@ export default function OrderDetailsModal() {
     }
 
     const distributorId: string | null = (() => {
-      const raw =
-        orderData.userId ??
-        orderData.sellerId ??
-        orderData.distributorId ??
-        orderData.sellerUserId ??
-        null;
-      if (raw === null || raw === undefined) return null;
-      return String(raw);
+      const sellerUserId = resolveDistributorUserId(orderData);
+      return sellerUserId != null ? String(sellerUserId) : null;
     })();
 
     return (
@@ -1031,12 +1027,7 @@ export default function OrderDetailsModal() {
   const handleContactSeller = () => {
     const company = orderData.user?.company;
     const phone = typeof company?.businessPhone === 'string' ? company.businessPhone : '';
-    const distributorIdRaw =
-      orderData.userId ??
-      orderData.sellerId ??
-      orderData.distributorId ??
-      orderData.sellerUserId ??
-      null;
+    const distributorIdRaw = resolveDistributorUserId(orderData);
     const distributorId = distributorIdRaw != null ? Number(distributorIdRaw) : Number.NaN;
     const distributorName =
       (company?.name || company?.companyName || '').trim() || 'Distributor';

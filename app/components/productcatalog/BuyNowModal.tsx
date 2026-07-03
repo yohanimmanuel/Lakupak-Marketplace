@@ -425,6 +425,7 @@ export default function BuyNowModal({
     }
 
     const checkoutParams: Record<string, string> = {
+      checkoutSource: 'direct',
       productId: product.id,
       quantity: quantity.toString(),
       totalPrice: totalPrice.toString(),
@@ -599,6 +600,7 @@ export default function BuyNowModal({
                     piecesPerPackage={computedValues.piecesPerPackage}
                     stockPieces={computedValues.stock}
                     moq={computedValues.moq}
+                    syncParentWhileEditing
                     onPackageQuantityChange={setQuantity}
                   />
                 ) : null}

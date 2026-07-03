@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,7 @@ import { getDistributorDisplayName, resolveDistributorId } from '../utils/cartDi
 import QuantitySelector from './components/productcatalog/QuantitySelector';
 
 const KEYBOARD_BOTTOM_GAP = 5;
+const CHECKOUT_BAR_HEIGHT = 72;
 
 export default function CartScreen() {
   const router = useRouter();
@@ -48,16 +49,23 @@ export default function CartScreen() {
     hydrate();
   }, [hydrate]);
   
-  // Cart store - use single subscription to ensure re-renders
-  const cartStore = useCartStore();
-  const cartItems = cartStore.items;
-  const { removeItem, updateQuantity, toggleSelect, setItemsSelected, selectAll, getSelectedItems, getTotalPrice, getTotalSaved, getSelectedItemCount, clearCart, initializeCart, loadFromDatabase } = cartStore;
+  // Cart store — selective subscriptions so qty typing does not re-render the whole screen
+  const cartItems = useCartStore((s) => s.items);
+  const removeItem = useCartStore((s) => s.removeItem);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const toggleSelect = useCartStore((s) => s.toggleSelect);
+  const setItemsSelected = useCartStore((s) => s.setItemsSelected);
+  const selectAll = useCartStore((s) => s.selectAll);
+  const getSelectedItems = useCartStore((s) => s.getSelectedItems);
+  const getTotalPrice = useCartStore((s) => s.getTotalPrice);
+  const getTotalSaved = useCartStore((s) => s.getTotalSaved);
+  const getSelectedItemCount = useCartStore((s) => s.getSelectedItemCount);
 
-  
   // Data store for products
   const { products } = useDataStore();
   
   const keyboardOffset = useRef(new Animated.Value(0)).current;
+  const [keyboardInset, setKeyboardInset] = useState(0);
 
   // Lift checkout bar above the keyboard while quantity is being edited
   useEffect(() => {
@@ -65,14 +73,17 @@ export default function CartScreen() {
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const showSub = Keyboard.addListener(showEvent, (event) => {
+      const inset = event.endCoordinates.height + KEYBOARD_BOTTOM_GAP;
+      setKeyboardInset(inset);
       Animated.timing(keyboardOffset, {
-        toValue: event.endCoordinates.height + KEYBOARD_BOTTOM_GAP,
+        toValue: inset,
         duration: Platform.OS === 'ios' ? event.duration ?? 250 : 250,
         useNativeDriver: true,
       }).start();
     });
 
     const hideSub = Keyboard.addListener(hideEvent, (event) => {
+      setKeyboardInset(0);
       Animated.timing(keyboardOffset, {
         toValue: 0,
         duration: Platform.OS === 'ios' ? event.duration ?? 250 : 250,
@@ -86,18 +97,13 @@ export default function CartScreen() {
     };
   }, [keyboardOffset]);
 
-  // Clear any test data on mount - use useRef to track if already initialized
+  // Remove legacy test products once on first mount (cart bootstrap lives in _layout)
   const hasInitialized = useRef(false);
   useEffect(() => {
     if (hasInitialized.current) return;
     hasInitialized.current = true;
-    
-    // Initialize cart immediately on app start
-    initializeCart();
-    
-    // Remove any test products that might be in the cart
-    // Use current cartItems snapshot to avoid stale closures
-    const currentCartItems = cartStore.items;
+
+    const currentCartItems = useCartStore.getState().items;
     const testItems = currentCartItems.filter(item => 
       item.product.name === 'Test Product' || 
       item.product.id === 'test-1'
@@ -138,7 +144,7 @@ export default function CartScreen() {
     );
     const variantStock = (option as { stockQuantity?: number } | null)?.stockQuantity;
     if (typeof variantStock === 'number' && variantStock >= 0) return variantStock;
-    return 999999;
+    return 0;
   };
 
   const renderMoqWarning = (item: CartItem, piecesPerPackage: number) => {
@@ -320,10 +326,12 @@ export default function CartScreen() {
     );
 
     return (
-    <View key={item.id} style={styles.cartItemWrapper}>
+    <View key={`${item.product.id}-${item.variant}`} style={styles.cartItemWrapper}>
       <ReanimatedSwipeable
         friction={2}
         overshootRight={false}
+        activeOffsetX={[-20, 20]}
+        failOffsetY={[-12, 12]}
         containerStyle={styles.swipeContainer}
         childrenContainerStyle={styles.swipeChild}
         renderRightActions={() => (
@@ -545,8 +553,15 @@ export default function CartScreen() {
       <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[
+          styles.scrollContent,
+          keyboardInset > 0 && {
+            paddingBottom: keyboardInset + CHECKOUT_BAR_HEIGHT,
+          },
+        ]}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="none"
+        nestedScrollEnabled
       >
         {distributorGroups.map(renderDistributorGroup)}
       </ScrollView>
@@ -581,7 +596,10 @@ export default function CartScreen() {
             style={[styles.checkoutButton, !canCheckout && styles.checkoutButtonDisabled]}
             onPress={() => {
               if (canCheckout) {
-                router.push('/components/productcatalog/checkout');
+                router.push({
+                  pathname: '/components/productcatalog/checkout',
+                  params: { checkoutSource: 'cart' },
+                });
               } else if (moqValidation.invalidItems.length > 0) {
                 // Show alert with MOQ requirements
                 const itemNames = moqValidation.invalidItems

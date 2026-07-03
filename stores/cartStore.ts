@@ -179,23 +179,80 @@ const syncCartItemSelectionToDatabase = async (
   });
 };
 
-// Helper function to sync cart item to database
-const syncItemToDatabase = async (item: CartItem, userId: number, token?: string): Promise<void> => {
+// Helper function to sync cart item to database; returns UserActivity row id when synced.
+const syncItemToDatabase = async (
+  item: CartItem,
+  userId: number,
+  token?: string,
+): Promise<number | null> => {
   try {
-    await cartService.addToCart(
+    const existingDbId = parseDbCartItemId(item.id);
+    if (existingDbId != null) {
+      await cartService.updateCartItem(existingDbId, item.quantity, item.selected, token);
+      return existingDbId;
+    }
+
+    const cartItem = await cartService.addToCart(
       userId,
       item.product.id,
       item.product as MarketplaceProduct,
       item.quantity,
       item.variant || 'Default',
-      token
+      token,
     );
+    return cartItem.id;
   } catch (error) {
-    // Silently handle network errors
     if (error instanceof TypeError && error.message.includes('Network request failed')) {
-      return;
+      return null;
     }
+    return null;
   }
+};
+
+const applySyncedCartItemId = (
+  set: (partial: Partial<CartState> | ((state: CartState) => Partial<CartState>)) => void,
+  get: () => CartState,
+  productId: string,
+  variant: string,
+  dbRowId: number,
+) => {
+  const dbItemId = `db-${dbRowId}`;
+  set({
+    items: get().items.map((item) =>
+      item.product.id === productId && item.variant === variant ? { ...item, id: dbItemId } : item,
+    ),
+  });
+};
+
+const cartItemKey = (productId: string, variant?: string) =>
+  `${productId}::${variant ?? 'Default'}`;
+
+let loadFromDatabaseRequestId = 0;
+
+const applyLoadedCartItems = (
+  set: (partial: Partial<CartState> | ((state: CartState) => Partial<CartState>)) => void,
+  previousItems: CartItem[],
+  convertedItems: CartItem[],
+) => {
+  const previousSelectionById = new Map(previousItems.map((item) => [item.id, item.selected]));
+  const previousSelectionByKey = new Map(
+    previousItems.map((item) => [cartItemKey(item.product.id, item.variant), item.selected]),
+  );
+
+  set({
+    items: convertedItems.map((item) => {
+      if (previousSelectionById.has(item.id)) {
+        return { ...item, selected: previousSelectionById.get(item.id)! };
+      }
+
+      const key = cartItemKey(item.product.id, item.variant);
+      if (previousSelectionByKey.has(key)) {
+        return { ...item, selected: previousSelectionByKey.get(key)! };
+      }
+
+      return item;
+    }),
+  });
 };
 
 export const useCartStore = create<CartState>()(
@@ -243,7 +300,11 @@ export const useCartStore = create<CartState>()(
         // Sync to database in background if user is logged in and online
         if (currentUserId && state.isOnline) {
           const token = authState.token;
-          syncItemToDatabase(updatedItem, currentUserId, token || undefined);
+          const productId = product.id;
+          void syncItemToDatabase(updatedItem, currentUserId, token || undefined).then((dbRowId) => {
+            if (dbRowId == null) return;
+            applySyncedCartItemId(set, get, productId, variant, dbRowId);
+          });
         }
       },
 
@@ -369,8 +430,8 @@ export const useCartStore = create<CartState>()(
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
         
-        // Clear local state immediately
-        set({ items: [], userId: null })
+        // Clear items only; keep userId aligned with authenticated user
+        set({ items: [], userId: currentUserId })
         
         // Clear from database if user is logged in and online
         if (currentUserId && isOnline) {
@@ -413,22 +474,66 @@ export const useCartStore = create<CartState>()(
       },
 
       syncWithDatabase: async () => {
-        const { items, isOnline } = get()
+        const { items: localItems, isOnline } = get()
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
         const token = authState.token
         
         if (!currentUserId || !isOnline) return
 
+        const requestId = ++loadFromDatabaseRequestId
         set({ isLoading: true })
+
         try {
-          // Sync all local items to database
-          for (const item of items) {
-            await syncItemToDatabase(item, currentUserId, token || undefined)
+          const serverRows = await cartService.getCart(currentUserId, token || undefined)
+          if (requestId !== loadFromDatabaseRequestId) return
+
+          const serverByKey = new Map<string, CartItem>()
+          for (const row of serverRows) {
+            const item = convertDatabaseToCartItem(row)
+            serverByKey.set(cartItemKey(item.product.id, item.variant), item)
           }
-        } catch (error) {
+
+          for (const item of localItems) {
+            const key = cartItemKey(item.product.id, item.variant)
+            const serverItem = serverByKey.get(key)
+
+            if (serverItem) {
+              const dbId = parseDbCartItemId(serverItem.id)
+              if (
+                dbId &&
+                (item.quantity !== serverItem.quantity || item.selected !== serverItem.selected)
+              ) {
+                await cartService
+                  .updateCartItem(dbId, item.quantity, item.selected, token || undefined)
+                  .catch(() => undefined)
+              }
+              continue
+            }
+
+            const dbRowId = await syncItemToDatabase(item, currentUserId, token || undefined)
+            if (dbRowId != null && requestId === loadFromDatabaseRequestId) {
+              applySyncedCartItemId(set, get, item.product.id, item.variant ?? 'Default', dbRowId)
+            }
+          }
+
+          if (requestId !== loadFromDatabaseRequestId) return
+
+          const freshRows = await cartService.getCart(currentUserId, token || undefined)
+          if (requestId !== loadFromDatabaseRequestId) return
+
+          const mergedLocalItems = get().items
+          applyLoadedCartItems(
+            set,
+            mergedLocalItems.length > 0 ? mergedLocalItems : localItems,
+            freshRows.map(convertDatabaseToCartItem),
+          )
+        } catch {
+          // Silently handle errors
         } finally {
-          set({ isLoading: false })
+          if (requestId === loadFromDatabaseRequestId) {
+            set({ isLoading: false })
+          }
         }
       },
 
@@ -440,34 +545,23 @@ export const useCartStore = create<CartState>()(
         
         if (!currentUserId || !isOnline) return
 
-        const previousSelectionById = new Map(previousItems.map((item) => [item.id, item.selected]));
-        const previousSelectionByKey = new Map(
-          previousItems.map((item) => [
-            `${item.product.id}::${item.variant ?? 'Default'}`,
-            item.selected,
-          ]),
-        );
-
+        const requestId = ++loadFromDatabaseRequestId
         set({ isLoading: true })
         try {
           const cartItems = await cartService.getCart(currentUserId, token || undefined)
-          const convertedItems = cartItems.map(convertDatabaseToCartItem).map((item) => {
-            if (previousSelectionById.has(item.id)) {
-              return { ...item, selected: previousSelectionById.get(item.id)! };
-            }
+          if (requestId !== loadFromDatabaseRequestId) return
 
-            const key = `${item.product.id}::${item.variant ?? 'Default'}`;
-            if (previousSelectionByKey.has(key)) {
-              return { ...item, selected: previousSelectionByKey.get(key)! };
-            }
-
-            return item;
-          });
-          set({ items: convertedItems })
-        } catch (error) {
+          applyLoadedCartItems(
+            set,
+            previousItems,
+            cartItems.map(convertDatabaseToCartItem),
+          )
+        } catch {
           // Silently handle errors
         } finally {
-          set({ isLoading: false })
+          if (requestId === loadFromDatabaseRequestId) {
+            set({ isLoading: false })
+          }
         }
       },
 
@@ -507,15 +601,11 @@ export const useCartStore = create<CartState>()(
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
         
-        // Update userId in store
         set({ userId: currentUserId })
         
         if (currentUserId) {
-          // Load immediately and set loading state
-          set({ isLoading: true })
           get().loadFromDatabase()
         } else {
-          // No user - clear cart
           set({ items: [], isLoading: false })
         }
       },

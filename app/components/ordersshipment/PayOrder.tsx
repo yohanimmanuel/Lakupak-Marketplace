@@ -16,6 +16,7 @@ import {
   normalizeProofFileName,
   type PaymentProofAttachment,
 } from '../../../services/paymentReceiptUpload';
+import { resolveDistributorUserId } from '../../../utils/orderSellerUserId';
 import {
   hasPaymentIntentSubmitted,
   paymentProofFromOrder,
@@ -33,6 +34,7 @@ type OrderDetails = {
   id: string;
   orderId: string;
   paymentTerms?: string | null;
+  distributorUserId?: number | null;
   userId?: number | null;
   sellerId?: number | null;
   distributorId?: number | null;
@@ -95,13 +97,7 @@ export default function PayOrder() {
       return;
     }
 
-    const sellerUserIdRaw =
-      o?.userId ??
-      o?.sellerId ??
-      o?.distributorId ??
-      o?.sellerUserId ??
-      null;
-    const sellerUserId = typeof sellerUserIdRaw === 'number' ? sellerUserIdRaw : null;
+    const sellerUserId = resolveDistributorUserId(o);
     if (sellerUserId && token) {
       const bankRes = await marketplaceService.getSellerBankDetails(sellerUserId, token, { fullAccountNumber: true });
       setBank({
@@ -168,13 +164,7 @@ export default function PayOrder() {
           return;
         }
 
-        const sellerUserIdRaw =
-          o?.userId ??
-          o?.sellerId ??
-          o?.distributorId ??
-          o?.sellerUserId ??
-          null;
-        const sellerUserId = typeof sellerUserIdRaw === 'number' ? sellerUserIdRaw : null;
+        const sellerUserId = resolveDistributorUserId(o);
         if (sellerUserId) {
           const bankRes = await marketplaceService.getSellerBankDetails(sellerUserId, token, { fullAccountNumber: true });
           if (cancelled) return;
@@ -224,16 +214,9 @@ export default function PayOrder() {
     null;
 
   const distributorId: string | null = useMemo(() => {
-    const raw =
-      order?.userId ??
-      order?.sellerId ??
-      order?.distributorId ??
-      order?.sellerUserId ??
-      null;
-    if (raw === null || raw === undefined) return null;
-    if (typeof raw === 'number' && raw > 0) return String(raw);
-    return null;
-  }, [order?.distributorId, order?.sellerId, order?.sellerUserId, order?.userId]);
+    const sellerUserId = resolveDistributorUserId(order);
+    return sellerUserId != null ? String(sellerUserId) : null;
+  }, [order]);
   const primaryBlue = '#0a61d7';
 
   const payOrderHeader = () => (
