@@ -471,6 +471,10 @@
     "unknownStatus": "Unknown",
     "reorder": "Re-order",
     "reorderLoading": "Adding items…",
+    "loadError": {
+      "title": "Couldn't load orders",
+      "retry": "Try again"
+    },
     "status": {
       "received": "Completed",
       "packed": "Packed",
@@ -2132,7 +2136,13 @@
         "placeOrder": "Place Order",
         "errorTitle": "Error",
         "placeOrderFailed": "Failed to place order. Please try again.",
-        "genericError": "Something went wrong. Please try again."
+        "genericError": "Something went wrong. Please try again.",
+        "rollbackPartialFailure": "{{count}} order(s) could not be cancelled automatically. Please check your orders list."
+      },
+      "emptyCart": {
+        "title": "No items selected",
+        "body": "Select at least one item in your cart to check out.",
+        "backToCart": "Back to cart"
       },
       "sections": {
         "payment": "Payment",

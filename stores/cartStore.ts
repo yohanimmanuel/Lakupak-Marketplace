@@ -163,33 +163,32 @@ const parseDbCartItemId = (itemId: string): number | null => {
   return Number.isNaN(dbId) ? null : dbId;
 };
 
-const syncCartItemSelectionToDatabase = async (
-  item: CartItem,
-  selected: boolean,
-  isOnline: boolean,
-): Promise<void> => {
-  if (!isOnline) return;
-
-  const authState = useAuthStore.getState();
-  const dbId = parseDbCartItemId(item.id);
-  if (!dbId) return;
-
-  await cartService.updateCartItem(dbId, undefined, selected, authState.token || undefined).catch(() => {
-    // Silently handle errors
-  });
-};
-
 // Helper function to sync cart item to database; returns UserActivity row id when synced.
 const syncItemToDatabase = async (
   item: CartItem,
   userId: number,
   token?: string,
 ): Promise<number | null> => {
+  const key = cartItemKey(item.product.id, item.variant);
+  if (pendingSyncKeys.has(key)) {
+    return null;
+  }
+
+  pendingSyncKeys.add(key);
   try {
     const existingDbId = parseDbCartItemId(item.id);
     if (existingDbId != null) {
       await cartService.updateCartItem(existingDbId, item.quantity, item.selected, token);
       return existingDbId;
+    }
+
+    const serverRows = await cartService.getCart(userId, token).catch(() => []);
+    const serverMatch = serverRows.find((row) => {
+      const converted = convertDatabaseToCartItem(row);
+      return cartItemKey(converted.product.id, converted.variant) === key;
+    });
+    if (serverMatch) {
+      return serverMatch.id;
     }
 
     const cartItem = await cartService.addToCart(
@@ -206,7 +205,74 @@ const syncItemToDatabase = async (
       return null;
     }
     return null;
+  } finally {
+    pendingSyncKeys.delete(key);
   }
+};
+
+type CartStoreSet = (
+  partial: Partial<CartState> | ((state: CartState) => Partial<CartState>),
+) => void;
+type CartStoreGet = () => CartState;
+
+const ensureCartItemDbId = async (
+  item: CartItem,
+  set: CartStoreSet,
+  get: CartStoreGet,
+): Promise<number | null> => {
+  const existingDbId = parseDbCartItemId(item.id);
+  if (existingDbId != null) return existingDbId;
+
+  const authState = useAuthStore.getState();
+  const userId = authState.user?.id;
+  const { isOnline } = get();
+  if (!userId || !isOnline) return null;
+
+  const key = cartItemKey(item.product.id, item.variant);
+  for (let attempt = 0; attempt < 15; attempt += 1) {
+    const current = get().items.find(
+      (entry) =>
+        entry.product.id === item.product.id && entry.variant === item.variant,
+    );
+    if (!current) return null;
+
+    const dbId = parseDbCartItemId(current.id);
+    if (dbId != null) return dbId;
+
+    if (!pendingSyncKeys.has(key)) {
+      const syncedId = await syncItemToDatabase(current, userId, authState.token || undefined);
+      if (syncedId != null) {
+        applySyncedCartItemId(set, get, current.product.id, current.variant ?? 'Default', syncedId);
+        return syncedId;
+      }
+      return null;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  return null;
+};
+
+const syncCartItemSelectionToDatabase = async (
+  item: CartItem,
+  selected: boolean,
+  isOnline: boolean,
+  set: CartStoreSet,
+  get: CartStoreGet,
+): Promise<void> => {
+  if (!isOnline) return;
+
+  const authState = useAuthStore.getState();
+  const userId = authState.user?.id;
+  if (!userId) return;
+
+  const dbId = await ensureCartItemDbId(item, set, get);
+  if (!dbId) return;
+
+  await cartService
+    .updateCartItem(dbId, undefined, selected, authState.token || undefined)
+    .catch(() => undefined);
 };
 
 const applySyncedCartItemId = (
@@ -226,6 +292,8 @@ const applySyncedCartItemId = (
 
 const cartItemKey = (productId: string, variant?: string) =>
   `${productId}::${variant ?? 'Default'}`;
+
+const pendingSyncKeys = new Set<string>();
 
 let loadFromDatabaseRequestId = 0;
 
@@ -310,56 +378,58 @@ export const useCartStore = create<CartState>()(
 
       removeItem: (itemId) => {
         const state = get();
+        const item = state.items.find((entry) => entry.id === itemId);
+        if (!item) return;
+
         const authState = useAuthStore.getState();
         const currentUserId = authState.user?.id || null;
-        
-        // Remove from local state
-        set((state) => ({
-          items: state.items.filter(item => item.id !== itemId)
-        }));
+        const itemSnapshot = { ...item };
 
-        // Remove from database if user is logged in
+        set({
+          items: state.items.filter((entry) => entry.id !== itemId),
+        });
+
         if (currentUserId && state.isOnline) {
-          // Extract database ID from item ID (format: db-{id} or {productId}-{variant}-{timestamp})
-          const dbId = itemId.startsWith('db-') ? parseInt(itemId.replace('db-', ''), 10) : null;
           const token = authState.token;
-          
-          if (dbId && !isNaN(dbId)) {
-            // Delete from database
-            cartService.removeCartItem(dbId, token || undefined).catch(() => {
-              // Silently handle errors
-            });
-          }
+          void (async () => {
+            const dbId = await ensureCartItemDbId(itemSnapshot, set, get);
+            if (dbId) {
+              await cartService.removeCartItem(dbId, token || undefined).catch(() => undefined);
+            }
+          })();
         }
       },
 
       updateQuantity: (itemId, quantity) => {
         if (quantity <= 0) {
-          get().removeItem(itemId)
-          return
+          get().removeItem(itemId);
+          return;
         }
-        
+
         const state = get();
+        const item = state.items.find((entry) => entry.id === itemId);
+        if (!item) return;
+
         const authState = useAuthStore.getState();
         const currentUserId = authState.user?.id || null;
-        
-        // Update local state
-        set((state) => ({
-          items: state.items.map(item =>
-            item.id === itemId ? { ...item, quantity } : item
-          )
-        }));
+        const itemSnapshot = { ...item, quantity };
 
-        // Update database if user is logged in
+        set({
+          items: state.items.map((entry) =>
+            entry.id === itemId ? { ...entry, quantity } : entry,
+          ),
+        });
+
         if (currentUserId && state.isOnline) {
-          const dbId = itemId.startsWith('db-') ? parseInt(itemId.replace('db-', ''), 10) : null;
           const token = authState.token;
-          
-          if (dbId && !isNaN(dbId)) {
-            cartService.updateCartItem(dbId, quantity, undefined, token || undefined).catch(() => {
-              // Silently handle errors
-            });
-          }
+          void (async () => {
+            const dbId = await ensureCartItemDbId(itemSnapshot, set, get);
+            if (dbId) {
+              await cartService
+                .updateCartItem(dbId, quantity, undefined, token || undefined)
+                .catch(() => undefined);
+            }
+          })();
         }
       },
 
@@ -381,7 +451,7 @@ export const useCartStore = create<CartState>()(
           ),
         });
 
-        void syncCartItemSelectionToDatabase(item, selected, state.isOnline);
+        void syncCartItemSelectionToDatabase(item, selected, state.isOnline, set, get);
       },
 
       setItemsSelected: (itemIds, selected) => {
@@ -398,7 +468,7 @@ export const useCartStore = create<CartState>()(
         });
 
         changedItems.forEach((entry) => {
-          void syncCartItemSelectionToDatabase(entry, selected, state.isOnline);
+          void syncCartItemSelectionToDatabase(entry, selected, state.isOnline, set, get);
         });
       },
 
@@ -496,6 +566,8 @@ export const useCartStore = create<CartState>()(
 
           for (const item of localItems) {
             const key = cartItemKey(item.product.id, item.variant)
+            if (pendingSyncKeys.has(key)) continue
+
             const serverItem = serverByKey.get(key)
 
             if (serverItem) {
@@ -666,6 +738,21 @@ export const useCartStore = create<CartState>()(
         if (!persisted || typeof persisted !== 'object') return { items: [], userId: null };
         if (version === 2) return persisted as never;
         return { items: [], userId: null };
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+
+        const authUserId = useAuthStore.getState().user?.id ?? null;
+        if (state.userId != null && authUserId != null && state.userId !== authUserId) {
+          state.items = [];
+          state.userId = authUserId;
+          return;
+        }
+
+        if (state.userId != null && authUserId == null) {
+          state.items = [];
+          state.userId = null;
+        }
       },
     },
   )

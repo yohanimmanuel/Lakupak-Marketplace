@@ -338,6 +338,20 @@ function RootLayoutNav() {
     reloadUserData();
   }, [user?.id, token, hasHydrated, initializeCart, loadUserActivities, refreshAllData, startAutoRefresh, stopAutoRefresh]);
 
+  // Cart offline/online: mark online on launch and when app returns to foreground, then sync.
+  useEffect(() => {
+    const { setOnlineStatus } = useCartStore.getState();
+    setOnlineStatus(true);
+
+    const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        setOnlineStatus(true);
+      }
+    });
+
+    return () => sub.remove();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ThemeProvider value={DefaultTheme}>

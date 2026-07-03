@@ -143,6 +143,7 @@ interface DataState {
   // WebSocket state
   isWebSocketConnected: boolean
   websocketUnsubscribe: (() => void) | null
+  supabaseOrderUnsubscribe: (() => void) | null
   
   // Actions
   setUser: (user: MobileUser | null) => void
@@ -184,6 +185,7 @@ export const useDataStore = create<DataState>()(
       isPolling: false,
       isWebSocketConnected: false,
       websocketUnsubscribe: null,
+      supabaseOrderUnsubscribe: null,
 
       // Actions
       setUser: (user) => set({ user, userLastUpdated: Date.now() }),
@@ -410,11 +412,14 @@ export const useDataStore = create<DataState>()(
       },
 
       startAutoRefresh: (token?: string | null) => {
-        const { pollingInterval, isPolling, websocketUnsubscribe } = get()
+        const { pollingInterval, isPolling, websocketUnsubscribe, supabaseOrderUnsubscribe } = get()
         
         // Clean up existing connections
         if (websocketUnsubscribe) {
           websocketUnsubscribe()
+        }
+        if (supabaseOrderUnsubscribe) {
+          supabaseOrderUnsubscribe()
         }
         if (pollingInterval) {
           clearInterval(pollingInterval)
@@ -423,12 +428,13 @@ export const useDataStore = create<DataState>()(
         // Start Supabase Realtime for order notifications
         const authState = useAuthStore.getState()
         const userId = authState.user?.id
+        let nextSupabaseUnsubscribe: (() => void) | null = null
         if (userId) {
           // Subscribe to order changes via Supabase Realtime
           supabaseRealtimeService.subscribeToOrders(userId)
           
           // Add callback to refresh orders when they change
-          supabaseRealtimeService.onOrderChange((orderChange) => {
+          nextSupabaseUnsubscribe = supabaseRealtimeService.onOrderChange((orderChange) => {
             const state = get()
             // Refresh orders to get the latest data
             if (!state.isOrdersLoading) {
@@ -436,6 +442,7 @@ export const useDataStore = create<DataState>()(
             }
           })
         }
+        set({ supabaseOrderUnsubscribe: nextSupabaseUnsubscribe })
         
         // Try WebSocket first (real-time updates) - for product/offer updates
         try {
@@ -626,7 +633,7 @@ export const useDataStore = create<DataState>()(
       },
 
       stopAutoRefresh: () => {
-        const { pollingInterval, websocketUnsubscribe } = get()
+        const { pollingInterval, websocketUnsubscribe, supabaseOrderUnsubscribe } = get()
         
         // Disconnect WebSocket
         websocketService.disconnect()
@@ -638,6 +645,9 @@ export const useDataStore = create<DataState>()(
         if (websocketUnsubscribe) {
           websocketUnsubscribe()
         }
+        if (supabaseOrderUnsubscribe) {
+          supabaseOrderUnsubscribe()
+        }
         
         // Stop polling
         if (pollingInterval) {
@@ -648,7 +658,8 @@ export const useDataStore = create<DataState>()(
           pollingInterval: null, 
           isPolling: false,
           isWebSocketConnected: false,
-          websocketUnsubscribe: null
+          websocketUnsubscribe: null,
+          supabaseOrderUnsubscribe: null,
         })
       },
 

@@ -57,6 +57,7 @@ export default function OrdersScreen() {
   const orders = useDataStore(state => state.orders);
   const products = useDataStore(state => state.products);
   const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
+  const ordersLoadError = useDataStore(state => state.ordersLoadError);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const [reorderingId, setReorderingId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -283,6 +284,17 @@ export default function OrdersScreen() {
         {isAuthenticated ? (
           showOrdersSkeleton ? (
             <OrdersListSkeleton />
+          ) : ordersLoadError && orders.length === 0 ? (
+            <View style={styles.noOrdersCard}>
+              <View style={styles.noOrdersIconContainer}>
+                <AlertCircle size={48} color="#ef4444" />
+              </View>
+              <Text style={styles.noOrdersTitle}>{t('tabsOrders.loadError.title')}</Text>
+              <Text style={styles.noOrdersSubDescription}>{ordersLoadError}</Text>
+              <Pressable style={styles.loginButton} onPress={() => loadOrdersData(true)}>
+                <Text style={styles.loginButtonText}>{t('tabsOrders.loadError.retry')}</Text>
+              </Pressable>
+            </View>
           ) : orders.length > 0 ? (
             orders.map((order: MarketplaceOrder) => {
               const dateLabel = formatOrderDateTime(order);

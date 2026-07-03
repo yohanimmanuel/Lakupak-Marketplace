@@ -151,6 +151,7 @@ export default function CheckoutScreen() {
         ? 'direct'
         : 'cart';
   const isCartCheckout = checkoutSource === 'cart' && selectedCartItems.length > 0;
+  const isCartCheckoutEmpty = checkoutSource === 'cart' && selectedCartItems.length === 0;
   
   // Get the actual product data (for single product checkout) - memoized to update when products change
   const product = useMemo(() => products.find(p => p.id === productId), [products, productId]);
@@ -950,11 +951,18 @@ const copyPickupAddress = () => {
                     await cartStore.removeItems(itemsToCheckout.map((item) => item.id));
                   } catch (checkoutError) {
                     if (createdOrderIds.length > 0 && token && authUser?.id) {
-                      await rollbackCheckoutOrders(
+                      const rollbackFailures = await rollbackCheckoutOrders(
                         createdOrderIds,
                         token,
-                        authUser.id,
                       );
+                      if (rollbackFailures.length > 0) {
+                        Alert.alert(
+                          t('ordersFlow.checkout.alerts.errorTitle'),
+                          t('ordersFlow.checkout.alerts.rollbackPartialFailure', {
+                            count: rollbackFailures.length,
+                          }),
+                        );
+                      }
                     }
                     throw checkoutError;
                   }
@@ -1134,6 +1142,14 @@ const copyPickupAddress = () => {
       >
         {showCheckoutSkeleton ? (
           <CheckoutSkeleton />
+        ) : isCartCheckoutEmpty ? (
+          <View style={styles.emptyCartState}>
+            <Text style={styles.emptyCartTitle}>{t('ordersFlow.checkout.emptyCart.title')}</Text>
+            <Text style={styles.emptyCartBody}>{t('ordersFlow.checkout.emptyCart.body')}</Text>
+            <TouchableOpacity style={styles.emptyCartButton} onPress={() => router.back()}>
+              <Text style={styles.emptyCartButtonText}>{t('ordersFlow.checkout.emptyCart.backToCart')}</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
         <>
         {/* Business Information - Always show distributor info */}
@@ -2048,6 +2064,38 @@ const copyPickupAddress = () => {
 }
 
 const styles = StyleSheet.create({
+  emptyCartState: {
+    margin: 20,
+    padding: 24,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyCartTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  emptyCartBody: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  emptyCartButton: {
+    marginTop: 8,
+    backgroundColor: '#0a61d7',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  emptyCartButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

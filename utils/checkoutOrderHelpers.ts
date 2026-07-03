@@ -29,13 +29,14 @@ export function extractCreatedOrderId(payload: unknown): string | null {
 export async function rollbackCheckoutOrders(
   orderIds: string[],
   token: string,
-  marketplaceUserId: number,
-): Promise<void> {
+): Promise<string[]> {
   const base = (API_BASE_URL || '').replace(/\/$/, '');
+  const failedIds: string[] = [];
+
   await Promise.all(
     orderIds.map(async (orderId) => {
       try {
-        await fetch(`${base}/api/orders`, {
+        const res = await fetch(`${base}/api/orders`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -44,15 +45,18 @@ export async function rollbackCheckoutOrders(
           body: JSON.stringify({
             cancel: true,
             orderId,
-            userId: marketplaceUserId,
-            cancelledBy: String(marketplaceUserId),
             reason: 'Checkout rolled back because a related order could not be created.',
             reasonCode: 'other',
           }),
         });
+        if (!res.ok) {
+          failedIds.push(orderId);
+        }
       } catch {
-        // best-effort
+        failedIds.push(orderId);
       }
     }),
   );
+
+  return failedIds;
 }

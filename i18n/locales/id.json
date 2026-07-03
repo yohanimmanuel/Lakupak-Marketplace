@@ -471,6 +471,10 @@
     "unknownStatus": "Tidak diketahui",
     "reorder": "Pesan lagi",
     "reorderLoading": "Menambahkan item…",
+    "loadError": {
+      "title": "Gagal memuat pesanan",
+      "retry": "Coba lagi"
+    },
     "status": {
       "received": "Selesai",
       "packed": "Dikemas",
@@ -2130,7 +2134,13 @@
         "placeOrder": "Buat pesanan",
         "errorTitle": "Error",
         "placeOrderFailed": "Gagal membuat pesanan. Silakan coba lagi.",
-        "genericError": "Terjadi kesalahan. Silakan coba lagi."
+        "genericError": "Terjadi kesalahan. Silakan coba lagi.",
+        "rollbackPartialFailure": "{{count}} pesanan tidak dapat dibatalkan otomatis. Periksa daftar pesanan Anda."
+      },
+      "emptyCart": {
+        "title": "Tidak ada item dipilih",
+        "body": "Pilih minimal satu item di keranjang untuk checkout.",
+        "backToCart": "Kembali ke keranjang"
       },
       "sections": {
         "payment": "Pembayaran",

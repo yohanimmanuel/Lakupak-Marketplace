@@ -246,15 +246,7 @@ class OrdersService {
         pagination: result.mobileOrders.pagination,
       };
     } catch (error) {
-      return {
-        orders: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          totalCount: 0,
-          totalPages: 0,
-        },
-      };
+      throw error instanceof Error ? error : new Error('Failed to load orders');
     }
   }
 
