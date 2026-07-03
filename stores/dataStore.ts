@@ -79,6 +79,8 @@ export interface MarketplaceOrder {
     updatedAt?: string | null;
   }[];
   returnItemsReceivedAt?: string | null;
+  assignedLogistics?: string | null;
+  trackingNumber?: string | null;
   seller?: {
     name?: string | null
     companyName?: string | null

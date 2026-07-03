@@ -581,7 +581,9 @@
       "orderReturnedTitle": "Pesanan diretur",
       "orderReturnedBody": "Pesanan {{orderId}} telah diretur.",
       "deliveryFailedTitle": "Pengiriman gagal",
-      "deliveryFailedBody": "Maaf. Pengiriman pesanan {{orderId}} tidak dapat diselesaikan. Silakan hubungi dukungan."
+      "deliveryFailedBody": "Maaf. Pengiriman pesanan {{orderId}} tidak dapat diselesaikan. Silakan hubungi dukungan.",
+      "fleetAssignedTitle": "Armada Ditugaskan",
+      "fleetAssignedBody": "Pesanan {{orderId}} telah ditugaskan ke salah satu armada distributor. Lacak pengiriman untuk info terbaru."
     }
   },
   "latestUpdatesDetail": {

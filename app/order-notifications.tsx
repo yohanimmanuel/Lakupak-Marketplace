@@ -55,6 +55,8 @@ export default function OrderNotificationsScreen() {
             paymentStatus: order.paymentStatus,
             returnItemsReceivedAt: order.returnItemsReceivedAt,
             returnRequests: order.returnRequests,
+            trackingNumber: order.trackingNumber,
+            assignedLogistics: order.assignedLogistics,
           },
           t,
         );

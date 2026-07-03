@@ -77,11 +77,30 @@ export type OrderPreviewInput = {
   paymentStatus?: string;
   returnItemsReceivedAt?: string | null;
   returnRequests?: Array<{ status?: string }>;
+  trackingNumber?: string | null;
+  assignedLogistics?: string | null;
 };
+
+/** Local notification copy when a distributor fleet is assigned to the buyer's order. */
+export function getFleetAssignedNotificationStrings(orderId: string): { title: string; body: string } {
+  return {
+    title: i18n.t('orderUpdates.status.fleetAssignedTitle'),
+    body: i18n.t('orderUpdates.status.fleetAssignedBody', { orderId }),
+  };
+}
 
 /** Preview rows on Notifications tab + Order notifications screen — same rules as prior English branches. */
 export function getOrderPreviewStrings(order: OrderPreviewInput, t: TFunction): { title: string; message: string } {
   const orderId = order.orderId;
+
+  const hasFleetAssignment = Boolean((order.trackingNumber || order.assignedLogistics || '').trim());
+  const fleetAssignableStatuses = new Set(['Pending', 'Confirmed', 'Packed']);
+  if (hasFleetAssignment && fleetAssignableStatuses.has(order.orderStatus ?? '')) {
+    return {
+      title: t('orderUpdates.status.fleetAssignedTitle'),
+      message: t('orderUpdates.status.fleetAssignedBody', { orderId }),
+    };
+  }
 
   if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
     return {
