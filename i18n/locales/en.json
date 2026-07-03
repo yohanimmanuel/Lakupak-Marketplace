@@ -1240,7 +1240,7 @@
       "stock": "Stock",
       "quantity": "Quantity",
       "freeItems": "+ {{count}} free items",
-      "minimumOrder": "Minimum order: {{count}} pieces",
+      "minimumOrder": "Minimum order: {{count}} qty",
       "total": "Total"
     },
     "cta": {

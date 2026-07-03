@@ -1238,7 +1238,7 @@
       "stock": "Stok",
       "quantity": "Jumlah",
       "freeItems": "+ {{count}} bonus item",
-      "minimumOrder": "Minimal pembelian: {{count}} pcs",
+      "minimumOrder": "Minimal pembelian: {{count}} qty",
       "total": "Total"
     },
     "cta": {
