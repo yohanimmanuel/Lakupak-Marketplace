@@ -150,11 +150,14 @@ export default function CheckoutScreen() {
       : params.productId
         ? 'direct'
         : 'cart';
+  const isDirectCheckout = checkoutSource === 'direct';
   const isCartCheckout = checkoutSource === 'cart' && selectedCartItems.length > 0;
   const isCartCheckoutEmpty = checkoutSource === 'cart' && selectedCartItems.length === 0;
   
   // Get the actual product data (for single product checkout) - memoized to update when products change
   const product = useMemo(() => products.find(p => p.id === productId), [products, productId]);
+  const isDirectCheckoutMissingProduct =
+    isDirectCheckout && !!productId && !product && !isProductsLoading;
   
   // Group cart items by distributor
 const slugify = (value: string) =>
@@ -770,12 +773,13 @@ const copyPickupAddress = () => {
         return true; // self_pickup is always ready once selected
       });
     } else {
+      if (!product) return false;
       if (!selectedShipping) return false;
       if (selectedShipping === 'seller_delivery') return !!sellerDeliveryMode;
-        if (selectedShipping === 'buyer_courier') return !!buyerCourierMode;
+      if (selectedShipping === 'buyer_courier') return !!buyerCourierMode;
       return true; // self_pickup
     }
-  }, [showCheckoutSkeleton, hasDeliveryAddress, isCartCheckout, selectedShipping, selectedShippingByDistributor, sellerDeliveryMode, buyerCourierMode, sellerDeliveryModeByDist, buyerCourierModeByDist, selectedCartItems]);
+  }, [showCheckoutSkeleton, hasDeliveryAddress, isCartCheckout, product, selectedShipping, selectedShippingByDistributor, sellerDeliveryMode, buyerCourierMode, sellerDeliveryModeByDist, buyerCourierModeByDist, selectedCartItems]);
 
   const handlePlaceOrder = async () => {
     if (isPlacingOrder || showCheckoutSkeleton) return;
@@ -804,13 +808,22 @@ const copyPickupAddress = () => {
               if (isPlacingOrder) return;
               setIsPlacingOrder(true);
               try {
-                const itemsToCheckout = useCartStore.getState().getSelectedItems();
-                if (itemsToCheckout.length === 0) {
+                const itemsToCheckout = isCartCheckout
+                  ? useCartStore.getState().getSelectedItems()
+                  : [];
+
+                if (isCartCheckout && itemsToCheckout.length === 0) {
                   Alert.alert(
                     t('ordersFlow.checkout.alerts.errorTitle'),
                     t('cart.checkout.noSelection'),
                   );
-                  setIsPlacingOrder(false);
+                  return;
+                }
+                if (!isCartCheckout && !product) {
+                  Alert.alert(
+                    t('ordersFlow.checkout.alerts.errorTitle'),
+                    t('ordersFlow.checkout.alerts.placeOrderFailed'),
+                  );
                   return;
                 }
 
@@ -1148,6 +1161,14 @@ const copyPickupAddress = () => {
             <Text style={styles.emptyCartBody}>{t('ordersFlow.checkout.emptyCart.body')}</Text>
             <TouchableOpacity style={styles.emptyCartButton} onPress={() => router.back()}>
               <Text style={styles.emptyCartButtonText}>{t('ordersFlow.checkout.emptyCart.backToCart')}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : isDirectCheckoutMissingProduct ? (
+          <View style={styles.emptyCartState}>
+            <Text style={styles.emptyCartTitle}>{t('ordersFlow.checkout.alerts.errorTitle')}</Text>
+            <Text style={styles.emptyCartBody}>{t('ordersFlow.checkout.alerts.placeOrderFailed')}</Text>
+            <TouchableOpacity style={styles.emptyCartButton} onPress={() => router.back()}>
+              <Text style={styles.emptyCartButtonText}>{t('ordersFlow.common.buttons.ok')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
