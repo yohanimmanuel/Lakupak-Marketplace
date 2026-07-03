@@ -80,6 +80,18 @@ interface DistributorInfo {
   email?: string;
 }
 
+function resolveProductLeadTime(product: MarketplaceProduct | undefined) {
+  const shipping = product?.shipping;
+  if (!shipping) {
+    return { minDays: null, maxDays: null };
+  }
+
+  return {
+    minDays: shipping.leadTimeMinDays ?? shipping.sellerDelivery?.minDays ?? null,
+    maxDays: shipping.leadTimeMaxDays ?? shipping.sellerDelivery?.maxDays ?? null,
+  };
+}
+
 export default function CheckoutScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -819,6 +831,7 @@ const copyPickupAddress = () => {
                     const shippingOptions = getAvailableShippingOptions(firstProduct);
                     const selectedId = selectedShippingByDistributor[distributorId] || '';
                     const selectedOption = shippingOptions.find(s => s.id === selectedId);
+                    const leadTime = resolveProductLeadTime(firstProduct as MarketplaceProduct);
                     const distributorTotal = distributorSubtotal;
                     
                     const toISODate = (dateValue: Date | null | undefined) => dateValue ? dateValue.toISOString() : null;
@@ -889,8 +902,8 @@ const copyPickupAddress = () => {
                         : null,
                       shippingMethodLabel: selectedOption?.name,
                       shippingMethod: selectedOption?.name,
-                      estimatedDeliveryMinDays: null,
-                      estimatedDeliveryMaxDays: null,
+                      estimatedDeliveryMinDays: leadTime.minDays,
+                      estimatedDeliveryMaxDays: leadTime.maxDays,
                       orderStatus: 'Pending',
                       paymentStatus: 'Unpaid',
                       paymentTerms: paymentTermsForOrder,
@@ -931,6 +944,7 @@ const copyPickupAddress = () => {
 
                   const selectedOption =
                     shippingOptions.find(option => option.id === selectedShipping);
+                  const leadTime = resolveProductLeadTime(product as MarketplaceProduct);
 
                   const orderData = {
                     orderId: orderId,
@@ -977,8 +991,8 @@ const copyPickupAddress = () => {
                       : null,
                     shippingMethodLabel: selectedOption?.name,
                     shippingMethod: selectedOption?.name,
-                    estimatedDeliveryMinDays: null,
-                    estimatedDeliveryMaxDays: null,
+                    estimatedDeliveryMinDays: leadTime.minDays,
+                    estimatedDeliveryMaxDays: leadTime.maxDays,
                     orderStatus: 'Pending',
                     paymentStatus: 'Unpaid',
                     paymentTerms: paymentTermsForOrder,
