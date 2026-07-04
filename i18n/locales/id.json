@@ -320,10 +320,16 @@
         "continue": "Lanjut"
       },
       "step2": {
-        "heading": "Buat kata sandi baru",
-        "subheading": "Masukkan kode 6 digit yang kami kirim ke email Anda, lalu buat kata sandi baru.",
+        "heading": "Verifikasi email Anda",
+        "subheading": "Masukkan kode 6 digit yang kami kirim ke email Anda.",
         "codeLabel": "Kode verifikasi",
         "codePlaceholder": "mis. 123456",
+        "verifying": "Memverifikasi…",
+        "continue": "Lanjut"
+      },
+      "step3": {
+        "heading": "Buat kata sandi baru",
+        "subheading": "Pilih kata sandi baru yang kuat untuk akun Anda.",
         "newPasswordLabel": "Kata sandi baru",
         "newPasswordPlaceholder": "Kata sandi baru",
         "confirmPasswordLabel": "Konfirmasi kata sandi",

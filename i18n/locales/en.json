@@ -320,10 +320,16 @@
         "continue": "Continue"
       },
       "step2": {
-        "heading": "Create new password",
-        "subheading": "Enter the 6-digit code we sent to your email, then choose a new password.",
+        "heading": "Verify your email",
+        "subheading": "Enter the 6-digit code we sent to your email.",
         "codeLabel": "Verification Code",
         "codePlaceholder": "e.g. 123456",
+        "verifying": "Verifying…",
+        "continue": "Continue"
+      },
+      "step3": {
+        "heading": "Create new password",
+        "subheading": "Choose a strong new password for your account.",
         "newPasswordLabel": "New Password",
         "newPasswordPlaceholder": "New password",
         "confirmPasswordLabel": "Confirm Password",

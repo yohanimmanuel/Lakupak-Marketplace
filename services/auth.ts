@@ -245,6 +245,31 @@ export async function requestForgotPassword(email: string): Promise<{ message: s
   return { message: data.message || 'If this email is registered, check your inbox for instructions.' }
 }
 
+export async function verifyForgotPasswordCode(email: string, token: string): Promise<{ valid: boolean }> {
+  const trimmed = email.trim().toLowerCase()
+  const code = typeof token === 'string' ? token.trim() : ''
+  if (!code) {
+    throwAuth(AUTH_ERROR_CODE.VERIFICATION_CODE_REQUIRED)
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/mobile/auth/verify-reset-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: trimmed, token: code }),
+  })
+  const data = (await res.json().catch(() => ({}))) as { valid?: boolean; error?: string; code?: string }
+  if (!res.ok) {
+    const err = new Error('') as AuthThrownError
+    if (res.status === 429) {
+      err.code = AUTH_ERROR_CODE.RATE_LIMITED
+    } else {
+      err.code = data.code || AUTH_ERROR_CODE.OTP_VERIFY_FAILED
+    }
+    throw err
+  }
+  return { valid: data.valid === true }
+}
+
 export async function resetPassword(email: string, token: string, newPassword: string): Promise<{ message: string }> {
   const trimmed = email.trim().toLowerCase()
   const code = typeof token === 'string' ? token.trim() : ''

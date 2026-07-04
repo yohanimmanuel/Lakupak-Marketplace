@@ -14,13 +14,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
-import { AUTH_ERROR_CODE, getAuthErrorCode, requestForgotPassword, resetPassword } from '../../../services/auth';
+import { AUTH_ERROR_CODE, getAuthErrorCode, requestForgotPassword, verifyForgotPasswordCode, resetPassword } from '../../../services/auth';
 import { useTranslation } from 'react-i18next';
 
 export default function ForgotPasswordModal() {
   const router = useRouter();
   const { t } = useTranslation();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [password, setPassword] = useState('');
@@ -30,11 +30,13 @@ export default function ForgotPasswordModal() {
   const [isLoading, setIsLoading] = useState(false);
 
   const onBack = () => {
-    if (step === 2) {
-      setStep(1);
-      setVerificationCode('');
+    if (step === 3) {
+      setStep(2);
       setPassword('');
       setConfirmPassword('');
+    } else if (step === 2) {
+      setStep(1);
+      setVerificationCode('');
     } else {
       router.back();
     }
@@ -74,6 +76,46 @@ export default function ForgotPasswordModal() {
     const code = verificationCode.trim();
     if (!code) {
       Alert.alert(t('auth.forgotPassword.alerts.codeRequiredTitle'), t('auth.forgotPassword.alerts.codeRequiredBody'));
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await verifyForgotPasswordCode(trimmed, code);
+      setStep(3);
+    } catch (e) {
+      if (getAuthErrorCode(e) === AUTH_ERROR_CODE.RATE_LIMITED) {
+        Alert.alert(
+          t('auth.forgotPassword.alerts.rateLimitedTitle'),
+          t('auth.forgotPassword.alerts.rateLimitedBody'),
+        );
+        return;
+      }
+      const err = e as Error & { code?: string; response?: { data?: { code?: string } } };
+      const apiCode = getAuthErrorCode(e) ?? err?.code ?? err?.response?.data?.code;
+      const isInvalidOrExpiredCode =
+        apiCode === 'INVALID_OR_EXPIRED_CODE' ||
+        apiCode === 'EXPIRED_CODE' ||
+        apiCode === AUTH_ERROR_CODE.OTP_VERIFY_FAILED;
+      if (isInvalidOrExpiredCode) {
+        Alert.alert(
+          t('auth.forgotPassword.alerts.invalidOrExpiredCodeTitle'),
+          t('auth.forgotPassword.alerts.invalidOrExpiredCodeBody'),
+          [{ text: t('auth.forgotPassword.alerts.ok') }],
+        );
+      } else {
+        Alert.alert(t('auth.forgotPassword.alerts.errorTitle'), t('auth.forgotPassword.alerts.genericErrorBody'));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStep3 = async () => {
+    const trimmed = email.trim();
+    const code = verificationCode.trim();
+    if (!code) {
+      Alert.alert(t('auth.forgotPassword.alerts.codeRequiredTitle'), t('auth.forgotPassword.alerts.codeRequiredBody'));
+      setStep(2);
       return;
     }
     if (!password.trim()) {
@@ -132,7 +174,7 @@ export default function ForgotPasswordModal() {
         Alert.alert(
           t('auth.forgotPassword.alerts.invalidOrExpiredCodeTitle'),
           t('auth.forgotPassword.alerts.invalidOrExpiredCodeBody'),
-          [{ text: t('auth.forgotPassword.alerts.ok') }],
+          [{ text: t('auth.forgotPassword.alerts.ok'), onPress: () => { setStep(2); setPassword(''); setConfirmPassword(''); } }],
         );
       } else {
         Alert.alert(t('auth.forgotPassword.alerts.errorTitle'), t('auth.forgotPassword.alerts.genericErrorBody'));
@@ -185,7 +227,7 @@ export default function ForgotPasswordModal() {
                 />
               </Pressable>
 
-              {step === 1 ? (
+              {step === 1 && (
                 <>
                   <View style={{ marginBottom: 32 }}>
                     <Text style={{ color: '#111827', fontSize: 28, fontWeight: '700', marginBottom: 8 }}>
@@ -237,7 +279,9 @@ export default function ForgotPasswordModal() {
                     </Text>
                   </Pressable>
                 </>
-              ) : (
+              )}
+
+              {step === 2 && (
                 <>
                   <View style={{ marginBottom: 32 }}>
                     <Text style={{ color: '#111827', fontSize: 28, fontWeight: '700', marginBottom: 8 }}>
@@ -247,7 +291,7 @@ export default function ForgotPasswordModal() {
                       {t('auth.forgotPassword.step2.subheading')}
                     </Text>
                   </View>
-                  <View style={{ marginBottom: 12 }}>
+                  <View style={{ marginBottom: 24 }}>
                     <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
                       {t('auth.forgotPassword.step2.codeLabel')}
                     </Text>
@@ -274,9 +318,37 @@ export default function ForgotPasswordModal() {
                       />
                     </View>
                   </View>
+                  <Pressable
+                    onPress={handleStep2}
+                    disabled={isLoading}
+                    style={{
+                      backgroundColor: isLoading ? '#93c5fd' : '#0a61d7',
+                      borderRadius: 12,
+                      paddingVertical: 16,
+                      alignItems: 'center',
+                      opacity: isLoading ? 0.7 : 1,
+                    }}
+                  >
+                    <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>
+                      {isLoading ? t('auth.forgotPassword.step2.verifying') : t('auth.forgotPassword.step2.continue')}
+                    </Text>
+                  </Pressable>
+                </>
+              )}
+
+              {step === 3 && (
+                <>
+                  <View style={{ marginBottom: 32 }}>
+                    <Text style={{ color: '#111827', fontSize: 28, fontWeight: '700', marginBottom: 8 }}>
+                      {t('auth.forgotPassword.step3.heading')}
+                    </Text>
+                    <Text style={{ color: '#6b7280', fontSize: 14, lineHeight: 20 }}>
+                      {t('auth.forgotPassword.step3.subheading')}
+                    </Text>
+                  </View>
                   <View style={{ marginBottom: 12 }}>
                     <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                      {t('auth.forgotPassword.step2.newPasswordLabel')}
+                      {t('auth.forgotPassword.step3.newPasswordLabel')}
                     </Text>
                     <View
                       style={{
@@ -292,7 +364,7 @@ export default function ForgotPasswordModal() {
                       <TextInput
                         value={password}
                         onChangeText={setPassword}
-                        placeholder={t('auth.forgotPassword.step2.newPasswordPlaceholder')}
+                        placeholder={t('auth.forgotPassword.step3.newPasswordPlaceholder')}
                         placeholderTextColor="#9ca3af"
                         style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827' }}
                         secureTextEntry={!showPassword}
@@ -309,9 +381,9 @@ export default function ForgotPasswordModal() {
                       </Pressable>
                     </View>
                   </View>
-                  <View style={{ marginBottom: 24 }}>
+                  <View style={{ marginBottom: 8 }}>
                     <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
-                      {t('auth.forgotPassword.step2.confirmPasswordLabel')}
+                      {t('auth.forgotPassword.step3.confirmPasswordLabel')}
                     </Text>
                     <View
                       style={{
@@ -327,7 +399,7 @@ export default function ForgotPasswordModal() {
                       <TextInput
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
-                        placeholder={t('auth.forgotPassword.step2.confirmPasswordPlaceholder')}
+                        placeholder={t('auth.forgotPassword.step3.confirmPasswordPlaceholder')}
                         placeholderTextColor="#9ca3af"
                         style={{ flex: 1, paddingVertical: 16, fontSize: 16, color: '#111827' }}
                         secureTextEntry={!showConfirmPassword}
@@ -347,8 +419,11 @@ export default function ForgotPasswordModal() {
                       </Pressable>
                     </View>
                   </View>
+                  <Text style={{ color: '#9ca3af', fontSize: 12, lineHeight: 18, marginBottom: 24 }}>
+                    {t('auth.forgotPassword.passwordHint')}
+                  </Text>
                   <Pressable
-                    onPress={handleStep2}
+                    onPress={handleStep3}
                     disabled={isLoading}
                     style={{
                       backgroundColor: isLoading ? '#93c5fd' : '#0a61d7',
@@ -359,7 +434,7 @@ export default function ForgotPasswordModal() {
                     }}
                   >
                     <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '600' }}>
-                      {isLoading ? t('auth.forgotPassword.step2.resetting') : t('auth.forgotPassword.step2.resetPassword')}
+                      {isLoading ? t('auth.forgotPassword.step3.resetting') : t('auth.forgotPassword.step3.resetPassword')}
                     </Text>
                   </Pressable>
                 </>
