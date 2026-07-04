@@ -297,6 +297,10 @@ const pendingSyncKeys = new Set<string>();
 
 let loadFromDatabaseRequestId = 0;
 
+/** Newest additions first — matches server `orderBy: createdAt desc` and cart UX. */
+const sortCartItemsByAddedAtDesc = (items: CartItem[]): CartItem[] =>
+  [...items].sort((a, b) => b.addedAt - a.addedAt);
+
 const applyLoadedCartItems = (
   set: (partial: Partial<CartState> | ((state: CartState) => Partial<CartState>)) => void,
   previousItems: CartItem[],
@@ -306,20 +310,40 @@ const applyLoadedCartItems = (
   const previousSelectionByKey = new Map(
     previousItems.map((item) => [cartItemKey(item.product.id, item.variant), item.selected]),
   );
+  const previousByKey = new Map(
+    previousItems.map((item) => [cartItemKey(item.product.id, item.variant), item]),
+  );
+  const serverByKey = new Set(
+    convertedItems.map((item) => cartItemKey(item.product.id, item.variant)),
+  );
 
-  set({
-    items: convertedItems.map((item) => {
-      if (previousSelectionById.has(item.id)) {
-        return { ...item, selected: previousSelectionById.get(item.id)! };
-      }
-
+  const mergedFromServer = convertedItems.map((item) => {
+    let selected = item.selected;
+    if (previousSelectionById.has(item.id)) {
+      selected = previousSelectionById.get(item.id)!;
+    } else {
       const key = cartItemKey(item.product.id, item.variant);
       if (previousSelectionByKey.has(key)) {
-        return { ...item, selected: previousSelectionByKey.get(key)! };
+        selected = previousSelectionByKey.get(key)!;
       }
+    }
 
-      return item;
-    }),
+    const key = cartItemKey(item.product.id, item.variant);
+    const prev = previousByKey.get(key);
+    const addedAt =
+      prev && prev.addedAt > item.addedAt ? prev.addedAt : item.addedAt;
+
+    return { ...item, selected, addedAt };
+  });
+
+  // Keep local-only rows while background sync is still in flight so opening the
+  // cart does not briefly drop a just-added item before the server round-trip finishes.
+  const unsyncedLocal = previousItems.filter(
+    (item) => !serverByKey.has(cartItemKey(item.product.id, item.variant)),
+  );
+
+  set({
+    items: sortCartItemsByAddedAtDesc([...unsyncedLocal, ...mergedFromServer]),
   });
 };
 
@@ -346,13 +370,11 @@ export const useCartStore = create<CartState>()(
         if (existingItem) {
           updatedItem = {
             ...existingItem,
-            quantity: existingItem.quantity + quantity
+            quantity: existingItem.quantity + quantity,
+            addedAt: Date.now(),
           };
-          set({
-            items: state.items.map(item =>
-              item.id === existingItem.id ? updatedItem : item
-            )
-          })
+          const rest = state.items.filter((item) => item.id !== existingItem.id);
+          set({ items: sortCartItemsByAddedAtDesc([updatedItem, ...rest]) });
         } else {
           updatedItem = {
             id: `${product.id}-${variant}-${Date.now()}`,
@@ -362,7 +384,7 @@ export const useCartStore = create<CartState>()(
             variant,
             addedAt: Date.now()
           };
-          set({ items: [...state.items, updatedItem] })
+          set({ items: sortCartItemsByAddedAtDesc([updatedItem, ...state.items]) });
         }
 
         // Sync to database in background if user is logged in and online
@@ -759,6 +781,8 @@ export const useCartStore = create<CartState>()(
         if (state.userId != null && authUserId != null && state.userId !== authUserId) {
           state.items = [];
           state.userId = authUserId;
+        } else if (state.items.length > 1) {
+          state.items = sortCartItemsByAddedAtDesc(state.items);
         }
       },
     },

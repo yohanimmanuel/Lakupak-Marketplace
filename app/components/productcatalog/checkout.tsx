@@ -13,6 +13,7 @@ import {
   StatusBar,
   Animated,
   Clipboard,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -127,6 +128,7 @@ export default function CheckoutScreen() {
   // Get cart data
   const cartStore = useCartStore();
   const cartItems = useCartStore(s => s.items as CartItem[]);
+  const isCartLoading = useCartStore(s => s.isLoading);
   const selectedCartItems = useMemo(
     () => cartItems.filter(item => item.selected),
     [cartItems]
@@ -368,6 +370,14 @@ const copyPickupAddress = () => {
   const showCheckoutSkeleton =
     (!!token && isProfileRefreshing) ||
     (waitingForProduct && isProductsLoading);
+
+  // The selected-items list is briefly empty in two non-error windows: while the cart
+  // is still loading/syncing from the server on a cold entry, and right after a
+  // successful order when removeItems() clears the cart just before we navigate away.
+  // Show a spinner in those windows so the "No items selected" copy only surfaces for a
+  // genuinely settled/empty cart (or a load/connection issue), never as a flash.
+  const isCartCheckoutResolving =
+    isCartCheckoutEmpty && (isPlacingOrder || isCartLoading);
 
   const paymentMethods: Array<{
     id: 'bank_transfer' | 'cod';
@@ -1155,6 +1165,11 @@ const copyPickupAddress = () => {
       >
         {showCheckoutSkeleton ? (
           <CheckoutSkeleton />
+        ) : isCartCheckoutResolving ? (
+          <View style={styles.checkoutLoaderState}>
+            <ActivityIndicator size="large" color={primaryBlue} />
+            <Text style={styles.checkoutLoaderText}>{t('common.loading')}</Text>
+          </View>
         ) : isCartCheckoutEmpty ? (
           <View style={styles.emptyCartState}>
             <Text style={styles.emptyCartTitle}>{t('ordersFlow.checkout.emptyCart.title')}</Text>
@@ -2080,11 +2095,47 @@ const copyPickupAddress = () => {
           style={styles.picker}
         />
       )}
+
+      {/* Full-screen loading overlay while the order is being placed. Covers the
+          checkout so the user sees a spinner immediately (not the form or an empty
+          cart) until we navigate to the success page. */}
+      {isPlacingOrder && (
+        <View style={styles.placingOrderOverlay}>
+          <ActivityIndicator size="large" color={primaryBlue} />
+          <Text style={styles.placingOrderText}>{t('ordersFlow.checkout.cta.placing')}</Text>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  checkoutLoaderState: {
+    marginTop: 80,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+  },
+  checkoutLoaderText: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  placingOrderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 14,
+    zIndex: 100,
+  },
+  placingOrderText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#374151',
+    textAlign: 'center',
+  },
   emptyCartState: {
     margin: 20,
     padding: 24,
