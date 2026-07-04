@@ -529,9 +529,16 @@ export const useCartStore = create<CartState>()(
 
       setUserId: (userId) => {
         set({ userId })
-        // Load cart from database when user logs in
         if (userId) {
-          get().loadFromDatabase()
+          // Preserve locally added (possibly offline / not-yet-synced) items across a
+          // cold start: when local items exist, upload + merge them with the server
+          // cart instead of overwriting with server-only rows. On a genuine user switch
+          // the cart is emptied first (clearCartLocal), so there is nothing to mis-upload.
+          if (get().items.length > 0) {
+            get().syncWithDatabase()
+          } else {
+            get().loadFromDatabase()
+          }
         }
       },
 
@@ -742,16 +749,16 @@ export const useCartStore = create<CartState>()(
       onRehydrateStorage: () => (state) => {
         if (!state) return;
 
+        // Only reconcile ownership when the authenticated user is already known. On a
+        // cold start the auth store hydrates asynchronously (getMe), so user?.id is
+        // briefly null even for a returning session — wiping here would drop locally
+        // added, still-unsynced items (the rehydration race). Ownership is instead
+        // reconciled once auth resolves: authStore.setUser clears the cart on a genuine
+        // user switch, and setUserId merges the same user's local + server carts.
         const authUserId = useAuthStore.getState().user?.id ?? null;
         if (state.userId != null && authUserId != null && state.userId !== authUserId) {
           state.items = [];
           state.userId = authUserId;
-          return;
-        }
-
-        if (state.userId != null && authUserId == null) {
-          state.items = [];
-          state.userId = null;
         }
       },
     },

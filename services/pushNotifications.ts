@@ -38,6 +38,8 @@ export interface PushNotificationData {
 
 class PushNotificationService {
   private expoPushToken: string | null = null;
+  /** Last Expo token successfully persisted to the server (dedup for foreground re-saves). */
+  private lastSavedToken: string | null = null;
   private lastPlatformAnnouncementShown: { announcementId: string; at: number } | null = null;
   private static readonly PLATFORM_ANNOUNCEMENT_DEDUP_MS = 8000;
   private masterEnabled: boolean | null = null;
@@ -223,11 +225,17 @@ class PushNotificationService {
         }),
       });
 
+      if (response.ok) this.lastSavedToken = token;
       return response.ok;
     } catch (error) {
       console.error('Error saving push token to server:', error);
       return false;
     }
+  }
+
+  /** Token already persisted this session; callers use it to avoid redundant POSTs. */
+  getLastSavedToken(): string | null {
+    return this.lastSavedToken;
   }
 
   /** Update language on all active push tokens (no Expo token required). */
@@ -264,6 +272,22 @@ class PushNotificationService {
     } catch (error) {
       console.error('Error removing push token from server:', error);
       return false;
+    }
+  }
+
+  /**
+   * Deregister this device's push token on logout so the account stops receiving pushes here.
+   * Must be called while the auth token is still valid (the DELETE endpoint requires auth).
+   * Resets the save-dedup marker so the next signed-in user re-registers this device.
+   */
+  async deregisterCurrentDevice(authToken?: string): Promise<void> {
+    const token = this.expoPushToken;
+    this.lastSavedToken = null;
+    if (!token) return;
+    try {
+      await this.removePushTokenFromServer(token, authToken);
+    } catch (error) {
+      console.error('Error deregistering push token on logout:', error);
     }
   }
 

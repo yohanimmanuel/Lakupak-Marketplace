@@ -410,7 +410,13 @@ export default function CartScreen() {
                     piecesPerPackage={piecesPerPackage}
                     stockPieces={getItemStockPieces(item)}
                     moq={getItemMOQ(item)}
-                    onPackageQuantityChange={(packages) => updateQuantity(item.id, packages)}
+                    syncParentWhileEditing
+                    onPackageQuantityChange={(packages) => {
+                      // Live-sync emits 0 while the field is momentarily empty mid-typing;
+                      // ignore it so the row isn't removed (updateQuantity(<=0) deletes the item).
+                      // The final value is normalized to >= MOQ on blur/submit.
+                      if (packages > 0) updateQuantity(item.id, packages);
+                    }}
                   />
                 </View>
               </View>

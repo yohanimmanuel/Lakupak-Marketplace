@@ -167,6 +167,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: false, hasHydrated: true })
   },
   logout: async () => {
+    // Capture the auth token before clearing state — deregistering the push token
+    // requires a valid Authorization header on the DELETE endpoint.
+    const authTokenForPush = get().token
+
     // Clear state immediately for instant UI response
     set({
       token: null,
@@ -174,7 +178,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       suspension: { active: false, reason: null, startedAt: null },
       blockSuspensionUntilNextToken: true,
     })
-    
+
+    // Stop this device from receiving the logged-out user's pushes. Best-effort and
+    // non-blocking so logout stays instant; failures just leave a stale server token.
+    void (async () => {
+      try {
+        const { pushNotificationService } = await import('../services/pushNotifications')
+        await pushNotificationService.deregisterCurrentDevice(authTokenForPush ?? undefined)
+      } catch {
+        // Ignore errors if the push service is unavailable
+      }
+    })()
+
     await clearUserScopedStores();
     
     // Clean up storage in background

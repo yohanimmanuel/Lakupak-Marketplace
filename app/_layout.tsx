@@ -23,9 +23,6 @@ import { logMobileEnvWarnings } from '../utils/validateEnv';
 
 import i18n from '../i18n';
 
-/** Avoid re-POSTing the same Expo token unless it rotates (foreground retries). */
-let lastSentMarketplacePushToken: string | null = null;
-
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
@@ -225,14 +222,13 @@ function RootLayoutNav() {
 
       const pushToken = await pushNotificationService.registerForPushNotifications();
 
-      if (pushToken && user?.id && token && pushToken !== lastSentMarketplacePushToken) {
-        const saved = await pushNotificationService.savePushTokenToServer(
+      if (pushToken && user?.id && token && pushToken !== pushNotificationService.getLastSavedToken()) {
+        await pushNotificationService.savePushTokenToServer(
           user.id,
           pushToken,
           token,
           language,
         );
-        if (saved) lastSentMarketplacePushToken = pushToken;
       }
       if (token && user?.id) {
         await pushNotificationService.setMarketplaceUserPushLanguage(token, language);

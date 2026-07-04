@@ -51,6 +51,26 @@ export async function graphqlRequest<T>(
     return currentToken === token;
   };
 
+  // Auth-expiry signals the server sends when a mid-session token is no longer valid.
+  // Note: the GraphQL layer reports this via extensions.code 'UNAUTHENTICATED' with the
+  // message "Authentication required" — FORBIDDEN is an authorization error and must NOT
+  // end the session.
+  const isAuthExpiryMessage = (message: string) =>
+    /UNAUTHENTICATED|Authentication required|Unable to extract userId from token|User not found|jwt expired|invalid token|Invalid or expired token/i.test(
+      message,
+    );
+  const hasUnauthenticatedError = (errs?: GraphQLResponse<T>['errors']) =>
+    !!errs?.some((e) => e.extensions?.code === 'UNAUTHENTICATED');
+
+  // End the session when the token has died mid-session so the app doesn't get stuck
+  // "logged in but every request 401s". Guarded by the same in-flight token check as
+  // suspension, so a late failure can't log out a freshly re-authenticated session.
+  const expireSessionForToken = () => {
+    const store = getAuthStore().getState();
+    if (!token || store.token !== token) return;
+    void store.logout();
+  };
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -85,6 +105,9 @@ export async function graphqlRequest<T>(
         err.code = 'ACCOUNT_SUSPENDED';
         err.reason = null;
         throw err;
+      }
+      if (response.status === 401) {
+        expireSessionForToken();
       }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -124,6 +147,9 @@ export async function graphqlRequest<T>(
       err.code = 'ACCOUNT_SUSPENDED'
       err.reason = reason
       throw err
+    }
+    if (response.status === 401 || hasUnauthenticatedError(result.errors) || isAuthExpiryMessage(errorMessage)) {
+      expireSessionForToken();
     }
     throw new Error(`GraphQL error: ${errorMessage}`);
   }
