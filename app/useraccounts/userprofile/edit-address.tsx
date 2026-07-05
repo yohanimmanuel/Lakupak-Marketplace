@@ -12,6 +12,7 @@ import {
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
+import * as Location from 'expo-location';
 import { useAuthStore } from '../../../stores/authStore';
 import {
   updateMe,
@@ -23,7 +24,7 @@ import { useTranslation } from 'react-i18next';
 import AddressMapPreview from '../../components/address/AddressMapPreview';
 import AddressLocationFields from '../../components/address/AddressLocationFields';
 import AddressLabelOptions, { type AddressLabel } from '../../components/address/AddressLabelOptions';
-import type { GeocodePrecision } from '../../../services/geocode';
+import { reverseGeocode, type GeocodePrecision } from '../../../services/geocode';
 
 const normalizeLabel = (value?: string | null): AddressLabel => {
   if (value === 'work' || value === 'store' || value === 'home') {
@@ -50,6 +51,7 @@ export default function EditAddress() {
   const [savedAddressSnapshot, setSavedAddressSnapshot] = useState('');
   const [savedCoordinates, setSavedCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
   const [savedPrecision, setSavedPrecision] = useState<GeocodePrecision | null>(null);
+  const [locating, setLocating] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const fieldScrollY = useRef<Partial<Record<'address' | 'fullName' | 'phone', number>>>({});
 
@@ -107,6 +109,57 @@ export default function EditAddress() {
     }
     load()
   }, [id, token])
+
+  const onUseCurrentLocation = async () => {
+    if (locating) return;
+    setLocating(true);
+    try {
+      Keyboard.dismiss();
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('profile.editAddress.locationPermissionTitle'),
+          t('profile.editAddress.locationPermissionBody'),
+        );
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const { latitude, longitude } = position.coords;
+
+      const result = await reverseGeocode(latitude, longitude, token);
+      if (!result || !result.address.trim()) {
+        // Still drop the GPS pin so the map reflects where they are.
+        setAddress('');
+        setSavedAddressSnapshot('');
+        setSavedCoordinates({ latitude, longitude });
+        setSavedPrecision('exact');
+        Alert.alert(
+          t('profile.editAddress.locationErrorTitle'),
+          t('profile.editAddress.locationNotFound'),
+        );
+        return;
+      }
+
+      const resolvedAddress = result.address.trim();
+      const coords = result.coordinates ?? { latitude, longitude };
+      setAddress(resolvedAddress);
+      // Prime the map preview with the exact GPS pin so it doesn't re-geocode
+      // the freshly filled text and drift from the real location.
+      setSavedAddressSnapshot(resolvedAddress);
+      setSavedCoordinates(coords);
+      setSavedPrecision(result.precision ?? 'exact');
+    } catch {
+      Alert.alert(
+        t('profile.editAddress.locationErrorTitle'),
+        t('profile.editAddress.locationErrorBody'),
+      );
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const onSave = async () => {
     try {
@@ -212,6 +265,8 @@ export default function EditAddress() {
             onFieldLayout={(field, y) => {
               fieldScrollY.current[field] = y;
             }}
+            onUseCurrentLocation={onUseCurrentLocation}
+            locating={locating}
           />
           <AddressLabelOptions
             isDefault={isDefault}

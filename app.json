@@ -46,6 +46,12 @@
       ],
       "expo-router",
       "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Laku to use your location to auto-fill your delivery address."
+        }
+      ],
       "expo-secure-store",
       "expo-web-browser",
       "@react-native-google-signin/google-signin",

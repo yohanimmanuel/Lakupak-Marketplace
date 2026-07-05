@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TextInput } from 'react-native';
+import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
+import { LocateFixed } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 interface AddressLocationFieldsProps {
@@ -11,6 +12,8 @@ interface AddressLocationFieldsProps {
   onPhoneChange: (value: string) => void;
   onInputFocus?: (field: 'address' | 'fullName' | 'phone') => void;
   onFieldLayout?: (field: 'address' | 'fullName' | 'phone', y: number) => void;
+  onUseCurrentLocation?: () => void;
+  locating?: boolean;
 }
 
 const fieldLabelStyle = {
@@ -43,6 +46,8 @@ export default function AddressLocationFields({
   onPhoneChange,
   onInputFocus,
   onFieldLayout,
+  onUseCurrentLocation,
+  locating = false,
 }: AddressLocationFieldsProps) {
   const { t } = useTranslation();
 
@@ -51,6 +56,40 @@ export default function AddressLocationFields({
       <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 12 }}>
         {t('profile.editAddress.locationDetails')}
       </Text>
+
+      {onUseCurrentLocation ? (
+        <Pressable
+          onPress={onUseCurrentLocation}
+          disabled={locating}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: locating, busy: locating }}
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#0a61d7',
+            backgroundColor: pressed || locating ? '#eef4fe' : '#ffffff',
+            marginBottom: 16,
+            opacity: locating ? 0.9 : 1,
+          })}
+        >
+          {locating ? (
+            <ActivityIndicator size="small" color="#0a61d7" />
+          ) : (
+            <LocateFixed color="#0a61d7" size={18} />
+          )}
+          <Text style={{ color: '#0a61d7', fontSize: 14, fontWeight: '600' }}>
+            {locating
+              ? t('profile.editAddress.locatingCurrent')
+              : t('profile.editAddress.useCurrentLocation')}
+          </Text>
+        </Pressable>
+      ) : null}
 
       <View
         style={{ marginBottom: 16 }}
