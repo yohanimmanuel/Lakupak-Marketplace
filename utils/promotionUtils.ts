@@ -7,6 +7,8 @@ import { resolveVariantMoq } from './variantRules';
 export interface PromotionDetails {
   minQuantity: number;
   freeQuantity: number;
+  /** Defaults to `after_moq` when omitted (legacy offers / order snapshots). */
+  applyMode?: 'from_zero' | 'after_moq';
 }
 
 export interface PromotionGift {
@@ -38,8 +40,14 @@ export interface ProductWithPromotion {
   }>;
 }
 
+function normalizePromotionApplyMode(
+  mode?: string | null,
+): 'from_zero' | 'after_moq' {
+  return mode === 'from_zero' ? 'from_zero' : 'after_moq';
+}
+
 /**
- * Calculate promotion free items based on quantity ABOVE MOQ (PIECE-BASED SYSTEM)
+ * Calculate promotion free items based on quantity and apply mode (PIECE-BASED SYSTEM)
  * @param promotionDetails - The promotion details (minQuantity, freeQuantity in pieces)
  * @param quantityInPieces - Current quantity ordered IN PIECES
  * @param moq - Minimum Order Quantity IN PIECES (null if no MOQ)
@@ -54,9 +62,9 @@ export function calculatePromotionGift(
   
   const minQty = promotionDetails.minQuantity || 1;
   const freeQty = promotionDetails.freeQuantity || 0;
-  
-  // If no MOQ is set, calculate from total quantity
-  if (!moq) {
+  const applyMode = normalizePromotionApplyMode(promotionDetails.applyMode);
+
+  if (applyMode === 'from_zero' || moq === null || moq === undefined) {
     const completeSets = Math.floor(quantityInPieces / minQty);
     const totalFreeItems = completeSets * freeQty;
     
@@ -69,20 +77,11 @@ export function calculatePromotionGift(
     return null;
   }
   
-  // Only calculate free items if MOQ is met
+  // after_moq: MOQ satisfied when quantity >= moq (not strictly greater).
   if (quantityInPieces < moq) return null;
   
-  // Once MOQ is met, apply promotion only to quantity ABOVE MOQ
-  // For example: MOQ = 4 pieces, buy 3 get 2
-  // - Order 4 pieces: 0 above MOQ, 0 complete sets, 0 free items
-  // - Order 7 pieces: 3 above MOQ, 1 complete set (3/3), 2 free items
-  // - Order 10 pieces: 6 above MOQ, 2 complete sets (6/3), 4 free items
   const quantityAboveMOQ = quantityInPieces - moq;
-  
-  // Count how many complete sets of minQty we have in the quantity above MOQ
   const completeSets = Math.floor(quantityAboveMOQ / minQty);
-  
-  // For each complete set, give freeQty items
   const totalFreeItems = completeSets * freeQty;
   
   if (totalFreeItems > 0) {

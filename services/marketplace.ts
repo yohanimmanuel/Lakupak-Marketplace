@@ -35,6 +35,7 @@ interface RawProductData {
     minQuantity: number;
     freeQuantity: number;
     description: string;
+    applyMode?: 'from_zero' | 'after_moq';
   };
 }
 
