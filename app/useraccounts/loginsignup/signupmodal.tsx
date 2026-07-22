@@ -239,7 +239,7 @@ export default function SignUpModal() {
                 </View>
                 <View style={{ marginBottom: 32 }}>
                   <Text style={{ color: '#111827', fontSize: 28, fontWeight: '700', marginBottom: 8 }}>
-                    {t('auth.signup.title')} 👋
+                    {t('auth.signup.title')}
                   </Text>
                   <Text style={{ color: '#6b7280', fontSize: 14, lineHeight: 20 }}>
                     {t('auth.signup.subtitle')}
@@ -267,7 +267,7 @@ export default function SignUpModal() {
             {signupStep > 0 && (
               <View style={{ marginBottom: 24 }}>
                 <Text style={{ color: '#111827', fontSize: 28, fontWeight: '700', marginBottom: 8 }}>
-                  {t('auth.signup.title')} 👋
+                  {t('auth.signup.title')}
                 </Text>
                 <Text style={{ color: '#6b7280', fontSize: 14, lineHeight: 20 }}>
                   {t('auth.signup.subtitle')}
@@ -776,7 +776,7 @@ export default function SignUpModal() {
                   borderColor: '#e5e7eb'
                 }}
               >
-                <Text style={{ fontSize: 18, marginRight: 12 }}>🍎</Text>
+                <Text style={{ fontSize: 18, marginRight: 12 }}></Text>
                 <Text style={{ color: '#111827', fontSize: 16, fontWeight: '500' }}>
                   {t('auth.signup.social.apple')}
                 </Text>

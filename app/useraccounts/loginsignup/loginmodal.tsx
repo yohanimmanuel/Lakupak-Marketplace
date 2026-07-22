@@ -86,7 +86,7 @@ export default function LoginModal() {
             {/* Welcome Title */}
             <View style={{ marginBottom: 32 }}>
               <Text style={{ color: '#111827', fontSize: 28, fontWeight: '700', marginBottom: 8 }}>
-                {t('auth.login.title')} 👋
+                {t('auth.login.title')}
               </Text>
               <Text style={{ color: '#6b7280', fontSize: 14, lineHeight: 20 }}>
                 {t('auth.login.subtitle')}
@@ -272,7 +272,7 @@ export default function LoginModal() {
                   borderColor: '#e5e7eb'
                 }}
               >
-                <Text style={{ fontSize: 18, marginRight: 12 }}>🍎</Text>
+                <Text style={{ fontSize: 18, marginRight: 12 }}></Text>
                 <Text style={{ color: '#111827', fontSize: 16, fontWeight: '500' }}>
                   {t('auth.login.social.apple')}
                 </Text>

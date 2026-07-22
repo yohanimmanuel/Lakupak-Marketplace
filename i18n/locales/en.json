@@ -899,7 +899,7 @@
         "p4": "Violations of these rules may result in warnings, content removal, account restrictions, or permanent suspension."
       },
       "dos": {
-        "title": "✅ What You Should Do",
+        "title": "What You Should Do",
         "sections": {
           "respect": {
             "title": "Be Respectful & Professional",
@@ -920,7 +920,7 @@
         }
       },
       "donts": {
-        "title": "❌ What You Shouldn't Do",
+        "title": "What You Shouldn't Do",
         "sections": {
           "prohibited": {
             "title": "Prohibited Content & Behavior",
@@ -941,7 +941,7 @@
         }
       },
       "summary": {
-        "title": "📋 Summary",
+        "title": "Summary",
         "coreTitle": "Core Principles",
         "coreBody": "Laku Marketplace is built on trust, respect, and mutual benefit. We expect all users to contribute positively to our community.",
         "takeawaysTitle": "Key Takeaways:",

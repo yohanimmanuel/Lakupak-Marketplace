@@ -898,7 +898,7 @@
         "p4": "Pelanggaran aturan dapat berakibat peringatan, penghapusan konten, pembatasan akun, atau penangguhan permanen."
       },
       "dos": {
-        "title": "✅ Yang sebaiknya Anda lakukan",
+        "title": "Yang sebaiknya Anda lakukan",
         "sections": {
           "respect": {
             "title": "Bersikap sopan & profesional",
@@ -919,7 +919,7 @@
         }
       },
       "donts": {
-        "title": "❌ Yang sebaiknya tidak Anda lakukan",
+        "title": "Yang sebaiknya tidak Anda lakukan",
         "sections": {
           "prohibited": {
             "title": "Konten & perilaku terlarang",
@@ -940,7 +940,7 @@
         }
       },
       "summary": {
-        "title": "📋 Ringkasan",
+        "title": "Ringkasan",
         "coreTitle": "Prinsip inti",
         "coreBody": "Laku Marketplace dibangun di atas kepercayaan, rasa hormat, dan manfaat bersama. Kami berharap semua pengguna berkontribusi positif di komunitas.",
         "takeawaysTitle": "Poin penting:",

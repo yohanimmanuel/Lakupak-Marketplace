@@ -1,4 +1,4 @@
-# 🤗 Laku-Marketplace (Mobile) 🤗
+# Laku-Marketplace (Mobile)
 
 ## Overview
 Laku-Marketplace is the buyer-facing mobile app for Laku. It enables verified retailers (warungs, kiosks, small shops) to browse products, place orders, track deliveries, and reorder quickly. Built with React Native (Expo) and connected to the existing Laku backend (Next.js + Prisma).

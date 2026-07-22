@@ -1118,7 +1118,7 @@ export default function ProductMarketplace({
             <View style={styles.ratingBars}>
               {[5, 4, 3, 2, 1].map((rating) => (
                 <View key={rating} style={styles.ratingBar}>
-                  <Text style={styles.ratingLabel}>{rating}⭐</Text>
+                  <Text style={styles.ratingLabel}>{rating}</Text>
                   <View style={styles.barContainer}>
                     <View
                       style={[
