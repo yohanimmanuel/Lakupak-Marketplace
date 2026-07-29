@@ -362,9 +362,7 @@ export default function OrdersScreen() {
                         <View style={styles.orderProductsList}>
                           {productLines.map((line, index) => (
                             <View key={`${order.orderId}-item-${index}`} style={styles.orderProductLine}>
-                              <Text style={styles.orderProductsText} numberOfLines={2}>
-                                {line.orderedQuantity}x {line.name}
-                              </Text>
+                              <Text style={styles.orderProductQty}>{line.orderedQuantity}x</Text>
                               {line.freePieces > 0 ? (
                                 <View style={styles.orderProductFreeBadge}>
                                   <Gift size={12} color="#9333EA" />
@@ -373,6 +371,9 @@ export default function OrdersScreen() {
                                   </Text>
                                 </View>
                               ) : null}
+                              <Text style={styles.orderProductsText} numberOfLines={1} ellipsizeMode="tail">
+                                {line.name}
+                              </Text>
                             </View>
                           ))}
                         </View>
@@ -602,10 +603,18 @@ const styles = StyleSheet.create({
   orderProductLine: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
     gap: 6,
   },
+  orderProductQty: {
+    flexShrink: 0,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    lineHeight: 18,
+  },
   orderProductsText: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 13,
     color: '#374151',
     lineHeight: 18,
