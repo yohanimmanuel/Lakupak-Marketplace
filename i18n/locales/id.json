@@ -1224,6 +1224,22 @@
       "failed": "Gagal memuat ulasan."
     }
   },
+  "distributorReviewsList": {
+    "title": "Ulasan distributor",
+    "titleWithName": "Ulasan · {{name}}",
+    "more": "Lihat ulasan lainnya",
+    "a11y": {
+      "back": "Kembali",
+      "more": "Buka semua ulasan distributor"
+    },
+    "sections": {
+      "overall": "Rating keseluruhan",
+      "latest": "Ulasan terbaru"
+    },
+    "states": {
+      "failed": "Gagal memuat ulasan."
+    }
+  },
   "cart": {
     "title": "Keranjang",
     "empty": {
@@ -1326,7 +1342,9 @@
     ,
     "sellerInformation": {
       "a11y": {
-        "back": "Kembali"
+        "back": "Kembali",
+        "moreOptions": "Opsi lainnya",
+        "closeMenu": "Tutup menu"
       },
       "title": "Informasi Penjual",
       "errors": {

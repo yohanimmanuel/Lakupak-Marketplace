@@ -1226,6 +1226,22 @@
       "failed": "Failed to load reviews."
     }
   },
+  "distributorReviewsList": {
+    "title": "Distributor reviews",
+    "titleWithName": "Reviews · {{name}}",
+    "more": "More reviews",
+    "a11y": {
+      "back": "Go back",
+      "more": "Open all distributor reviews"
+    },
+    "sections": {
+      "overall": "Overall rating",
+      "latest": "Latest reviews"
+    },
+    "states": {
+      "failed": "Failed to load reviews."
+    }
+  },
   "cart": {
     "title": "Shopping Cart",
     "empty": {
@@ -1328,7 +1344,9 @@
     ,
     "sellerInformation": {
       "a11y": {
-        "back": "Back"
+        "back": "Back",
+        "moreOptions": "More options",
+        "closeMenu": "Close menu"
       },
       "title": "Seller Information",
       "errors": {

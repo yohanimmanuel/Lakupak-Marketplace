@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,10 @@ import {
   Image,
   StyleSheet,
   Pressable,
+  Modal,
+  Animated,
+  Alert,
+  Share,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
@@ -15,10 +19,14 @@ import {
   Star,
   MessageSquare,
   Store,
-  FileText,
   Truck,
   Check,
   MapPin,
+  MoreVertical,
+  Share2,
+  Flag,
+  HelpCircle,
+  ChevronRight,
 } from 'lucide-react-native';
 import { API_BASE_URL } from '../../../services/config';
 import { useTranslation } from 'react-i18next';
@@ -82,6 +90,9 @@ export default function SellerInformationScreen() {
   const [reviewsData, setReviewsData] = useState<DistributorReviewsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const menuOpacity = useRef(new Animated.Value(0)).current;
+  const menuScale = useRef(new Animated.Value(0.95)).current;
 
   const distributorId = id ? parseInt(id, 10) : NaN;
 
@@ -100,7 +111,9 @@ export default function SellerInformationScreen() {
       try {
         const [profileRes, reviewsRes] = await Promise.all([
           fetch(`${API_BASE_URL}/api/mobile/distributor/${encodeURIComponent(id)}`),
-          fetch(`${API_BASE_URL}/api/mobile/reviews/distributor?distributorId=${encodeURIComponent(id)}`),
+          fetch(
+            `${API_BASE_URL}/api/mobile/reviews/distributor?distributorId=${encodeURIComponent(id)}&page=1&limit=3`,
+          ),
         ]);
 
         if (cancelled) return;
@@ -158,6 +171,67 @@ export default function SellerInformationScreen() {
     }
   };
 
+  const openMenu = () => {
+    setMenuVisible(true);
+    menuOpacity.setValue(0);
+    menuScale.setValue(0.95);
+    Animated.parallel([
+      Animated.timing(menuOpacity, { toValue: 1, duration: 120, useNativeDriver: true }),
+      Animated.spring(menuScale, { toValue: 1, useNativeDriver: true, friction: 7, tension: 90 }),
+    ]).start();
+  };
+
+  const closeMenu = () => {
+    Animated.parallel([
+      Animated.timing(menuOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+      Animated.timing(menuScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
+    ]).start(() => setMenuVisible(false));
+  };
+
+  const handleShareDistributor = async () => {
+    try {
+      await Share.share({
+        message: t('buyerNetworks.distributorInformation.share.message', {
+          name: profile?.companyName || profile?.name || 'Distributor',
+        }),
+      });
+    } catch {
+      Alert.alert(
+        t('buyerNetworks.distributorInformation.share.title'),
+        t('buyerNetworks.distributorInformation.share.failed'),
+      );
+    }
+  };
+
+  const handleReportDistributor = () => {
+    if (!Number.isFinite(distributorId)) return;
+    router.push({
+      pathname: '/useraccounts/buyernetworks/ReportDistributorModal',
+      params: {
+        distributorId: String(distributorId),
+        distributorName: profile?.companyName || profile?.name || 'Distributor',
+      },
+    });
+  };
+
+  const handleNeedHelp = () => {
+    Alert.alert(
+      t('buyerNetworks.distributorInformation.help.title'),
+      t('buyerNetworks.distributorInformation.help.body'),
+    );
+  };
+
+  const openReviewsList = () => {
+    if (!Number.isFinite(distributorId)) return;
+    router.push({
+      pathname: '/useraccounts/buyernetworks/DistributorReviewsList',
+      params: {
+        distributorId: String(distributorId),
+        distributorName: profile?.companyName || profile?.name || '',
+      },
+    });
+  };
+
   // Same behaviour as distributor-detail: loading and not-found are early returns with no Stack.Screen (layout header shows)
   if (loading) {
     return (
@@ -205,6 +279,14 @@ export default function SellerInformationScreen() {
                 <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 }}>
                   {t('buyerNetworks.sellerInformation.title')}
                 </Text>
+                <Pressable
+                  onPress={openMenu}
+                  hitSlop={10}
+                  accessibilityLabel={t('buyerNetworks.sellerInformation.a11y.moreOptions')}
+                  accessibilityRole="button"
+                >
+                  <MoreVertical color={primaryBlue} size={22} />
+                </Pressable>
               </View>
             </View>
           ),
@@ -367,26 +449,53 @@ export default function SellerInformationScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MessageSquare color={iconGray} size={20} />
-            <Text style={styles.sectionTitle}>{t('buyerNetworks.sellerInformation.labels.reviewsRating')}</Text>
+            <Text style={[styles.sectionTitle, { flex: 1 }]}>
+              {t('buyerNetworks.sellerInformation.labels.reviewsRating')}
+            </Text>
+            {totalReviews > 0 ? (
+              <Pressable
+                onPress={openReviewsList}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('distributorReviewsList.a11y.more')}
+                style={styles.moreReviewsBtn}
+              >
+                <Text style={styles.moreReviewsText}>
+                  {t('distributorReviewsList.more')}
+                </Text>
+                <ChevronRight size={16} color={primaryBlue} />
+              </Pressable>
+            ) : null}
           </View>
 
           {totalReviews > 0 ? (
             <>
-              <View style={styles.ratingSummary}>
+              <Pressable
+                onPress={openReviewsList}
+                style={styles.ratingSummary}
+                accessibilityRole="button"
+              >
                 <Text style={styles.overallRatingNumber}>{overallRating}</Text>
                 {renderStars(Math.round(overallRating), 20)}
                 <Text style={styles.totalReviewsText}>
-                  {totalReviews} {totalReviews === 1 ? t('buyerNetworks.sellerInformation.labels.review') : t('buyerNetworks.sellerInformation.labels.reviews')}
+                  {totalReviews}{' '}
+                  {totalReviews === 1
+                    ? t('buyerNetworks.sellerInformation.labels.review')
+                    : t('buyerNetworks.sellerInformation.labels.reviews')}
                 </Text>
-              </View>
+              </Pressable>
 
-              {reviewsList.map((review) => (
+              {reviewsList.slice(0, 3).map((review) => (
                 <View key={review.id} style={styles.reviewCard}>
                   <View style={styles.reviewHeader}>
                     <View style={styles.reviewerAvatar}>
                       {review.reviewerProfileImage ? (
                         <Image
-                          source={{ uri: normalizeUrl(review.reviewerProfileImage) ?? review.reviewerProfileImage }}
+                          source={{
+                            uri:
+                              normalizeUrl(review.reviewerProfileImage) ??
+                              review.reviewerProfileImage,
+                          }}
                           style={styles.reviewerAvatarImage}
                           resizeMode="cover"
                         />
@@ -399,14 +508,13 @@ export default function SellerInformationScreen() {
                     <View style={styles.reviewMeta}>
                       <View style={styles.reviewMetaRow}>
                         {renderStars(review.overallRating, 14)}
-                        <Text style={styles.reviewerName}>{review.reviewerDisplayName}</Text>
-                      </View>
-                      <Text style={styles.reviewDate}>{formatReviewDate(review.createdAt)}</Text>
-                      {review.wouldOrderAgain ? (
-                        <Text style={styles.wouldOrderAgain}>
-                          {t('buyerNetworks.sellerInformation.labels.wouldOrderAgain')}: {review.wouldOrderAgain}
+                        <Text style={styles.reviewerName}>
+                          {review.reviewerDisplayName}
                         </Text>
-                      ) : null}
+                      </View>
+                      <Text style={styles.reviewDate}>
+                        {formatReviewDate(review.createdAt)}
+                      </Text>
                     </View>
                   </View>
                   {review.comment ? (
@@ -418,12 +526,79 @@ export default function SellerInformationScreen() {
           ) : (
             <View style={styles.noReviews}>
               <MessageSquare color={iconGray} size={48} />
-              <Text style={styles.noReviewsText}>{t('buyerNetworks.sellerInformation.labels.noReviewsYet')}</Text>
+              <Text style={styles.noReviewsText}>
+                {t('buyerNetworks.sellerInformation.labels.noReviewsYet')}
+              </Text>
             </View>
           )}
         </View>
       </ScrollView>
 
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="none"
+        onRequestClose={closeMenu}
+        statusBarTranslucent
+      >
+        <View style={styles.menuRoot}>
+          <Pressable
+            style={styles.menuBackdrop}
+            onPress={closeMenu}
+            accessibilityLabel={t('buyerNetworks.sellerInformation.a11y.closeMenu')}
+            accessibilityRole="button"
+          />
+          <Animated.View
+            style={[
+              styles.menuSheet,
+              {
+                top: Math.max(insets.top, 44) + 8 + 44,
+                opacity: menuOpacity,
+                transform: [{ scale: menuScale }],
+              },
+            ]}
+          >
+            <Pressable
+              onPress={() => {
+                closeMenu();
+                void handleShareDistributor();
+              }}
+              style={styles.menuRow}
+            >
+              <Share2 size={18} color="#111827" />
+              <Text style={styles.menuRowText}>
+                {t('buyerNetworks.distributorInformation.menu.share')}
+              </Text>
+            </Pressable>
+            <View style={styles.menuDivider} />
+            <Pressable
+              onPress={() => {
+                closeMenu();
+                handleReportDistributor();
+              }}
+              style={styles.menuRow}
+            >
+              <Flag size={18} color="#ef4444" />
+              <Text style={[styles.menuRowText, styles.menuRowTextDanger]}>
+                {t('buyerNetworks.distributorInformation.menu.reportDistributor')}
+              </Text>
+            </Pressable>
+            <View style={styles.menuDivider} />
+            <Pressable
+              onPress={() => {
+                closeMenu();
+                handleNeedHelp();
+              }}
+              style={styles.menuRow}
+            >
+              <HelpCircle size={18} color="#0a61d7" />
+              <Text style={[styles.menuRowText, styles.menuRowTextPrimary]}>
+                {t('buyerNetworks.distributorInformation.menu.needHelp')}
+              </Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -475,4 +650,32 @@ const styles = StyleSheet.create({
   reviewComment: { fontSize: 14, color: '#374151', lineHeight: 20, fontStyle: 'italic' },
   noReviews: { alignItems: 'center', paddingVertical: 32 },
   noReviewsText: { fontSize: 16, color: '#6b7280', marginTop: 12 },
+  moreReviewsBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  moreReviewsText: { fontSize: 13, fontWeight: '600', color: primaryBlue },
+  menuRoot: { flex: 1 },
+  menuBackdrop: { flex: 1 },
+  menuSheet: {
+    position: 'absolute',
+    right: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingVertical: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    width: 200,
+  },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 10,
+  },
+  menuRowText: { fontSize: 14, color: '#111827' },
+  menuRowTextPrimary: { color: '#0a61d7', fontWeight: '600' },
+  menuRowTextDanger: { color: '#ef4444', fontWeight: '600' },
+  menuDivider: { height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 },
 });

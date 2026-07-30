@@ -391,11 +391,28 @@ export default function DistributorInformationScreen() {
                 {displayName}
               </Text>
               <View style={styles.storeMetaRow}>
-                <Star size={14} color="#fbbf24" fill="#fbbf24" />
-                <Text style={styles.storeMetaTextOnBanner}>
-                  {storeRating.toFixed(1)}
-                  {storeTotalRatings ? ` (${storeTotalRatings})` : ''}
-                </Text>
+                <Pressable
+                  onPress={() => {
+                    if (!Number.isFinite(distributorId) || !storeTotalRatings) return;
+                    router.push({
+                      pathname: '/useraccounts/buyernetworks/DistributorReviewsList',
+                      params: {
+                        distributorId: String(distributorId),
+                        distributorName: displayName,
+                      },
+                    });
+                  }}
+                  disabled={!storeTotalRatings}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('distributorReviewsList.a11y.more')}
+                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                >
+                  <Star size={14} color="#fbbf24" fill="#fbbf24" />
+                  <Text style={styles.storeMetaTextOnBanner}>
+                    {storeRating.toFixed(1)}
+                    {storeTotalRatings ? ` (${storeTotalRatings})` : ''}
+                  </Text>
+                </Pressable>
                 {storeFollowersLabel ? <Text style={styles.storeFollowersTextOnBanner}> · {storeFollowersLabel}</Text> : null}
               </View>
             </View>
