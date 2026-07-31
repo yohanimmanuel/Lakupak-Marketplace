@@ -72,7 +72,7 @@ export async function geocodeAddress(
 
 /**
  * Reverse-geocode device GPS coordinates into a formatted delivery address.
- * Powers the "Use current location" button on the edit-address screen.
+ * Powers the "Use current location" button on edit-address and signup.
  * Returns null when the dashboard proxy is unreachable or unconfigured so the
  * caller can fall back to keeping the manually typed address.
  */

@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, Animated, Easing, Alert, KeyboardAvoidingView, Platform, Keyboard, StatusBar, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import { AUTH_ERROR_CODE, getAuthErrorCode, requestOtp, verifyOtp, signupStep1, signupStep2, signupStepAddress, signupStep3, registerAccount } from '../../../services/auth';
 import AddressMapPreview from '../../components/address/AddressMapPreview';
 import AddressLocationFields from '../../components/address/AddressLocationFields';
 import AddressLabelOptions, { type AddressLabel } from '../../components/address/AddressLabelOptions';
+import { reverseGeocode, type GeocodePrecision } from '../../../services/geocode';
 import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore } from '../../../stores/cartStore';
@@ -33,6 +35,13 @@ export default function SignUpModal() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [locating, setLocating] = useState(false);
+  const [savedAddressSnapshot, setSavedAddressSnapshot] = useState('');
+  const [savedCoordinates, setSavedCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [savedPrecision, setSavedPrecision] = useState<GeocodePrecision | null>(null);
   
   // Combined signup state - 0 = initial screen, 1-4 = signup steps
   const [signupStep, setSignupStep] = useState(0);
@@ -116,6 +125,54 @@ export default function SignUpModal() {
       }));
     }
   }, [signupStep]);
+
+  const onUseCurrentLocation = async () => {
+    if (locating) return;
+    setLocating(true);
+    try {
+      Keyboard.dismiss();
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('profile.editAddress.locationPermissionTitle'),
+          t('profile.editAddress.locationPermissionBody'),
+        );
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const { latitude, longitude } = position.coords;
+
+      const result = await reverseGeocode(latitude, longitude);
+      if (!result || !result.address.trim()) {
+        setSignupData((prev) => ({ ...prev, address: '' }));
+        setSavedAddressSnapshot('');
+        setSavedCoordinates({ latitude, longitude });
+        setSavedPrecision('exact');
+        Alert.alert(
+          t('profile.editAddress.locationErrorTitle'),
+          t('profile.editAddress.locationNotFound'),
+        );
+        return;
+      }
+
+      const resolvedAddress = result.address.trim();
+      const coords = result.coordinates ?? { latitude, longitude };
+      setSignupData((prev) => ({ ...prev, address: resolvedAddress }));
+      setSavedAddressSnapshot(resolvedAddress);
+      setSavedCoordinates(coords);
+      setSavedPrecision(result.precision ?? 'exact');
+    } catch {
+      Alert.alert(
+        t('profile.editAddress.locationErrorTitle'),
+        t('profile.editAddress.locationErrorBody'),
+      );
+    } finally {
+      setLocating(false);
+    }
+  };
 
   const stepMotionStyle = {
     opacity: stepAnim,
@@ -446,6 +503,14 @@ export default function SignUpModal() {
                 </Text>
                 <AddressMapPreview
                   address={signupData.address}
+                  savedCoordinates={
+                    signupData.address.trim() === savedAddressSnapshot && savedCoordinates
+                      ? savedCoordinates
+                      : null
+                  }
+                  savedPrecision={
+                    signupData.address.trim() === savedAddressSnapshot ? savedPrecision : null
+                  }
                   onScrollInteractionChange={(active) => setScrollEnabled(!active)}
                 />
                 <AddressLocationFields
@@ -455,6 +520,8 @@ export default function SignUpModal() {
                   onAddressChange={(text) => setSignupData((prev) => ({ ...prev, address: text }))}
                   onFullNameChange={(text) => setSignupData((prev) => ({ ...prev, deliveryFullName: text }))}
                   onPhoneChange={(text) => setSignupData((prev) => ({ ...prev, deliveryPhone: text }))}
+                  onUseCurrentLocation={onUseCurrentLocation}
+                  locating={locating}
                 />
                 <AddressLabelOptions
                   isDefault={signupData.addressIsDefault}
