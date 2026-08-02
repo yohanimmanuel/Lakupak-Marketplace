@@ -13,7 +13,7 @@ import { Text, View } from '../components/Themed';
 import ProductMarketplace from '../components/productcatalog/ProductMarketplace';
 import CategoryBadge from '../components/CategoryBadge';
 import { ProductGridSkeleton } from '../components/SkeletonLoader';
-import { generateDynamicCategories } from '../../utils/categoryUtils';
+import { buildCategoryDirectory } from '../../utils/categoryUtils';
 import { translateProductType } from '../../utils/translateProductType';
 
 // Hooks
@@ -75,8 +75,8 @@ export default function CategoriesScreen() {
   const products = cachedProducts;
   const loading = isProductsLoading && cachedProducts.length === 0;
 
-  // Generate dynamic categories from product data
-  const dynamicCategories = generateDynamicCategories(products);
+  // Full taxonomy — not limited to categories that currently have published products
+  const dynamicCategories = buildCategoryDirectory(products);
 
   // Handle category scroll
   const handleCategoryScroll = (event: { nativeEvent: { contentOffset: { x: number }; contentSize: { width: number }; layoutMeasurement: { width: number } } }) => {

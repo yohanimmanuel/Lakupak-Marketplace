@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { translateProductType } from '../../utils/translateProductType';
+import { getCategoryImageSource } from '../../utils/categoryUtils';
 
 interface CategoryBadgeProps {
   name: string;
@@ -39,6 +40,7 @@ export default function CategoryBadge({ name, icon, onPress }: CategoryBadgeProp
   const { i18n } = useTranslation();
   const primaryBlue = '#0a61d7';
   const grayBg = '#f3f4f6';
+  const imageSource = getCategoryImageSource(name);
   const label = useMemo(
     () => formatStackedCategoryLabel(translateProductType(name)),
     [name, i18n.language],
@@ -47,11 +49,15 @@ export default function CategoryBadge({ name, icon, onPress }: CategoryBadgeProp
   return (
     <TouchableOpacity style={styles.categoryItem} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.categoryIcon, { backgroundColor: grayBg }]}>
-        <Ionicons
-          name={icon as keyof typeof import('@expo/vector-icons').Ionicons.glyphMap}
-          size={26}
-          color={primaryBlue}
-        />
+        {imageSource ? (
+          <Image source={imageSource} style={styles.categoryImage} resizeMode="contain" />
+        ) : (
+          <Ionicons
+            name={icon as keyof typeof import('@expo/vector-icons').Ionicons.glyphMap}
+            size={26}
+            color={primaryBlue}
+          />
+        )}
       </View>
       <Text style={styles.categoryName} numberOfLines={2}>
         {label}
@@ -72,6 +78,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
+    overflow: 'hidden',
+  },
+  categoryImage: {
+    width: 44,
+    height: 44,
   },
   categoryName: {
     width: '100%',

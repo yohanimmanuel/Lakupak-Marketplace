@@ -5,6 +5,7 @@ export const LEGACY_CATEGORY_MAP: Record<string, string> = {
   'Food & Beverage': 'Food & Beverages',
   Technology: 'Mobile & Gadgets',
   Fashion: 'Fashion & Apparel',
+  'Bags & Wallets': 'Bags & Wallets',
   'Home & Garden': 'Home & Living',
   Sports: 'Sports & Outdoors',
   Beauty: 'Beauty & Personal Care',
@@ -36,7 +37,7 @@ export const LEGACY_CATEGORY_MAP: Record<string, string> = {
   Appliances: 'Home Appliances',
   Cleaning: 'Household Supplies',
   Organization: 'Office & Stationery',
-  Safety: 'Industrial Supplies',
+  Safety: 'Tools & Hardware',
 };
 
 export function canonicalizeCategory(value: string | null | undefined): string {
@@ -52,9 +53,13 @@ const categoryIconMap: { [key: string]: string } = {
   'Mobile & Gadgets': 'phone-portrait',
   'Computers & Peripherals': 'laptop',
   'Home Appliances': 'hardware-chip',
-  'Fashion & Apparel': 'shirt',
-  'Muslim Fashion': 'moon',
-  'Bags & Wallets': 'bag-handle',
+  "Men's Wear": 'shirt',
+  "Women's Apparel": 'sparkles',
+  "Men's Shoes": 'footsteps',
+  "Women's Shoes": 'footsteps',
+  "Men's Bags": 'briefcase',
+  "Women's Bags": 'bag-handle',
+  'Kids Fashion': 'happy',
   'Sports & Outdoors': 'fitness',
   'Beauty & Personal Care': 'flower',
   'Health & Wellness': 'medical',
@@ -66,8 +71,6 @@ const categoryIconMap: { [key: string]: string } = {
   'Pet Supplies': 'paw',
   'Automotive & Motorbike': 'car',
   'Tools & Hardware': 'construct',
-  'Building Materials': 'hammer',
-  'Industrial Supplies': 'business',
   'Office & Stationery': 'briefcase',
   'Cameras & Drones': 'camera',
   'Video Games': 'game-controller',
@@ -86,9 +89,13 @@ const categoryColorMap: { [key: string]: string } = {
   'Mobile & Gadgets': '#3B82F6',
   'Computers & Peripherals': '#2563EB',
   'Home Appliances': '#374151',
-  'Fashion & Apparel': '#EF4444',
-  'Muslim Fashion': '#059669',
-  'Bags & Wallets': '#B45309',
+  "Men's Wear": '#2563EB',
+  "Women's Apparel": '#EC4899',
+  "Men's Shoes": '#1D4ED8',
+  "Women's Shoes": '#DB2777',
+  "Men's Bags": '#B45309',
+  "Women's Bags": '#C2410C',
+  'Kids Fashion': '#F59E0B',
   'Sports & Outdoors': '#F59E0B',
   'Beauty & Personal Care': '#8B5CF6',
   'Health & Wellness': '#EC4899',
@@ -100,8 +107,6 @@ const categoryColorMap: { [key: string]: string } = {
   'Pet Supplies': '#F97316',
   'Automotive & Motorbike': '#374151',
   'Tools & Hardware': '#6B7280',
-  'Building Materials': '#78716C',
-  'Industrial Supplies': '#57534E',
   'Office & Stationery': '#6366F1',
   'Cameras & Drones': '#6B7280',
   'Video Games': '#8B5CF6',
@@ -146,8 +151,75 @@ export const generateDynamicCategories = (products: MarketplaceProduct[]): Dynam
     .slice(0, 8);
 };
 
+/**
+ * Full category directory for home / categories / search discovery.
+ * Always shows every predefined category (not filtered by published products).
+ * Live counts are filled when products are available.
+ */
+export const buildCategoryDirectory = (
+  products: MarketplaceProduct[] = [],
+): DynamicCategory[] => {
+  const counts = new Map<string, number>();
+  for (const product of products) {
+    const category = canonicalizeCategory(product.category);
+    if (!category || category === 'Uncategorized' || category === 'General') continue;
+    counts.set(category, (counts.get(category) ?? 0) + 1);
+  }
+
+  return PREDEFINED_CATEGORY_NAMES.map((name) => ({
+    name,
+    count: counts.get(name) ?? 0,
+    icon: categoryIconMap[name] || categoryIconMap.Default,
+    color: categoryColorMap[name] || categoryColorMap.Default,
+  }));
+};
+
 export const getCategoryIcon = (categoryName: string): string => {
   return categoryIconMap[canonicalizeCategory(categoryName)] || categoryIconMap.Default;
+};
+
+/** Local pictorial assets (require() so Metro bundles them). */
+const categoryImageMap: Record<string, number> = {
+  'Food & Beverages': require('../assets/categories/foodnbeverage.png'),
+  'Fresh Produce': require('../assets/categories/freshproduce.png'),
+  'Mobile & Gadgets': require('../assets/categories/mobilegadgets.png'),
+  'Computers & Peripherals': require('../assets/categories/computerperipherals.png'),
+  'Home Appliances': require('../assets/categories/homeappliances.png'),
+  "Men's Wear": require('../assets/categories/menswear.png'),
+  "Women's Apparel": require('../assets/categories/womensapparel.png'),
+  "Men's Shoes": require('../assets/categories/menshoes.png'),
+  "Women's Shoes": require('../assets/categories/womenshoes.png'),
+  "Men's Bags": require('../assets/categories/mensbag.png'),
+  "Women's Bags": require('../assets/categories/womensbag.png'),
+  'Kids Fashion': require('../assets/categories/kidsfashion.png'),
+  'Sports & Outdoors': require('../assets/categories/sportsoutdoors.png'),
+  'Beauty & Personal Care': require('../assets/categories/beautycare.png'),
+  'Health & Wellness': require('../assets/categories/healthwellness.png'),
+  'Pharmacy & Medical': require('../assets/categories/pharmacies.png'),
+  'Home & Living': require('../assets/categories/homeliving.png'),
+  'Household Supplies': require('../assets/categories/householdsupplies.png'),
+  'Toys, Kids & Babies': require('../assets/categories/toys.png'),
+  'Mom & Baby Care': require('../assets/categories/babycare.png'),
+  'Pet Supplies': require('../assets/categories/petsupplies.png'),
+  'Automotive & Motorbike': require('../assets/categories/automotive.png'),
+  'Tools & Hardware': require('../assets/categories/toolshardware.png'),
+  'Office & Stationery': require('../assets/categories/officestationaires.png'),
+  'Cameras & Drones': require('../assets/categories/camerasdrones.png'),
+  'Video Games': require('../assets/categories/videogames.png'),
+  'Hobbies & Books': require('../assets/categories/hobbiesbooks.png'),
+  'Jewelry & Accessories': require('../assets/categories/jeweleriesaccessories.png'),
+  Watches: require('../assets/categories/watch.png'),
+  'Music & Audio': require('../assets/categories/musicaudio.png'),
+  'Travel & Luggage': require('../assets/categories/travelluggages.png'),
+  Miscellaneous: require('../assets/categories/miscellaneous.png'),
+};
+
+export const getCategoryImageSource = (
+  categoryName: string | null | undefined,
+): number | null => {
+  const key = canonicalizeCategory(categoryName);
+  if (!key) return null;
+  return categoryImageMap[key] ?? null;
 };
 
 export const getCategoryColor = (categoryName: string): string => {

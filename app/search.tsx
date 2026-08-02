@@ -20,7 +20,7 @@ import { marketplaceService, MarketplaceProduct } from '../services/marketplace'
 import { searchHistoryService } from '../services/searchHistory';
 import {
   canonicalizeCategory,
-  generateDynamicCategories,
+  buildCategoryDirectory,
   generateTopBrands,
   generateTopDistributors,
   PREDEFINED_CATEGORY_NAMES,
@@ -84,7 +84,7 @@ export default function SearchScreen() {
   // Get all products for categories and brands
   const { products: allProducts } = useDataStore();
   const dynamicCategories = useMemo(
-    () => generateDynamicCategories(allProducts),
+    () => buildCategoryDirectory(allProducts),
     [allProducts]
   );
   const topBrands = useMemo(
@@ -131,9 +131,7 @@ export default function SearchScreen() {
     category: [],
   });
   
-  // Available categories from search results
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
-
+  // Available locations for shipped-from filter (from current result set)
   const shippedFromOptions = useMemo(() => {
     const locations = Array.from(
       new Set(
@@ -160,29 +158,7 @@ export default function SearchScreen() {
     return out;
   }, [searchResults, t]);
 
-  const categoryOptions = useMemo(() => {
-    // Prefer facets that appear in results first, then fill the rest of the taxonomy.
-    const facetOrder = availableCategories
-      .map((c) => canonicalizeCategory(c))
-      .filter(Boolean);
-    const fallbackOrder = dynamicCategories.map((c) => c.name);
-    const priority = facetOrder.length > 0 ? facetOrder : fallbackOrder;
-
-    const seen = new Set<string>();
-    const ordered: string[] = [];
-    for (const name of priority) {
-      if (!name || seen.has(name)) continue;
-      if (!PREDEFINED_CATEGORY_NAMES.includes(name)) continue;
-      seen.add(name);
-      ordered.push(name);
-    }
-    for (const name of PREDEFINED_CATEGORY_NAMES) {
-      if (seen.has(name)) continue;
-      seen.add(name);
-      ordered.push(name);
-    }
-    return ordered;
-  }, [availableCategories, dynamicCategories]);
+  const categoryOptions = useMemo(() => PREDEFINED_CATEGORY_NAMES, []);
 
   const filteredResults = useMemo(() => {
     const shippedFrom = filters.shippedFrom;
@@ -399,32 +375,6 @@ export default function SearchScreen() {
       setCurrentPage(page);
       setHasMore(matchingDistributor ? false : page < result.pagination.totalPages);
       setActiveQuery(displayQuery);
-
-
-      // Shopee-style "category pills": prefer server facets (productType), fallback to local scan.
-      // Canonicalize so legacy DB values merge into the new taxonomy.
-      const facetCategories =
-        result.facets?.productTypes
-          ?.map((f) => canonicalizeCategory(f.value))
-          .filter(Boolean) ?? [];
-      const newPageCategories =
-        facetCategories.length > 0
-          ? Array.from(new Set(facetCategories))
-          : Array.from(
-              new Set(
-                sortedProducts
-                  .map((p) => canonicalizeCategory(p.category))
-                  .filter(Boolean),
-              ),
-            );
-
-      if (!append) {
-        // Replace categories when starting a new search.
-        setAvailableCategories(newPageCategories);
-      } else if (facetCategories.length === 0) {
-        // Only merge on pagination when we're using client-derived categories.
-        setAvailableCategories((prev) => Array.from(new Set([...prev, ...newPageCategories])));
-      }
 
       // Save to recent searches (only on first page)
       if (page === 1 && userId) {

@@ -36,7 +36,7 @@ import { useHeaderScrollStore } from '../../stores/headerScrollStore';
 import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
 import { ProductGridSkeleton } from '../components/SkeletonLoader';
-import { generateDynamicCategories } from '../../utils/categoryUtils';
+import { buildCategoryDirectory } from '../../utils/categoryUtils';
 // Removed theme color imports - using explicit colors
 
 // Header constants
@@ -149,8 +149,8 @@ export default function HomeScreen() {
   // Show loading only if products are loading AND we have no cached products yet
   const loading = isProductsLoading && cachedProducts.length === 0;
 
-  // Generate dynamic categories from product data
-  const dynamicCategories = generateDynamicCategories(products);
+  // Full taxonomy — not limited to categories that currently have published products
+  const dynamicCategories = buildCategoryDirectory(products);
 
   // Handlers
   const handleRefresh = useCallback(async () => {
