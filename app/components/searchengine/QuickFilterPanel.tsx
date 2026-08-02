@@ -3,6 +3,7 @@ import { Animated, Dimensions, Easing, Modal, Pressable, ScrollView, StyleSheet,
 import type { SearchFilters, ShippingOptionKey } from './SearchFilterSheet';
 import { useTranslation } from 'react-i18next';
 import { translateProductType } from '../../../utils/translateProductType';
+import { formatStackedCategoryLabel } from '../CategoryBadge';
 
 export type QuickFilterSection = 'shippingOption' | 'salesChannel' | 'rating' | 'price' | 'category';
 
@@ -34,7 +35,10 @@ function Chip({
         style={[styles.chip, selected ? styles.chipSelected : null]}
         accessibilityRole="button"
       >
-        <Text style={[styles.chipText, selected ? styles.chipTextSelected : null]} numberOfLines={2}>
+        <Text
+          style={[styles.chipText, selected ? styles.chipTextSelected : null]}
+          numberOfLines={2}
+        >
           {label}
         </Text>
       </Pressable>
@@ -208,7 +212,7 @@ export default function QuickFilterPanel({
                       : categoryOptions.map((opt) => (
                           <Chip
                             key={opt}
-                            label={translateProductType(opt)}
+                            label={formatStackedCategoryLabel(translateProductType(opt))}
                             selected={filters.category.includes(opt)}
                             onPress={() => {
                               const next = new Set(filters.category);
@@ -255,15 +259,23 @@ const styles = StyleSheet.create({
   },
   chipCell: { width: '48%' },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 6,
     backgroundColor: '#f3f4f6',
     borderWidth: 1,
     borderColor: '#f3f4f6',
+    minHeight: 40,
+    justifyContent: 'center',
   },
   chipSelected: { backgroundColor: '#e8f0ff', borderColor: '#0a61d7' },
-  chipText: { fontSize: 13, color: '#374151', fontWeight: '700' },
+  chipText: {
+    fontSize: 12,
+    lineHeight: 15,
+    color: '#374151',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   chipTextSelected: { color: '#0a61d7' },
   priceBody: { paddingHorizontal: 16, paddingVertical: 12 },
   priceRow: { flexDirection: 'row', gap: 10 },

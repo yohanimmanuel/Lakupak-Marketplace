@@ -5,6 +5,10 @@ import { MarketplaceProduct } from '../../../services/marketplace';
 import { API_BASE_URL } from '../../../services/config';
 import { useTranslation } from 'react-i18next';
 import { translateProductType } from '../../../utils/translateProductType';
+import {
+  canonicalizeCategory,
+  PREDEFINED_CATEGORY_NAMES,
+} from '../../../utils/categoryUtils';
 import { productTypeMatchesQuery } from '../../../utils/resolveSearchQuery';
 
 interface SearchSuggestionsProps {
@@ -51,15 +55,16 @@ export default function SearchSuggestions({
     });
 
     // Extract suggestions from products
-    products.forEach(product => {
+    products.forEach((product) => {
       // Product names
       if (product.name && product.name.toLowerCase().includes(queryLower)) {
         const name = product.name.trim();
         if (!suggestionSet.has(name) && suggestionsWithType.length < 8) {
           suggestionSet.add(name);
-          const imageUrl = product.images && product.images.length > 0 
-            ? normalizeUrl(product.images[0]) 
-            : undefined;
+          const imageUrl =
+            product.images && product.images.length > 0
+              ? normalizeUrl(product.images[0])
+              : undefined;
           suggestionsWithType.push({ text: name, type: 'product', imageUrl });
         }
       }
@@ -72,11 +77,30 @@ export default function SearchSuggestions({
           suggestionsWithType.push({ text: brand, type: 'brand' });
         }
       }
+    });
 
-      // Categories (match English DB value or localized label, e.g. "Makanan" → Food & Beverage)
+    // Prefer predefined taxonomy matches so empty shelves still suggest categories.
+    for (const name of PREDEFINED_CATEGORY_NAMES) {
+      if (
+        productTypeMatchesQuery(name, queryLower) &&
+        !suggestionSet.has(name) &&
+        suggestionsWithType.length < 8
+      ) {
+        suggestionSet.add(name);
+        suggestionsWithType.push({ text: name, type: 'category' });
+      }
+    }
+
+    // Categories from loaded products (covers any non-predefined leftovers).
+    products.forEach((product) => {
       if (product.category) {
-        const category = product.category.trim();
-        if (productTypeMatchesQuery(category, queryLower) && !suggestionSet.has(category) && suggestionsWithType.length < 8) {
+        const category = canonicalizeCategory(product.category);
+        if (
+          category &&
+          productTypeMatchesQuery(category, queryLower) &&
+          !suggestionSet.has(category) &&
+          suggestionsWithType.length < 8
+        ) {
           suggestionSet.add(category);
           suggestionsWithType.push({ text: category, type: 'category' });
         }
@@ -84,7 +108,8 @@ export default function SearchSuggestions({
     });
 
     // Limit to 8 suggestions total
-    return suggestionsWithType.slice(0, 8);  }, [queryLower, recentSearches, products]);
+    return suggestionsWithType.slice(0, 8);
+  }, [queryLower, recentSearches, products]);
 
   if (suggestions.length === 0) {
     return null;

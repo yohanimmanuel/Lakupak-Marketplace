@@ -15,6 +15,7 @@ import {
 import { ChevronDown } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { translateProductType } from '../../../utils/translateProductType';
+import { formatStackedCategoryLabel } from '../CategoryBadge';
 
 export type ShippingOptionKey = 'selfPickup' | 'sellerDelivery' | 'buyerCourier';
 
@@ -403,7 +404,7 @@ export default function SearchFilterSheet({
                   {categoryShown.map((opt) => (
                     <Chip
                       key={opt}
-                      label={translateProductType(opt)}
+                      label={formatStackedCategoryLabel(translateProductType(opt))}
                       selected={local.category.includes(opt)}
                       onPress={() =>
                         setLocal((p) => {
@@ -516,21 +517,25 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: '#f3f4f6',
     borderWidth: 1,
     borderColor: '#f3f4f6',
+    minHeight: 40,
+    justifyContent: 'center',
   },
   chipSelected: {
     backgroundColor: '#e8f0ff',
     borderColor: '#0a61d7',
   },
   chipText: {
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 15,
     color: '#374151',
     fontWeight: '600',
+    textAlign: 'center',
   },
   chipTextSelected: {
     color: '#0a61d7',

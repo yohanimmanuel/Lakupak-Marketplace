@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     paddingHorizontal: 16,
-    gap: 8,
+    gap: 10,
   },
 });
 

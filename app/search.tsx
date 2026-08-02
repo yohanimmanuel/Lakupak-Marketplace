@@ -18,7 +18,13 @@ import { useCartStore } from '../stores/cartStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { marketplaceService, MarketplaceProduct } from '../services/marketplace';
 import { searchHistoryService } from '../services/searchHistory';
-import { generateDynamicCategories, generateTopBrands, generateTopDistributors } from '../utils/categoryUtils';
+import {
+  canonicalizeCategory,
+  generateDynamicCategories,
+  generateTopBrands,
+  generateTopDistributors,
+  PREDEFINED_CATEGORY_NAMES,
+} from '../utils/categoryUtils';
 import RecentSearches from './components/searchengine/RecentSearches';
 import PopularCategories from './components/searchengine/PopularCategories';
 import TopBrands from './components/searchengine/TopBrands';
@@ -31,7 +37,11 @@ import QuickFilterPanel, { type QuickFilterSection } from './components/searchen
 import { Product } from '../data/sampleProducts';
 import { useTranslation } from 'react-i18next';
 import { translateProductType } from '../utils/translateProductType';
-import { resolveSearchQuery, resolveProductTypeKey } from '../utils/resolveSearchQuery';
+import {
+  productTypeMatchesQuery,
+  resolveSearchQuery,
+  resolveProductTypeKey,
+} from '../utils/resolveSearchQuery';
 
 /** Higher = better match. Weak matches stay included but sink to the bottom. */
 function computeRelevanceScore(query: string, p: MarketplaceProduct): number {
@@ -40,7 +50,6 @@ function computeRelevanceScore(query: string, p: MarketplaceProduct): number {
   const name = String(p.name ?? '').toLowerCase();
   const desc = String(p.description ?? '').toLowerCase();
   const brand = String(p.brand ?? '').toLowerCase();
-  const cat = String(p.category ?? '').toLowerCase();
   const tokens = q.split(/\s+/).filter(Boolean);
 
   let score = 0;
@@ -53,7 +62,7 @@ function computeRelevanceScore(query: string, p: MarketplaceProduct): number {
     score += hits * 40;
   }
   if (brand && tokens.some((t) => t.length >= 2 && brand.includes(t))) score += 45;
-  if (cat && tokens.some((t) => t.length >= 2 && cat.includes(t))) score += 28;
+  if (productTypeMatchesQuery(p.category, q)) score += 55;
   const descHits = tokens.filter((t) => t.length >= 3 && desc.includes(t)).length;
   score += descHits * 10;
   if (score < 30 && desc.includes(q)) score += 22;
@@ -152,23 +161,27 @@ export default function SearchScreen() {
   }, [searchResults, t]);
 
   const categoryOptions = useMemo(() => {
-    const catsRaw =
-      availableCategories.length > 0
-        ? availableCategories // preserve server-provided ranking order
-        : dynamicCategories.map((c) => c.name);
-    const cats = catsRaw.map((c) => (c || '').trim()).filter(Boolean);
+    // Prefer facets that appear in results first, then fill the rest of the taxonomy.
+    const facetOrder = availableCategories
+      .map((c) => canonicalizeCategory(c))
+      .filter(Boolean);
+    const fallbackOrder = dynamicCategories.map((c) => c.name);
+    const priority = facetOrder.length > 0 ? facetOrder : fallbackOrder;
 
-    // Keep order when coming from server facets; otherwise sort for a stable UX.
     const seen = new Set<string>();
-    const uniqInOrder: string[] = [];
-    for (const c of cats) {
-      if (seen.has(c)) continue;
-      seen.add(c);
-      uniqInOrder.push(c);
+    const ordered: string[] = [];
+    for (const name of priority) {
+      if (!name || seen.has(name)) continue;
+      if (!PREDEFINED_CATEGORY_NAMES.includes(name)) continue;
+      seen.add(name);
+      ordered.push(name);
     }
-
-    if (availableCategories.length > 0) return uniqInOrder;
-    return uniqInOrder.sort((a, b) => a.localeCompare(b));
+    for (const name of PREDEFINED_CATEGORY_NAMES) {
+      if (seen.has(name)) continue;
+      seen.add(name);
+      ordered.push(name);
+    }
+    return ordered;
   }, [availableCategories, dynamicCategories]);
 
   const filteredResults = useMemo(() => {
@@ -182,8 +195,9 @@ export default function SearchScreen() {
 
     return searchResults.filter((p) => {
       if (Array.isArray(cat) && cat.length > 0) {
-        const productType = (p.category || '').trim();
-        if (!cat.includes(productType)) return false;
+        const selected = new Set(cat.map((c) => canonicalizeCategory(c)).filter(Boolean));
+        const productType = canonicalizeCategory(p.category);
+        if (!productType || !selected.has(productType)) return false;
       }
       if (Array.isArray(shippedFrom) && shippedFrom.length > 0) {
         const loc = (p.shippingInfo?.location || '').trim();
@@ -303,8 +317,8 @@ export default function SearchScreen() {
       }
 
       const result = await marketplaceService.getProducts({
-        search: apiQuery.trim(),
-        category: effectiveCategory,
+        search: apiQuery.trim() || undefined,
+        category: effectiveCategory && effectiveCategory !== 'All' ? effectiveCategory : undefined,
         page,
         limit: 50,
         token: token || undefined,
@@ -388,12 +402,21 @@ export default function SearchScreen() {
 
 
       // Shopee-style "category pills": prefer server facets (productType), fallback to local scan.
+      // Canonicalize so legacy DB values merge into the new taxonomy.
       const facetCategories =
-        result.facets?.productTypes?.map((f) => f.value).filter(Boolean) ?? [];
+        result.facets?.productTypes
+          ?.map((f) => canonicalizeCategory(f.value))
+          .filter(Boolean) ?? [];
       const newPageCategories =
         facetCategories.length > 0
-          ? facetCategories
-          : Array.from(new Set(sortedProducts.map((p) => p.category).filter(Boolean)));
+          ? Array.from(new Set(facetCategories))
+          : Array.from(
+              new Set(
+                sortedProducts
+                  .map((p) => canonicalizeCategory(p.category))
+                  .filter(Boolean),
+              ),
+            );
 
       if (!append) {
         // Replace categories when starting a new search.

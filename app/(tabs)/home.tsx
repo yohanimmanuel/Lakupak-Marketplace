@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     paddingHorizontal: 16,
-    gap: 16,
+    gap: 10,
   },
   categoryItem: {
     alignItems: 'center',

@@ -1,4 +1,5 @@
 import i18n from '../i18n';
+import { canonicalizeCategory, LEGACY_CATEGORY_MAP } from './categoryUtils';
 
 function normTerm(value: string): string {
   return value.trim().toLowerCase().normalize('NFC');
@@ -18,18 +19,34 @@ function getProductTypeEntries(): ProductTypeEntry[] {
   }));
 }
 
-/** Map a user-facing category label (any locale) to the canonical English DB product type. */
-export function resolveProductTypeKey(input: string): string | null {
+/** Exact map of a user-facing category label (any locale / legacy) to the canonical DB key. */
+export function resolveProductTypeKeyExact(input: string): string | null {
   const q = normTerm(input);
   if (!q) return null;
 
-  const entries = getProductTypeEntries();
+  // Exact match on legacy English keys (e.g. "Beauty" → Beauty & Personal Care).
+  for (const [legacy, canonical] of Object.entries(LEGACY_CATEGORY_MAP)) {
+    if (normTerm(legacy) === q) return canonical;
+  }
 
-  for (const { key, en, id } of entries) {
+  for (const { key, en, id } of getProductTypeEntries()) {
     if (normTerm(key) === q || normTerm(en) === q || normTerm(id) === q) {
       return key;
     }
   }
+
+  return null;
+}
+
+/** Map a user-facing category label (any locale) to the canonical English DB product type. */
+export function resolveProductTypeKey(input: string): string | null {
+  const exact = resolveProductTypeKeyExact(input);
+  if (exact) return exact;
+
+  const q = normTerm(input);
+  if (!q) return null;
+
+  const entries = getProductTypeEntries();
 
   let bestKey: string | null = null;
   let bestScore = -1;
@@ -68,7 +85,7 @@ export function productTypeMatchesQuery(categoryKey: string, queryLower: string)
   const q = normTerm(queryLower);
   if (!q) return false;
 
-  const key = categoryKey.trim();
+  const key = canonicalizeCategory(categoryKey);
   if (!key) return false;
   if (normTerm(key).includes(q)) return true;
 
@@ -88,11 +105,13 @@ export function resolveSearchQuery(raw: string): {
     return { displayQuery: '', apiQuery: '' };
   }
 
-  const productTypeKey = resolveProductTypeKey(displayQuery);
+  const productTypeKey = resolveProductTypeKeyExact(displayQuery);
   if (productTypeKey) {
+    // Category browse: filter by productType only. Sending the category label as
+    // `search` forces Meili/trigram text match and hides products that only share the type.
     return {
       displayQuery,
-      apiQuery: productTypeKey,
+      apiQuery: '',
       category: productTypeKey,
     };
   }
