@@ -378,7 +378,7 @@ export default function HomeScreen() {
           borderTopRightRadius: 24,
           transform: [{ translateY: contentTranslateY }]
         }}
-        contentContainerStyle={{ paddingTop: 10, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -669,11 +669,12 @@ const styles = StyleSheet.create({
   },
   endMessageContainer: {
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 20,
+    paddingTop: 4,
+    paddingBottom: 60,
     alignItems: 'center',
     backgroundColor: '#f9fafb',
-    marginBottom: 15,
+    marginTop: -4,
+    marginBottom: 0,
   },
   endMessage: {
     fontSize: 14,

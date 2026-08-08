@@ -6,6 +6,7 @@ import { Settings } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { useHeaderScrollStore } from '../../stores/headerScrollStore';
 import CartBadge from '../components/CartBadge';
+import { FloatingTabBar } from '../../components/FloatingTabBar';
 import { useTranslation } from 'react-i18next';
 
 // Constants for header animation
@@ -168,10 +169,6 @@ export default function TabLayout() {
     return <View style={{ height: 0 }} />;
   }
 
-  const TabButton = (props: object) => (
-    <Pressable {...props} style={({ pressed }: { pressed: boolean }) => [{ alignItems: 'center', justifyContent: 'center', borderRadius: 9999, paddingVertical: 6 }]} />
-  );
-
   const isOrders = pathname?.endsWith('/orders') || pathname === '/orders';
   const isCategories = pathname?.endsWith('/categories') || pathname === '/categories';
   const isMessages = pathname?.endsWith('/notifications') || pathname === '/notifications';
@@ -188,6 +185,7 @@ export default function TabLayout() {
       />
       <Tabs
         initialRouteName="home"
+        tabBar={(props) => <FloatingTabBar {...props} />}
         screenOptions={{
         tabBarActiveTintColor: primaryBlue,
         tabBarInactiveTintColor: inactiveGrey,
@@ -256,9 +254,19 @@ export default function TabLayout() {
           borderBottomWidth: 0,
         },
         headerTitleContainerStyle: isHome ? { position: 'absolute', top: 0, left: -16, right: -16, bottom: 0, margin: 0, padding: 0 } : { flex: 1, width: '100%', maxWidth: '100%', alignItems: 'stretch', paddingBottom: 0, marginHorizontal: 0, left: 0, right: 0 },
-        tabBarStyle: { backgroundColor: '#ffffff', borderTopWidth: 0, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 10 },
+        tabBarStyle: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowColor: 'transparent',
+          shadowOpacity: 0,
+        },
+        tabBarBackground: () => null,
         tabBarLabelStyle: { fontSize: 11 },
-        tabBarButton: (props) => <TabButton {...props} />,
       }}
     >
       <Tabs.Screen name="home" options={{ title: t('tabs.home'), headerShown: false, tabBarIcon: ({ color }) => <HomeIcon color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.home')}</Text> }} />

@@ -168,7 +168,7 @@ export default function CategoriesScreen() {
   return (
     <ScrollView 
       style={{ flex: 1, backgroundColor: '#f9fafb' }}
-      contentContainerStyle={{ paddingBottom: 20 }}
+      contentContainerStyle={{ paddingBottom: 100 }}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -381,11 +381,12 @@ const styles = StyleSheet.create({
   },
   endMessageContainer: {
     paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingTop: 4,
     alignItems: 'center',
-    backgroundColor: '#f9fafb', // Gray background
-    marginBottom: 0, // Explicitly remove bottom margin
-    paddingBottom: 0, // Explicitly remove bottom padding
+    backgroundColor: '#f9fafb',
+    marginTop: -4,
+    marginBottom: 0,
+    paddingBottom: 8,
   },
   endMessage: {
     fontSize: 14,

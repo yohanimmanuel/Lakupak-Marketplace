@@ -12,6 +12,12 @@ export const LakuTheme = {
   border: '#e5e7eb',
   mapFallback: '#0b1220',
   mapScreen: '#e8eef5',
+  tabBar: {
+    active: primaryBlue,
+    inactive: '#6B7280',
+    background: 'rgba(255, 255, 255, 0.95)',
+    activePill: 'rgba(10, 97, 215, 0.12)',
+  },
 } as const;
 
 export default {
