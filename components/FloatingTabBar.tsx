@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform, LayoutChangeEvent } from 'react-native';
+import { View, Pressable, StyleSheet, Platform, LayoutChangeEvent } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -9,6 +9,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { LakuTheme } from '@/constants/Colors';
+import { useTabBarScrollStore } from '@/stores/tabBarScrollStore';
 
 const BAR_BG = LakuTheme.tabBar.background;
 const ACTIVE_PILL = LakuTheme.tabBar.activePill;
@@ -18,11 +19,17 @@ const INACTIVE_COLOR = LakuTheme.tabBar.inactive;
 /** Oval size for the sliding active indicator. */
 const INDICATOR_WIDTH = 72;
 const INDICATOR_HEIGHT = 52;
+const INDICATOR_HEIGHT_COLLAPSED = 40;
+const LABEL_SLOT = 14;
 
 /** Approximate bar height (pill + top pad) excluding safe-area inset. */
 export const FLOATING_TAB_BAR_HEIGHT = 72;
 
+/** Scroll content bottom padding so lists clear the floating tab bar + home indicator. */
+export const FLOATING_TAB_BAR_CONTENT_INSET = 95;
+
 const SLIDE = { duration: 220, easing: Easing.out(Easing.cubic) };
+const LABEL_ANIM = { duration: 200, easing: Easing.out(Easing.cubic) };
 
 function isHiddenTab(
   routeName: string,
@@ -39,6 +46,8 @@ function isHiddenTab(
 export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 10);
+  const labelsCollapsed = useTabBarScrollStore((s) => s.labelsCollapsed);
+  const resetLabels = useTabBarScrollStore((s) => s.resetLabels);
 
   const visibleRoutes = useMemo(
     () =>
@@ -55,6 +64,20 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   const indicatorX = useSharedValue(0);
   const indicatorWidth = useSharedValue(INDICATOR_WIDTH);
   const indicatorOpacity = useSharedValue(0);
+  const labelsVisible = useSharedValue(1);
+  const indicatorHeight = useSharedValue(INDICATOR_HEIGHT);
+
+  useEffect(() => {
+    resetLabels();
+  }, [state.index, resetLabels]);
+
+  useEffect(() => {
+    labelsVisible.value = withTiming(labelsCollapsed ? 0 : 1, LABEL_ANIM);
+    indicatorHeight.value = withTiming(
+      labelsCollapsed ? INDICATOR_HEIGHT_COLLAPSED : INDICATOR_HEIGHT,
+      LABEL_ANIM,
+    );
+  }, [labelsCollapsed, labelsVisible, indicatorHeight]);
 
   const onTabLayout = (index: number, e: LayoutChangeEvent) => {
     const { x, width } = e.nativeEvent.layout;
@@ -79,7 +102,20 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   const indicatorStyle = useAnimatedStyle(() => ({
     opacity: indicatorOpacity.value,
     width: indicatorWidth.value,
+    height: indicatorHeight.value,
+    borderRadius: indicatorHeight.value / 2,
     transform: [{ translateX: indicatorX.value }],
+  }));
+
+  const itemInnerStyle = useAnimatedStyle(() => ({
+    height: indicatorHeight.value,
+  }));
+
+  const labelStyle = useAnimatedStyle(() => ({
+    opacity: labelsVisible.value,
+    maxHeight: labelsVisible.value * LABEL_SLOT,
+    marginTop: labelsVisible.value * 2,
+    transform: [{ translateY: (1 - labelsVisible.value) * -6 }],
   }));
 
   return (
@@ -126,12 +162,12 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
               onLayout={(e) => onTabLayout(index, e)}
               style={styles.item}
             >
-              <View style={styles.itemInner}>
+              <Animated.View style={[styles.itemInner, itemInnerStyle]}>
                 {icon}
-                <Text style={[styles.label, { color }]} numberOfLines={1}>
+                <Animated.Text style={[styles.label, { color }, labelStyle]} numberOfLines={1}>
                   {label}
-                </Text>
-              </View>
+                </Animated.Text>
+              </Animated.View>
             </Pressable>
           );
         })}
@@ -176,8 +212,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 6,
     left: 0,
-    height: INDICATOR_HEIGHT,
-    borderRadius: INDICATOR_HEIGHT / 2,
     backgroundColor: ACTIVE_PILL,
     zIndex: 0,
   },
@@ -186,13 +220,13 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   itemInner: {
-    height: INDICATOR_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    overflow: 'hidden',
   },
   label: {
     fontSize: 10,
     fontWeight: '600',
+    overflow: 'hidden',
   },
 });

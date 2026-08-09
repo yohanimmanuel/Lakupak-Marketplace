@@ -26,10 +26,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
 import { useTranslation } from 'react-i18next';
+import { useTabBarScrollCollapse } from '../../hooks/useTabBarScrollCollapse';
+import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../components/FloatingTabBar';
 
 export default function CategoriesScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const onTabBarScroll = useTabBarScrollCollapse();
   const token = useAuthStore(s => s.token);
   const user = useAuthStore(s => s.user);
   const isAuthenticated = !!token && !!user;
@@ -168,8 +171,10 @@ export default function CategoriesScreen() {
   return (
     <ScrollView 
       style={{ flex: 1, backgroundColor: '#f9fafb' }}
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: FLOATING_TAB_BAR_CONTENT_INSET }}
       showsVerticalScrollIndicator={false}
+      onScroll={onTabBarScroll}
+      scrollEventThrottle={16}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}

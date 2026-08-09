@@ -8,6 +8,8 @@ import type { MarketplaceProduct } from '../../services/marketplace';
 import { useDataStore } from '../../stores/dataStore';
 import { useTranslation } from 'react-i18next';
 import { AccountProfileSkeleton } from '../components/SkeletonLoader';
+import { useTabBarScrollCollapse } from '../../hooks/useTabBarScrollCollapse';
+import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../components/FloatingTabBar';
 
 // Normalize relative image paths to absolute URLs
 const normalizeUrl = (url?: string | null): string | undefined => {
@@ -42,6 +44,7 @@ interface Order {
 export default function AccountScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const onTabBarScroll = useTabBarScrollCollapse();
   const primaryBlue = '#0a61d7';
   const iconGray = '#6B7280';
   const token = useAuthStore(s => s.token);
@@ -208,6 +211,9 @@ export default function AccountScreen() {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: '#f9fafb' }}
+      contentContainerStyle={{ paddingBottom: FLOATING_TAB_BAR_CONTENT_INSET }}
+      onScroll={onTabBarScroll}
+      scrollEventThrottle={16}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}

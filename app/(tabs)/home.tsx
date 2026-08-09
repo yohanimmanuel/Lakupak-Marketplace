@@ -33,6 +33,8 @@ import { useDataStore } from '../../stores/dataStore';
 import { useUserActivityStore } from '../../stores/userActivityStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useHeaderScrollStore } from '../../stores/headerScrollStore';
+import { useTabBarScrollCollapse } from '../../hooks/useTabBarScrollCollapse';
+import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../components/FloatingTabBar';
 import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
 import { ProductGridSkeleton } from '../components/SkeletonLoader';
@@ -87,6 +89,7 @@ export default function HomeScreen() {
   // Header scroll animation
   const scrollY = useRef(new Animated.Value(0)).current;
   const { setScrollY } = useHeaderScrollStore();
+  const onTabBarScroll = useTabBarScrollCollapse();
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Set scrollY in store synchronously before first render to prevent flickering
@@ -378,11 +381,11 @@ export default function HomeScreen() {
           borderTopRightRadius: 24,
           transform: [{ translateY: contentTranslateY }]
         }}
-        contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: 10, paddingBottom: FLOATING_TAB_BAR_CONTENT_INSET }}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
+          { useNativeDriver: true, listener: onTabBarScroll }
         )}
         scrollEventThrottle={16}
         refreshControl={

@@ -38,6 +38,8 @@ import { useDataStore, type MarketplaceOrder, type MarketplaceOrderItem } from '
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { getDistributorCompanyName } from '../../utils/orderDistributor';
+import { useTabBarScrollCollapse } from '../../hooks/useTabBarScrollCollapse';
+import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../components/FloatingTabBar';
 import { isReorderEligible, resolveReorderNavigationTarget } from '../../utils/reorderFromOrder';
 import { showReorderUnavailableAlert } from '../../utils/reorderAlerts';
 import { OrdersListSkeleton } from '../components/SkeletonLoader';
@@ -51,6 +53,7 @@ const { width: screenWidth } = Dimensions.get('window');
 export default function OrdersScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const onTabBarScroll = useTabBarScrollCollapse();
   const token = useAuthStore(s => s.token);
   const authUser = useAuthStore(s => s.user);
   const hydrate = useAuthStore(s => s.hydrateFromStorage);
@@ -269,7 +272,10 @@ export default function OrdersScreen() {
       {/* Content */}
       <ScrollView
         style={styles.content}
+        contentContainerStyle={{ paddingBottom: FLOATING_TAB_BAR_CONTENT_INSET }}
         showsVerticalScrollIndicator={false}
+        onScroll={onTabBarScroll}
+        scrollEventThrottle={16}
         refreshControl={
           isAuthenticated ? (
             <RefreshControl

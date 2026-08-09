@@ -38,6 +38,8 @@ import { OrderUpdateRow } from '../../components/notifications/OrderUpdateRow';
 import { useTranslation } from 'react-i18next';
 import { getOrderPreviewStrings } from '../../utils/orderNotificationI18n';
 import { NotificationsTabSkeleton } from '../components/SkeletonLoader';
+import { useTabBarScrollCollapse } from '../../hooks/useTabBarScrollCollapse';
+import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../components/FloatingTabBar';
 
 const MISSING_ORDER_TIMESTAMP_FALLBACK = '1970-01-01T00:00:00.000Z';
 const warnedOrderIds = new Set<string>();
@@ -83,6 +85,7 @@ function formatAnnouncementTime(iso: string | null, fallbackIso: string) {
 export default function NotificationsScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const onTabBarScroll = useTabBarScrollCollapse();
   const orderPreviewLocale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
   const token = useAuthStore((s) => s.token);
   const authUser = useAuthStore((s) => s.user);
@@ -413,6 +416,8 @@ export default function NotificationsScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        onScroll={onTabBarScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -658,7 +663,7 @@ const styles = StyleSheet.create({
     color: '#b91c1c',
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: FLOATING_TAB_BAR_CONTENT_INSET,
   },
   /** Full-width white panel (Shopee-style section on gray page). */
   latestSectionWrap: {
