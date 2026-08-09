@@ -5,6 +5,7 @@ import Animated, {
   useSharedValue,
   withTiming,
   Easing,
+  interpolate,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
@@ -16,11 +17,13 @@ const ACTIVE_PILL = LakuTheme.tabBar.activePill;
 const ACTIVE_COLOR = LakuTheme.tabBar.active;
 const INACTIVE_COLOR = LakuTheme.tabBar.inactive;
 
-/** Oval size for the sliding active indicator. */
+/** Fixed oval size — shrinks only via the bar's shared scale, like Revolut. */
 const INDICATOR_WIDTH = 72;
 const INDICATOR_HEIGHT = 52;
-const INDICATOR_HEIGHT_COLLAPSED = 40;
 const LABEL_SLOT = 14;
+const BAR_PAD = 6;
+const WRAPPER_INSET = 16;
+const COLLAPSED_SCALE = 0.85;
 
 /** Approximate bar height (pill + top pad) excluding safe-area inset. */
 export const FLOATING_TAB_BAR_HEIGHT = 72;
@@ -29,7 +32,7 @@ export const FLOATING_TAB_BAR_HEIGHT = 72;
 export const FLOATING_TAB_BAR_CONTENT_INSET = 95;
 
 const SLIDE = { duration: 220, easing: Easing.out(Easing.cubic) };
-const LABEL_ANIM = { duration: 200, easing: Easing.out(Easing.cubic) };
+const MORPH = { duration: 200, easing: Easing.out(Easing.cubic) };
 
 function isHiddenTab(
   routeName: string,
@@ -61,23 +64,19 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   );
 
   const [tabLayouts, setTabLayouts] = useState<{ x: number; width: number }[]>([]);
-  const indicatorX = useSharedValue(0);
-  const indicatorWidth = useSharedValue(INDICATOR_WIDTH);
+  const slotX = useSharedValue(0);
+  const slotWidth = useSharedValue(0);
   const indicatorOpacity = useSharedValue(0);
-  const labelsVisible = useSharedValue(1);
-  const indicatorHeight = useSharedValue(INDICATOR_HEIGHT);
+  /** 1 = expanded, 0 = collapsed. Drives labels + whole-bar scale only. */
+  const expandProgress = useSharedValue(1);
 
   useEffect(() => {
     resetLabels();
   }, [state.index, resetLabels]);
 
   useEffect(() => {
-    labelsVisible.value = withTiming(labelsCollapsed ? 0 : 1, LABEL_ANIM);
-    indicatorHeight.value = withTiming(
-      labelsCollapsed ? INDICATOR_HEIGHT_COLLAPSED : INDICATOR_HEIGHT,
-      LABEL_ANIM,
-    );
-  }, [labelsCollapsed, labelsVisible, indicatorHeight]);
+    expandProgress.value = withTiming(labelsCollapsed ? 0 : 1, MORPH);
+  }, [labelsCollapsed, expandProgress]);
 
   const onTabLayout = (index: number, e: LayoutChangeEvent) => {
     const { x, width } = e.nativeEvent.layout;
@@ -91,36 +90,43 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   useEffect(() => {
     const layout = tabLayouts[focusedVisibleIndex];
     if (!layout) return;
-    const width =
-      layout.width > 0 ? Math.min(INDICATOR_WIDTH, layout.width) : INDICATOR_WIDTH;
-    const targetX = layout.x + (layout.width - width) / 2;
-    indicatorX.value = withTiming(targetX, SLIDE);
-    indicatorWidth.value = withTiming(width, SLIDE);
+    slotX.value = withTiming(layout.x, SLIDE);
+    slotWidth.value = withTiming(layout.width, SLIDE);
     indicatorOpacity.value = withTiming(1, SLIDE);
-  }, [focusedVisibleIndex, tabLayouts, indicatorX, indicatorWidth, indicatorOpacity]);
+  }, [focusedVisibleIndex, tabLayouts, slotX, slotWidth, indicatorOpacity]);
 
-  const indicatorStyle = useAnimatedStyle(() => ({
-    opacity: indicatorOpacity.value,
-    width: indicatorWidth.value,
-    height: indicatorHeight.value,
-    borderRadius: indicatorHeight.value / 2,
-    transform: [{ translateX: indicatorX.value }],
-  }));
+  const barStyle = useAnimatedStyle(() => {
+    const scale = interpolate(expandProgress.value, [0, 1], [COLLAPSED_SCALE, 1]);
+    return {
+      transform: [{ scale }],
+    };
+  });
 
-  const itemInnerStyle = useAnimatedStyle(() => ({
-    height: indicatorHeight.value,
-  }));
+  const indicatorStyle = useAnimatedStyle(() => {
+    const width =
+      slotWidth.value > 0 && slotWidth.value < INDICATOR_WIDTH
+        ? slotWidth.value
+        : INDICATOR_WIDTH;
+    const translateX = slotX.value + (slotWidth.value - width) / 2;
+    return {
+      opacity: indicatorOpacity.value,
+      width,
+      height: INDICATOR_HEIGHT,
+      borderRadius: INDICATOR_HEIGHT / 2,
+      transform: [{ translateX }],
+    };
+  });
 
   const labelStyle = useAnimatedStyle(() => ({
-    opacity: labelsVisible.value,
-    maxHeight: labelsVisible.value * LABEL_SLOT,
-    marginTop: labelsVisible.value * 2,
-    transform: [{ translateY: (1 - labelsVisible.value) * -6 }],
+    opacity: expandProgress.value,
+    maxHeight: expandProgress.value * LABEL_SLOT,
+    marginTop: expandProgress.value * 2,
+    overflow: 'hidden' as const,
   }));
 
   return (
     <View pointerEvents="box-none" style={[styles.wrapper, { paddingBottom: bottomPad }]}>
-      <View style={styles.bar}>
+      <Animated.View style={[styles.bar, barStyle]}>
         <Animated.View style={[styles.indicator, indicatorStyle]} pointerEvents="none" />
         {visibleRoutes.map((route, index) => {
           const { options } = descriptors[route.key];
@@ -162,16 +168,16 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
               onLayout={(e) => onTabLayout(index, e)}
               style={styles.item}
             >
-              <Animated.View style={[styles.itemInner, itemInnerStyle]}>
+              <View style={styles.itemInner}>
                 {icon}
                 <Animated.Text style={[styles.label, { color }, labelStyle]} numberOfLines={1}>
                   {label}
                 </Animated.Text>
-              </Animated.View>
+              </View>
             </Pressable>
           );
         })}
-      </View>
+      </Animated.View>
     </View>
   );
 }
@@ -183,7 +189,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'transparent',
-    paddingHorizontal: 16,
+    paddingHorizontal: WRAPPER_INSET,
     paddingTop: 8,
   },
   bar: {
@@ -194,8 +200,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: LakuTheme.border,
-    paddingVertical: 6,
-    paddingHorizontal: 6,
+    paddingVertical: BAR_PAD,
+    paddingHorizontal: BAR_PAD,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -210,7 +216,7 @@ const styles = StyleSheet.create({
   },
   indicator: {
     position: 'absolute',
-    top: 6,
+    top: BAR_PAD,
     left: 0,
     backgroundColor: ACTIVE_PILL,
     zIndex: 0,
@@ -220,13 +226,12 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   itemInner: {
+    height: INDICATOR_HEIGHT,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   label: {
     fontSize: 10,
     fontWeight: '600',
-    overflow: 'hidden',
   },
 });
