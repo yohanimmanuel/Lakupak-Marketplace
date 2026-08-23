@@ -12,6 +12,7 @@ import {
   StatusBar,
   Keyboard,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Gift } from 'lucide-react-native';
@@ -493,10 +494,11 @@ export default function BuyNowModal({
               transform: [{ translateY: Animated.subtract(slideAnim, keyboardOffset) }],
             },
           ]}
-          {...panResponder.panHandlers}
         >
-          {/* Drag Handle */}
-          <View style={styles.dragHandle} />
+          {/* Drag Handle — swipe target only, so ScrollView keeps vertical scroll */}
+          <View style={styles.dragHandleArea} {...panResponder.panHandlers}>
+            <View style={styles.dragHandle} />
+          </View>
 
           {/* Header */}
           <View style={styles.header}>
@@ -513,12 +515,12 @@ export default function BuyNowModal({
                 </View>
               )}
               <View style={styles.productInfo}>
-              <Text style={styles.productName} numberOfLines={2}>
+                <Text style={styles.productName} numberOfLines={2}>
                   {safeGetString(product.name)}
-              </Text>
+                </Text>
                 <Text style={styles.headerPrice}>
                   {formatHeaderPriceDisplay()}
-              </Text>
+                </Text>
                 <View style={styles.stockContainer}>
                   <Text style={styles.stock}>
                     {t('buyNow.labels.stock')}: {stock}
@@ -529,109 +531,118 @@ export default function BuyNowModal({
                       : stock <= (currentVariantOption?.lowStockThreshold || 0)
                         ? t('product.stock.lowStock')
                         : t('product.stock.inStock')}
-              </Text>
+                  </Text>
                 </View>
               </View>
             </View>
           </View>
 
-          {/* New Variant Structure - Multiple Variant Types */}
-          {variantData.definitions.length > 0 && (
-            <View style={styles.variantSection}>
-              {variantData.definitions.map((definition) => {
-                const options = Array.isArray(definition.options) ? definition.options : [];
-                
-                return (
-                  <View key={definition.id} style={styles.variantTypeContainer}>
-                    <Text style={styles.variantLabel}>{definition.variantType}</Text>
-              <View style={styles.variantContainer}>
-                      {options.map((option, index) => {
-                        const optionStr = String(option);
-                        const isSelected = selectedVariantOptions[definition.variantType] === optionStr;
-                        
-                        return (
-                  <TouchableOpacity
-                            key={`${definition.id}-${index}`}
-                    style={[
-                      styles.variantOption,
-                              isSelected && styles.variantOptionSelected
-                            ]}
-                            onPress={() => {
-                              setSelectedVariantOptions(prev => ({
-                                ...prev,
-                                [definition.variantType]: optionStr
-                              }));
-                            }}
-                  >
-                    <Text style={[
-                      styles.variantText,
-                              isSelected && styles.variantTextSelected
-                    ]}>
-                              {optionStr}
-                    </Text>
-                  </TouchableOpacity>
-                        );
-                      })}
-              </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
+          <ScrollView
+            style={styles.scrollContent}
+            contentContainerStyle={styles.scrollContentContainer}
+            showsVerticalScrollIndicator
+            keyboardShouldPersistTaps="handled"
+            nestedScrollEnabled
+            bounces={false}
+          >
+            {/* Variant selectors */}
+            {variantData.definitions.length > 0 && (
+              <View style={styles.variantSection}>
+                {variantData.definitions.map((definition) => {
+                  const options = Array.isArray(definition.options) ? definition.options : [];
 
-          {/* Quantity Selector */}
-          <View style={styles.quantitySection}>
-            <View style={styles.quantityRow}>
-              <Text style={styles.quantityLabel}>{t('buyNow.labels.quantity')}</Text>
-              
-              <View style={styles.quantityControlsGroup}>
-                {/* Free items display - left side beside selector */}
-                {promotionInfo && promotionInfo > 0 && (
-                  <View style={styles.freeItemsContainer}>
-                    <Gift size={14} color="#9333EA" />
-                    <Text style={styles.freeItemsText}>{t('buyNow.labels.freeItems', { count: promotionInfo })}</Text>
-                  </View>
-                )}
-                
-                {/* Segmented Quantity Selector */}
-                {computedValues ? (
-                  <QuantitySelector
-                    packageQuantity={quantity}
-                    piecesPerPackage={computedValues.piecesPerPackage}
-                    stockPieces={computedValues.stock}
-                    moq={computedValues.moq}
-                    syncParentWhileEditing
-                    onPackageQuantityChange={setQuantity}
-                  />
-                ) : null}
-              </View>
-            </View>
-            
-            {/* MOQ Warning - below the selector row */}
-            {moq && !meetsMOQ && (
-              <View style={styles.moqWarning}>
-                <Text style={styles.moqWarningText}>
-                  {t('buyNow.labels.minimumOrder', { count: moq })}
-                </Text>
+                  return (
+                    <View key={definition.id} style={styles.variantTypeContainer}>
+                      <Text style={styles.variantLabel}>{definition.variantType}</Text>
+                      <View style={styles.variantContainer}>
+                        {options.map((option, index) => {
+                          const optionStr = String(option);
+                          const isSelected = selectedVariantOptions[definition.variantType] === optionStr;
+
+                          return (
+                            <TouchableOpacity
+                              key={`${definition.id}-${index}`}
+                              style={[
+                                styles.variantOption,
+                                isSelected && styles.variantOptionSelected,
+                              ]}
+                              onPress={() => {
+                                setSelectedVariantOptions((prev) => ({
+                                  ...prev,
+                                  [definition.variantType]: optionStr,
+                                }));
+                              }}
+                            >
+                              <Text
+                                style={[
+                                  styles.variantText,
+                                  isSelected && styles.variantTextSelected,
+                                ]}
+                              >
+                                {optionStr}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
             )}
-          </View>
 
-          {/* Footer */}
+            {/* Quantity */}
+            <View style={styles.quantitySection}>
+              <View style={styles.quantityRow}>
+                <Text style={styles.quantityLabel}>{t('buyNow.labels.quantity')}</Text>
+
+                <View style={styles.quantityControlsGroup}>
+                  {promotionInfo != null && promotionInfo > 0 ? (
+                    <View style={styles.freeItemsContainer}>
+                      <Gift size={14} color="#9333EA" />
+                      <Text style={styles.freeItemsText}>{t('buyNow.labels.freeItems', { count: promotionInfo })}</Text>
+                    </View>
+                  ) : null}
+
+                  {computedValues ? (
+                    <QuantitySelector
+                      packageQuantity={quantity}
+                      piecesPerPackage={computedValues.piecesPerPackage}
+                      stockPieces={computedValues.stock}
+                      moq={computedValues.moq}
+                      syncParentWhileEditing
+                      onPackageQuantityChange={setQuantity}
+                      size="compact"
+                    />
+                  ) : null}
+                </View>
+              </View>
+
+              {moq != null && moq > 0 && !meetsMOQ ? (
+                <View style={styles.moqWarning}>
+                  <Text style={styles.moqWarningText}>
+                    {t('buyNow.labels.minimumOrder', { count: moq })}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </ScrollView>
+
+          {/* Sticky footer */}
           <View style={styles.footer}>
-          <View style={styles.totalSection}>
+            <View style={styles.totalSection}>
               <Text style={styles.totalLabel}>{t('buyNow.labels.total')}</Text>
               <Text style={styles.totalPrice}>{formatCurrency(totalPrice)}</Text>
             </View>
-          <TouchableOpacity
+            <TouchableOpacity
               style={[styles.confirmButton, !isFormValid && styles.confirmButtonDisabled]}
-            onPress={handleConfirm}
-            disabled={!isFormValid}
-          >
+              onPress={handleConfirm}
+              disabled={!isFormValid}
+            >
               <Text style={styles.confirmButtonText}>
                 {mode === 'cart' ? t('buyNow.cta.addToCart') : t('buyNow.cta.buyNow')}
-            </Text>
-          </TouchableOpacity>
+              </Text>
+            </TouchableOpacity>
           </View>
         </Animated.View>
       </View>
@@ -657,15 +668,24 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: screenHeight * 0.85,
+    flexDirection: 'column',
+  },
+  dragHandleArea: {
+    paddingTop: 8,
+    paddingBottom: 12,
+    alignItems: 'center',
   },
   dragHandle: {
     width: 40,
     height: 4,
     backgroundColor: '#D1D5DB',
     borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 12,
+  },
+  scrollContent: {
+    flexShrink: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: 8,
   },
   header: {
     flexDirection: 'row',
@@ -742,7 +762,6 @@ const styles = StyleSheet.create({
   },
   variantSection: {
     paddingHorizontal: 15,
-    marginBottom: 10,
     paddingTop: 10,
     paddingBottom: 10,
     borderTopWidth: 1,
@@ -751,37 +770,38 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
   },
   variantTypeContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   variantLabel: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#111827',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   variantContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   variantOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     backgroundColor: '#FFFFFF',
-    minWidth: 60,
+    minWidth: 52,
   },
   variantOptionSelected: {
     borderColor: '#0a61d7',
     backgroundColor: '#EBF4FF',
   },
   variantText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
     color: '#111827',
     textAlign: 'center',
+    lineHeight: 16,
   },
   variantTextSelected: {
     color: '#0a61d7',
@@ -797,22 +817,21 @@ const styles = StyleSheet.create({
   },
   quantitySection: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginBottom: 10,
+    paddingVertical: 6,
   },
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 8,
   },
   quantityControlsGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
   quantityLabel: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '600',
     color: '#111827',
   },
@@ -865,13 +884,13 @@ const styles = StyleSheet.create({
   },
   moqWarning: {
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginTop: 12,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+    borderRadius: 6,
   },
   moqWarningText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#92400E',
     fontWeight: '500',
   },
@@ -881,7 +900,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   freeItemsText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#9333EA',
     fontWeight: '600',
   },
@@ -890,6 +909,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
   },
   totalSection: {
     flexDirection: 'row',
