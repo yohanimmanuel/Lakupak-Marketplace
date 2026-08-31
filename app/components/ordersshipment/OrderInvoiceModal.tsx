@@ -87,7 +87,7 @@ function InvoiceRasterBody({ order, t }: { order: OrderLike; t: TFunction }) {
     <View style={rasterStyles.sheet} collapsable={false}>
       <View style={rasterStyles.logoWrap}>
         <Image
-          source={require('../../../assets/images/LakuMobile.png')}
+          source={require('../../../assets/images/Lakupak!.png')}
           style={rasterStyles.logo}
           resizeMode="contain"
         />
@@ -221,7 +221,7 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
 
   const logoUri = useMemo(
     () =>
-      Image.resolveAssetSource(require('../../../assets/images/LakuMobile.png'))?.uri ?? null,
+      Image.resolveAssetSource(require('../../../assets/images/Lakupak!.png'))?.uri ?? null,
     []
   );
 
@@ -229,7 +229,7 @@ export default function OrderInvoiceModal({ visible, onClose, order }: Props) {
     let cancelled = false;
     (async () => {
       try {
-        const asset = Asset.fromModule(require('../../../assets/images/LakuMobile.png'));
+        const asset = Asset.fromModule(require('../../../assets/images/Lakupak!.png'));
         await asset.downloadAsync();
         if (!asset.localUri || cancelled) return;
         const b64 = await FileSystem.readAsStringAsync(asset.localUri, {

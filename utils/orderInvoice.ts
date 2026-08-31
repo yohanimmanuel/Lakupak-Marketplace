@@ -121,7 +121,7 @@ export function buildInvoiceSnapshot(order: OrderLike): OrderInvoiceSnapshot {
 
   return {
     orderId: order.orderId,
-    storeName: order.storeName?.trim() || 'Laku Marketplace',
+    storeName: order.storeName?.trim() || 'Lakupak Marketplace',
     issuedAt: issued,
     paymentStatus: order.paymentStatus || '—',
     paymentTerms: order.paymentTerms || '—',
@@ -140,7 +140,7 @@ export function buildInvoiceSnapshot(order: OrderLike): OrderInvoiceSnapshot {
 /** Shown on invoice HTML, image export, and plain-text share. */
 export function getInvoiceLegalFooter(): string {
   const y = new Date().getFullYear();
-  return `© ${y} Laku. All rights reserved. This invoice is issued through Laku Marketplace. Use of the Laku platform is subject to Laku's Terms & Conditions and Privacy Policy.`;
+  return `© ${y} Lakupak. All rights reserved. This invoice is issued through Lakupak Marketplace. Use of the Lakupak platform is subject to Lakupak's Terms & Conditions and Privacy Policy.`;
 }
 
 export type BuildInvoiceHtmlOptions = {
@@ -162,7 +162,7 @@ export function buildOrderInvoiceHtml(order: OrderLike, options?: BuildInvoiceHt
     (options?.logoUri && options.logoUri.trim()) ||
     '';
   const logoBlock = logoSrc
-    ? `<div class="logo-row"><img src="${htmlImgSrcAttr(logoSrc)}" alt="Laku" width="104" height="56" style="max-width:124px;height:auto;object-fit:contain;"/></div>`
+    ? `<div class="logo-row"><img src="${htmlImgSrcAttr(logoSrc)}" alt="Lakupak" width="104" height="56" style="max-width:124px;height:auto;object-fit:contain;"/></div>`
     : '';
   const rows =
     s.lines.length > 0
@@ -222,7 +222,7 @@ export function buildOrderInvoiceHtml(order: OrderLike, options?: BuildInvoiceHt
     <div class="tot-row"><span>Shipping</span><span>${escapeHtml(s.shipping)}</span></div>
     <div class="tot-row grand"><span>Total</span><span>${escapeHtml(s.total)}</span></div>
   </div>
-  <p class="muted" style="margin-top:16px;font-size:11px;">For order support, contact the seller or Laku Help Center.</p>
+  <p class="muted" style="margin-top:16px;font-size:11px;">For order support, contact the seller or Lakupak Help Center.</p>
   <p class="legal">${escapeHtml(getInvoiceLegalFooter())}</p>
 </div>
 </body></html>`;

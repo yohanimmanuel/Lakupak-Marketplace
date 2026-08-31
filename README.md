@@ -1,14 +1,14 @@
-# Laku-Marketplace (Mobile)
+# Lakupak-Marketplace (Mobile)
 
 ## Overview
-Laku-Marketplace is the buyer-facing mobile app for Laku. It enables verified retailers (warungs, kiosks, small shops) to browse products, place orders, track deliveries, and reorder quickly. Built with React Native (Expo) and connected to the existing Laku backend (Next.js + Prisma).
+Lakupak-Marketplace is the buyer-facing mobile app for Lakupak. It enables verified retailers (warungs, kiosks, small shops) to browse products, place orders, track deliveries, and reorder quickly. Built with React Native (Expo) and connected to the existing Lakupak backend (Next.js + Prisma).
 
 ## Key Security & Trust Principles
 - Verified buyer access; pricing and offers scoped to approved distributors.
 - Role-based data isolation; buyers see only their own orders and eligible catalogs.
 - Messaging/notifications respect opt-in consent.
 
-## Why Laku-Marketplace
+## Why Lakupak-Marketplace
 - Wholesale-first buyer UX (carton/box, quick reorder, low bandwidth).
 - Tight integration with distributor dashboards (inventory, fulfillment, analytics).
 - Remote-first confirmations and push updates reduce field visits.
@@ -57,7 +57,7 @@ export default ({ config }) => ({
 ```
 
 ## Data & APIs
-- Uses existing Laku endpoints (users, products, orders, buyers)
+- Uses existing Lakupak endpoints (users, products, orders, buyers)
 - Typed DTOs; Zod validation at request/response boundaries
 - React Query for caching and mutations (cart, checkout, orders)
 
@@ -72,7 +72,7 @@ export default ({ config }) => ({
 
 ## Styling
 - NativeWind with Tailwind classnames
-- Align colors/typography with Laku design system
+- Align colors/typography with Lakupak design system
 
 ## Testing
 - Jest + jest-expo for unit tests

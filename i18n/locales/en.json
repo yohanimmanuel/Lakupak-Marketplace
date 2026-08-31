@@ -27,7 +27,7 @@
     "setAddress": "Set your address"
   },
   "nav": {
-    "welcomeToLaku": "Welcome to Laku!",
+    "welcomeToLaku": "Welcome to Lakupak",
     "myNetworks": "My Networks",
     "distributorDetails": "Distributor Details",
     "sellerInformation": "Seller Information",
@@ -36,7 +36,7 @@
     "myWallet": "My Wallet",
     "bonuses": "Bonuses",
     "discounts": "Discounts",
-    "lakupay": "LakuPay",
+    "lakupay": "LakupakPay",
     "favourites": "Favourites",
     "recentlyViewed": "Recently Viewed",
     "buyAgain": "Buy Again",
@@ -124,7 +124,7 @@
           },
           "latestUpdates": {
             "label": "Latest updates",
-            "description": "Announcements and news from Laku"
+            "description": "Announcements and news from Lakupak"
           },
           "promotions": {
             "label": "Promotions",
@@ -184,9 +184,9 @@
       "openChatWith": "Open chat with {{name}}"
     },
     "whatsapp": {
-      "distributorMessage": "Hi {{name}}, I'd like to ask about your products on Laku Marketplace.",
-      "productInquiry": "Hi, I'm interested in \"{{productName}}\" on Laku Marketplace. Is it available?",
-      "orderUpdate": "Hi, I'd like to ask for an update on my order {{orderId}} on Laku Marketplace. Thank you!"
+      "distributorMessage": "Hi {{name}}, I'd like to ask about your products on Lakupak Marketplace.",
+      "productInquiry": "Hi, I'm interested in \"{{productName}}\" on Lakupak Marketplace. Is it available?",
+      "orderUpdate": "Hi, I'd like to ask for an update on my order {{orderId}} on Lakupak Marketplace. Thank you!"
     }
   },
   "map": {
@@ -340,7 +340,7 @@
     },
     "signup": {
       "title": "Create Account",
-      "subtitle": "Join Laku Marketplace and start your journey",
+      "subtitle": "Join Lakupak Marketplace and start your journey",
       "ctaCreateAccount": "Create Account",
       "button": {
         "idle": "Create Account",
@@ -837,13 +837,13 @@
       "totalItems_one": "Total {{count}} item: {{amount}}",
       "totalItems_other": "Total {{count}} items: {{amount}}"
     },
-    "fallbackStore": "Laku Store"
+    "fallbackStore": "Lakupak Store"
   },
   "startDistributing": {
-    "title": "Welcome to Laku!",
+    "title": "Welcome to Lakupak",
     "badge": "Start Distributing!",
     "headline": "Start Distributing!",
-    "body": "Join Laku as a distributor to access wholesale tools, manage catalogs, and reach more buyers.",
+    "body": "Join Lakupak as a distributor to access wholesale tools, manage catalogs, and reach more buyers.",
     "actions": {
       "maybeLater": "Maybe later",
       "getStarted": "Get Started"
@@ -860,9 +860,9 @@
       "body": "Manage your bonuses, discounts, and deposited amounts here."
     },
     "lakuPay": {
-      "title": "LakuPay",
-      "headline": "LakuPay Balance",
-      "body": "Manage your LakuPay balance and view transaction history.",
+      "title": "LakupakPay",
+      "headline": "LakupakPay Balance",
+      "body": "Manage your LakupakPay balance and view transaction history.",
       "availableBalance": "Available Balance"
     },
     "bonuses": {
@@ -878,7 +878,7 @@
       "total": "Total Discounts"
     },
     "widget": {
-      "lakupay": "LakuPay",
+      "lakupay": "LakupakPay",
       "bonuses": "Bonuses",
       "discounts": "Discounts"
     }
@@ -893,9 +893,9 @@
         "summary": "Summary"
       },
       "overview": {
-        "p1": "Welcome to Laku Marketplace! Our community rules ensure a safe, respectful, and productive environment for all users.",
+        "p1": "Welcome to Lakupak Marketplace! Our community rules ensure a safe, respectful, and productive environment for all users.",
         "p2": "These guidelines apply to all interactions on our platform, including product listings, reviews, messages, and community discussions.",
-        "p3": "By using Laku, you agree to follow these community standards and help us maintain a positive marketplace experience for everyone.",
+        "p3": "By using Lakupak, you agree to follow these community standards and help us maintain a positive marketplace experience for everyone.",
         "p4": "Violations of these rules may result in warnings, content removal, account restrictions, or permanent suspension."
       },
       "dos": {
@@ -943,7 +943,7 @@
       "summary": {
         "title": "Summary",
         "coreTitle": "Core Principles",
-        "coreBody": "Laku Marketplace is built on trust, respect, and mutual benefit. We expect all users to contribute positively to our community.",
+        "coreBody": "Lakupak Marketplace is built on trust, respect, and mutual benefit. We expect all users to contribute positively to our community.",
         "takeawaysTitle": "Key Takeaways:",
         "takeaways": "• Be honest, respectful, and professional in all interactions\\n• Provide accurate product information and quality service\\n• Report violations and help maintain platform integrity\\n• Respect others' privacy and intellectual property\\n• Follow all applicable laws and regulations",
         "enforcementTitle": "Enforcement",
@@ -960,12 +960,12 @@
       },
       "privacy": {
         "title": "Privacy Policy",
-        "intro": "This Privacy Policy explains how Laku collects, uses, discloses, and protects your personal information when you use our marketplace applications and services.",
+        "intro": "This Privacy Policy explains how Lakupak collects, uses, discloses, and protects your personal information when you use our marketplace applications and services.",
         "sections": {
           "collectTitle": "1. Information We Collect",
-          "collectBody": "• Account Data: name, phone number, country/region, email, profile details.\\n• Authentication Data: verification codes (WhatsApp/SMS), device identifiers for fraud prevention.\\n• Transaction Data: orders, payments, refunds, vouchers, wallet balance (LakuPay), discounts and bonuses.\\n• Usage Data: pages viewed, buttons clicked, device and app version, approximate location (country/region).\\n• Communications: messages with support and notifications preferences.",
+          "collectBody": "• Account Data: name, phone number, country/region, email, profile details.\\n• Authentication Data: verification codes (WhatsApp/SMS), device identifiers for fraud prevention.\\n• Transaction Data: orders, payments, refunds, vouchers, wallet balance (LakupakPay), discounts and bonuses.\\n• Usage Data: pages viewed, buttons clicked, device and app version, approximate location (country/region).\\n• Communications: messages with support and notifications preferences.",
           "useTitle": "2. How We Use Information",
-          "useBody": "• Provide and improve core features including account creation, order processing, and wallet management.\\n• Authenticate your identity, send verification codes, and protect against fraud and abuse.\\n• Personalize your experience (e.g., recently viewed, buy again) aligned with Laku standards.\\n• Communicate with you about orders, promotions, and service updates.\\n• Comply with legal obligations and enforce our Terms.",
+          "useBody": "• Provide and improve core features including account creation, order processing, and wallet management.\\n• Authenticate your identity, send verification codes, and protect against fraud and abuse.\\n• Personalize your experience (e.g., recently viewed, buy again) aligned with Lakupak standards.\\n• Communicate with you about orders, promotions, and service updates.\\n• Comply with legal obligations and enforce our Terms.",
           "shareTitle": "3. Sharing and Disclosure",
           "shareBody": "• Service Providers: payment processing, analytics, cloud hosting, and communications strictly under contract.\\n• Business Partners: where you opt in to specific services, we may share minimal data to fulfil your requests.\\n• Legal Requirements: to comply with applicable laws, regulations, or lawful requests.\\n• Transfers: in a merger, acquisition, or asset sale, we will notify you where legally required.",
           "retentionTitle": "4. Data Retention",
@@ -975,31 +975,31 @@
           "securityTitle": "6. Security",
           "securityBody": "We use industry-standard safeguards including encryption in transit, secure credential storage, risk-based authentication, and access controls. While no system is perfectly secure, we continuously improve our protections.",
           "childrenTitle": "7. Children",
-          "childrenBody": "Laku is not directed to children under the age of 13 (or the minimum age in your jurisdiction). We do not knowingly collect personal information from children.",
+          "childrenBody": "Lakupak is not directed to children under the age of 13 (or the minimum age in your jurisdiction). We do not knowingly collect personal information from children.",
           "changesTitle": "8. Changes to This Policy",
           "changesBody": "We may update this policy to reflect changes in our practices or legal requirements. We will post updates in-app and revise the effective date."
         }
       },
       "terms": {
         "title": "Terms & Conditions",
-        "intro": "These Terms govern your access to and use of Laku marketplace applications and services. By using our services, you agree to these Terms.",
+        "intro": "These Terms govern your access to and use of Lakupak marketplace applications and services. By using our services, you agree to these Terms.",
         "sections": {
           "accountsTitle": "1. Accounts",
           "accountsBody": "• You must provide accurate, current information. You are responsible for maintaining account security.\\n• Social sign-in (e.g., Google) must map to your valid email. We may require additional verification.",
           "ordersTitle": "2. Orders and Payments",
           "ordersBody": "• Prices, promotions, and stock availability may change.\\n• Payments may be processed by third-party providers. Refunds follow product and channel rules.\\n• Disputes and chargebacks will be reviewed according to policy and evidence provided.",
           "walletTitle": "3. Wallet and Vouchers",
-          "walletBody": "• LakuPay balances, bonuses, and discounts are subject to eligibility and expiry rules.\\n• Misuse, fraud, or policy violations may result in suspension or forfeiture as permitted by law.",
+          "walletBody": "• LakupakPay balances, bonuses, and discounts are subject to eligibility and expiry rules.\\n• Misuse, fraud, or policy violations may result in suspension or forfeiture as permitted by law.",
           "useTitle": "4. Acceptable Use",
           "useBody": "You agree not to: violate laws; infringe IP; reverse engineer; spam; harm users; or interfere with the service. We may suspend accounts involved in prohibited activities.",
           "ipTitle": "5. Intellectual Property",
-          "ipBody": "Laku trademarks, logos, and content are protected by law. You may not use our branding without prior written permission.",
+          "ipBody": "Lakupak trademarks, logos, and content are protected by law. You may not use our branding without prior written permission.",
           "liabilityTitle": "6. Liability",
-          "liabilityBody": "To the extent permitted by law, Laku is not liable for indirect, incidental, or consequential damages. Our aggregate liability is limited to amounts you paid within the last 6 months.",
+          "liabilityBody": "To the extent permitted by law, Lakupak is not liable for indirect, incidental, or consequential damages. Our aggregate liability is limited to amounts you paid within the last 6 months.",
           "terminationTitle": "7. Termination",
           "terminationBody": "We may suspend or terminate your access for policy violations, unlawful activity, or risk to users. You may stop using the services at any time.",
           "lawTitle": "8. Governing Law",
-          "lawBody": "These Terms are governed by applicable local laws where Laku operates or as required by mandatory consumer protection laws."
+          "lawBody": "These Terms are governed by applicable local laws where Lakupak operates or as required by mandatory consumer protection laws."
         }
       },
       "actions": {
@@ -1040,7 +1040,7 @@
     "wallet": {
       "bonuses": "Bonuses",
       "discounts": "Discounts",
-      "lakupay": "LakuPay"
+      "lakupay": "LakupakPay"
     },
     "services": {
       "favourites": "Favourites",
@@ -1185,8 +1185,8 @@
       "buyNow": "Buy Now"
     },
     "share": {
-      "withPrice": "Check out \"{{productName}}\" on Laku Marketplace.\nPrice: Rp{{price}}\n{{link}}",
-      "withoutPrice": "Check out \"{{productName}}\" on Laku Marketplace.\n{{link}}",
+      "withPrice": "Check out \"{{productName}}\" on Lakupak Marketplace.\nPrice: Rp{{price}}\n{{link}}",
+      "withoutPrice": "Check out \"{{productName}}\" on Lakupak Marketplace.\n{{link}}",
       "dialogTitle": "Share product",
       "copiedTitle": "Caption copied",
       "copiedBody": "We copied the share text. Paste it as the WhatsApp caption after selecting the image."
@@ -1327,13 +1327,13 @@
         "noProducts": "No products found."
       },
       "share": {
-        "message": "Check out {{name}} on Laku Marketplace.",
+        "message": "Check out {{name}} on Lakupak Marketplace.",
         "title": "Share",
         "failed": "Unable to open share dialog right now."
       },
       "help": {
         "title": "Need help?",
-        "body": "Please contact Laku support from the Help Center."
+        "body": "Please contact Lakupak support from the Help Center."
       },
       "menu": {
         "share": "Share",
@@ -1405,14 +1405,14 @@
         "rateReview": "Rate and review distributor"
       },
       "share": {
-        "message": "Check out {{name}} on Laku Marketplace.",
+        "message": "Check out {{name}} on Lakupak Marketplace.",
         "errorTitle": "Share",
         "errorBody": "Unable to open share dialog right now."
       },
       "needHelp": {
         "menu": "Need help",
         "title": "Need help?",
-        "body": "Please contact Laku support from the Help Center.",
+        "body": "Please contact Lakupak support from the Help Center.",
         "goToHelpCenter": "Open Help Center",
         "close": "Close"
       },
@@ -1647,7 +1647,7 @@
         },
         "walletRefunds": {
           "q": "Wallet and refunds",
-          "a": "Refunds are returned to the original payment method or LakuPay depending on the channel and eligibility."
+          "a": "Refunds are returned to the original payment method or LakupakPay depending on the channel and eligibility."
         },
         "contactSupport": {
           "q": "Contact support",
@@ -1662,7 +1662,7 @@
         "basicsBody": "You can request a return for eligible items and get a refund after the request is approved and, when required, the items are received back in good condition.",
         "policyTitle": "Policy comes from product data",
         "policyBody1": "Each product has its own return policy stored in the product data. It defines whether it is returnable, how many days after delivery you can request a return, and any specific conditions.",
-        "policyBody2": "Laku checks every return/refund request against this policy. Different items in the same order can therefore have different eligibility and refund amounts.",
+        "policyBody2": "Lakupak checks every return/refund request against this policy. Different items in the same order can therefore have different eligibility and refund amounts.",
         "policyStrong": "Refund approval and amount always depend on the return days and rules saved on each product, not only on the order status.",
         "quickFlowTitle": "Quick flow",
         "steps": {
@@ -1686,8 +1686,8 @@
         "statusBasicsNote": "Some options (like rate order or request return/refund) only appear after certain statuses for buyer and seller protection.",
         "contactSellerTitle": "Contact seller",
         "contactSellerBody": "Use \"Contact seller\" from the order details when delivery looks late, product details are unclear, or the parcel you receive does not match the order.",
-        "contactSupportTitle": "Contact Laku support",
-        "contactSupportBody": "Contact Laku support through the main Help Center if you cannot reach the seller, see a payment or refund issue, your status is stuck for too long, or you suspect fraud or policy abuse."
+        "contactSupportTitle": "Contact Lakupak support",
+        "contactSupportBody": "Contact Lakupak support through the main Help Center if you cannot reach the seller, see a payment or refund issue, your status is stuck for too long, or you suspect fraud or policy abuse."
       },
       "statusBullets": {
         "pendingConfirmedTitle": "Pending / Confirmed",

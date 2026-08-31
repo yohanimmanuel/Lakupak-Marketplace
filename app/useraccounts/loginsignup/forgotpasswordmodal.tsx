@@ -222,8 +222,9 @@ export default function ForgotPasswordModal() {
             >
               <Pressable onPress={() => router.push('/useraccounts/welcome')}>
                 <Image
-                  source={require('../../../assets/images/LakuLakuMobileIcon.png')}
-                  style={{ width: 135, height: 90 }}
+                  source={require('../../../assets/images/Lakupak!.png')}
+                  style={{ width: 128, height: 32, marginBottom: 8 }}
+                  resizeMode="contain"
                 />
               </Pressable>
 

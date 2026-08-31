@@ -27,7 +27,7 @@
     "setAddress": "Atur alamat"
   },
   "nav": {
-    "welcomeToLaku": "Selamat datang di Laku!",
+    "welcomeToLaku": "Selamat datang di Lakupak",
     "myNetworks": "Jaringan Saya",
     "distributorDetails": "Detail Distributor",
     "sellerInformation": "Informasi Penjual",
@@ -36,7 +36,7 @@
     "myWallet": "Dompet Saya",
     "bonuses": "Bonus",
     "discounts": "Diskon",
-    "lakupay": "LakuPay",
+    "lakupay": "LakupakPay",
     "favourites": "Favorit",
     "recentlyViewed": "Terakhir Dilihat",
     "buyAgain": "Beli Lagi",
@@ -124,7 +124,7 @@
           },
           "latestUpdates": {
             "label": "Pembaruan terbaru",
-            "description": "Pengumuman dan berita dari Laku"
+            "description": "Pengumuman dan berita dari Lakupak"
           },
           "promotions": {
             "label": "Promosi",
@@ -184,9 +184,9 @@
       "openChatWith": "Buka chat dengan {{name}}"
     },
     "whatsapp": {
-      "distributorMessage": "Halo {{name}}, saya ingin menanyakan produk Anda di Laku Marketplace.",
-      "productInquiry": "Halo, saya tertarik dengan \"{{productName}}\" di Laku Marketplace. Apakah masih tersedia?",
-      "orderUpdate": "Halo, saya ingin menanyakan update untuk pesanan {{orderId}} saya di Laku Marketplace. Terima kasih!"
+      "distributorMessage": "Halo {{name}}, saya ingin menanyakan produk Anda di Lakupak Marketplace.",
+      "productInquiry": "Halo, saya tertarik dengan \"{{productName}}\" di Lakupak Marketplace. Apakah masih tersedia?",
+      "orderUpdate": "Halo, saya ingin menanyakan update untuk pesanan {{orderId}} saya di Lakupak Marketplace. Terima kasih!"
     }
   },
   "map": {
@@ -340,7 +340,7 @@
     },
     "signup": {
       "title": "Buat Akun",
-      "subtitle": "Bergabung di Laku Marketplace dan mulai perjalanan Anda",
+      "subtitle": "Bergabung di Lakupak Marketplace dan mulai perjalanan Anda",
       "ctaCreateAccount": "Buat Akun",
       "button": {
         "idle": "Buat Akun",
@@ -836,13 +836,13 @@
       "totalItems_one": "Total {{count}} item: {{amount}}",
       "totalItems_other": "Total {{count}} item: {{amount}}"
     },
-    "fallbackStore": "Toko Laku"
+    "fallbackStore": "Toko Lakupak"
   },
   "startDistributing": {
-    "title": "Selamat datang di Laku!",
+    "title": "Selamat datang di Lakupak",
     "badge": "Mulai jadi distributor!",
     "headline": "Mulai menjadi distributor!",
-    "body": "Bergabunglah dengan Laku sebagai distributor untuk mengakses alat grosir, mengelola katalog, dan menjangkau lebih banyak pembeli.",
+    "body": "Bergabunglah dengan Lakupak sebagai distributor untuk mengakses alat grosir, mengelola katalog, dan menjangkau lebih banyak pembeli.",
     "actions": {
       "maybeLater": "Nanti saja",
       "getStarted": "Mulai"
@@ -859,9 +859,9 @@
       "body": "Kelola bonus, diskon, dan saldo deposit Anda di sini."
     },
     "lakuPay": {
-      "title": "LakuPay",
-      "headline": "Saldo LakuPay",
-      "body": "Kelola saldo LakuPay Anda dan lihat riwayat transaksi.",
+      "title": "LakupakPay",
+      "headline": "Saldo LakupakPay",
+      "body": "Kelola saldo LakupakPay Anda dan lihat riwayat transaksi.",
       "availableBalance": "Saldo tersedia"
     },
     "bonuses": {
@@ -877,7 +877,7 @@
       "total": "Total diskon"
     },
     "widget": {
-      "lakupay": "LakuPay",
+      "lakupay": "LakupakPay",
       "bonuses": "Bonus",
       "discounts": "Diskon"
     }
@@ -892,9 +892,9 @@
         "summary": "Ringkasan"
       },
       "overview": {
-        "p1": "Selamat datang di Laku Marketplace! Aturan komunitas kami membantu menciptakan lingkungan yang aman, saling menghormati, dan produktif untuk semua pengguna.",
+        "p1": "Selamat datang di Lakupak Marketplace! Aturan komunitas kami membantu menciptakan lingkungan yang aman, saling menghormati, dan produktif untuk semua pengguna.",
         "p2": "Pedoman ini berlaku untuk semua interaksi di platform kami, termasuk listing produk, ulasan, pesan, dan diskusi komunitas.",
-        "p3": "Dengan menggunakan Laku, Anda setuju untuk mengikuti standar komunitas ini dan membantu kami menjaga pengalaman marketplace yang positif untuk semua orang.",
+        "p3": "Dengan menggunakan Lakupak, Anda setuju untuk mengikuti standar komunitas ini dan membantu kami menjaga pengalaman marketplace yang positif untuk semua orang.",
         "p4": "Pelanggaran aturan dapat berakibat peringatan, penghapusan konten, pembatasan akun, atau penangguhan permanen."
       },
       "dos": {
@@ -942,7 +942,7 @@
       "summary": {
         "title": "Ringkasan",
         "coreTitle": "Prinsip inti",
-        "coreBody": "Laku Marketplace dibangun di atas kepercayaan, rasa hormat, dan manfaat bersama. Kami berharap semua pengguna berkontribusi positif di komunitas.",
+        "coreBody": "Lakupak Marketplace dibangun di atas kepercayaan, rasa hormat, dan manfaat bersama. Kami berharap semua pengguna berkontribusi positif di komunitas.",
         "takeawaysTitle": "Poin penting:",
         "takeaways": "• Bersikap jujur, sopan, dan profesional dalam semua interaksi\\n• Berikan informasi produk yang akurat dan layanan yang baik\\n• Laporkan pelanggaran dan bantu menjaga integritas platform\\n• Hormati privasi dan kekayaan intelektual orang lain\\n• Patuhi hukum dan peraturan yang berlaku",
         "enforcementTitle": "Penegakan",
@@ -959,12 +959,12 @@
       },
       "privacy": {
         "title": "Kebijakan privasi",
-        "intro": "Kebijakan Privasi ini menjelaskan bagaimana Laku mengumpulkan, menggunakan, mengungkapkan, dan melindungi informasi pribadi Anda ketika Anda menggunakan aplikasi dan layanan marketplace kami.",
+        "intro": "Kebijakan Privasi ini menjelaskan bagaimana Lakupak mengumpulkan, menggunakan, mengungkapkan, dan melindungi informasi pribadi Anda ketika Anda menggunakan aplikasi dan layanan marketplace kami.",
         "sections": {
           "collectTitle": "1. Informasi yang kami kumpulkan",
-          "collectBody": "• Data akun: nama, nomor telepon, negara/wilayah, email, detail profil.\\n• Data autentikasi: kode verifikasi (WhatsApp/SMS), pengenal perangkat untuk pencegahan penipuan.\\n• Data transaksi: pesanan, pembayaran, refund, voucher, saldo dompet (LakuPay), diskon dan bonus.\\n• Data penggunaan: halaman yang dilihat, tombol yang diklik, versi perangkat dan aplikasi, lokasi perkiraan (negara/wilayah).\\n• Komunikasi: pesan dengan dukungan dan preferensi notifikasi.",
+          "collectBody": "• Data akun: nama, nomor telepon, negara/wilayah, email, detail profil.\\n• Data autentikasi: kode verifikasi (WhatsApp/SMS), pengenal perangkat untuk pencegahan penipuan.\\n• Data transaksi: pesanan, pembayaran, refund, voucher, saldo dompet (LakupakPay), diskon dan bonus.\\n• Data penggunaan: halaman yang dilihat, tombol yang diklik, versi perangkat dan aplikasi, lokasi perkiraan (negara/wilayah).\\n• Komunikasi: pesan dengan dukungan dan preferensi notifikasi.",
           "useTitle": "2. Bagaimana kami menggunakan informasi",
-          "useBody": "• Menyediakan dan meningkatkan fitur inti termasuk pembuatan akun, pemrosesan pesanan, dan pengelolaan dompet.\\n• Mengautentikasi identitas Anda, mengirim kode verifikasi, dan melindungi dari penipuan/penyalahgunaan.\\n• Mempersonalisasi pengalaman (mis. terakhir dilihat, beli lagi) sesuai standar Laku.\\n• Berkomunikasi tentang pesanan, promo, dan update layanan.\\n• Memenuhi kewajiban hukum dan menegakkan Syarat & Ketentuan.",
+          "useBody": "• Menyediakan dan meningkatkan fitur inti termasuk pembuatan akun, pemrosesan pesanan, dan pengelolaan dompet.\\n• Mengautentikasi identitas Anda, mengirim kode verifikasi, dan melindungi dari penipuan/penyalahgunaan.\\n• Mempersonalisasi pengalaman (mis. terakhir dilihat, beli lagi) sesuai standar Lakupak.\\n• Berkomunikasi tentang pesanan, promo, dan update layanan.\\n• Memenuhi kewajiban hukum dan menegakkan Syarat & Ketentuan.",
           "shareTitle": "3. Berbagi dan pengungkapan",
           "shareBody": "• Penyedia layanan: pemrosesan pembayaran, analitik, hosting cloud, dan komunikasi sesuai kontrak.\\n• Mitra bisnis: bila Anda ikut serta layanan tertentu, kami dapat membagikan data minimal untuk memenuhi permintaan Anda.\\n• Kewajiban hukum: untuk mematuhi hukum/peraturan atau permintaan yang sah.\\n• Pengalihan: dalam merger, akuisisi, atau penjualan aset, kami akan memberi tahu Anda bila diwajibkan secara hukum.",
           "retentionTitle": "4. Retensi data",
@@ -974,31 +974,31 @@
           "securityTitle": "6. Keamanan",
           "securityBody": "Kami menggunakan pengamanan standar industri termasuk enkripsi saat transmisi, penyimpanan kredensial yang aman, autentikasi berbasis risiko, dan kontrol akses. Walau tidak ada sistem yang sempurna, kami terus meningkatkan perlindungan.",
           "childrenTitle": "7. Anak-anak",
-          "childrenBody": "Laku tidak ditujukan untuk anak di bawah 13 tahun (atau usia minimum di yurisdiksi Anda). Kami tidak dengan sengaja mengumpulkan informasi pribadi dari anak-anak.",
+          "childrenBody": "Lakupak tidak ditujukan untuk anak di bawah 13 tahun (atau usia minimum di yurisdiksi Anda). Kami tidak dengan sengaja mengumpulkan informasi pribadi dari anak-anak.",
           "changesTitle": "8. Perubahan kebijakan ini",
           "changesBody": "Kami dapat memperbarui kebijakan ini untuk mencerminkan perubahan praktik atau kebutuhan hukum. Kami akan memposting pembaruan di aplikasi dan memperbarui tanggal efektif."
         }
       },
       "terms": {
         "title": "Syarat & ketentuan",
-        "intro": "Syarat ini mengatur akses dan penggunaan Anda atas aplikasi dan layanan marketplace Laku. Dengan menggunakan layanan kami, Anda menyetujui Syarat ini.",
+        "intro": "Syarat ini mengatur akses dan penggunaan Anda atas aplikasi dan layanan marketplace Lakupak. Dengan menggunakan layanan kami, Anda menyetujui Syarat ini.",
         "sections": {
           "accountsTitle": "1. Akun",
           "accountsBody": "• Anda harus memberikan informasi yang akurat dan terbaru. Anda bertanggung jawab menjaga keamanan akun.\\n• Login sosial (mis. Google) harus terhubung ke email yang valid. Kami dapat meminta verifikasi tambahan.",
           "ordersTitle": "2. Pesanan dan pembayaran",
           "ordersBody": "• Harga, promo, dan ketersediaan stok dapat berubah.\\n• Pembayaran dapat diproses oleh penyedia pihak ketiga. Refund mengikuti aturan produk dan channel.\\n• Sengketa dan chargeback akan ditinjau sesuai kebijakan dan bukti yang diberikan.",
           "walletTitle": "3. Dompet dan voucher",
-          "walletBody": "• Saldo LakuPay, bonus, dan diskon mengikuti aturan kelayakan dan masa berlaku.\\n• Penyalahgunaan, penipuan, atau pelanggaran kebijakan dapat menyebabkan penangguhan atau hangusnya benefit sesuai hukum.",
+          "walletBody": "• Saldo LakupakPay, bonus, dan diskon mengikuti aturan kelayakan dan masa berlaku.\\n• Penyalahgunaan, penipuan, atau pelanggaran kebijakan dapat menyebabkan penangguhan atau hangusnya benefit sesuai hukum.",
           "useTitle": "4. Penggunaan yang diperbolehkan",
           "useBody": "Anda setuju untuk tidak: melanggar hukum; melanggar HKI; reverse engineer; spam; merugikan pengguna; atau mengganggu layanan. Kami dapat menangguhkan akun yang terlibat aktivitas terlarang.",
           "ipTitle": "5. Hak kekayaan intelektual",
-          "ipBody": "Merek dagang, logo, dan konten Laku dilindungi hukum. Anda tidak boleh menggunakan branding kami tanpa izin tertulis sebelumnya.",
+          "ipBody": "Merek dagang, logo, dan konten Lakupak dilindungi hukum. Anda tidak boleh menggunakan branding kami tanpa izin tertulis sebelumnya.",
           "liabilityTitle": "6. Tanggung jawab",
-          "liabilityBody": "Sejauh diizinkan hukum, Laku tidak bertanggung jawab atas kerugian tidak langsung/insidental/konsekuensial. Tanggung jawab agregat kami dibatasi pada jumlah yang Anda bayar dalam 6 bulan terakhir.",
+          "liabilityBody": "Sejauh diizinkan hukum, Lakupak tidak bertanggung jawab atas kerugian tidak langsung/insidental/konsekuensial. Tanggung jawab agregat kami dibatasi pada jumlah yang Anda bayar dalam 6 bulan terakhir.",
           "terminationTitle": "7. Penghentian",
           "terminationBody": "Kami dapat menangguhkan atau menghentikan akses Anda karena pelanggaran kebijakan, aktivitas ilegal, atau risiko bagi pengguna. Anda dapat berhenti menggunakan layanan kapan saja.",
           "lawTitle": "8. Hukum yang berlaku",
-          "lawBody": "Syarat ini diatur oleh hukum setempat yang berlaku di wilayah operasi Laku atau sesuai hukum perlindungan konsumen yang wajib."
+          "lawBody": "Syarat ini diatur oleh hukum setempat yang berlaku di wilayah operasi Lakupak atau sesuai hukum perlindungan konsumen yang wajib."
         }
       },
       "actions": {
@@ -1038,7 +1038,7 @@
     "wallet": {
       "bonuses": "Bonus",
       "discounts": "Diskon",
-      "lakupay": "LakuPay"
+      "lakupay": "LakupakPay"
     },
     "services": {
       "favourites": "Favorit",
@@ -1183,8 +1183,8 @@
       "buyNow": "Beli sekarang"
     },
     "share": {
-      "withPrice": "Lihat \"{{productName}}\" di Laku Marketplace.\nHarga: Rp{{price}}\n{{link}}",
-      "withoutPrice": "Lihat \"{{productName}}\" di Laku Marketplace.\n{{link}}",
+      "withPrice": "Lihat \"{{productName}}\" di Lakupak Marketplace.\nHarga: Rp{{price}}\n{{link}}",
+      "withoutPrice": "Lihat \"{{productName}}\" di Lakupak Marketplace.\n{{link}}",
       "dialogTitle": "Bagikan produk",
       "copiedTitle": "Teks tersalin",
       "copiedBody": "Teks bagikan sudah disalin. Tempel sebagai caption WhatsApp setelah memilih gambar."
@@ -1325,13 +1325,13 @@
         "noProducts": "Tidak ada produk."
       },
       "share": {
-        "message": "Lihat {{name}} di Laku Marketplace.",
+        "message": "Lihat {{name}} di Lakupak Marketplace.",
         "title": "Bagikan",
         "failed": "Tidak dapat membuka dialog berbagi saat ini."
       },
       "help": {
         "title": "Butuh bantuan?",
-        "body": "Silakan hubungi dukungan Laku melalui Pusat Bantuan."
+        "body": "Silakan hubungi dukungan Lakupak melalui Pusat Bantuan."
       },
       "menu": {
         "share": "Bagikan",
@@ -1403,14 +1403,14 @@
         "rateReview": "Beri rating dan ulasan distributor"
       },
       "share": {
-        "message": "Lihat {{name}} di Laku Marketplace.",
+        "message": "Lihat {{name}} di Lakupak Marketplace.",
         "errorTitle": "Bagikan",
         "errorBody": "Tidak dapat membuka dialog berbagi saat ini."
       },
       "needHelp": {
         "menu": "Butuh bantuan",
         "title": "Butuh bantuan?",
-        "body": "Silakan hubungi dukungan Laku melalui Pusat Bantuan.",
+        "body": "Silakan hubungi dukungan Lakupak melalui Pusat Bantuan.",
         "goToHelpCenter": "Buka Pusat Bantuan",
         "close": "Tutup"
       },
@@ -1645,7 +1645,7 @@
         },
         "walletRefunds": {
           "q": "Dompet dan refund",
-          "a": "Refund dikembalikan ke metode pembayaran awal atau LakuPay tergantung channel dan kelayakan."
+          "a": "Refund dikembalikan ke metode pembayaran awal atau LakupakPay tergantung channel dan kelayakan."
         },
         "contactSupport": {
           "q": "Hubungi dukungan",
@@ -1660,7 +1660,7 @@
         "basicsBody": "Anda dapat mengajukan retur untuk item yang memenuhi syarat dan mendapatkan refund setelah pengajuan disetujui dan, bila diperlukan, item diterima kembali dalam kondisi baik.",
         "policyTitle": "Kebijakan berasal dari data produk",
         "policyBody1": "Setiap produk memiliki kebijakan retur tersendiri yang tersimpan di data produk. Kebijakan ini menentukan apakah produk dapat diretur, berapa hari setelah diterima Anda bisa mengajukan retur, serta syarat khusus lainnya.",
-        "policyBody2": "Laku akan mengecek setiap pengajuan retur/refund terhadap kebijakan ini. Item yang berbeda dalam satu pesanan bisa memiliki kelayakan dan nominal refund yang berbeda.",
+        "policyBody2": "Lakupak akan mengecek setiap pengajuan retur/refund terhadap kebijakan ini. Item yang berbeda dalam satu pesanan bisa memiliki kelayakan dan nominal refund yang berbeda.",
         "policyStrong": "Persetujuan dan nominal refund selalu bergantung pada hari retur dan aturan yang tersimpan di masing-masing produk, bukan hanya pada status pesanan.",
         "quickFlowTitle": "Alur singkat",
         "steps": {
@@ -1684,8 +1684,8 @@
         "statusBasicsNote": "Beberapa opsi (seperti beri rating atau ajukan retur/refund) hanya muncul setelah status tertentu untuk perlindungan pembeli dan penjual.",
         "contactSellerTitle": "Hubungi penjual",
         "contactSellerBody": "Gunakan \"Hubungi penjual\" dari detail pesanan jika pengiriman terlihat terlambat, detail produk tidak jelas, atau paket yang diterima tidak sesuai.",
-        "contactSupportTitle": "Hubungi dukungan Laku",
-        "contactSupportBody": "Hubungi dukungan Laku melalui Pusat Bantuan jika Anda tidak bisa menghubungi penjual, ada masalah pembayaran/refund, status macet terlalu lama, atau Anda mencurigai penipuan/penyalahgunaan kebijakan."
+        "contactSupportTitle": "Hubungi dukungan Lakupak",
+        "contactSupportBody": "Hubungi dukungan Lakupak melalui Pusat Bantuan jika Anda tidak bisa menghubungi penjual, ada masalah pembayaran/refund, status macet terlalu lama, atau Anda mencurigai penipuan/penyalahgunaan kebijakan."
       },
       "statusBullets": {
         "pendingConfirmedTitle": "Menunggu / Dikonfirmasi",

@@ -486,7 +486,7 @@ export const useDataStore = create<DataState>()(
                 const isPromotion = cat === 'promotion' || cat === 'promotions'
                 void pushNotificationService.scheduleLocalNotification(
                   a.title,
-                  preview || a.title || 'New update from Laku',
+                  preview || a.title || 'New update from Lakupak',
                   {
                     type: isPromotion ? 'promotion' : 'platform_announcement',
                     announcementId: String(a.id),

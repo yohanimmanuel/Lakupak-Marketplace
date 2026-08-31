@@ -192,7 +192,7 @@ export class NotificationService {
       await this.addNotification({
         type: 'order',
         title: 'Shipped Out',
-        message: `Parcel ${trackingNumber} for your order ${orderId} has been shipped out by Laku Logistics. Click here to see order details and track your parcel.`,
+        message: `Parcel ${trackingNumber} for your order ${orderId} has been shipped out by Lakupak Logistics. Click here to see order details and track your parcel.`,
         orderId: orderId,
         status: 'shipped'
       }, userId);
@@ -216,7 +216,7 @@ export class NotificationService {
       await this.addNotification({
         type: 'order',
         title: 'Confirm Receipt',
-        message: `Please check that all items for your order ${orderId} have been delivered. Thank you for shopping with Laku!`,
+        message: `Please check that all items for your order ${orderId} have been delivered. Thank you for shopping with Lakupak!`,
         orderId: orderId,
         status: 'delivered'
       }, userId);
