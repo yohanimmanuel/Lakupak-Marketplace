@@ -166,6 +166,9 @@ interface DataState {
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes - increased from 1min to reduce unnecessary requests
 const AUTO_REFRESH_INTERVAL = 60 * 1000 // 60 seconds - reduced from 10s to prevent backend overload
 
+/** Set when a refresh is requested while one is already running (see forceRefreshProducts). */
+let productsRefreshPending = false
+
 export const useDataStore = create<DataState>()(
   persist(
     (set, get) => ({
@@ -351,6 +354,13 @@ export const useDataStore = create<DataState>()(
       },
 
       forceRefreshProducts: async () => {
+        // A refresh requested while one is in flight is queued rather than dropped: the
+        // in-flight request may have read the database before the change we were told about.
+        if (get().isProductsLoading) {
+          productsRefreshPending = true
+          return
+        }
+
         set({ isProductsLoading: true })
         try {
           const response = await marketplaceService.getProducts({ limit: 20 })
@@ -366,6 +376,11 @@ export const useDataStore = create<DataState>()(
             productsLastUpdated: Date.now(), 
             isProductsLoading: false 
           })
+        }
+
+        if (productsRefreshPending) {
+          productsRefreshPending = false
+          await get().forceRefreshProducts()
         }
       },
 
@@ -455,9 +470,7 @@ export const useDataStore = create<DataState>()(
             // Handle different message types
             if (message.type === 'offer_updated' || message.type === 'product_updated' || message.type === 'prices_updated') {
               // Refresh products when offers/products are updated
-              if (!state.isProductsLoading) {
-                state.forceRefreshProducts()
-              }
+              state.forceRefreshProducts()
             }
 
             if (message.type === 'order_updated' && message.orderIds && message.orderIds.length > 0) {
