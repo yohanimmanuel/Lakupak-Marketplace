@@ -56,17 +56,31 @@ class WebSocketService {
   private token: string | null = null;
 
   constructor() {
-    // WebSocket server runs on a separate port (default 3001)
-    // Convert HTTP/HTTPS URL to WS/WSS and use WS_PORT if available
-    const wsPort = process.env.EXPO_PUBLIC_WS_PORT || '3001';
-    
-    // Extract hostname from API_BASE_URL
-    const host = API_BASE_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const hostname = host.split(':')[0]; // Remove port if present
-    const protocol = API_BASE_URL.startsWith('https') ? 'wss' : 'ws';
-    
-    // Construct WebSocket URL properly (no double slashes)
-    this.url = `${protocol}://${hostname}:${wsPort}/api/marketplace/ws`;
+    if (process.env.EXPO_PUBLIC_WS_URL) {
+      this.url = `${process.env.EXPO_PUBLIC_WS_URL.replace(/\/$/, '')}/api/marketplace/ws`;
+      return;
+    }
+
+    const isSecure = API_BASE_URL.startsWith('https');
+    const protocol = isSecure ? 'wss' : 'ws';
+
+    // Extract hostname and optional port from API_BASE_URL
+    const hostWithPort = API_BASE_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const [hostname, urlPort] = hostWithPort.split(':');
+
+    // In production (https), WebSockets route through the standard 443 proxy (no custom port needed)
+    // unless EXPO_PUBLIC_WS_PORT is explicitly specified as a non-standard port.
+    // Local development port (3001) is automatically ignored on HTTPS.
+    if (isSecure) {
+      const explicitPort = process.env.EXPO_PUBLIC_WS_PORT;
+      const portPart = explicitPort && explicitPort !== '443' && explicitPort !== 'none' && explicitPort !== '3001' ? `:${explicitPort}` : '';
+      this.url = `${protocol}://${hostname}${portPart}/api/marketplace/ws`;
+    } else {
+      // In local development (http), default to 3001 or EXPO_PUBLIC_WS_PORT
+      const devPort = process.env.EXPO_PUBLIC_WS_PORT || urlPort || '3001';
+      const portPart = devPort && devPort !== 'none' ? `:${devPort}` : '';
+      this.url = `${protocol}://${hostname}${portPart}/api/marketplace/ws`;
+    }
   }
 
   connect(token?: string | null): void {
