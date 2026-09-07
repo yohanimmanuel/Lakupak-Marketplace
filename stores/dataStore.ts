@@ -571,6 +571,12 @@ export const useDataStore = create<DataState>()(
             
             if (isConnected !== currentState.isWebSocketConnected) {
               set({ isWebSocketConnected: isConnected })
+              // Broadcasts are only delivered to sockets that are open at the time, and any
+              // sent while we were down are gone. Resync on reconnect so a missed
+              // publish/unpublish can't leave the catalog stale indefinitely.
+              if (isConnected) {
+                void get().forceRefreshProducts()
+              }
             }
             
             // If WebSocket is not connected, fallback to polling
