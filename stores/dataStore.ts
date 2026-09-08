@@ -168,6 +168,7 @@ const AUTO_REFRESH_INTERVAL = 60 * 1000 // 60 seconds - reduced from 10s to prev
 
 /** Set when a refresh is requested while one is already running (see forceRefreshProducts). */
 let productsRefreshPending = false
+let lastProductWsAt = 0
 
 /**
  * A single change can emit several broadcasts at once (e.g. product_updated plus
@@ -178,6 +179,7 @@ const WS_REFRESH_DEBOUNCE_MS = 150
 let productsRefreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 function scheduleProductsRefresh(run: () => void): void {
+  lastProductWsAt = Date.now()
   if (productsRefreshDebounceTimer) {
     clearTimeout(productsRefreshDebounceTimer)
   }
@@ -372,13 +374,12 @@ export const useDataStore = create<DataState>()(
       },
 
       forceRefreshProducts: async () => {
-        // A refresh requested while one is in flight is queued rather than dropped: the
-        // in-flight request may have read the database before the change we were told about.
         if (get().isProductsLoading) {
           productsRefreshPending = true
           return
         }
 
+        const startedAt = Date.now()
         set({ isProductsLoading: true })
         try {
           const response = await marketplaceService.getProducts({ limit: 20 })
@@ -388,7 +389,6 @@ export const useDataStore = create<DataState>()(
             isProductsLoading: false 
           })
         } catch (error) {
-          // No fallback to mock data - show empty state instead
           set({ 
             products: [], 
             productsLastUpdated: Date.now(), 
@@ -398,7 +398,11 @@ export const useDataStore = create<DataState>()(
 
         if (productsRefreshPending) {
           productsRefreshPending = false
-          await get().forceRefreshProducts()
+          // Only refetch if a new ping arrived after this request started. Events that
+          // triggered this fetch already waited on debounce and are in the payload above.
+          if (lastProductWsAt >= startedAt) {
+            await get().forceRefreshProducts()
+          }
         }
       },
 
