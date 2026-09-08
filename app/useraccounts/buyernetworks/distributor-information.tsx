@@ -3,7 +3,7 @@ import { Alert, Animated, Dimensions, Image, ImageBackground, Modal, PanResponde
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, ChevronDown, ChevronUp, HelpCircle, MoreVertical, Share2, Star, Flag } from 'lucide-react-native';
-import { marketplaceService, transformGraphQLProduct, type MarketplaceProduct } from '../../../services/marketplace';
+import { marketplaceService, type MarketplaceProduct } from '../../../services/marketplace';
 import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
 import { API_BASE_URL } from '../../../services/config';
 import { websocketService } from '../../../services/websocket';
@@ -185,18 +185,6 @@ export default function DistributorInformationScreen() {
           const unpublishedIds = new Set(message.productIds);
           setAllProducts((prev) => prev.filter((p) => !unpublishedIds.has(p.id)));
           return;
-        }
-
-        // Fast-path for publish: prepend locally in 0ms if matching distributor
-        if (message.action === 'publish' && Array.isArray(message.products) && message.products.length > 0) {
-          const incoming = (message.products as Record<string, unknown>[])
-            .map(transformGraphQLProduct)
-            .filter((p) => !distributorId || p.userId === distributorId);
-          if (incoming.length > 0) {
-            const incomingIds = new Set(incoming.map((p) => p.id));
-            setAllProducts((prev) => [...incoming, ...prev.filter((p) => !incomingIds.has(p.id))]);
-            return;
-          }
         }
 
         if (debounceTimer) clearTimeout(debounceTimer);
