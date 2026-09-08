@@ -28,6 +28,7 @@ interface WebSocketMessage {
     | 'pong';
   data?: unknown;
   productIds?: string[];
+  action?: 'publish' | 'unpublish' | 'update';
   offerIds?: string[];
   orderIds?: string[];
   announcement?: PlatformAnnouncementWsPayload;

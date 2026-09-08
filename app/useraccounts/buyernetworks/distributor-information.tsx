@@ -179,12 +179,25 @@ export default function DistributorInformationScreen() {
   useEffect(() => {
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const unsubscribe = websocketService.subscribe((message) => {
-      if (message.type === 'product_updated' || message.type === 'offer_updated' || message.type === 'prices_updated') {
+      if (message.type === 'product_updated') {
+        // Fast-path for unpublish: remove locally in 0ms without full network refetch
+        if (message.action === 'unpublish' && message.productIds && message.productIds.length > 0) {
+          const unpublishedIds = new Set(message.productIds);
+          setAllProducts((prev) => prev.filter((p) => !unpublishedIds.has(p.id)));
+          return;
+        }
+
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
           debounceTimer = null;
           void fetchData();
-        }, 150);
+        }, 300);
+      } else if (message.type === 'offer_updated' || message.type === 'prices_updated') {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          debounceTimer = null;
+          void fetchData();
+        }, 300);
       }
     });
     return () => {

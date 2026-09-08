@@ -175,7 +175,7 @@ let lastProductWsAt = 0
  * prices_updated, or one per product in a bulk publish). Collapsing them into one fetch
  * avoids running the same expensive product query several times back to back.
  */
-const WS_REFRESH_DEBOUNCE_MS = 150
+const WS_REFRESH_DEBOUNCE_MS = 300
 let productsRefreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 function scheduleProductsRefresh(run: () => void): void {
@@ -265,12 +265,13 @@ export const useDataStore = create<DataState>()(
             isProductsLoading: false 
           })
         } catch (error) {
-          // No fallback to mock data - show empty state instead
-          set({ 
-            products: [], 
+          console.warn('[DataStore] loadProductsData failed:', error)
+          // Keep existing products if any exist in cache rather than blanking the screen
+          set((state) => ({ 
+            products: state.products.length > 0 ? state.products : [], 
             productsLastUpdated: now, 
             isProductsLoading: false 
-          })
+          }))
         }
       },
 
@@ -379,30 +380,30 @@ export const useDataStore = create<DataState>()(
           return
         }
 
-        const startedAt = Date.now()
         set({ isProductsLoading: true })
         try {
           const response = await marketplaceService.getProducts({ limit: 20 })
-          set({ 
-            products: response.products, 
-            productsLastUpdated: Date.now(), 
-            isProductsLoading: false 
-          })
+          if (response && Array.isArray(response.products)) {
+            set({ 
+              products: response.products, 
+              productsLastUpdated: Date.now(), 
+              isProductsLoading: false 
+            })
+          } else {
+            set({ isProductsLoading: false })
+          }
         } catch (error) {
+          console.warn('[DataStore] forceRefreshProducts failed:', error)
+          // NEVER wipe existing products on background refresh failure!
+          // Real marketplaces (Shopee/Tokopedia) preserve stale cache rather than blanking the screen.
           set({ 
-            products: [], 
-            productsLastUpdated: Date.now(), 
             isProductsLoading: false 
           })
         }
 
         if (productsRefreshPending) {
           productsRefreshPending = false
-          // Only refetch if a new ping arrived after this request started. Events that
-          // triggered this fetch already waited on debounce and are in the payload above.
-          if (lastProductWsAt >= startedAt) {
-            await get().forceRefreshProducts()
-          }
+          await get().forceRefreshProducts()
         }
       },
 
@@ -490,8 +491,25 @@ export const useDataStore = create<DataState>()(
             const state = get()
             
             // Handle different message types
-            if (message.type === 'offer_updated' || message.type === 'product_updated' || message.type === 'prices_updated') {
-              // Refresh products when offers/products are updated, coalescing bursts.
+            if (message.type === 'product_updated') {
+              // Targeted optimization for unpublish: remove products locally in 0ms without network roundtrip
+              if (message.action === 'unpublish' && message.productIds && message.productIds.length > 0) {
+                const unpublishedIds = new Set(message.productIds)
+                set((state) => ({
+                  products: state.products.filter((p) => !unpublishedIds.has(p.id)),
+                  productsLastUpdated: Date.now(),
+                }))
+                return
+              }
+
+              // For publish or general update, debounce and refetch products
+              scheduleProductsRefresh(() => {
+                void get().forceRefreshProducts()
+              })
+            }
+
+            if (message.type === 'offer_updated' || message.type === 'prices_updated') {
+              // Refresh products when offers/prices are updated, coalescing bursts.
               scheduleProductsRefresh(() => {
                 void get().forceRefreshProducts()
               })
