@@ -29,6 +29,7 @@ interface WebSocketMessage {
   data?: unknown;
   productIds?: string[];
   action?: 'publish' | 'unpublish' | 'update';
+  products?: unknown[];
   offerIds?: string[];
   orderIds?: string[];
   announcement?: PlatformAnnouncementWsPayload;

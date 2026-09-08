@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Product } from '../data/sampleProducts'
-import { marketplaceService, MarketplaceProduct, type MarketplaceHomeOfferPayload } from '../services/marketplace'
+import { marketplaceService, MarketplaceProduct, transformGraphQLProduct, type MarketplaceHomeOfferPayload } from '../services/marketplace'
 import { getMe, MobileUser } from '../services/user'
 import { websocketService } from '../services/websocket'
 import { ordersService } from '../services/orders'
@@ -502,7 +502,18 @@ export const useDataStore = create<DataState>()(
                 return
               }
 
-              // For publish or general update, debounce and refetch products
+              // Fast-path for publish: prepend products directly in 0ms without network roundtrip
+              if (message.action === 'publish' && Array.isArray(message.products) && message.products.length > 0) {
+                const incoming = (message.products as Record<string, unknown>[]).map(transformGraphQLProduct)
+                const incomingIds = new Set(incoming.map((p) => p.id))
+                set((state) => ({
+                  products: [...incoming, ...state.products.filter((p) => !incomingIds.has(p.id))],
+                  productsLastUpdated: Date.now(),
+                }))
+                return
+              }
+
+              // Fallback for general updates or messages without inline products
               scheduleProductsRefresh(() => {
                 void get().forceRefreshProducts()
               })
