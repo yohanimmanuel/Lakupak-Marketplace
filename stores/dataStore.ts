@@ -169,16 +169,22 @@ const AUTO_REFRESH_INTERVAL = 60 * 1000 // 60 seconds - reduced from 10s to prev
 /** Set when a refresh is requested while one is already running (see forceRefreshProducts). */
 let productsRefreshPending = false
 
-/** Debounces rapid bursts of WebSocket product/offer/price updates into a single query. */
-let productRefreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
-const debouncedForceRefreshProducts = (delayMs = 150) => {
-  if (productRefreshDebounceTimer) {
-    clearTimeout(productRefreshDebounceTimer)
+/**
+ * A single change can emit several broadcasts at once (e.g. product_updated plus
+ * prices_updated, or one per product in a bulk publish). Collapsing them into one fetch
+ * avoids running the same expensive product query several times back to back.
+ */
+const WS_REFRESH_DEBOUNCE_MS = 150
+let productsRefreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleProductsRefresh(run: () => void): void {
+  if (productsRefreshDebounceTimer) {
+    clearTimeout(productsRefreshDebounceTimer)
   }
-  productRefreshDebounceTimer = setTimeout(() => {
-    productRefreshDebounceTimer = null
-    void useDataStore.getState().forceRefreshProducts()
-  }, delayMs)
+  productsRefreshDebounceTimer = setTimeout(() => {
+    productsRefreshDebounceTimer = null
+    run()
+  }, WS_REFRESH_DEBOUNCE_MS)
 }
 
 export const useDataStore = create<DataState>()(
@@ -481,8 +487,10 @@ export const useDataStore = create<DataState>()(
             
             // Handle different message types
             if (message.type === 'offer_updated' || message.type === 'product_updated' || message.type === 'prices_updated') {
-              // Debounce rapid bursts into a single refresh to avoid back-to-back duplicate queries
-              debouncedForceRefreshProducts(150)
+              // Refresh products when offers/products are updated, coalescing bursts.
+              scheduleProductsRefresh(() => {
+                void get().forceRefreshProducts()
+              })
             }
 
             if (message.type === 'order_updated' && message.orderIds && message.orderIds.length > 0) {
@@ -587,7 +595,7 @@ export const useDataStore = create<DataState>()(
               // sent while we were down are gone. Resync on reconnect so a missed
               // publish/unpublish can't leave the catalog stale indefinitely.
               if (isConnected) {
-                debouncedForceRefreshProducts(200)
+                void get().forceRefreshProducts()
               }
             }
             
@@ -636,10 +644,6 @@ export const useDataStore = create<DataState>()(
           
           set({ 
             websocketUnsubscribe: () => {
-              if (productRefreshDebounceTimer) {
-                clearTimeout(productRefreshDebounceTimer)
-                productRefreshDebounceTimer = null
-              }
               unsubscribe()
               clearInterval(connectionCheckInterval)
             },
