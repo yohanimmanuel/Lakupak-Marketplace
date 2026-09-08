@@ -177,12 +177,18 @@ export default function DistributorInformationScreen() {
 
   // Real-time updates (like homepage): refresh when products/offers/prices change via WebSocket
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const unsubscribe = websocketService.subscribe((message) => {
       if (message.type === 'product_updated' || message.type === 'offer_updated' || message.type === 'prices_updated') {
-        void fetchData();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          debounceTimer = null;
+          void fetchData();
+        }, 150);
       }
     });
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       unsubscribe();
     };
   }, [fetchData]);

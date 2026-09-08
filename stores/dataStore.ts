@@ -169,6 +169,18 @@ const AUTO_REFRESH_INTERVAL = 60 * 1000 // 60 seconds - reduced from 10s to prev
 /** Set when a refresh is requested while one is already running (see forceRefreshProducts). */
 let productsRefreshPending = false
 
+/** Debounces rapid bursts of WebSocket product/offer/price updates into a single query. */
+let productRefreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
+const debouncedForceRefreshProducts = (delayMs = 150) => {
+  if (productRefreshDebounceTimer) {
+    clearTimeout(productRefreshDebounceTimer)
+  }
+  productRefreshDebounceTimer = setTimeout(() => {
+    productRefreshDebounceTimer = null
+    void useDataStore.getState().forceRefreshProducts()
+  }, delayMs)
+}
+
 export const useDataStore = create<DataState>()(
   persist(
     (set, get) => ({
@@ -469,8 +481,8 @@ export const useDataStore = create<DataState>()(
             
             // Handle different message types
             if (message.type === 'offer_updated' || message.type === 'product_updated' || message.type === 'prices_updated') {
-              // Refresh products when offers/products are updated
-              state.forceRefreshProducts()
+              // Debounce rapid bursts into a single refresh to avoid back-to-back duplicate queries
+              debouncedForceRefreshProducts(150)
             }
 
             if (message.type === 'order_updated' && message.orderIds && message.orderIds.length > 0) {
@@ -575,7 +587,7 @@ export const useDataStore = create<DataState>()(
               // sent while we were down are gone. Resync on reconnect so a missed
               // publish/unpublish can't leave the catalog stale indefinitely.
               if (isConnected) {
-                void get().forceRefreshProducts()
+                debouncedForceRefreshProducts(200)
               }
             }
             
@@ -624,6 +636,10 @@ export const useDataStore = create<DataState>()(
           
           set({ 
             websocketUnsubscribe: () => {
+              if (productRefreshDebounceTimer) {
+                clearTimeout(productRefreshDebounceTimer)
+                productRefreshDebounceTimer = null
+              }
               unsubscribe()
               clearInterval(connectionCheckInterval)
             },

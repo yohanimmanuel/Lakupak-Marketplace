@@ -118,16 +118,22 @@ export default function CartScreen() {
     // Ensure WebSocket is connected
     websocketService.connect(token);
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const unsubscribe = websocketService.subscribe((message) => {
       // Refresh cart when products are updated (published/unpublished)
       if (message.type === 'product_updated' || message.type === 'prices_updated') {
-        // Reload cart from database to get filtered items (unpublished products removed)
-        // Use store method directly to avoid stale closure issues
-        useCartStore.getState().loadFromDatabase();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          debounceTimer = null;
+          // Reload cart from database to get filtered items (unpublished products removed)
+          // Use store method directly to avoid stale closure issues
+          useCartStore.getState().loadFromDatabase();
+        }, 150);
       }
     });
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       unsubscribe();
     };
   }, [isAuthenticated, token]); // loadFromDatabase removed - using store method directly
