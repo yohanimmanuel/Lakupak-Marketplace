@@ -246,10 +246,12 @@ interface MobileMarketplaceProductsResponse {
 export function transformGraphQLProduct(product: GraphQLMarketplaceProduct | Record<string, unknown>): MarketplaceProduct {
   const p = product as GraphQLMarketplaceProduct;
   const sellingPrice = Number(p.sellingPrice) || 0;
-  const originalSellingPrice = Number(p.originalSellingPrice) || Number(p.originalPrice) || 0;
-  const discount = originalSellingPrice > 0 
-    ? ((originalSellingPrice - sellingPrice) / originalSellingPrice) * 100 
-    : 0;
+  // originalPrice from the API is purchase/cost — never use it as a compare-at price.
+  const originalSellingPrice = Number(p.originalSellingPrice) || 0;
+  const discount =
+    originalSellingPrice > sellingPrice
+      ? Math.round(((originalSellingPrice - sellingPrice) / originalSellingPrice) * 100)
+      : 0;
 
   // Transform variantOptionsFormatted to ProductVariant array for the variants property
   const variantOptionsFormatted = (p.variantOptionsFormatted || []) as Array<Record<string, unknown>>;
@@ -293,6 +295,8 @@ export function transformGraphQLProduct(product: GraphQLMarketplaceProduct | Rec
 
   return {
     ...p,
+    sellingPrice,
+    originalSellingPrice,
     discount,
     variants: originalVariants as unknown as ProductVariant[],
     variantOptions: transformedVariantOptions,
@@ -579,68 +583,8 @@ export const marketplaceService = {
       if (!rawProduct) {
         throw new Error(`Product with id ${productId} not found`);
       }
-      
-      // Transform product to calculate discount and format variants
-      const sellingPrice = Number(rawProduct.sellingPrice) || 0;
-      const originalSellingPrice = Number(rawProduct.originalSellingPrice) || Number(rawProduct.originalPrice) || 0;
-      const discount = originalSellingPrice > 0 
-        ? ((originalSellingPrice - sellingPrice) / originalSellingPrice) * 100 
-        : 0;
-      
-      // Transform variantOptionsFormatted to ProductVariant array for the variants property
-      const variantOptionsFormatted = (rawProduct.variantOptionsFormatted || []) as Array<Record<string, unknown>>;
-      const transformedVariants: ProductVariant[] = variantOptionsFormatted.map((v, idx) => ({
-        id: Number(v.id) || idx,
-        variantName: String(v.variantName || ''),
-        variantType: v.variantType ? String(v.variantType) : undefined,
-        sku: v.sku ? String(v.sku) : undefined,
-        purchasePrice: Number(v.purchasePrice) || 0,
-        sellingPrice: Number(v.sellingPrice) || 0,
-        originalSellingPrice: v.originalSellingPrice ? Number(v.originalSellingPrice) : null,
-        moq: v.moq ? Number(v.moq) : undefined,
-        stockQuantity: v.stockQuantity ? Number(v.stockQuantity) : undefined,
-        lowStockThreshold: v.lowStockThreshold ? Number(v.lowStockThreshold) : undefined,
-        stockStatus: v.stockStatus ? String(v.stockStatus) as 'In Stock' | 'Low Stock' | 'Out of Stock' : undefined,
-        attributes: v.attributes as Record<string, unknown> | undefined,
-        isDefault: Boolean(v.isDefault),
-        isActive: Boolean(v.isActive),
-      }));
 
-      // Keep original variants (definitions) and variantOptions (options) for component compatibility
-      // Transform variantOptions to proper structure
-      const variantOptions = (rawProduct.variantOptions || []) as Array<Record<string, unknown>>;
-      const transformedVariantOptions = variantOptions.map((vo) => ({
-        id: Number(vo.id) || 0,
-        sku: String(vo.sku || ''),
-        purchasePrice: Number(vo.purchasePrice) || 0,
-        sellingPrice: Number(vo.sellingPrice) || 0,
-        originalSellingPrice: vo.originalSellingPrice ? Number(vo.originalSellingPrice) : undefined,
-        moq: Number(vo.moq) || 0,
-        stockQuantity: Number(vo.stockQuantity) || 0,
-        lowStockThreshold: Number(vo.lowStockThreshold) || 0,
-        stockStatus: String(vo.stockStatus || 'In Stock'),
-        attributes: vo.attributes as Record<string, string> || {},
-        isDefault: Boolean(vo.isDefault),
-        isActive: Boolean(vo.isActive),
-      }));
-      
-      // Keep original variants (definitions) from GraphQL for component compatibility
-      const originalVariants = (rawProduct.variants || []) as Array<Record<string, unknown>>;
-      
-      return {
-        ...rawProduct,
-        discount,
-        variants: originalVariants as unknown as ProductVariant[], // Keep definitions structure for component, cast for interface
-        variantOptions: transformedVariantOptions, // Keep for component
-        seller: rawProduct.seller as MarketplaceProduct['seller'],
-        shipping: rawProduct.shipping as MarketplaceProduct['shipping'],
-        assurance: rawProduct.assurance as MarketplaceProduct['assurance'],
-        reviews: rawProduct.reviews as MarketplaceProduct['reviews'],
-        shippingInfo: rawProduct.shippingInfo ? {
-          location: rawProduct.shippingInfo.location || '',
-          days: '', // Not available in GraphQL schema
-        } : undefined,
-      } as MarketplaceProduct;
+      return transformGraphQLProduct(rawProduct);
     } catch (error) {
       throw error;
     }

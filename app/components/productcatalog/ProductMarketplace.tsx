@@ -212,11 +212,9 @@ export default function ProductMarketplace({
       return originalPriceRange.min; // Return minimum for single value display
     }
     
-    // Fallback to product-level fields
+    // originalPrice from the API is purchase/cost, not a compare-at price.
     const osp = product.originalSellingPrice;
-    const op = (product as EnrichedProduct).originalPrice;
     if (osp !== undefined && osp !== null) return safeGetNumber(osp);
-    if (op !== undefined && op !== null) return safeGetNumber(op);
     return 0;
   };
 
@@ -437,9 +435,8 @@ export default function ProductMarketplace({
   };
 
   const renderCardDiscountTag = () => {
-    // Show offer badge if available, otherwise show percentage discount
+    // Show offer badge if available
     const offerBadge = getOfferBadge();
-    const discount = safeGetNumber(product.discount);
     const hasActiveOffer = getHasActiveOffer();
     const originalPrice = getOriginalSellingPrice();
     const currentPrice = getSellingPrice();
@@ -448,7 +445,7 @@ export default function ProductMarketplace({
     let discountDisplay = t('product.labels.discount');
     if (product.discountType === 'fixed' && product.discountValue) {
       // Show fixed discount amount
-      discountDisplay = `Rp${product.discountValue.toLocaleString()} OFF`;
+      discountDisplay = `${formatCurrency(product.discountValue)} OFF`;
     } else {
       // Calculate percentage discount if we have both prices
       let discountPercentage = 0;
@@ -472,18 +469,8 @@ export default function ProductMarketplace({
       }
       // Don't show anything for Promotion-only here
       return null;
-    } else if (discount > 0) {
-      // Fallback to percentage discount
-      return (
-        <View style={styles.cardDiscountTag}>
-          <Text style={styles.cardDiscountTagText}>-{discount}%</Text>
-          {safeGetString(product.brand) && (
-            <Text style={styles.cardBrandTagText}>{safeGetString(product.brand)}</Text>
-          )}
-        </View>
-      );
     }
-    
+
     return null;
   };
 
@@ -768,7 +755,7 @@ export default function ProductMarketplace({
             let discountDisplay = t('product.labels.discount');
             if (product.discountType === 'fixed' && product.discountValue) {
               // Show fixed discount amount
-              discountDisplay = `Rp${product.discountValue.toLocaleString()} OFF`;
+              discountDisplay = `${formatCurrency(product.discountValue)} OFF`;
             } else {
               // Calculate percentage discount if we have both prices
               let discountPercentage = 0;

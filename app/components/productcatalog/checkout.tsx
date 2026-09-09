@@ -1312,7 +1312,6 @@ const copyPickupAddress = () => {
                             const marketplaceProduct = item.product as MarketplaceProduct;
                             const offerBadge = marketplaceProduct.offerBadge;
                             const hasActiveOffer = marketplaceProduct.hasActiveOffer;
-                            const discount = marketplaceProduct.discount || 0;
                             const originalPrice = marketplaceProduct.originalSellingPrice || 0;
                             const currentPrice = marketplaceProduct.sellingPrice || 0;
                             
@@ -1332,7 +1331,7 @@ const copyPickupAddress = () => {
                               }
                             }
                             
-                            // Only show DISCOUNT badge (not Promotion badge)
+                            // Only show DISCOUNT badge when there is an active offer
                             if (offerBadge && hasActiveOffer) {
                               if (offerBadge === 'Discount' || offerBadge === 'All Offers') {
                                 return (
@@ -1343,14 +1342,6 @@ const copyPickupAddress = () => {
                                   </View>
                                 );
                               }
-                            } else if (discount > 0) {
-                              return (
-                                <View style={styles.discountBadge}>
-                                  <Text style={styles.discountBadgeText}>
-                                    -{discount}%
-                                  </Text>
-                                </View>
-                              );
                             }
                             return null;
                           })()}
