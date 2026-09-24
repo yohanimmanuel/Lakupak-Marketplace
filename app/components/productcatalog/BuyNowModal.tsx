@@ -429,10 +429,10 @@ export default function BuyNowModal({
       checkoutSource: 'direct',
       productId: product.id,
       quantity: quantity.toString(),
-      totalPrice: totalPrice.toString(),
+      totalPrice: '0',
       productName: safeGetString(product.name),
       productImage: productImage || '',
-      unitPrice: unitPrice.toString(),
+      unitPrice: '0',
       packageType: packageType,
       piecesPerPackage: piecesPerPackage.toString(),
       variantId: currentVariantOption?.id?.toString() || '',
@@ -519,7 +519,12 @@ export default function BuyNowModal({
                   {safeGetString(product.name)}
                 </Text>
                 <Text style={styles.headerPrice}>
-                  {formatHeaderPriceDisplay()}
+                  {t('buyNow.labels.pricingNote', {
+                    distributor: safeGetString(
+                      (product as MarketplaceProduct)?.seller?.name,
+                      t('product.labels.unknownCompany'),
+                    ),
+                  })}
                 </Text>
                 <View style={styles.stockContainer}>
                   <Text style={styles.stock}>
@@ -631,8 +636,14 @@ export default function BuyNowModal({
           {/* Sticky footer */}
           <View style={styles.footer}>
             <View style={styles.totalSection}>
-              <Text style={styles.totalLabel}>{t('buyNow.labels.total')}</Text>
-              <Text style={styles.totalPrice}>{formatCurrency(totalPrice)}</Text>
+              <Text style={styles.pricingNoteFooter} numberOfLines={2}>
+                {t('buyNow.labels.pricingNote', {
+                  distributor: safeGetString(
+                    (product as MarketplaceProduct)?.seller?.name,
+                    t('product.labels.unknownCompany'),
+                  ),
+                })}
+              </Text>
             </View>
             <TouchableOpacity
               style={[styles.confirmButton, !isFormValid && styles.confirmButtonDisabled]}
@@ -727,9 +738,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   headerPrice: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
     marginBottom: 4,
+    lineHeight: 18,
   },
   priceContainer: {
     flexDirection: 'row',
@@ -912,10 +924,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   totalSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 12,
+  },
+  pricingNoteFooter: {
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 16,
+    flex: 1,
+    paddingRight: 8,
   },
   totalLabel: {
     fontSize: 14,

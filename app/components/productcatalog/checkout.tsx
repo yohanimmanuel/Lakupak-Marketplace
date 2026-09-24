@@ -38,7 +38,6 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
-import { formatCurrency } from '../../../utils/currencyUtils';
 import { calculateProductPromotion } from '../../../utils/promotionUtils';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore, CartItem } from '../../../stores/cartStore';
@@ -137,11 +136,8 @@ export default function CheckoutScreen() {
   // Parse parameters
   const productId = params.productId || '';
   const quantity = parseInt(params.quantity || '1');
-  const totalPrice = parseFloat(params.totalPrice || '0');
   const productName = params.productName || t('ordersFlow.checkout.defaults.product');
   const productImage = params.productImage || '';
-  const unitPrice = parseFloat(params.unitPrice || '0');
-  const originalPrice = parseFloat(params.originalPrice || '0');
   const packageType = params.packageType || t('ordersFlow.checkout.defaults.box');
   const piecesPerPackage = parseInt(params.piecesPerPackage || '1');
 
@@ -751,21 +747,10 @@ const copyPickupAddress = () => {
     }
   }, [showPickupModal, pickupSlideAnim]);
 
-  // Calculations
-  const calculateSubtotal = () => {
-    if (isCartCheckout) {
-      return selectedCartItems.reduce((total, item) => {
-        const marketplaceProduct = getItemProduct(item) as MarketplaceProduct;
-        const { unitPrice } = resolveVariantPricing(marketplaceProduct, item.variant);
-        const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-        return total + (unitPrice * item.quantity * piecesPerPackage);
-      }, 0);
-    }
-    return totalPrice;
-  };
-  
-  const subtotal = calculateSubtotal();
-  const total = subtotal;
+  // Item count for bottom bar (packages selected, not money)
+  const checkoutItemCount = isCartCheckout
+    ? selectedCartItems.reduce((sum, item) => sum + item.quantity, 0)
+    : quantity;
 
   // Validate that all shipping requirements are met before allowing order placement
   const isOrderReady = useMemo(() => {
@@ -808,7 +793,7 @@ const copyPickupAddress = () => {
       // Show loading state
     Alert.alert(
       t('ordersFlow.checkout.alerts.orderConfirmationTitle'),
-      t('ordersFlow.checkout.alerts.orderConfirmationAmount', { amount: formatCurrency(total) }),
+      t('ordersFlow.checkout.alerts.orderConfirmationBody'),
       [
         { text: t('ordersFlow.checkout.alerts.cancel'), style: 'cancel' },
         { 
@@ -855,23 +840,12 @@ const copyPickupAddress = () => {
                       const [distributorId, items] = groupEntries[groupIndex];
                       const orderId = generateCheckoutOrderId(groupIndex);
                     
-                    // Calculate totals for this distributor's items
-                    const distributorSubtotal = items.reduce((total, item) => {
-                      const marketplaceProduct = getItemProduct(item) as MarketplaceProduct;
-                      const { unitPrice } = resolveVariantPricing(
-                        marketplaceProduct,
-                        item.variant,
-                        (item.product as { price?: number }).price || item.product.sellingPrice || 0,
-                      );
-                      const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-                      return total + (unitPrice * item.quantity * piecesPerPackage);
-                    }, 0);
+                    // Calculate piece counts for this distributor's items (money is resolved server-side)
                     const firstProduct = getItemProduct(items[0]);
                     const shippingOptions = getAvailableShippingOptions(firstProduct);
                     const selectedId = selectedShippingByDistributor[distributorId] || '';
                     const selectedOption = shippingOptions.find(s => s.id === selectedId);
                     const leadTime = resolveProductLeadTime(firstProduct as MarketplaceProduct);
-                    const distributorTotal = distributorSubtotal;
                     
                     const toISODate = (dateValue: Date | null | undefined) => dateValue ? dateValue.toISOString() : null;
                     const toTimeComponent = (dateValue: Date | null | undefined) => {
@@ -888,7 +862,7 @@ const copyPickupAddress = () => {
                       distributorUserId: (firstProduct as MarketplaceProduct)?.userId,
                       orderItems: items.map(item => {
                         const marketplaceProduct = getItemProduct(item) as MarketplaceProduct;
-                        const { unitPrice, variantOptionId } = resolveVariantPricing(
+                        const { variantOptionId } = resolveVariantPricing(
                           marketplaceProduct,
                           item.variant,
                           (item.product as { price?: number }).price || item.product.sellingPrice || 0,
@@ -904,14 +878,15 @@ const copyPickupAddress = () => {
                           variantId: variantOptionId,
                           variantName: item.variant,
                           piecesPerPackage: piecesPerPackage,
-                          pricePerPackage: unitPrice * piecesPerPackage,
-                          subtotal: unitPrice * item.quantity * piecesPerPackage
+                          // Marketplace never sends catalog/offer prices — server resolves after Send pricing
+                          pricePerPackage: 0,
+                          subtotal: 0,
                         };
                       }),
-                      subtotal: distributorSubtotal,
+                      subtotal: 0,
                       discounts: 0,
                       shippingFee: 0,
-                      totalAmount: distributorTotal,
+                      totalAmount: 0,
                       totalOrders: items.reduce((sum, item) => {
                         const marketplaceProduct = getItemProduct(item) as MarketplaceProduct;
                         const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
@@ -1016,15 +991,16 @@ const copyPickupAddress = () => {
                       packageQuantity: quantity,
                       packageType: packageType,
                       piecesPerPackage: piecesPerPackage,
-                      pricePerPackage: unitPrice * piecesPerPackage,
-                      subtotal: totalPrice,
+                      // Marketplace never sends catalog/offer prices — server resolves after Send pricing
+                      pricePerPackage: 0,
+                      subtotal: 0,
                       variantId: params.variantId && params.variantId !== '' ? parseInt(params.variantId) : undefined,
                       variantName: params.variantName || 'Default'
                     }],
-                    subtotal: totalPrice,
+                    subtotal: 0,
                     discounts: 0,
                     shippingFee: 0,
-                    totalAmount: totalPrice,
+                    totalAmount: 0,
                     totalOrders: quantity * piecesPerPackage,
                     contactPerson: authUser?.name || addresses[0].name,
                     storeName: authUser?.storeName || addresses[0].company,
@@ -1118,7 +1094,7 @@ const copyPickupAddress = () => {
                     pathname: '/payment-success',
                     params: {
                       orderId,
-                      totalAmount: total.toString(),
+                      totalAmount: '0',
                       orderStatus,
                       orderCount: createdOrders.length.toString()
                     }
@@ -1308,43 +1284,6 @@ const copyPickupAddress = () => {
                       <View style={styles.productDetails}>
                         <View style={styles.productNameRow}>
                         <Text style={styles.productName} numberOfLines={2}>{item.product.name}</Text>
-                          {(() => {
-                            const marketplaceProduct = item.product as MarketplaceProduct;
-                            const offerBadge = marketplaceProduct.offerBadge;
-                            const hasActiveOffer = marketplaceProduct.hasActiveOffer;
-                            const originalPrice = marketplaceProduct.originalSellingPrice || 0;
-                            const currentPrice = marketplaceProduct.sellingPrice || 0;
-                            
-                            // Calculate discount display based on type
-                            let discountDisplay = 'Discount';
-                            if (marketplaceProduct.discountType === 'fixed' && marketplaceProduct.discountValue) {
-                              // Show fixed discount amount with currency
-                              discountDisplay = `${formatCurrency(marketplaceProduct.discountValue)} OFF`;
-                            } else {
-                              // Calculate percentage discount if we have both prices
-                              let discountPercentage = 0;
-                              if (originalPrice > 0 && currentPrice > 0 && currentPrice < originalPrice) {
-                                discountPercentage = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
-                              }
-                              if (discountPercentage > 0) {
-                                discountDisplay = `${discountPercentage}% OFF`;
-                              }
-                            }
-                            
-                            // Only show DISCOUNT badge when there is an active offer
-                            if (offerBadge && hasActiveOffer) {
-                              if (offerBadge === 'Discount' || offerBadge === 'All Offers') {
-                                return (
-                                  <View style={styles.discountBadge}>
-                                    <Text style={styles.discountBadgeText}>
-                                      {discountDisplay}
-                                    </Text>
-                                  </View>
-                                );
-                              }
-                            }
-                            return null;
-                          })()}
                         </View>
                         {item.variant && item.variant !== 'Default' ? (
                           <Text style={styles.variantName} numberOfLines={2}>
@@ -1362,35 +1301,7 @@ const copyPickupAddress = () => {
                           })()}
                         </Text>
                         <View style={styles.priceRow}>
-                          <View style={styles.priceContainer}>
-                            {(() => {
-                              const marketplaceProduct = getItemProduct(item) as MarketplaceProduct;
-                              const { unitPrice, originalPrice } = resolveVariantPricing(
-                                marketplaceProduct,
-                                item.variant,
-                                marketplaceProduct.sellingPrice || (item.product as { price?: number }).price || 0,
-                              );
-
-                              if (originalPrice > 0 && originalPrice > unitPrice) {
-                                return (
-                                  <>
-                                    <Text style={styles.originalPrice}>
-                                      {formatCurrency(originalPrice)} {t('ordersFlow.checkout.perPiece')}
-                                    </Text>
-                                    <Text style={styles.discountedPrice}>
-                                      {formatCurrency(unitPrice)} {t('ordersFlow.checkout.perPiece')}
-                                    </Text>
-                                  </>
-                                );
-                              }
-
-                              return (
-                                <Text style={styles.productPrice}>
-                                  {formatCurrency(unitPrice)} {t('ordersFlow.checkout.perPiece')}
-                                </Text>
-                              );
-                            })()}
-                          </View>
+                          <View style={styles.priceContainer} />
                           <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                             {(() => {
                               const promotionGift = calculateProductPromotion(
@@ -1519,49 +1430,7 @@ const copyPickupAddress = () => {
                     {t('ordersFlow.checkout.productSpecs', { count: piecesPerPackage, package: packageType })}
                   </Text>
                   <View style={styles.priceRow}>
-                    <View style={styles.priceContainer}>
-                      {(() => {
-                        // Use actual product data if available, otherwise fallback to URL parameters
-                        if (product) {
-                          const actualProduct = product as MarketplaceProduct;
-                          
-                          return actualProduct.originalSellingPrice > 0 && 
-                                 actualProduct.originalSellingPrice > actualProduct.sellingPrice ? (
-                            <>
-                              <Text style={styles.originalPrice}>
-                                {formatCurrency(actualProduct.originalSellingPrice)} {t('ordersFlow.checkout.perPiece')}
-                              </Text>
-                              <Text style={styles.discountedPrice}>
-                                {formatCurrency(actualProduct.sellingPrice)} {t('ordersFlow.checkout.perPiece')}
-                              </Text>
-                            </>
-                          ) : (
-                            <Text style={styles.productPrice}>
-                              {formatCurrency(actualProduct.sellingPrice)} {t('ordersFlow.checkout.perPiece')}
-                            </Text>
-                          );
-                        } else {
-                          // Fallback to URL parameters if product is not found
-                          const originalPriceValue = parseFloat(originalPrice.toString());
-                          const unitPriceValue = parseFloat(unitPrice.toString());
-                          
-                          return originalPriceValue > 0 && originalPriceValue > unitPriceValue ? (
-                            <>
-                              <Text style={styles.originalPrice}>
-                                {formatCurrency(originalPriceValue)} {t('ordersFlow.checkout.perPiece')}
-                              </Text>
-                              <Text style={styles.discountedPrice}>
-                                {formatCurrency(unitPriceValue)} {t('ordersFlow.checkout.perPiece')}
-                              </Text>
-                            </>
-                          ) : (
-                            <Text style={styles.productPrice}>
-                              {formatCurrency(unitPriceValue)} {t('ordersFlow.checkout.perPiece')}
-                            </Text>
-                          );
-                        }
-                      })()}
-                    </View>
+                    <View style={styles.priceContainer} />
                     <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                       {(() => {
                         // Calculate promotion using standardized function
@@ -1688,18 +1557,57 @@ const copyPickupAddress = () => {
               <Package size={20} color="#111827" />
               <Text style={styles.sectionTitle}>{t('ordersFlow.checkout.summary.title')}</Text>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>{t('ordersFlow.checkout.summary.subtotal')}</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
-            </View>
+            {(isCartCheckout
+              ? Object.entries(distributorGroups).map(([distributorId, items]) => {
+                  const info = distributorsInfoMap[distributorId];
+                  const name =
+                    info?.companyName ||
+                    t('ordersFlow.checkout.distributorDefaults.company');
+                  const count = items.reduce((sum, item) => sum + item.quantity, 0);
+                  return (
+                    <View key={distributorId} style={{ marginBottom: 10 }}>
+                      <Text style={[styles.summaryLabel, { color: '#111827', fontWeight: '600' }]}>
+                        {t('ordersFlow.checkout.summary.distributorGroupLine', {
+                          distributor: name,
+                          count,
+                        })}
+                      </Text>
+                      <Text style={[styles.summaryLabel, { color: '#6B7280', fontSize: 12, marginTop: 4 }]}>
+                        {t('ordersFlow.checkout.pricingNote', { distributor: name })}
+                      </Text>
+                    </View>
+                  );
+                })
+              : [
+                  <View key="direct" style={{ marginBottom: 10 }}>
+                    <Text style={[styles.summaryLabel, { color: '#111827', fontWeight: '600' }]}>
+                      {t('ordersFlow.checkout.summary.distributorGroupLine', {
+                        distributor:
+                          distributorsInfo[0]?.companyName ||
+                          t('ordersFlow.checkout.distributorDefaults.company'),
+                        count: quantity,
+                      })}
+                    </Text>
+                    <Text style={[styles.summaryLabel, { color: '#6B7280', fontSize: 12, marginTop: 4 }]}>
+                      {t('ordersFlow.checkout.pricingNote', {
+                        distributor:
+                          distributorsInfo[0]?.companyName ||
+                          t('ordersFlow.checkout.distributorDefaults.company'),
+                      })}
+                    </Text>
+                  </View>,
+                ])}
+            {distributorsInfo.length > 1 ? (
+              <View style={[styles.summaryRow, { marginBottom: 8 }]}>
+                <Text style={[styles.summaryLabel, { color: '#6B7280', fontSize: 12, flex: 1 }]}>
+                  {t('ordersFlow.checkout.summary.splitNote', { count: distributorsInfo.length })}
+                </Text>
+              </View>
+            ) : null}
             <View style={styles.summaryRow}>
               <Text style={[styles.summaryLabel, { color: '#6B7280', fontSize: 11 }]}>
                 {t('ordersFlow.checkout.shipping.costNoteShort')}
               </Text>
-            </View>
-            <View style={[styles.summaryRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>{t('ordersFlow.checkout.summary.totalPayment')}</Text>
-              <Text style={styles.totalValue}>{formatCurrency(total)}</Text>
             </View>
           </View>
         </View>
@@ -1718,7 +1626,9 @@ const copyPickupAddress = () => {
       <View style={styles.bottomBar}>
         <View style={styles.totalSection}>
           <Text style={styles.bottomTotalLabel}>{t('ordersFlow.checkout.summary.total')}</Text>
-          <Text style={styles.bottomTotalValue}>{formatCurrency(total)}</Text>
+          <Text style={styles.bottomTotalValue}>
+            {t('ordersFlow.checkout.summary.totalItems', { count: checkoutItemCount })}
+          </Text>
         </View>
         <TouchableOpacity
           style={[

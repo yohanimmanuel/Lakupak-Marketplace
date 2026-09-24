@@ -47,6 +47,7 @@ import {
   buildOrderItemDisplayLines,
   getOrderItemCountSummary,
 } from '../../utils/orderItemDisplay';
+import { isOrderPricingPending, moneyAmount } from '../../utils/orderPricingDisplay';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -310,10 +311,11 @@ export default function OrdersScreen() {
                 getDistributorCompanyName(order) || t('tabsOrders.distributorFallback');
               const productLines = buildOrderProductLines(order);
               const itemSummary = getOrderItemCountSummary(order.orderItems ?? []);
-              const amountLabel =
-                order.totalAmount != null
-                  ? `Rp ${Math.round(order.totalAmount).toLocaleString('id-ID')}`
-                  : '';
+              const amountLabel = isOrderPricingPending(order)
+                ? t('tabsOrders.pendingPrice')
+                : moneyAmount(order.totalAmount) > 0
+                  ? `Rp ${Math.round(moneyAmount(order.totalAmount)).toLocaleString('id-ID')}`
+                  : t('tabsOrders.pendingPrice');
               const summaryLabel = t('tabsOrders.summaryLine', {
                 count: itemSummary.total,
                 amount: amountLabel,

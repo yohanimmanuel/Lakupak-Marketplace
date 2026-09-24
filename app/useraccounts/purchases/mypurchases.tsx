@@ -478,10 +478,16 @@ export default function MyPurchasesModal() {
             ) : null}
             <Text style={styles.productQuantity}>x{mainItem.packageQuantity}</Text>
             <View style={styles.priceContainer}>
-              {order.discounts > 0 && (
-                <Text style={styles.originalPrice}>{formatCurrency(mainItem.pricePerPackage + order.discounts)}</Text>
+              {!(Number(mainItem.pricePerPackage) > 0) ? (
+                <Text style={styles.currentPrice}>{t('tabsOrders.pendingPrice')}</Text>
+              ) : (
+                <>
+                  {order.discounts > 0 && (
+                    <Text style={styles.originalPrice}>{formatCurrency(mainItem.pricePerPackage + order.discounts)}</Text>
+                  )}
+                  <Text style={styles.currentPrice}>{formatCurrency(mainItem.pricePerPackage)}</Text>
+                </>
               )}
-              <Text style={styles.currentPrice}>{formatCurrency(mainItem.pricePerPackage)}</Text>
             </View>
           </View>
         </View>
@@ -518,7 +524,11 @@ export default function MyPurchasesModal() {
                     {item.productName}
                   </Text>
                   <Text style={styles.additionalItemQuantity}>x{item.packageQuantity}</Text>
-                  <Text style={styles.additionalItemPrice}>{formatCurrency(item.pricePerPackage)}</Text>
+                  <Text style={styles.additionalItemPrice}>
+                    {Number(item.pricePerPackage) > 0
+                      ? formatCurrency(item.pricePerPackage)
+                      : t('tabsOrders.pendingPrice')}
+                  </Text>
             </View>
           </View>
         ))}
@@ -528,7 +538,13 @@ export default function MyPurchasesModal() {
         {/* Order Summary */}
         <View style={styles.orderSummary}>
           <Text style={styles.totalText}>
-            {t('myPurchases.summary.totalItems', { count: order.orderItems.length, amount: formatCurrency(order.totalAmount) })}
+            {t('myPurchases.summary.totalItems', {
+              count: order.orderItems.length,
+              amount:
+                Number(order.totalAmount) > 0
+                  ? formatCurrency(order.totalAmount)
+                  : t('tabsOrders.pendingPrice'),
+            })}
           </Text>
         </View>
 

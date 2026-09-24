@@ -12,7 +12,6 @@ import {
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CheckCircle, Home, Package, ArrowLeft } from 'lucide-react-native';
-import { formatCurrency } from '../utils/currencyUtils';
 import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -32,9 +31,10 @@ export default function PaymentSuccessScreen() {
   const { t } = useTranslation();
   
   const orderId = params.orderId || '';
-  const totalAmount = parseFloat(params.totalAmount || '0');
   const orderStatus = params.orderStatus || 'Pending';
   const orderCount = parseInt(params.orderCount || '1');
+  const parsedTotal = Number.parseFloat(params.totalAmount || '0');
+  const pricingPending = !Number.isFinite(parsedTotal) || parsedTotal <= 0;
 
   const handleGoHome = () => {
     router.push('/(tabs)/home');
@@ -72,7 +72,7 @@ export default function PaymentSuccessScreen() {
           
           <Text style={styles.successTitle}>{t('paymentSuccessPage.title')}</Text>
           <Text style={styles.successSubtitle}>
-            {t('paymentSuccessPage.paid', { amount: formatCurrency(totalAmount) })}
+            {t('paymentSuccessPage.pricingPending')}
           </Text>
           <Text style={styles.notificationText}>
             {orderCount > 1 
@@ -99,8 +99,12 @@ export default function PaymentSuccessScreen() {
         <View style={styles.statusCard}>
           <Text style={styles.statusCardTitle}>{t('paymentSuccessPage.status.title')}</Text>
           <View style={styles.statusItem}>
-            <View style={[styles.statusDot, styles.statusCompleted]} />
-            <Text style={styles.statusText}>{t('paymentSuccessPage.status.paymentRequired')}</Text>
+            <View style={[styles.statusDot, pricingPending ? styles.statusCurrent : styles.statusCompleted]} />
+            <Text style={styles.statusText}>
+              {pricingPending
+                ? t('paymentSuccessPage.status.pricingConfirmation')
+                : t('paymentSuccessPage.status.paymentRequired')}
+            </Text>
           </View>
           <View style={styles.statusItem}>
             <View style={[styles.statusDot, styles.statusPending]} />
@@ -257,6 +261,9 @@ const styles = StyleSheet.create({
   },
   statusCompleted: {
     backgroundColor: '#10b981',
+  },
+  statusCurrent: {
+    backgroundColor: '#0a61d7',
   },
   statusPending: {
     backgroundColor: '#e5e7eb',

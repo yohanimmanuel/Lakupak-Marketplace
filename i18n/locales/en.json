@@ -201,11 +201,12 @@
     }
   },
   "paymentSuccessPage": {
-    "headerTitle": "Payment Success",
-    "title": "Payment Successful!",
+    "headerTitle": "Order Placed",
+    "title": "Order placed!",
     "paid": "You paid {{amount}}",
-    "notifiedSingle": "We have notified the seller to ship out your order.",
-    "notifiedMultiple": "We have created {{count}} separate orders and notified the sellers to ship out your orders.",
+    "pricingPending": "Pricing will be confirmed by the distributor. Nothing is charged yet.",
+    "notifiedSingle": "We have notified the seller. Pricing will be confirmed before payment.",
+    "notifiedMultiple": "We have created {{count}} separate orders. Pricing will be confirmed before payment.",
     "actions": {
       "home": "Home",
       "myOrders": "My Orders"
@@ -213,6 +214,7 @@
     "status": {
       "title": "Order Status",
       "paymentRequired": "Payment Required",
+      "pricingConfirmation": "Pricing confirmation",
       "processing": "Processing Order",
       "shipped": "Shipped",
       "delivered": "Delivered"
@@ -473,6 +475,7 @@
     "seeDetails": "See details",
     "summaryLine_one": "{{count}} item • {{amount}}",
     "summaryLine_other": "{{count}} items • {{amount}}",
+    "pendingPrice": "Pending price",
     "distributorFallback": "Distributor",
     "unknownStatus": "Unknown",
     "reorder": "Re-order",
@@ -1178,6 +1181,7 @@
     "soldLabel": "{{count}} sold",
     "sellerInformation": "Seller Information",
     "sellerRating": "{{rating}} ({{count}}+ ratings)",
+    "pricingConfirmedBy": "Pricing will be confirmed by {{distributor}}",
     "youMayAlsoLike": "You may also like",
     "assurance": {
       "halalCertified": "Halal Certified",
@@ -1258,6 +1262,8 @@
     "deleteA11y": "Remove from cart",
     "moqWarning": "Minimum order: {{moq}} pieces (you have {{have}})",
     "saved": "Saved {{amount}}",
+    "pricingNote": "Pricing will be confirmed by {{distributor}}",
+    "splitNote": "Orders will be split into {{count}} separate orders, one per distributor",
     "loginPrompt": {
       "title": "Create an account to win first-order benefits!",
       "login": "Login",
@@ -1282,7 +1288,8 @@
       "quantity": "Quantity",
       "freeItems": "+ {{count}} free items",
       "minimumOrder": "Minimum order: {{count}} qty",
-      "total": "Total"
+      "total": "Total",
+      "pricingNote": "Pricing will be confirmed by {{distributor}}"
     },
     "cta": {
       "buyNow": "Buy Now",
@@ -2083,6 +2090,7 @@
       "totals": {
         "orderTotal": "Order Total: {{amount}}"
       },
+      "pendingPrice": "Pending price",
       "payment": {
         "methodNotSpecified": "Method not specified"
       },
@@ -2167,7 +2175,7 @@
       },
       "alerts": {
         "orderConfirmationTitle": "Order Confirmation",
-        "orderConfirmationBody": "Please confirm your address, delivery, and payment before placing the order.",
+        "orderConfirmationBody": "Please confirm your address, delivery, and payment before placing the order. Pricing will be confirmed by the distributor. Nothing is charged yet.",
         "orderConfirmationAmount": "Are you sure you want to place this order for {{amount}}?",
         "cancel": "Cancel",
         "placeOrder": "Place Order",
@@ -2248,7 +2256,7 @@
       },
       "shipping": {
         "title": "Shipping Option",
-        "costNote": "Shipping cost is agreed between buyer and distributor — not charged at checkout.",
+        "costNote": "Shipping cost is agreed between buyer and distributor, not charged at checkout.",
         "costNoteShort": "Shipping cost is agreed between buyer and distributor (not included here).",
         "tapSchedulePickup": "Tap to schedule pickup date & time",
         "pickupPrefix": "Pickup",
@@ -2267,8 +2275,15 @@
         "title": "Order Summary",
         "subtotal": "Subtotal",
         "totalPayment": "Total Payment",
-        "total": "Total"
+        "total": "Total",
+        "pendingPrice": "Pending price",
+        "distributorGroupLine": "{{distributor}}: {{count}} item(s)",
+        "multiDistributorShort": "{{count}} distributors",
+        "splitNote": "Orders will be split into {{count}} separate orders",
+        "totalItems_one": "{{count}} item",
+        "totalItems_other": "{{count}} items"
       },
+      "pricingNote": "Pricing will be confirmed by {{distributor}}",
       "terms": "By placing this order, you agree to our Terms of Service and Privacy Policy. This is a B2B transaction subject to business terms and conditions.",
       "cta": {
         "placing": "Placing…",

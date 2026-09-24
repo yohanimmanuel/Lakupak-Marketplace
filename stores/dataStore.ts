@@ -190,6 +190,18 @@ function scheduleProductsRefresh(run: () => void): void {
   }, WS_REFRESH_DEBOUNCE_MS)
 }
 
+let ordersRefreshDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleOrdersRefresh(run: () => void): void {
+  if (ordersRefreshDebounceTimer) {
+    clearTimeout(ordersRefreshDebounceTimer)
+  }
+  ordersRefreshDebounceTimer = setTimeout(() => {
+    ordersRefreshDebounceTimer = null
+    run()
+  }, WS_REFRESH_DEBOUNCE_MS)
+}
+
 export const useDataStore = create<DataState>()(
   persist(
     (set, get) => ({
@@ -527,6 +539,11 @@ export const useDataStore = create<DataState>()(
               // Refresh products when offers/prices are updated, coalescing bursts.
               scheduleProductsRefresh(() => {
                 void get().forceRefreshProducts()
+              })
+              // Pending order totals follow the live client rate. Refresh orders too
+              // so the orders tab updates without a pull-to-refresh.
+              scheduleOrdersRefresh(() => {
+                void get().forceRefreshOrders()
               })
             }
 

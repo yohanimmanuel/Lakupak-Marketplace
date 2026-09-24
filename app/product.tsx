@@ -141,14 +141,11 @@ export default function ProductModal() {
   const handleShare = async () => {
     try {
       const productName = product.name || 'Product';
-      const unitPrice = product.sellingPrice || 0;
       const deepLink = Linking.createURL('/product', {
         queryParams: { productId: product.id },
       });
 
-      const message = unitPrice
-        ? t('product.share.withPrice', { productName, price: unitPrice.toLocaleString(), link: deepLink })
-        : t('product.share.withoutPrice', { productName, link: deepLink });
+      const message = t('product.share.withoutPrice', { productName, link: deepLink });
 
       await Share.share({ message });
     } catch {
@@ -171,11 +168,11 @@ export default function ProductModal() {
       checkoutSource: 'direct' as const,
       productId: targetProduct.id,
       quantity: quantity.toString(),
-      totalPrice: ((targetProduct.sellingPrice || 0) * quantity).toString(),
+      totalPrice: '0',
       productName: targetProduct.name || 'Unknown Product',
       productImage: targetProduct.images?.[0] || '',
-      unitPrice: (targetProduct.sellingPrice || 0).toString(),
-      originalPrice: ((targetProduct as MarketplaceProduct).originalSellingPrice || (targetProduct as Product).originalSellingPrice || 0).toString(),
+      unitPrice: '0',
+      originalPrice: '0',
       packageType: targetProduct.packageType || 'Box',
       piecesPerPackage: targetProduct.piecesPerPackage?.toString() || '1',
     };

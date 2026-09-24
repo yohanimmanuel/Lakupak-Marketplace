@@ -475,7 +475,11 @@ export default function DistributorDetailScreen() {
                     </View>
                   </View>
                   <View style={styles.orderRight}>
-                    <Text style={styles.orderTotal}>{formatCurrency(order.total)}</Text>
+                    <Text style={styles.orderTotal}>
+                      {Number(order.total) > 0
+                        ? formatCurrency(order.total)
+                        : t('tabsOrders.pendingPrice')}
+                    </Text>
                     <Text style={styles.orderStatus}>{order.status}</Text>
                   </View>
                 </View>

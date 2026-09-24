@@ -201,11 +201,12 @@
     }
   },
   "paymentSuccessPage": {
-    "headerTitle": "Pembayaran Berhasil",
-    "title": "Pembayaran Berhasil!",
+    "headerTitle": "Pesanan dibuat",
+    "title": "Pesanan berhasil dibuat!",
     "paid": "Anda membayar {{amount}}",
-    "notifiedSingle": "Kami telah memberi tahu penjual untuk mengirim pesanan Anda.",
-    "notifiedMultiple": "Kami telah membuat {{count}} pesanan terpisah dan memberi tahu penjual untuk mengirim pesanan Anda.",
+    "pricingPending": "Harga akan dikonfirmasi distributor. Belum ada tagihan.",
+    "notifiedSingle": "Kami telah memberi tahu penjual. Harga akan dikonfirmasi sebelum pembayaran.",
+    "notifiedMultiple": "Kami telah membuat {{count}} pesanan terpisah. Harga akan dikonfirmasi sebelum pembayaran.",
     "actions": {
       "home": "Beranda",
       "myOrders": "Pesanan Saya"
@@ -213,6 +214,7 @@
     "status": {
       "title": "Status Pesanan",
       "paymentRequired": "Perlu Pembayaran",
+      "pricingConfirmation": "Konfirmasi harga",
       "processing": "Pesanan Diproses",
       "shipped": "Dikirim",
       "delivered": "Terkirim"
@@ -473,6 +475,7 @@
     "seeDetails": "Lihat detail",
     "summaryLine_one": "{{count}} item • {{amount}}",
     "summaryLine_other": "{{count}} item • {{amount}}",
+    "pendingPrice": "Menunggu harga",
     "distributorFallback": "Distributor",
     "unknownStatus": "Tidak diketahui",
     "reorder": "Pesan lagi",
@@ -1176,6 +1179,7 @@
     "soldLabel": "{{count}} terjual",
     "sellerInformation": "Informasi penjual",
     "sellerRating": "{{rating}} ({{count}}+ rating)",
+    "pricingConfirmedBy": "Harga akan dikonfirmasi oleh {{distributor}}",
     "youMayAlsoLike": "Mungkin Anda suka",
     "assurance": {
       "halalCertified": "Bersertifikat Halal",
@@ -1256,6 +1260,8 @@
     "deleteA11y": "Hapus dari keranjang",
     "moqWarning": "Minimal pembelian: {{moq}} pcs (Anda punya {{have}})",
     "saved": "Hemat {{amount}}",
+    "pricingNote": "Harga akan dikonfirmasi oleh {{distributor}}",
+    "splitNote": "Pesanan akan dipecah menjadi {{count}} pesanan terpisah, satu per distributor",
     "loginPrompt": {
       "title": "Buat akun untuk dapat manfaat pesanan pertama!",
       "login": "Masuk",
@@ -1280,7 +1286,8 @@
       "quantity": "Jumlah",
       "freeItems": "+ {{count}} bonus item",
       "minimumOrder": "Minimal pembelian: {{count}} qty",
-      "total": "Total"
+      "total": "Total",
+      "pricingNote": "Harga akan dikonfirmasi oleh {{distributor}}"
     },
     "cta": {
       "buyNow": "Beli sekarang",
@@ -2081,6 +2088,7 @@
       "totals": {
         "orderTotal": "Total pesanan: {{amount}}"
       },
+      "pendingPrice": "Menunggu harga",
       "payment": {
         "methodNotSpecified": "Metode belum ditentukan"
       },
@@ -2165,7 +2173,7 @@
       },
       "alerts": {
         "orderConfirmationTitle": "Konfirmasi pesanan",
-        "orderConfirmationBody": "Pastikan alamat, pengiriman, dan pembayaran sudah benar sebelum membuat pesanan.",
+        "orderConfirmationBody": "Pastikan alamat, pengiriman, dan pembayaran sudah benar sebelum membuat pesanan. Harga akan dikonfirmasi distributor. Belum ada tagihan.",
         "orderConfirmationAmount": "Anda yakin ingin membuat pesanan ini sebesar {{amount}}?",
         "cancel": "Batal",
         "placeOrder": "Buat pesanan",
@@ -2246,7 +2254,7 @@
       },
       "shipping": {
         "title": "Opsi pengiriman",
-        "costNote": "Biaya pengiriman disepakati antara pembeli dan distributor — tidak ditagihkan saat checkout.",
+        "costNote": "Biaya pengiriman disepakati antara pembeli dan distributor, tidak ditagihkan saat checkout.",
         "costNoteShort": "Biaya pengiriman disepakati antara pembeli dan distributor (tidak termasuk di sini).",
         "tapSchedulePickup": "Ketuk untuk mengatur tanggal & waktu pengambilan",
         "pickupPrefix": "Pickup",
@@ -2265,8 +2273,15 @@
         "title": "Ringkasan pesanan",
         "subtotal": "Subtotal",
         "totalPayment": "Total pembayaran",
-        "total": "Total"
+        "total": "Total",
+        "pendingPrice": "Menunggu harga",
+        "distributorGroupLine": "{{distributor}}: {{count}} item",
+        "multiDistributorShort": "{{count}} distributor",
+        "splitNote": "Pesanan akan dipecah menjadi {{count}} pesanan terpisah",
+        "totalItems_one": "{{count}} item",
+        "totalItems_other": "{{count}} item"
       },
+      "pricingNote": "Harga akan dikonfirmasi oleh {{distributor}}",
       "terms": "Dengan membuat pesanan ini, Anda menyetujui Syarat Layanan dan Kebijakan Privasi kami. Ini adalah transaksi B2B yang tunduk pada syarat dan ketentuan bisnis.",
       "cta": {
         "placing": "Memproses…",

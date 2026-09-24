@@ -1,5 +1,5 @@
 import { graphqlRequest } from './graphql';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL, API_CONFIG } from './config';
 
 export interface OrderItem {
   productId?: string | null;
@@ -127,6 +127,41 @@ class OrdersService {
     token?: string
   ): Promise<{ orders: Order[]; pagination: { page: number; limit: number; totalCount: number; totalPages: number } }> {
     try {
+      // Prefer REST (same as Marketplace-Web) — does not re-apply catalog prices on read.
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/api/mobile/orders?userId=${userId}&page=${page}&limit=${limit}`,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              signal: controller.signal,
+            },
+          );
+          if (response.ok) {
+            const data = await response.json();
+            const orders = (data.orders ?? []) as Order[];
+            return {
+              orders,
+              pagination: {
+                page: data.pagination?.page ?? page,
+                limit: data.pagination?.limit ?? limit,
+                totalCount: data.pagination?.total ?? orders.length,
+                totalPages: data.pagination?.pages ?? 1,
+              },
+            };
+          }
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      } catch {
+        // fall through to GraphQL
+      }
+
       const query = `
         query GetMobileOrders($userId: Int!, $page: Int!, $limit: Int!) {
           mobileOrders(userId: $userId, page: $page, limit: $limit) {
@@ -248,6 +283,31 @@ class OrdersService {
     } catch (error) {
       throw error instanceof Error ? error : new Error('Failed to load orders');
     }
+  }
+
+  /** Buyer order detail — never use Dashboard /api/orders (that syncs catalog into Pending POs). */
+  async getOrderById(
+    orderId: string,
+    userId: number,
+    token?: string
+  ): Promise<Order | null> {
+    // No single-order buyer endpoint. List pages are capped at 100, so walk them.
+    const limit = 100;
+    let page = 1;
+    let totalPages = 1;
+
+    while (page <= totalPages) {
+      const { orders, pagination } = await this.getOrders(userId, page, limit, token);
+      const match = orders.find((order) => order.orderId === orderId);
+      if (match) return match;
+
+      const reportedPages = pagination.totalPages;
+      totalPages = Number.isFinite(reportedPages) && reportedPages > 0 ? reportedPages : page;
+      if (orders.length < limit) break;
+      page += 1;
+    }
+
+    return null;
   }
 
   async createOrder(

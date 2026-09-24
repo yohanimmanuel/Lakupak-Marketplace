@@ -18,7 +18,6 @@ import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, MessageSquareText, ShoppingBag, ChevronDown, Trash2, User as UserIcon, ChevronRight, Store } from 'lucide-react-native';
 import { MarketplaceProduct } from '../services/marketplace';
-import { formatCurrency } from '../utils/currencyUtils';
 import { calculateProductPromotion } from '../utils/promotionUtils';
 import { useCartStore, CartItem } from '../stores/cartStore';
 import { useDataStore } from '../stores/dataStore';
@@ -57,8 +56,6 @@ export default function CartScreen() {
   const setItemsSelected = useCartStore((s) => s.setItemsSelected);
   const selectAll = useCartStore((s) => s.selectAll);
   const getSelectedItems = useCartStore((s) => s.getSelectedItems);
-  const getTotalPrice = useCartStore((s) => s.getTotalPrice);
-  const getTotalSaved = useCartStore((s) => s.getTotalSaved);
   const getSelectedItemCount = useCartStore((s) => s.getSelectedItemCount);
 
   // Data store for products
@@ -236,8 +233,6 @@ export default function CartScreen() {
   };
 
   const selectedItems = getSelectedItems();
-  const totalPrice = getTotalPrice();
-  const totalSaved = getTotalSaved();
   const selectedItemCount = getSelectedItemCount();
 
   const getItemProduct = useCallback(
@@ -316,15 +311,9 @@ export default function CartScreen() {
     </View>
   );
 
-  const renderCartItem = (item: CartItem) => {
+  const renderCartItem = (item: CartItem, distributorName: string) => {
     const marketplaceProduct = getItemProduct(item);
     const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-    const { unitPrice, originalPrice } = resolveVariantPricing(
-      marketplaceProduct,
-      item.variant,
-      marketplaceProduct.sellingPrice || (item.product as { price?: number }).price || 0,
-    );
-    const hasDiscount = originalPrice > unitPrice;
     const promotionGift = calculateProductPromotion(
       marketplaceProduct,
       item.quantity,
@@ -394,19 +383,15 @@ export default function CartScreen() {
                     });
                   }}
                 >
-                  {hasDiscount ? (
-                    <>
-                      <Text style={styles.originalLinePrice}>{formatCurrency(originalPrice)}</Text>
-                      <Text style={styles.price}>{formatCurrency(unitPrice)}</Text>
-                    </>
-                  ) : (
-                    <Text style={styles.price}>{formatCurrency(unitPrice)}</Text>
-                  )}
                   {promotionGift?.freeQty ? (
                     <Text style={styles.promotionGiftText}>
                       +{promotionGift.freeQty} Free pieces
                     </Text>
-                  ) : null}
+                  ) : (
+                    <Text style={styles.priceNote} numberOfLines={2}>
+                      {t('cart.pricingNote', { distributor: distributorName || t('tabsOrders.distributorFallback') })}
+                    </Text>
+                  )}
                 </TouchableOpacity>
 
                 <View style={styles.qtyPickerWrap}>
@@ -460,7 +445,7 @@ export default function CartScreen() {
             <ChevronRight size={16} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
-        {group.items.map((item) => renderCartItem(item))}
+        {group.items.map((item) => renderCartItem(item, group.name))}
       </View>
     );
   };
@@ -598,11 +583,6 @@ export default function CartScreen() {
             )}
             <Text style={styles.selectAllText}>{t('cart.selectAll')}</Text>
           </TouchableOpacity>
-
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalPrice}>{formatCurrency(totalPrice)}</Text>
-            <Text style={styles.totalSaved}>{t('cart.saved', { amount: formatCurrency(totalSaved) })}</Text>
-          </View>
 
           <TouchableOpacity 
             style={[styles.checkoutButton, !canCheckout && styles.checkoutButtonDisabled]}
@@ -894,7 +874,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   checkoutSection: {
-    paddingHorizontal: 10,
+    // Align All checkbox with distributor-card checkboxes
+    // (group marginHorizontal 12 + header paddingHorizontal 12)
+    paddingLeft: 24,
+    paddingRight: 22,
     paddingVertical: 10,
     paddingBottom: 18,
     borderTopWidth: 1,
@@ -916,8 +899,19 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   totalContainer: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flex: 1,
+    paddingHorizontal: 8,
+  },
+  priceNote: {
+    fontSize: 11,
+    color: '#6B7280',
+    lineHeight: 15,
+  },
+  pricingNoteFooter: {
+    fontSize: 11,
+    color: '#6B7280',
+    lineHeight: 15,
   },
   totalPrice: {
     fontSize: 18,

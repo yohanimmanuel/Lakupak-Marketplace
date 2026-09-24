@@ -538,12 +538,9 @@ export default function ProductMarketplace({
           onPress={handleCardPress}
           activeOpacity={0.8}
         >
-          {/* Image Container */}
+            {/* Image Container */}
           <View style={styles.cardImageContainer}>
             {renderCardImageCarousel()}
-            
-            {/* Discount Tag */}
-            {renderCardDiscountTag()}
 
             {/* Promo Badge */}
             {renderCardPromoBadge()}
@@ -563,20 +560,7 @@ export default function ProductMarketplace({
               {safeGetString(product.name, t('product.labels.unknownProduct'))}
             </Text>
 
-            {/* Price */}
-            <View style={styles.cardPriceContainer}>
-              {/* Only show strikethrough if there's a DISCOUNT (not just promotion) */}
-              {getHasActiveOffer() && getOriginalSellingPrice() > 0 && getOfferBadge() !== 'Promotion' && (
-                <Text style={styles.cardOriginalPrice}>
-                  {formatOriginalPriceDisplay()}
-                </Text>
-              )}
-              <Text style={[styles.cardPrice, { color: primaryColor }]}>
-                {formatPriceDisplay()}
-              </Text>
-            </View>
-
-            {/* Promotion pill (Buy X Get Y) - below price */}
+            {/* Promotion pill (Buy X Get Y) — no catalog prices on cards */}
             {showBuyXGetY && product?.promotionDetails ? (
               <View style={styles.cardPromotionInline}>
                 <Gift size={10} color="#9333EA" />
@@ -732,87 +716,13 @@ export default function ProductMarketplace({
         </Text>
       </View>
 
-      {/* Pricing */}
+      {/* Pricing — catalog amounts stay private until distributor Send pricing */}
       <View style={styles.pricingContainer}>
-        <View style={styles.priceRow}>
-          <View style={styles.priceColumn}>
-            {/* Only show strikethrough if there's a DISCOUNT (not just promotion) */}
-            {getHasActiveOffer() && getOriginalSellingPrice() > 0 && getOfferBadge() !== 'Promotion' && (
-              <Text style={styles.originalPrice}>
-                {formatOriginalPriceDisplay()}
-              </Text>
-            )}
-            <View style={styles.currentPriceRow}>
-              <Text style={[styles.currentPrice, { color: primaryColor }]}>
-                {formatPriceDisplay()}
-              </Text>
-              {/* Show offer badge - aligned with current price */}
-              {getHasActiveOffer() && getOfferBadge() && (() => {
-            const originalPrice = getOriginalSellingPrice();
-            const currentPrice = getSellingPrice();
-            
-            // Calculate discount display based on type
-            let discountDisplay = t('product.labels.discount');
-            if (product.discountType === 'fixed' && product.discountValue) {
-              // Show fixed discount amount
-              discountDisplay = `${formatCurrency(product.discountValue)} OFF`;
-            } else {
-              // Calculate percentage discount if we have both prices
-              let discountPercentage = 0;
-              if (originalPrice > 0 && currentPrice > 0 && currentPrice < originalPrice) {
-                discountPercentage = Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
-              }
-              if (discountPercentage > 0) {
-                discountDisplay = `${discountPercentage}% OFF`;
-              }
-            }
-            
-            if (getOfferBadge() === 'All Offers') {
-              // Show both badges
-              return (
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <View style={[styles.discountBadge, { backgroundColor: '#FEE2E2' }]}>
-                    <Text style={[styles.discountText, { color: '#DC2626' }]}>
-                      {discountDisplay}
-                    </Text>
-                  </View>
-                  <View style={[styles.discountBadge, { backgroundColor: '#F3E8FF', flexDirection: 'row', alignItems: 'center', gap: 4 }]}>
-                    <Gift size={10} color="#9333EA" />
-                    <Text style={[styles.discountText, { color: '#9333EA' }]}>
-                      {product?.promotionDetails 
-                        ? t('product.promo.buyXGetY', { buy: product.promotionDetails.minQuantity, free: product.promotionDetails.freeQuantity })
-                        : t('product.labels.promotion')}
-                    </Text>
-                  </View>
-                </View>
-              );
-            }
-            
-            return (
-              <View style={[styles.discountBadge, { 
-                backgroundColor: getOfferBadge() === 'Discount' ? '#FEE2E2' :
-                                getOfferBadge() === 'Promotion' ? '#F3E8FF' : '#DBEAFE',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: getOfferBadge() === 'Promotion' ? 4 : 0
-              }]}>
-                {getOfferBadge() === 'Promotion' && <Gift size={10} color="#9333EA" />}
-                <Text style={[styles.discountText, { 
-                  color: getOfferBadge() === 'Discount' ? '#DC2626' :
-                         getOfferBadge() === 'Promotion' ? '#9333EA' : '#2563EB'
-                }]}>
-                  {getOfferBadge() === 'Discount' 
-                    ? discountDisplay
-                    : getOfferBadge() === 'Promotion' && product?.promotionDetails
-                      ? t('product.promo.buyXGetY', { buy: product.promotionDetails.minQuantity, free: product.promotionDetails.freeQuantity })
-                      : getOfferBadge()}
-                </Text>
-              </View>
-            );
-          })()}
-            </View>
-          </View>
-        </View>
+        <Text style={styles.pricingConfirmedNote}>
+          {t('product.pricingConfirmedBy', {
+            distributor: safeGetString(product.seller?.name, t('product.labels.unknownCompany')),
+          })}
+        </Text>
         <Text style={styles.shippingNote}>{t('product.shipping.costNote')}</Text>
       </View>
 
@@ -1812,6 +1722,12 @@ const styles = StyleSheet.create({
   },
   pricingContainer: {
     marginBottom: 12,
+  },
+  pricingConfirmedNote: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 20,
+    marginBottom: 6,
   },
   priceRow: {
     flexDirection: 'row',

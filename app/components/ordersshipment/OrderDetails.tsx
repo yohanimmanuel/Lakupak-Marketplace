@@ -37,8 +37,15 @@ import {
 } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
+import { ordersService, type Order as MarketplaceOrder } from '../../../services/orders';
 import { websocketService } from '../../../services/websocket';
 import { calculateOrderItemPromotion } from '../../../utils/promotionUtils';
+import {
+  isOrderPricingPending,
+  isLinePricingPending,
+  lineDisplayAmount,
+  moneyAmount,
+} from '../../../utils/orderPricingDisplay';
 import OrderInvoiceModal from './OrderInvoiceModal';
 import { useTranslation } from 'react-i18next';
 import { openWhatsApp } from '../../../utils/whatsapp';
@@ -170,6 +177,40 @@ interface Order {
   sellerUserId?: number | string | null;
 }
 
+/** GraphQL order lists expose distributor info on `seller`, not `user.company`. */
+function mapSellerIntoOrder(orderData: MarketplaceOrder): Order {
+  const current = orderData as Order;
+  const company = current.user?.company;
+  const hasCompany = Boolean(
+    company &&
+      (company.name ||
+        company.companyName ||
+        company.industryType ||
+        company.businessPhone ||
+        company.businessEmail ||
+        company.businessAddress ||
+        company.pickupAddress ||
+        company.logo),
+  );
+  const seller = orderData.seller;
+  if (!seller || hasCompany) return current;
+
+  return {
+    ...current,
+    user: {
+      ...current.user,
+      company: {
+        name: seller.companyName || seller.name || undefined,
+        companyName: seller.companyName || undefined,
+        businessAddress: seller.companyAddress || undefined,
+        businessPhone: seller.companyPhone || undefined,
+        businessEmail: seller.companyEmail || undefined,
+        logo: seller.logo || undefined,
+      },
+    },
+  };
+}
+
 interface OrderDetailsModalProps {
   visible: boolean;
   onClose: () => void;
@@ -195,28 +236,30 @@ export default function OrderDetailsModal() {
 
   const fetchOrderDetails = useCallback(async (orderId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/orders?id=${orderId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.ok) {
-        const orderData: Order = await response.json();
-        
-        // Map variantNameSnapshot to variantName for each order item
+      // Buyer-scoped mobile API only — Dashboard /api/orders syncs catalog into Pending POs.
+      const userId = user?.id;
+      if (!userId) {
+        setOrder(null);
+        return;
+      }
+      const fetched = await ordersService.getOrderById(
+        orderId,
+        userId,
+        token || undefined,
+      );
+      const orderData = fetched ? mapSellerIntoOrder(fetched) : null;
+
+      if (orderData) {
         if (orderData?.orderItems) {
           orderData.orderItems = orderData.orderItems.map((item: OrderItem) => ({
             ...item,
-            variantName: item.variantNameSnapshot || item.variantName
+            variantName: item.variantNameSnapshot || item.variantName,
           }));
         }
-        
+
         setOrder(orderData);
         setIsReceived(orderData?.orderStatus === 'Received');
-        
-        // Fetch MOQ data for all products in the order
+
         if (orderData?.orderItems) {
           await fetchProductMOQs(orderData.orderItems);
         }
@@ -228,7 +271,7 @@ export default function OrderDetailsModal() {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, user?.id]);
 
   useEffect(() => {
     if (params.orderId && typeof params.orderId === 'string') {
@@ -279,7 +322,12 @@ export default function OrderDetailsModal() {
 
     const unsubscribe = websocketService.subscribe((message) => {
       // Check if this order was updated
-      if (message.type === 'order_updated' && message.orderIds?.includes(orderId)) {
+      const offerChanged =
+        message.type === 'offer_updated' || message.type === 'prices_updated';
+      if (
+        offerChanged ||
+        (message.type === 'order_updated' && message.orderIds?.includes(orderId))
+      ) {
         // Fetch updated order details
         fetchOrderDetails(orderId);
       }
@@ -431,6 +479,10 @@ export default function OrderDetailsModal() {
     }).format(amount);
   };
 
+  const pendingPriceLabel = t('ordersFlow.orderDetails.pendingPrice');
+  const formatOrderMoney = (amount: number | null | undefined) =>
+    moneyAmount(amount) > 0 ? formatCurrency(moneyAmount(amount)) : pendingPriceLabel;
+
   const formatShippingOptionLabel = (value: string) => {
     if (!value) return '';
     return value
@@ -548,27 +600,7 @@ export default function OrderDetailsModal() {
 
   const calculateProductTotal = () => {
     const items = Array.isArray(orderData.orderItems) ? orderData.orderItems : [];
-    return items.reduce((total, item) => {
-      let computedTotal: number | null = null;
-
-      if (typeof item.totalPrice === 'number') {
-        computedTotal = item.totalPrice;
-      } else if (typeof item.totalPrice === 'string') {
-        const parsed = parseFloat(item.totalPrice);
-        computedTotal = Number.isFinite(parsed) ? parsed : null;
-      }
-
-      if (computedTotal === null) {
-        const quantity = item.packageQuantity ?? item.quantity ?? 1;
-        const price =
-          (typeof item.pricePerPackage === 'number' ? item.pricePerPackage : Number(item.pricePerPackage)) ||
-          item.unitPrice ||
-          0;
-        computedTotal = Number.isFinite(price * quantity) ? price * quantity : 0;
-      }
-
-      return total + (computedTotal || 0);
-    }, 0);
+    return items.reduce((total, item) => total + lineDisplayAmount(item), 0);
   };
 
 
@@ -765,16 +797,27 @@ export default function OrderDetailsModal() {
   };
 
   const renderProductInfo = () => {
-    // Filter products into discounted and non-discounted groups
-    const discountedItems = orderData.orderItems?.filter((item: OrderItem) => 
-      item.originalPriceSnapshot && 
-      item.originalPriceSnapshot > (item.pricePerPackage || item.unitPrice || 0)
-    ) || [];
-    
-    const nonDiscountedItems = orderData.orderItems?.filter((item: OrderItem) => 
-      !item.originalPriceSnapshot || 
-      item.originalPriceSnapshot <= (item.pricePerPackage || item.unitPrice || 0)
-    ) || [];
+    const pricingPending = isOrderPricingPending(orderData);
+    const items = orderData.orderItems ?? [];
+
+    // Filter products into discounted and non-discounted groups (only when priced)
+    const discountedItems = pricingPending
+      ? []
+      : items.filter(
+          (item: OrderItem) =>
+            item.originalPriceSnapshot &&
+            moneyAmount(item.originalPriceSnapshot) >
+              moneyAmount(item.pricePerPackage || item.unitPrice),
+        );
+
+    const nonDiscountedItems = pricingPending
+      ? items
+      : items.filter(
+          (item: OrderItem) =>
+            !item.originalPriceSnapshot ||
+            moneyAmount(item.originalPriceSnapshot) <=
+              moneyAmount(item.pricePerPackage || item.unitPrice),
+        );
 
     const renderProductItem = (item: OrderItem, index: number) => (
       <View key={item.id || index} style={styles.productRow}>
@@ -798,19 +841,22 @@ export default function OrderDetailsModal() {
           ) : null}
           <View style={styles.priceRow}>
             <View style={styles.priceContainer}>
-              {item.originalPriceSnapshot && 
-                item.originalPriceSnapshot > (item.pricePerPackage || item.unitPrice) ? (
+              {pricingPending || isLinePricingPending(item) ? (
+                <Text style={styles.productPrice}>{pendingPriceLabel}</Text>
+              ) : item.originalPriceSnapshot &&
+                moneyAmount(item.originalPriceSnapshot) >
+                  moneyAmount(item.pricePerPackage || item.unitPrice) ? (
                 <>
                   <Text style={styles.originalPrice}>
-                    {formatCurrency(item.originalPriceSnapshot)}
+                    {formatCurrency(moneyAmount(item.originalPriceSnapshot))}
                   </Text>
                   <Text style={styles.discountedPrice}>
-                    {formatCurrency(item.pricePerPackage || item.unitPrice)}
+                    {formatOrderMoney(lineDisplayAmount(item))}
                   </Text>
                 </>
               ) : (
                 <Text style={styles.productPrice}>
-                  {formatCurrency(item.pricePerPackage || item.unitPrice)}
+                  {formatOrderMoney(lineDisplayAmount(item))}
                 </Text>
               )}
             </View>
@@ -885,7 +931,11 @@ export default function OrderDetailsModal() {
           {orderData.orderItems && orderData.orderItems.length > 0 ? (
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>{t('ordersFlow.orderDetails.sections2.productTotal')}</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(calculateProductTotal())}</Text>
+              <Text style={styles.summaryValue}>
+                {isOrderPricingPending(orderData)
+                  ? pendingPriceLabel
+                  : formatOrderMoney(calculateProductTotal())}
+              </Text>
             </View>
           ) : null}
 
@@ -913,7 +963,11 @@ export default function OrderDetailsModal() {
           
           <View style={styles.orderTotal}>
             <Text style={styles.orderTotalText}>
-              {t('ordersFlow.orderDetails.totals.orderTotal', { amount: formatCurrency(orderData.totalAmount || orderData.total || 0) })}
+              {t('ordersFlow.orderDetails.totals.orderTotal', {
+                amount: isOrderPricingPending(orderData)
+                  ? pendingPriceLabel
+                  : formatOrderMoney(orderData.totalAmount || orderData.total || 0),
+              })}
             </Text>
           </View>
         </View>
