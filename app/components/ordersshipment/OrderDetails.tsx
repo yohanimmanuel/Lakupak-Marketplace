@@ -179,7 +179,7 @@ interface Order {
 
 /** GraphQL order lists expose distributor info on `seller`, not `user.company`. */
 function mapSellerIntoOrder(orderData: MarketplaceOrder): Order {
-  const current = orderData as Order;
+  const current = orderData as unknown as Order;
   const company = current.user?.company;
   const hasCompany = Boolean(
     company &&
@@ -321,14 +321,22 @@ export default function OrderDetailsModal() {
     if (!orderId || typeof orderId !== 'string') return;
 
     const unsubscribe = websocketService.subscribe((message) => {
-      // Check if this order was updated
-      const offerChanged =
-        message.type === 'offer_updated' || message.type === 'prices_updated';
-      if (
-        offerChanged ||
-        (message.type === 'order_updated' && message.orderIds?.includes(orderId))
-      ) {
-        // Fetch updated order details
+      if (message.type === 'order_updated' && message.orderIds?.includes(orderId)) {
+        fetchOrderDetails(orderId);
+        return;
+      }
+      if (message.type !== 'notification' || message.notification?.type !== 'order') return;
+      const data = message.notification.data;
+      const notifiedOrderId = typeof data?.orderId === 'string' ? data.orderId : '';
+      const event = typeof data?.event === 'string' ? data.event : '';
+      const status = typeof data?.orderStatus === 'string' ? data.orderStatus.toLowerCase() : '';
+      const isPricingRelease =
+        notifiedOrderId === orderId &&
+        (event === 'pricing_sent' ||
+          event === 'pricing_updated' ||
+          status === 'pricing_sent' ||
+          status === 'pricing_updated');
+      if (isPricingRelease) {
         fetchOrderDetails(orderId);
       }
     });
