@@ -237,7 +237,7 @@ export default function OrderDetailsModal() {
   const fetchGeneration = useRef(0);
   const storedOrders = useDataStore((state) => state.orders);
 
-  const applyOrder = useCallback((fetched: { seller?: MarketplaceOrder['seller']; orderItems?: OrderItem[] }) => {
+  const applyOrder = useCallback((fetched: { seller?: MarketplaceOrder['seller'] }) => {
     fetchGeneration.current += 1;
     const orderData = mapSellerIntoOrder(fetched);
     if (orderData.orderItems) {
@@ -352,7 +352,7 @@ export default function OrderDetailsModal() {
     if (!orderId || typeof orderId !== 'string') return;
     const match = storedOrders.find((row) => row.orderId === orderId);
     if (!match) return;
-    applyOrder(match as { seller?: MarketplaceOrder['seller']; orderItems?: OrderItem[] });
+    applyOrder(match);
   }, [storedOrders, params.orderId, applyOrder]);
 
   const fetchProductMOQs = async (orderItems: OrderItem[]) => {
