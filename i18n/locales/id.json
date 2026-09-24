@@ -593,7 +593,11 @@
       "deliveryFailedTitle": "Pengiriman gagal",
       "deliveryFailedBody": "Maaf. Pengiriman pesanan {{orderId}} tidak dapat diselesaikan. Silakan hubungi dukungan.",
       "fleetAssignedTitle": "Armada Ditugaskan",
-      "fleetAssignedBody": "Pesanan {{orderId}} telah ditugaskan ke salah satu armada distributor. Lacak pengiriman untuk info terbaru."
+      "fleetAssignedBody": "Pesanan {{orderId}} telah ditugaskan ke salah satu armada distributor. Lacak pengiriman untuk info terbaru.",
+      "pricingAwaitingTitle": "Menunggu Harga",
+      "pricingAwaitingBody": "Purchase order {{orderId}} menunggu distributor mengonfirmasi harga.",
+      "pricingReadyTitle": "Harga Pesanan Siap",
+      "pricingReadyBody": "Distributor telah mengirim harga untuk pesanan {{orderId}}. Buka pesanan untuk melihat detail harga."
     }
   },
   "latestUpdatesDetail": {

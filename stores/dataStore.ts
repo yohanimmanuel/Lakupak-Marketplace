@@ -11,6 +11,7 @@ import { useAuthStore } from './authStore'
 import { pushNotificationService } from '../services/pushNotifications'
 import { supabaseRealtimeService } from '../services/supabaseRealtime'
 import { usePlatformAnnouncementsRealtimeStore } from './platformAnnouncementsRealtimeStore'
+import { getPricingSentNotificationStrings } from '../utils/orderNotificationI18n'
 
 export interface MarketplaceOrderItem {
   productId?: string | null
@@ -576,16 +577,33 @@ export const useDataStore = create<DataState>()(
                 if (type === 'order') {
                   const orderId = data?.orderId as string
                   const orderStatus = data?.orderStatus as string
-                  if (orderId && orderStatus) {
+                  const event = typeof data?.event === 'string' ? data.event : undefined
+                  const isPricingSent =
+                    event === 'pricing_sent' ||
+                    (typeof orderStatus === 'string' && orderStatus.toLowerCase() === 'pricing_sent')
+
+                  if (orderId && (orderStatus || isPricingSent)) {
+                    const statusForShow = isPricingSent ? 'pricing_sent' : orderStatus
+                    let titleToUse = title || undefined
+                    let bodyToUse = body || undefined
+                    if (isPricingSent && (!titleToUse || !bodyToUse)) {
+                      const pricingCopy = getPricingSentNotificationStrings(orderId)
+                      titleToUse = titleToUse || pricingCopy.title
+                      bodyToUse = bodyToUse || pricingCopy.body
+                    }
                     // Forward the server-supplied title/body so non-status events
-                    // (e.g. return/refund submitted) don't fall through to the generic
-                    // status copy in `getBuyerOrderNotificationStrings`.
+                    // (e.g. return/refund submitted, pricing_sent) don't fall through
+                    // to the generic status copy in `getBuyerOrderNotificationStrings`.
                     pushNotificationService.showOrderNotificationInApp(
                       orderId,
-                      orderStatus,
-                      title || undefined,
-                      body || undefined,
+                      statusForShow,
+                      titleToUse,
+                      bodyToUse,
                     )
+                    // Pricing does not change orderStatus, so force-refresh totals for this event only.
+                    if (isPricingSent) {
+                      void get().loadOrdersData(true)
+                    }
                   }
                 } else {
                   const base =

@@ -41,62 +41,80 @@ export default function OrderNotificationsScreen() {
       return;
     }
 
+    let cancelled = false;
+    const userId = authUser.id;
     const dataStore = useDataStore.getState();
     const cachedUserId = dataStore.user?.id;
-    const validOrders = cachedUserId === authUser.id ? orders : [];
+    const validOrders = cachedUserId === userId ? orders : [];
 
-    setOrderNotifications((prev) => {
-      const previousMap = new Map(prev.map((notification) => [notification.id, notification]));
-      const derived = validOrders.map((order) => {
-        const { title, message } = getOrderPreviewStrings(
-          {
-            orderId: order.orderId,
-            orderStatus: order.orderStatus,
-            paymentStatus: order.paymentStatus,
-            returnItemsReceivedAt: order.returnItemsReceivedAt,
-            returnRequests: order.returnRequests,
-            trackingNumber: order.trackingNumber,
-            assignedLogistics: order.assignedLogistics,
-          },
-          t,
-        );
+    void (async () => {
+      const storedOrder = await NotificationService.getStoredOrderNotifications(userId);
+      if (cancelled) return;
 
-        let timestampSource = order.createdAt || order.orderDate;
-        if (!timestampSource) {
-          const orderKey = order.orderId ?? String(order.id ?? '');
-          if (orderKey && !warnedOrderIds.has(orderKey)) {
-            warnedOrderIds.add(orderKey);
+      setOrderNotifications((prev) => {
+        const previousMap = new Map(prev.map((notification) => [notification.id, notification]));
+        const derived = validOrders.map((order) => {
+          const { title, message } = getOrderPreviewStrings(
+            {
+              orderId: order.orderId,
+              orderStatus: order.orderStatus,
+              paymentStatus: order.paymentStatus,
+              totalAmount: order.totalAmount,
+              returnItemsReceivedAt: order.returnItemsReceivedAt,
+              returnRequests: order.returnRequests,
+              trackingNumber: order.trackingNumber,
+              assignedLogistics: order.assignedLogistics,
+            },
+            t,
+          );
+
+          let timestampSource = order.createdAt || order.orderDate;
+          if (!timestampSource) {
+            const orderKey = order.orderId ?? String(order.id ?? '');
+            if (orderKey && !warnedOrderIds.has(orderKey)) {
+              warnedOrderIds.add(orderKey);
+            }
+            timestampSource = MISSING_ORDER_TIMESTAMP_FALLBACK;
           }
-          timestampSource = MISSING_ORDER_TIMESTAMP_FALLBACK;
-        }
-        const normalizedStatus = (order.orderStatus || '').toLowerCase() as Notification['status'];
+          const normalizedStatus = (order.orderStatus || '').toLowerCase() as Notification['status'];
 
-        const notificationKey = order.orderId ?? order.id;
-        return {
-          id: `order_${notificationKey}`,
-          type: 'order' as const,
-          title,
-          message,
-          timestamp: new Date(timestampSource)
-            .toLocaleString(locale, {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: false,
-            })
-            .replace(',', ''),
-          isRead: previousMap.get(`order_${order.orderId}`)?.isRead ?? false,
-          orderId: order.orderId,
-          status: normalizedStatus,
-          productImage: order.orderItems?.[0]?.images?.[0],
-        } as Notification;
+          const notificationKey = order.orderId ?? order.id;
+          return {
+            id: `order_${notificationKey}`,
+            type: 'order' as const,
+            title,
+            message,
+            timestamp: new Date(timestampSource)
+              .toLocaleString(locale, {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+              })
+              .replace(',', ''),
+            isRead: previousMap.get(`order_${order.orderId}`)?.isRead ?? false,
+            orderId: order.orderId,
+            status: normalizedStatus,
+            productImage: order.orderItems?.[0]?.images?.[0],
+          } as Notification;
+        });
+
+        return NotificationService.mergeDerivedWithStoredOrderNotifications(
+          derived,
+          storedOrder.map((n) => ({
+            ...n,
+            isRead: previousMap.get(n.id)?.isRead ?? n.isRead,
+          })),
+        );
       });
+      setLoading(false);
+    })();
 
-      return derived;
-    });
-    setLoading(false);
+    return () => {
+      cancelled = true;
+    };
   }, [orders, authUser?.id, locale, t]);
 
   const markAsRead = useCallback(

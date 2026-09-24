@@ -36,6 +36,26 @@ export class NotificationService {
     }
   }
 
+  /** Stored order events (e.g. pricing_sent) for Order updates — not Alerts. */
+  static async getStoredOrderNotifications(userId: number | null = null): Promise<Notification[]> {
+    const all = await this.getNotifications(userId);
+    return all.filter((n) => n.type === 'order');
+  }
+
+  /**
+   * Merge derived order-status rows with persisted order events.
+   * Stored rows keep their event timestamps; ids already in `derived` are skipped.
+   */
+  static mergeDerivedWithStoredOrderNotifications(
+    derived: Notification[],
+    storedOrder: Notification[],
+  ): Notification[] {
+    const seenIds = new Set(derived.map((n) => n.id));
+    const extras = storedOrder.filter((n) => n.type === 'order' && !seenIds.has(n.id));
+    // Stored list is newest-first (unshift on write); keep that order ahead of derived.
+    return [...extras, ...derived];
+  }
+
   // Save notifications for a specific user
   static async saveNotifications(notifications: Notification[], userId: number | null = null): Promise<void> {
     try {
@@ -182,6 +202,28 @@ export class NotificationService {
         }, userId);
       }
     } catch (error) {
+      // Handle error silently
+    }
+  }
+
+  /** Distributor sent PO pricing — buyer should review amounts on the order. */
+  static async createPricingSentNotification(
+    orderId: string,
+    userId: number | null = null,
+    title?: string,
+    message?: string,
+  ): Promise<void> {
+    try {
+      await this.addNotification({
+        type: 'order',
+        title: title || 'Order Pricing Ready',
+        message:
+          message ||
+          `Your distributor sent pricing for order ${orderId}. Open the order to review the amounts.`,
+        orderId,
+        status: 'pending',
+      }, userId);
+    } catch {
       // Handle error silently
     }
   }

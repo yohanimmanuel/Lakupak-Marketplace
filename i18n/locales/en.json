@@ -593,7 +593,11 @@
       "deliveryFailedTitle": "Delivery Failed",
       "deliveryFailedBody": "We're sorry. Delivery of your order {{orderId}} could not be completed. Please contact support.",
       "fleetAssignedTitle": "Fleet Assigned",
-      "fleetAssignedBody": "Your order {{orderId}} has been assigned to a distributor fleet. Track your delivery for updates."
+      "fleetAssignedBody": "Your order {{orderId}} has been assigned to a distributor fleet. Track your delivery for updates.",
+      "pricingAwaitingTitle": "Awaiting Pricing",
+      "pricingAwaitingBody": "Your purchase order {{orderId}} is waiting for the distributor to confirm pricing.",
+      "pricingReadyTitle": "Order Pricing Ready",
+      "pricingReadyBody": "Your distributor sent pricing for order {{orderId}}. Open the order to review the amounts."
     }
   },
   "latestUpdatesDetail": {

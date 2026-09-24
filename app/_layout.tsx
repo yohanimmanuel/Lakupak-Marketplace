@@ -244,17 +244,29 @@ function RootLayoutNav() {
       const isRemote = trigger && trigger.type === 'push';
       if (!isRemote) return;
       const content = notification.request.content;
-      const data = content.data as { type?: string; orderId?: string; orderStatus?: string; paymentStatus?: string } | undefined;
+      const data = content.data as {
+        type?: string;
+        orderId?: string;
+        orderStatus?: string;
+        paymentStatus?: string;
+        event?: string;
+      } | undefined;
       if (data?.type === 'order' && data?.orderId) {
+        const isPricingSent =
+          data.event === 'pricing_sent' ||
+          (data.orderStatus || '').toLowerCase() === 'pricing_sent';
         // Forward the server-supplied title/body so non-status pushes (e.g. return-refund
-        // submitted) don't get re-derived to the generic "Order <Status>" copy from
-        // `getBuyerOrderNotificationStrings`, which only knows order-status transitions.
+        // submitted, pricing_sent) don't get re-derived to the generic "Order <Status>"
+        // copy from `getBuyerOrderNotificationStrings`.
         pushNotificationService.showOrderNotificationInApp(
           String(data.orderId),
-          data.orderStatus ?? '',
+          isPricingSent ? 'pricing_sent' : (data.orderStatus ?? ''),
           content.title ?? undefined,
           content.body ?? undefined,
         );
+        if (isPricingSent) {
+          void useDataStore.getState().loadOrdersData(true);
+        }
         return;
       }
 

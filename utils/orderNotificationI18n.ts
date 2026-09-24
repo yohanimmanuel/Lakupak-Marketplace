@@ -1,8 +1,7 @@
 import type { TFunction } from 'i18next';
 import i18n from '../i18n';
 
-/**
- * Local notification + OS banner copy for an order status (buyer marketplace).
+/** Local notification + OS banner copy for an order status (buyer marketplace).
  * Matches `orderUpdates.status.*` in locales — keep aligned with server `translateMarketplaceBuyerOrderStatus` meanings.
  */
 export function getBuyerOrderNotificationStrings(
@@ -63,6 +62,8 @@ export function getBuyerOrderNotificationStrings(
         title: title('orderUpdates.status.deliveryFailedTitle'),
         body: body('orderUpdates.status.deliveryFailedBody', { orderId }),
       };
+    case 'pricing_sent':
+      return getPricingSentNotificationStrings(orderId);
     default:
       return {
         title: title('orderUpdates.status.orderUpdatedTitle'),
@@ -75,11 +76,20 @@ export type OrderPreviewInput = {
   orderId: string;
   orderStatus?: string;
   paymentStatus?: string;
+  totalAmount?: number | null;
   returnItemsReceivedAt?: string | null;
   returnRequests?: Array<{ status?: string }>;
   trackingNumber?: string | null;
   assignedLogistics?: string | null;
 };
+
+/** Distributor sent confirmed PO pricing — buyer can review amounts on the order. */
+export function getPricingSentNotificationStrings(orderId: string): { title: string; body: string } {
+  return {
+    title: i18n.t('orderUpdates.status.pricingReadyTitle'),
+    body: i18n.t('orderUpdates.status.pricingReadyBody', { orderId }),
+  };
+}
 
 /** Local notification copy when a distributor fleet is assigned to the buyer's order. */
 export function getFleetAssignedNotificationStrings(orderId: string): { title: string; body: string } {
@@ -102,10 +112,20 @@ export function getOrderPreviewStrings(order: OrderPreviewInput, t: TFunction): 
     };
   }
 
+  if (order.orderStatus === 'Pending') {
+    const total = Number(order.totalAmount ?? 0);
+    if (!(total > 0)) {
+      return {
+        title: t('orderUpdates.status.pricingAwaitingTitle'),
+        message: t('orderUpdates.status.pricingAwaitingBody', { orderId }),
+      };
+    }
+  }
+
   if (order.paymentStatus === 'Unpaid' && order.orderStatus === 'Pending') {
     return {
-      title: t('orderUpdates.status.paymentRequiredTitle'),
-      message: t('orderUpdates.status.paymentRequiredBody', { orderId }),
+      title: t('orderUpdates.status.pricingReadyTitle'),
+      message: t('orderUpdates.status.pricingReadyBody', { orderId }),
     };
   }
 
