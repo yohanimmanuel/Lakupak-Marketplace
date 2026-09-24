@@ -252,19 +252,27 @@ function RootLayoutNav() {
         event?: string;
       } | undefined;
       if (data?.type === 'order' && data?.orderId) {
-        const isPricingSent =
+        const isPricingEvent =
           data.event === 'pricing_sent' ||
-          (data.orderStatus || '').toLowerCase() === 'pricing_sent';
+          data.event === 'pricing_updated' ||
+          ['pricing_sent', 'pricing_updated'].includes(
+            (data.orderStatus || '').toLowerCase(),
+          );
+        const pricingStatus =
+          data.event === 'pricing_updated' ||
+          (data.orderStatus || '').toLowerCase() === 'pricing_updated'
+            ? 'pricing_updated'
+            : 'pricing_sent';
         // Forward the server-supplied title/body so non-status pushes (e.g. return-refund
-        // submitted, pricing_sent) don't get re-derived to the generic "Order <Status>"
-        // copy from `getBuyerOrderNotificationStrings`.
+        // submitted, pricing_sent / pricing_updated) don't get re-derived to the generic
+        // "Order <Status>" copy from `getBuyerOrderNotificationStrings`.
         pushNotificationService.showOrderNotificationInApp(
           String(data.orderId),
-          isPricingSent ? 'pricing_sent' : (data.orderStatus ?? ''),
+          isPricingEvent ? pricingStatus : (data.orderStatus ?? ''),
           content.title ?? undefined,
           content.body ?? undefined,
         );
-        if (isPricingSent) {
+        if (isPricingEvent) {
           void useDataStore.getState().loadOrdersData(true);
         }
         return;

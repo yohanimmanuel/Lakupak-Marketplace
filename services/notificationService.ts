@@ -206,7 +206,7 @@ export class NotificationService {
     }
   }
 
-  /** Distributor sent PO pricing — buyer should review amounts on the order. */
+  /** Distributor sent or updated PO pricing — buyer should review amounts on the order. */
   static async createPricingSentNotification(
     orderId: string,
     userId: number | null = null,

@@ -597,7 +597,9 @@
       "pricingAwaitingTitle": "Menunggu Harga",
       "pricingAwaitingBody": "Purchase order {{orderId}} menunggu distributor mengonfirmasi harga.",
       "pricingReadyTitle": "Harga Pesanan Siap",
-      "pricingReadyBody": "Distributor telah mengirim harga untuk pesanan {{orderId}}. Buka pesanan untuk melihat detail harga."
+      "pricingReadyBody": "Distributor telah mengirim harga untuk pesanan {{orderId}}. Buka pesanan untuk melihat detail harga.",
+      "pricingUpdatedTitle": "Pembaruan Harga Pesanan",
+      "pricingUpdatedBody": "Distributor telah memperbarui harga untuk pesanan {{orderId}}. Buka pesanan untuk meninjau jumlah terbaru."
     }
   },
   "latestUpdatesDetail": {

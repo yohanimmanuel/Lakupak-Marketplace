@@ -597,7 +597,9 @@
       "pricingAwaitingTitle": "Awaiting Pricing",
       "pricingAwaitingBody": "Your purchase order {{orderId}} is waiting for the distributor to confirm pricing.",
       "pricingReadyTitle": "Order Pricing Ready",
-      "pricingReadyBody": "Your distributor sent pricing for order {{orderId}}. Open the order to review the amounts."
+      "pricingReadyBody": "Your distributor sent pricing for order {{orderId}}. Open the order to review the amounts.",
+      "pricingUpdatedTitle": "Order Pricing Update",
+      "pricingUpdatedBody": "Your distributor updated pricing for order {{orderId}}. Open the order to review the latest amounts."
     }
   },
   "latestUpdatesDetail": {

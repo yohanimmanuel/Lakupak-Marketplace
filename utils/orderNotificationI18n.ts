@@ -64,6 +64,8 @@ export function getBuyerOrderNotificationStrings(
       };
     case 'pricing_sent':
       return getPricingSentNotificationStrings(orderId);
+    case 'pricing_updated':
+      return getPricingUpdatedNotificationStrings(orderId);
     default:
       return {
         title: title('orderUpdates.status.orderUpdatedTitle'),
@@ -88,6 +90,14 @@ export function getPricingSentNotificationStrings(orderId: string): { title: str
   return {
     title: i18n.t('orderUpdates.status.pricingReadyTitle'),
     body: i18n.t('orderUpdates.status.pricingReadyBody', { orderId }),
+  };
+}
+
+/** Distributor re-sent / corrected PO pricing after the first notify. */
+export function getPricingUpdatedNotificationStrings(orderId: string): { title: string; body: string } {
+  return {
+    title: i18n.t('orderUpdates.status.pricingUpdatedTitle'),
+    body: i18n.t('orderUpdates.status.pricingUpdatedBody', { orderId }),
   };
 }
 

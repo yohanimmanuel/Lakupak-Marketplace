@@ -16,6 +16,7 @@ import {
 import {
   getBuyerOrderNotificationStrings,
   getPricingSentNotificationStrings,
+  getPricingUpdatedNotificationStrings,
 } from '../utils/orderNotificationI18n';
 import { NotificationService } from './notificationService';
 import { useAuthStore } from '../stores/authStore';
@@ -366,6 +367,8 @@ class PushNotificationService {
   ): Promise<void> {
     const statusKey = (orderStatus || 'unknown').toLowerCase();
     const isPricingSent = statusKey === 'pricing_sent';
+    const isPricingUpdated = statusKey === 'pricing_updated';
+    const isPricingEvent = isPricingSent || isPricingUpdated;
 
     const { title, body } =
       customTitle != null &&
@@ -373,9 +376,11 @@ class PushNotificationService {
       customMessage != null &&
       customMessage !== ''
         ? { title: customTitle, body: customMessage }
-        : isPricingSent
-          ? getPricingSentNotificationStrings(orderId)
-          : getBuyerOrderNotificationStrings(orderId, orderStatus);
+        : isPricingUpdated
+          ? getPricingUpdatedNotificationStrings(orderId)
+          : isPricingSent
+            ? getPricingSentNotificationStrings(orderId)
+            : getBuyerOrderNotificationStrings(orderId, orderStatus);
 
     // Dedup includes the title so non-status events (e.g. return/refund submitted) aren't
     // suppressed by a recent status banner sharing the same `(orderId, orderStatus)` pair.
@@ -392,7 +397,7 @@ class PushNotificationService {
     }
     this.lastOrderNotificationShown = { orderId, orderStatus: statusKey, titleKey, at: now };
 
-    if (isPricingSent) {
+    if (isPricingEvent) {
       const userId = useAuthStore.getState().user?.id ?? null;
       await NotificationService.createPricingSentNotification(orderId, userId, title, body);
     }
@@ -400,8 +405,8 @@ class PushNotificationService {
     await this.scheduleLocalNotification(title, body, {
       type: 'order',
       orderId,
-      orderStatus: isPricingSent ? 'pricing_sent' : orderStatus,
-      ...(isPricingSent ? { event: 'pricing_sent' } : {}),
+      orderStatus: isPricingEvent ? statusKey : orderStatus,
+      ...(isPricingEvent ? { event: statusKey } : {}),
     }, 'orders');
   }
 

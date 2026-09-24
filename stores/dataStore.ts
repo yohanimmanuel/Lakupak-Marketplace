@@ -11,7 +11,7 @@ import { useAuthStore } from './authStore'
 import { pushNotificationService } from '../services/pushNotifications'
 import { supabaseRealtimeService } from '../services/supabaseRealtime'
 import { usePlatformAnnouncementsRealtimeStore } from './platformAnnouncementsRealtimeStore'
-import { getPricingSentNotificationStrings } from '../utils/orderNotificationI18n'
+import { getPricingSentNotificationStrings, getPricingUpdatedNotificationStrings } from '../utils/orderNotificationI18n'
 
 export interface MarketplaceOrderItem {
   productId?: string | null
@@ -328,16 +328,30 @@ export const useDataStore = create<DataState>()(
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to load orders'
-          const { ordersLastUpdated: previousUpdated } = get()
+          const state = get()
+          const previousUpdated = state.ordersLastUpdated
+          const authUserId = useAuthStore.getState().user?.id
+          // Pricing / push force-refresh must not wipe a good cache on transient errors.
+          const keepCachedOrders =
+            forceRefresh &&
+            state.orders.length > 0 &&
+            authUserId != null &&
+            state.user?.id === authUserId
+
           set({
             isOrdersLoading: false,
             ordersLoadError: message,
-            ...(forceRefresh
-              ? { orders: [], ordersLastUpdated: null }
-              : {
+            ...(keepCachedOrders
+              ? {
                   ordersLastUpdated:
                     previousUpdated != null ? previousUpdated - CACHE_DURATION : null,
-                }),
+                }
+              : forceRefresh
+                ? { orders: [], ordersLastUpdated: null }
+                : {
+                    ordersLastUpdated:
+                      previousUpdated != null ? previousUpdated - CACHE_DURATION : null,
+                  }),
           })
         }
       },
@@ -578,16 +592,27 @@ export const useDataStore = create<DataState>()(
                   const orderId = data?.orderId as string
                   const orderStatus = data?.orderStatus as string
                   const event = typeof data?.event === 'string' ? data.event : undefined
-                  const isPricingSent =
+                  const isPricingEvent =
                     event === 'pricing_sent' ||
-                    (typeof orderStatus === 'string' && orderStatus.toLowerCase() === 'pricing_sent')
+                    event === 'pricing_updated' ||
+                    (typeof orderStatus === 'string' &&
+                      ['pricing_sent', 'pricing_updated'].includes(orderStatus.toLowerCase()))
 
-                  if (orderId && (orderStatus || isPricingSent)) {
-                    const statusForShow = isPricingSent ? 'pricing_sent' : orderStatus
+                  if (orderId && (orderStatus || isPricingEvent)) {
+                    const statusKey =
+                      typeof orderStatus === 'string' ? orderStatus.toLowerCase() : ''
+                    const statusForShow = isPricingEvent
+                      ? event === 'pricing_updated' || statusKey === 'pricing_updated'
+                        ? 'pricing_updated'
+                        : 'pricing_sent'
+                      : orderStatus
                     let titleToUse = title || undefined
                     let bodyToUse = body || undefined
-                    if (isPricingSent && (!titleToUse || !bodyToUse)) {
-                      const pricingCopy = getPricingSentNotificationStrings(orderId)
+                    if (isPricingEvent && (!titleToUse || !bodyToUse)) {
+                      const pricingCopy =
+                        statusForShow === 'pricing_updated'
+                          ? getPricingUpdatedNotificationStrings(orderId)
+                          : getPricingSentNotificationStrings(orderId)
                       titleToUse = titleToUse || pricingCopy.title
                       bodyToUse = bodyToUse || pricingCopy.body
                     }
@@ -601,7 +626,7 @@ export const useDataStore = create<DataState>()(
                       bodyToUse,
                     )
                     // Pricing does not change orderStatus, so force-refresh totals for this event only.
-                    if (isPricingSent) {
+                    if (isPricingEvent) {
                       void get().loadOrdersData(true)
                     }
                   }
