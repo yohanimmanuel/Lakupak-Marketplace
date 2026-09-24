@@ -352,7 +352,7 @@ export default function OrderDetailsModal() {
     if (!orderId || typeof orderId !== 'string') return;
     const match = storedOrders.find((row) => row.orderId === orderId);
     if (!match) return;
-    applyOrder(match);
+    applyOrder(match as { seller?: MarketplaceOrder['seller']; orderItems?: OrderItem[] });
   }, [storedOrders, params.orderId, applyOrder]);
 
   const fetchProductMOQs = async (orderItems: OrderItem[]) => {
