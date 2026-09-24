@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -36,6 +36,7 @@ import {
   ArrowLeft,
 } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
+import { useDataStore } from '../../../stores/dataStore';
 import { API_BASE_URL } from '../../../services/config';
 import { ordersService, type Order as MarketplaceOrder } from '../../../services/orders';
 import { websocketService } from '../../../services/websocket';
@@ -178,7 +179,7 @@ interface Order {
 }
 
 /** GraphQL order lists expose distributor info on `seller`, not `user.company`. */
-function mapSellerIntoOrder(orderData: MarketplaceOrder): Order {
+function mapSellerIntoOrder(orderData: { seller?: MarketplaceOrder['seller'] }): Order {
   const current = orderData as unknown as Order;
   const company = current.user?.company;
   const hasCompany = Boolean(
@@ -233,13 +234,33 @@ export default function OrderDetailsModal() {
   const [showAllOrderInfo, setShowAllOrderInfo] = useState(false);
   const [productMOQs, setProductMOQs] = useState<Record<string, number | null>>({});
   const [invoiceModalVisible, setInvoiceModalVisible] = useState(false);
+  const fetchGeneration = useRef(0);
+  const storedOrders = useDataStore((state) => state.orders);
+
+  const applyOrder = useCallback((fetched: { seller?: MarketplaceOrder['seller']; orderItems?: OrderItem[] }) => {
+    fetchGeneration.current += 1;
+    const orderData = mapSellerIntoOrder(fetched);
+    if (orderData.orderItems) {
+      orderData.orderItems = orderData.orderItems.map((item: OrderItem) => ({
+        ...item,
+        variantName: item.variantNameSnapshot || item.variantName,
+      }));
+    }
+    setOrder(orderData);
+    setIsReceived(orderData.orderStatus === 'Received');
+    setIsLoading(false);
+    if (orderData.orderItems) {
+      void fetchProductMOQs(orderData.orderItems);
+    }
+  }, []);
 
   const fetchOrderDetails = useCallback(async (orderId: string) => {
+    const generation = ++fetchGeneration.current;
     try {
       // Buyer-scoped mobile API only — Dashboard /api/orders syncs catalog into Pending POs.
       const userId = user?.id;
       if (!userId) {
-        setOrder(null);
+        if (generation === fetchGeneration.current) setOrder(null);
         return;
       }
       const fetched = await ordersService.getOrderById(
@@ -247,31 +268,19 @@ export default function OrderDetailsModal() {
         userId,
         token || undefined,
       );
-      const orderData = fetched ? mapSellerIntoOrder(fetched) : null;
+      if (generation !== fetchGeneration.current) return;
 
-      if (orderData) {
-        if (orderData?.orderItems) {
-          orderData.orderItems = orderData.orderItems.map((item: OrderItem) => ({
-            ...item,
-            variantName: item.variantNameSnapshot || item.variantName,
-          }));
-        }
-
-        setOrder(orderData);
-        setIsReceived(orderData?.orderStatus === 'Received');
-
-        if (orderData?.orderItems) {
-          await fetchProductMOQs(orderData.orderItems);
-        }
+      if (fetched) {
+        applyOrder(fetched);
       } else {
         setOrder(null);
       }
     } catch (error) {
-      setOrder(null);
+      if (generation === fetchGeneration.current) setOrder(null);
     } finally {
-      setIsLoading(false);
+      if (generation === fetchGeneration.current) setIsLoading(false);
     }
-  }, [token, user?.id]);
+  }, [token, user?.id, applyOrder]);
 
   useEffect(() => {
     if (params.orderId && typeof params.orderId === 'string') {
@@ -315,36 +324,36 @@ export default function OrderDetailsModal() {
     };
   }, [token, params.orderId]);
 
-  // Subscribe to WebSocket for real-time order updates
+  // Same socket as the orders tab: pricing send, status, and the refreshed order list.
   useEffect(() => {
     const orderId = params.orderId;
     if (!orderId || typeof orderId !== 'string') return;
+    if (token) websocketService.connect(token);
 
     const unsubscribe = websocketService.subscribe((message) => {
       if (message.type === 'order_updated' && message.orderIds?.includes(orderId)) {
-        fetchOrderDetails(orderId);
+        void fetchOrderDetails(orderId);
         return;
       }
       if (message.type !== 'notification' || message.notification?.type !== 'order') return;
       const data = message.notification.data;
       const notifiedOrderId = typeof data?.orderId === 'string' ? data.orderId : '';
-      const event = typeof data?.event === 'string' ? data.event : '';
-      const status = typeof data?.orderStatus === 'string' ? data.orderStatus.toLowerCase() : '';
-      const isPricingRelease =
-        notifiedOrderId === orderId &&
-        (event === 'pricing_sent' ||
-          event === 'pricing_updated' ||
-          status === 'pricing_sent' ||
-          status === 'pricing_updated');
-      if (isPricingRelease) {
-        fetchOrderDetails(orderId);
-      }
+      if (notifiedOrderId !== orderId) return;
+      void fetchOrderDetails(orderId);
     });
 
     return () => {
       unsubscribe();
     };
-  }, [params.orderId, fetchOrderDetails]);
+  }, [params.orderId, fetchOrderDetails, token]);
+
+  useEffect(() => {
+    const orderId = params.orderId;
+    if (!orderId || typeof orderId !== 'string') return;
+    const match = storedOrders.find((row) => row.orderId === orderId);
+    if (!match) return;
+    applyOrder(match as { seller?: MarketplaceOrder['seller']; orderItems?: OrderItem[] });
+  }, [storedOrders, params.orderId, applyOrder]);
 
   const fetchProductMOQs = async (orderItems: OrderItem[]) => {
     try {
