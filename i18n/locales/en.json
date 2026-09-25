@@ -128,7 +128,7 @@
           },
           "promotions": {
             "label": "Promotions",
-            "description": "Vouchers, campaigns, and promotional messages"
+            "description": "Vouchers and promotional messages"
           }
         },
         "systemNote": "Note: You may still receive notifications from your device system settings."

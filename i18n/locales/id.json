@@ -128,7 +128,7 @@
           },
           "promotions": {
             "label": "Promosi",
-            "description": "Voucher, kampanye, dan pesan promosi"
+            "description": "Voucher dan pesan promosi"
           }
         },
         "systemNote": "Catatan: Anda mungkin masih menerima notifikasi dari pengaturan sistem perangkat."
