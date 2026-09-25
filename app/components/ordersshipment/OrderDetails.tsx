@@ -41,6 +41,7 @@ import { API_BASE_URL } from '../../../services/config';
 import { ordersService, type Order as MarketplaceOrder } from '../../../services/orders';
 import { websocketService } from '../../../services/websocket';
 import { calculateOrderItemPromotion } from '../../../utils/promotionUtils';
+import { getShownOrderDiscount } from '../../../utils/orderItemDisplay';
 import {
   isOrderPricingPending,
   isLinePricingPending,
@@ -81,6 +82,8 @@ interface OrderItem {
   };
   promotionDetailsSnapshot?: string;
   originalPriceSnapshot?: number;
+  discountPercentage?: number | null;
+  discountAmount?: number | null;
 }
 
 interface ShippingInfo {
@@ -835,7 +838,20 @@ export default function OrderDetailsModal() {
               moneyAmount(item.pricePerPackage || item.unitPrice),
         );
 
-    const renderProductItem = (item: OrderItem, index: number) => (
+    const renderProductItem = (item: OrderItem, index: number) => {
+      const shownDiscount = getShownOrderDiscount(item);
+      const discountPercent = shownDiscount.percent;
+      const shownPercent =
+        discountPercent != null && discountPercent > 0 && discountPercent < 0.5
+          ? Math.max(0.1, Math.round(discountPercent * 10) / 10)
+          : Math.round(discountPercent ?? 0);
+      const discountLabel = shownDiscount.percent != null
+        ? t('ordersFlow.orderDetails.product.percentOff', { percent: shownPercent })
+        : shownDiscount.amount != null
+          ? t('ordersFlow.orderDetails.product.amountOff', { amount: formatCurrency(shownDiscount.amount) })
+          : null;
+
+      return (
       <View key={item.id || index} style={styles.productRow}>
         <View style={styles.productImageContainer}>
           {item.images && item.images.length > 0 && item.images[0] ? (
@@ -859,12 +875,13 @@ export default function OrderDetailsModal() {
             <View style={styles.priceContainer}>
               {pricingPending || isLinePricingPending(item) ? (
                 <Text style={styles.productPrice}>{pendingPriceLabel}</Text>
-              ) : item.originalPriceSnapshot &&
-                moneyAmount(item.originalPriceSnapshot) >
-                  moneyAmount(item.pricePerPackage || item.unitPrice) ? (
+              ) : shownDiscount.show ? (
                 <>
+                  {discountLabel ? (
+                    <Text style={styles.lineDiscountBadge}>{discountLabel}</Text>
+                  ) : null}
                   <Text style={styles.originalPrice}>
-                    {formatCurrency(moneyAmount(item.originalPriceSnapshot))}
+                    {formatCurrency(shownDiscount.originalLineTotal)}
                   </Text>
                   <Text style={styles.discountedPrice}>
                     {formatOrderMoney(lineDisplayAmount(item))}
@@ -920,7 +937,8 @@ export default function OrderDetailsModal() {
           </View>
         </View>
       </View>
-    );
+      );
+    };
 
     return (
       <View style={styles.section}>
@@ -2256,6 +2274,18 @@ const styles = StyleSheet.create({
   },
   priceContainer: {
     flex: 1,
+  },
+  lineDiscountBadge: {
+    alignSelf: 'flex-start',
+    marginBottom: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: '#FEE2E2',
+    color: '#DC2626',
+    fontSize: 11,
+    fontWeight: '600',
+    overflow: 'hidden',
   },
   originalPrice: {
     fontSize: 12,

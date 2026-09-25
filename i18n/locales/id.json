@@ -469,7 +469,8 @@
     "items": {
       "products": "{{count}} produk",
       "noProducts": "Tidak ada produk",
-      "freePieces": "+{{count}} gratis"
+      "freePieces": "+{{count}} gratis",
+      "buyXGetY": "Beli {{buy}} Gratis {{free}}"
     },
     "orderDateLabel": "Tanggal pesanan:",
     "seeDetails": "Lihat detail",
@@ -2099,7 +2100,10 @@
         "viewLess": "Lihat lebih sedikit"
       },
       "product": {
-        "freePieces": "{{count}} pcs gratis"
+        "freePieces": "{{count}} pcs gratis",
+        "buyXGetY": "Beli {{buy}} Gratis {{free}}",
+        "percentOff": "Diskon {{percent}}%",
+        "amountOff": "Diskon {{amount}}"
       },
       "fields": {
         "assignedLogistics": "Logistik yang ditugaskan",

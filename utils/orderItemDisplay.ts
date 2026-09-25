@@ -47,18 +47,102 @@ export function getOrderItemDisplayName(item: OrderItemDisplaySource, fallback: 
   return item.productName?.trim() || item.productNameSnapshot?.trim() || fallback;
 }
 
+export function readOrderItemPromoRule(
+  snapshot:
+    | string
+    | { minQuantity?: number; buyQuantity?: number; freeQuantity?: number }
+    | null
+    | undefined,
+): { buy: number; free: number } | null {
+  if (!snapshot) return null;
+  try {
+    const parsed =
+      typeof snapshot === 'string'
+        ? (JSON.parse(snapshot) as {
+            minQuantity?: number;
+            buyQuantity?: number;
+            freeQuantity?: number;
+          })
+        : snapshot;
+    const buy = Number(parsed.minQuantity || parsed.buyQuantity || 0);
+    const free = Number(parsed.freeQuantity || 0);
+    if (!(buy > 0) || !(free > 0)) return null;
+    return { buy, free };
+  } catch {
+    return null;
+  }
+}
+
+export function getShownOrderDiscount(item: {
+  piecesPerPackage?: number | null;
+  packageQuantity?: number | null;
+  quantity?: number | null;
+  pricePerPackage?: number | null;
+  unitPrice?: number | null;
+  subtotal?: number | null;
+  originalPriceSnapshot?: number | null;
+  discountPercentage?: number | null;
+  discountAmount?: number | null;
+}): {
+  show: boolean;
+  originalLineTotal: number;
+  percent: number | null;
+  amount: number | null;
+} {
+  const pieces = Math.max(1, Number(item.piecesPerPackage) || 1);
+  const qty = Math.max(1, Number(item.packageQuantity ?? item.quantity) || 1);
+  const originalUnit = Number(item.originalPriceSnapshot) || 0;
+  const originalLineTotal = originalUnit > 0 ? originalUnit * pieces * qty : 0;
+  const subtotalValue = Number(item.subtotal);
+  const hasSubtotal = item.subtotal != null && Number.isFinite(subtotalValue);
+  const unitPrice = Number(item.unitPrice);
+  const usePiecePrice =
+    !hasSubtotal &&
+    item.pricePerPackage == null &&
+    Number.isFinite(unitPrice) &&
+    unitPrice > 0;
+  const currentLine = hasSubtotal
+    ? subtotalValue
+    : usePiecePrice
+      ? unitPrice * pieces * qty
+      : Math.max(0, Number(item.pricePerPackage ?? item.unitPrice) || 0) * qty;
+  const show = originalLineTotal > currentLine + 0.01;
+  const percent = Number(item.discountPercentage);
+  const amount = Number(item.discountAmount);
+  return {
+    show,
+    originalLineTotal,
+    percent: show && Number.isFinite(percent) && percent > 0 ? percent : null,
+    amount:
+      show && !(Number.isFinite(percent) && percent > 0) && Number.isFinite(amount) && amount > 0
+        ? amount
+        : null,
+  };
+}
+
 export function buildOrderItemDisplayLines(
   items: OrderItemDisplaySource[],
   nameFallback: string,
-): Array<{ name: string; orderedQuantity: number; freePieces: number }> {
-  const grouped = new Map<string, { name: string; orderedQuantity: number; freePieces: number }>();
+): Array<{
+  name: string;
+  orderedQuantity: number;
+  freePieces: number;
+  buy: number | null;
+  free: number | null;
+}> {
+  const grouped = new Map<
+    string,
+    { name: string; orderedQuantity: number; freePieces: number; buy: number | null; free: number | null }
+  >();
 
   items.forEach((item, index) => {
     const productId = item.productId?.trim();
-    const key = productId || `__no_product_id__${index}`;
     const name = getOrderItemDisplayName(item, nameFallback);
     const orderedQuantity = getOrderItemOrderedQuantity(item);
     const freePieces = getOrderItemPromotionFreePieces(item);
+    const promo = readOrderItemPromoRule(item.promotionDetailsSnapshot);
+    const promoKey = promo ? `${promo.buy}:${promo.free}` : 'none';
+    const key = productId ? `${productId}::${promoKey}` : `__no_product_id__${index}`;
 
     const existing = grouped.get(key);
     if (existing) {
@@ -67,7 +151,13 @@ export function buildOrderItemDisplayLines(
       return;
     }
 
-    grouped.set(key, { name, orderedQuantity, freePieces });
+    grouped.set(key, {
+      name,
+      orderedQuantity,
+      freePieces,
+      buy: promo?.buy ?? null,
+      free: promo?.free ?? null,
+    });
   });
 
   return Array.from(grouped.values());

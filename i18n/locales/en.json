@@ -469,7 +469,8 @@
     "items": {
       "products": "{{count}} products",
       "noProducts": "No products",
-      "freePieces": "+{{count}} free"
+      "freePieces": "+{{count}} free",
+      "buyXGetY": "Buy {{buy}} Get {{free}}"
     },
     "orderDateLabel": "Order Date:",
     "seeDetails": "See details",
@@ -2101,7 +2102,10 @@
         "viewLess": "View Less"
       },
       "product": {
-        "freePieces": "{{count}} free pieces"
+        "freePieces": "{{count}} free pieces",
+        "buyXGetY": "Buy {{buy}} Get {{free}}",
+        "percentOff": "{{percent}}% off",
+        "amountOff": "{{amount}} off"
       },
       "fields": {
         "assignedLogistics": "Assigned Logistics",
