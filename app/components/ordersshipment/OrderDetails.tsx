@@ -45,6 +45,7 @@ import { getShownOrderDiscount } from '../../../utils/orderItemDisplay';
 import {
   isOrderPricingPending,
   isLinePricingPending,
+  isBuyerOfferVisible,
   lineDisplayAmount,
   moneyAmount,
 } from '../../../utils/orderPricingDisplay';
@@ -113,6 +114,7 @@ interface OrderCompanyInfo {
   businessPhone?: string;
   businessEmail?: string;
   logo?: string;
+  autoApplyBasePriceForFirstBuyers?: boolean | null;
 }
 
 interface OrderUserInfo {
@@ -179,6 +181,7 @@ interface Order {
   sellerId?: number | string | null;
   distributorId?: number | string | null;
   sellerUserId?: number | string | null;
+  pricingSentAt?: string | Date | null;
 }
 
 /** GraphQL order lists expose distributor info on `seller`, not `user.company`. */
@@ -838,8 +841,11 @@ export default function OrderDetailsModal() {
               moneyAmount(item.pricePerPackage || item.unitPrice),
         );
 
+    const offersVisible = isBuyerOfferVisible(orderData);
     const renderProductItem = (item: OrderItem, index: number) => {
-      const shownDiscount = getShownOrderDiscount(item);
+      const shownDiscount = offersVisible
+        ? getShownOrderDiscount(item)
+        : { show: false, originalLineTotal: 0, percent: null, amount: null };
       const discountPercent = shownDiscount.percent;
       const shownPercent =
         discountPercent != null && discountPercent > 0 && discountPercent < 0.5
@@ -913,12 +919,14 @@ export default function OrderDetailsModal() {
                   }
                 }
                 
-                const promotionGift = calculateOrderItemPromotion(
-                  promotionDetails,
-                  quantity,
-                  piecesPerPackage,
-                  moq
-                );
+                const promotionGift = offersVisible
+                  ? calculateOrderItemPromotion(
+                      promotionDetails,
+                      quantity,
+                      piecesPerPackage,
+                      moq
+                    )
+                  : null;
                 
                 if (promotionGift) {
                   return (

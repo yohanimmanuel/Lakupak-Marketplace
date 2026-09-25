@@ -47,7 +47,7 @@ import {
   buildOrderItemDisplayLines,
   getOrderItemCountSummary,
 } from '../../utils/orderItemDisplay';
-import { isOrderPricingPending, moneyAmount } from '../../utils/orderPricingDisplay';
+import { isBuyerOfferVisible, isOrderPricingPending, moneyAmount } from '../../utils/orderPricingDisplay';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -155,7 +155,10 @@ export default function OrdersScreen() {
   const buildOrderProductLines = (order: MarketplaceOrder) => {
     const items = order.orderItems ?? [];
     if (items.length === 0) return [];
-    return buildOrderItemDisplayLines(items, t('tabsOrders.items.noProducts'));
+    const visibleItems = isBuyerOfferVisible(order)
+      ? items
+      : items.map((item) => ({ ...item, promotionDetailsSnapshot: null }));
+    return buildOrderItemDisplayLines(visibleItems, t('tabsOrders.items.noProducts'));
   };
 
   const getOrderStatusColor = (status?: string) => {

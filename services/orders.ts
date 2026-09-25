@@ -1,5 +1,6 @@
 import { graphqlRequest } from './graphql';
 import { API_BASE_URL, API_CONFIG } from './config';
+import { hideUnreleasedBuyerOffers } from '../utils/orderPricingDisplay';
 
 export interface OrderItem {
   productId?: string | null;
@@ -66,6 +67,7 @@ export interface Order {
   deliveryConfirmation?: string;
   pod?: string;
   orderDate: string;
+  pricingSentAt?: string | Date | null;
   createdAt?: string;
   updatedAt?: string;
   acceptedBy?: string;
@@ -144,7 +146,7 @@ class OrdersService {
           );
           if (response.ok) {
             const data = await response.json();
-            const orders = (data.orders ?? []) as Order[];
+            const orders = hideUnreleasedBuyerOffers((data.orders ?? []) as Order[]);
             return {
               orders,
               pagination: {
@@ -197,6 +199,7 @@ class OrdersService {
               deliveryConfirmation
               pod
               orderDate
+              pricingSentAt
               createdAt
               updatedAt
               acceptedBy
@@ -277,7 +280,7 @@ class OrdersService {
       );
       
       return {
-        orders: result.mobileOrders.nodes,
+        orders: hideUnreleasedBuyerOffers(result.mobileOrders.nodes),
         pagination: result.mobileOrders.pagination,
       };
     } catch (error) {

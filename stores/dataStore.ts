@@ -12,6 +12,7 @@ import { pushNotificationService } from '../services/pushNotifications'
 import { supabaseRealtimeService } from '../services/supabaseRealtime'
 import { usePlatformAnnouncementsRealtimeStore } from './platformAnnouncementsRealtimeStore'
 import { getPricingSentNotificationStrings, getPricingUpdatedNotificationStrings } from '../utils/orderNotificationI18n'
+import { hideUnreleasedBuyerOffers, isBuyerOfferVisible } from '../utils/orderPricingDisplay'
 
 export interface MarketplaceOrderItem {
   productId?: string | null
@@ -60,6 +61,7 @@ export interface MarketplaceOrder {
   contactPhone?: string
   deliveryAddress?: string
   orderDate?: string
+  pricingSentAt?: string | Date | null
   createdAt?: string
   updatedAt?: string
   cancelledAt?: string | null
@@ -110,6 +112,7 @@ export interface MarketplaceOrder {
       businessDescription?: string
       industryType?: string
       yearsInOperation?: string
+      autoApplyBasePriceForFirstBuyers?: boolean | null
     }
   }
 }
@@ -216,7 +219,7 @@ export const useDataStore = create<DataState>()(
       
       setProducts: (products) => set({ products, productsLastUpdated: Date.now() }),
 
-      setOrders: (orders) => set({ orders, ordersLastUpdated: Date.now() }),
+      setOrders: (orders) => set({ orders: hideUnreleasedBuyerOffers(orders), ordersLastUpdated: Date.now() }),
 
       loadUserData: async (token) => {
         const { userLastUpdated } = get()
@@ -302,7 +305,12 @@ export const useDataStore = create<DataState>()(
         if (!forceRefresh && ordersLastUpdated && (now - ordersLastUpdated) < CACHE_DURATION) {
           // Double-check cached orders belong to current user
           if (cachedUserId === userId) {
-          return
+            const cachedHasUnreleasedPromo = get().orders.some(
+              (order) =>
+                !isBuyerOfferVisible(order) &&
+                (order.orderItems ?? []).some((item) => Boolean(item.promotionDetailsSnapshot)),
+            );
+            if (!cachedHasUnreleasedPromo) return;
           }
           // If user mismatch, force refresh
         }
@@ -318,7 +326,7 @@ export const useDataStore = create<DataState>()(
           
           if (currentUserId === userId) {
           set({
-            orders,
+            orders: hideUnreleasedBuyerOffers(orders),
             ordersLastUpdated: now,
             ordersLoadError: null,
             isOrdersLoading: false
@@ -456,7 +464,7 @@ export const useDataStore = create<DataState>()(
           const mergedOrders = Array.from(existingOrdersMap.values())
           
           set({
-            orders: mergedOrders,
+            orders: hideUnreleasedBuyerOffers(mergedOrders),
             ordersLastUpdated: Date.now()
           })
         } catch (error) {
@@ -848,6 +856,10 @@ export const useDataStore = create<DataState>()(
           if (!currentUserId) {
             state.orders = []
             state.ordersLastUpdated = null
+          }
+
+          if (state.orders.length > 0) {
+            state.orders = hideUnreleasedBuyerOffers(state.orders)
           }
         }
       },

@@ -5,6 +5,39 @@
  * only when the line or order total is above zero.
  */
 
+export function isBuyerOfferVisible(order: {
+  pricingSentAt?: unknown;
+  user?: { company?: { autoApplyBasePriceForFirstBuyers?: boolean | null } | null } | null;
+}): boolean {
+  if (order.pricingSentAt != null && String(order.pricingSentAt) !== '') return true;
+  return Boolean(order.user?.company?.autoApplyBasePriceForFirstBuyers);
+}
+
+export function hideUnreleasedBuyerOffers<T extends {
+  pricingSentAt?: unknown;
+  discounts?: unknown;
+  user?: { company?: { autoApplyBasePriceForFirstBuyers?: boolean | null } | null } | null;
+  orderItems?: Array<Record<string, unknown> | object> | null;
+}>(orders: T[]): T[] {
+  return orders.map((order) => {
+    if (isBuyerOfferVisible(order)) return order;
+    return {
+      ...order,
+      discounts: 0,
+      orderItems: (order.orderItems ?? []).map((item) => ({
+        ...item,
+        offerApplied: false,
+        offerBadgeSnapshot: null,
+        offerNameSnapshot: null,
+        originalPriceSnapshot: null,
+        discountPercentage: null,
+        discountAmount: null,
+        promotionDetailsSnapshot: null,
+      })),
+    } as T;
+  });
+}
+
 export function moneyAmount(value: unknown): number {
   if (value == null || value === '') return 0;
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
