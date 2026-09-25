@@ -1263,6 +1263,7 @@
     "moqWarning": "Minimum order: {{moq}} pieces (you have {{have}})",
     "saved": "Saved {{amount}}",
     "pricingNote": "Pricing will be confirmed by {{distributor}}",
+    "basePriceNote": "Your final PO price is confirmed by the distributor.",
     "splitNote": "Orders will be split into {{count}} separate orders, one per distributor",
     "loginPrompt": {
       "title": "Create an account to win first-order benefits!",
@@ -2278,6 +2279,7 @@
         "total": "Total",
         "pendingPrice": "Pending price",
         "distributorGroupLine": "{{distributor}}: {{count}} item(s)",
+        "basePriceNote": "Your final PO price is confirmed by the distributor.",
         "multiDistributorShort": "{{count}} distributors",
         "splitNote": "Orders will be split into {{count}} separate orders",
         "totalItems_one": "{{count}} item",

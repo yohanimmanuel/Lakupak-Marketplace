@@ -242,6 +242,27 @@ export default function ProductMarketplace({
     return formatCurrency(getSellingPrice());
   };
 
+  // Catalog base price for browse surfaces. Offers never change it: client rates
+  // only reach the buyer on their PO.
+  const formatBasePriceDisplay = (): string => {
+    const variantPrices =
+      'variantOptions' in product && Array.isArray(product.variantOptions)
+        ? product.variantOptions
+            .map((vo: { sellingPrice: string | number }) =>
+              typeof vo.sellingPrice === 'string' ? parseFloat(vo.sellingPrice) : Number(vo.sellingPrice),
+            )
+            .filter((price) => Number.isFinite(price) && price > 0)
+        : [];
+    if (variantPrices.length > 0) {
+      const min = Math.min(...variantPrices);
+      const max = Math.max(...variantPrices);
+      return min === max ? formatCurrency(min) : `${formatCurrency(min)} – ${formatCurrency(max)}`;
+    }
+    const selling = safeGetNumber(product.sellingPrice);
+    const base = selling > 0 ? selling : safeGetNumber((product as EnrichedProduct).price);
+    return base > 0 ? formatCurrency(base) : '';
+  };
+
   const getOfferBadge = (): string | undefined => {
     const badge = product.offerBadge;
     return badge;
@@ -526,6 +547,7 @@ export default function ProductMarketplace({
 
     const deliveryTimeLabel = formatDeliveryTime();
     const deliveryTimeDisplay = deliveryTimeLabel || t('product.labels.notProvided');
+    const basePriceLabel = formatBasePriceDisplay();
     const showBuyXGetY =
       getHasActiveOffer() &&
       (getOfferBadge() === 'Promotion' || getOfferBadge() === 'All Offers') &&
@@ -560,7 +582,15 @@ export default function ProductMarketplace({
               {safeGetString(product.name, t('product.labels.unknownProduct'))}
             </Text>
 
-            {/* Promotion pill (Buy X Get Y) — no catalog prices on cards */}
+            {basePriceLabel ? (
+              <View style={styles.cardPriceContainer}>
+                <Text style={[styles.cardPrice, styles.basePriceText]} numberOfLines={1}>
+                  {basePriceLabel}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Promotion pill (Buy X Get Y) */}
             {showBuyXGetY && product?.promotionDetails ? (
               <View style={styles.cardPromotionInline}>
                 <Gift size={10} color="#9333EA" />
@@ -716,8 +746,10 @@ export default function ProductMarketplace({
         </Text>
       </View>
 
-      {/* Pricing — catalog amounts stay private until distributor Send pricing */}
       <View style={styles.pricingContainer}>
+        {formatBasePriceDisplay() ? (
+          <Text style={[styles.currentPrice, styles.basePriceText]}>{formatBasePriceDisplay()}</Text>
+        ) : null}
         <Text style={styles.pricingConfirmedNote}>
           {t('product.pricingConfirmedBy', {
             distributor: safeGetString(product.seller?.name, t('product.labels.unknownCompany')),
@@ -1429,6 +1461,9 @@ const styles = StyleSheet.create({
   cardPrice: {
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  basePriceText: {
+    color: '#0a61d7',
   },
   cardOriginalPrice: {
     fontSize: 12,

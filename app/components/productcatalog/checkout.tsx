@@ -50,6 +50,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getMe } from '../../../services/user';
 import { CheckoutSkeleton } from '../SkeletonLoader';
 import { resolveVariantPricing } from '../../../utils/variantRules';
+import { formatCurrency } from '../../../utils/currencyUtils';
 import {
   extractCreatedOrderId,
   generateCheckoutOrderId,
@@ -752,6 +753,32 @@ const copyPickupAddress = () => {
     ? selectedCartItems.reduce((sum, item) => sum + item.quantity, 0)
     : quantity;
 
+  // Display only: catalog base price. Checkout still sends 0 and the server
+  // stores the PO price (client rate or base) on submit.
+  const getBaseLineTotal = (
+    lineProduct: MarketplaceProduct | undefined | null,
+    variantName: string | null | undefined,
+    packages: number,
+    piecesOverride?: number,
+  ): number => {
+    if (!lineProduct) return 0;
+    const pieces = piecesOverride || lineProduct.piecesPerPackage || 1;
+    const { unitPrice } = resolveVariantPricing(lineProduct, variantName, lineProduct.sellingPrice || 0);
+    const total = Number(unitPrice) * pieces * packages;
+    return Number.isFinite(total) && total > 0 ? total : 0;
+  };
+  const checkoutBaseTotal = isCartCheckout
+    ? selectedCartItems.reduce(
+        (sum, item) => sum + getBaseLineTotal(getItemProduct(item), item.variant, item.quantity),
+        0,
+      )
+    : getBaseLineTotal(
+        product as MarketplaceProduct | undefined,
+        params.variantName || null,
+        quantity,
+        piecesPerPackage,
+      );
+
   // Validate that all shipping requirements are met before allowing order placement
   const isOrderReady = useMemo(() => {
     if (showCheckoutSkeleton) return false;
@@ -1301,7 +1328,14 @@ const copyPickupAddress = () => {
                           })()}
                         </Text>
                         <View style={styles.priceRow}>
-                          <View style={styles.priceContainer} />
+                          <View style={styles.priceContainer}>
+                            {(() => {
+                              const lineTotal = getBaseLineTotal(getItemProduct(item), item.variant, item.quantity);
+                              return lineTotal > 0 ? (
+                                <Text style={styles.linePrice}>{formatCurrency(lineTotal)}</Text>
+                              ) : null;
+                            })()}
+                          </View>
                           <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                             {(() => {
                               const promotionGift = calculateProductPromotion(
@@ -1430,7 +1464,11 @@ const copyPickupAddress = () => {
                     {t('ordersFlow.checkout.productSpecs', { count: piecesPerPackage, package: packageType })}
                   </Text>
                   <View style={styles.priceRow}>
-                    <View style={styles.priceContainer} />
+                    <View style={styles.priceContainer}>
+                      {checkoutBaseTotal > 0 ? (
+                        <Text style={styles.linePrice}>{formatCurrency(checkoutBaseTotal)}</Text>
+                      ) : null}
+                    </View>
                     <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
                       {(() => {
                         // Calculate promotion using standardized function
@@ -1564,14 +1602,25 @@ const copyPickupAddress = () => {
                     info?.companyName ||
                     t('ordersFlow.checkout.distributorDefaults.company');
                   const count = items.reduce((sum, item) => sum + item.quantity, 0);
+                  const groupTotal = items.reduce(
+                    (sum, item) => sum + getBaseLineTotal(getItemProduct(item), item.variant, item.quantity),
+                    0,
+                  );
                   return (
                     <View key={distributorId} style={{ marginBottom: 10 }}>
-                      <Text style={[styles.summaryLabel, { color: '#111827', fontWeight: '600' }]}>
-                        {t('ordersFlow.checkout.summary.distributorGroupLine', {
-                          distributor: name,
-                          count,
-                        })}
-                      </Text>
+                      <View style={styles.summaryRow}>
+                        <Text style={[styles.summaryLabel, { color: '#111827', fontWeight: '600', flex: 1 }]}>
+                          {t('ordersFlow.checkout.summary.distributorGroupLine', {
+                            distributor: name,
+                            count,
+                          })}
+                        </Text>
+                        {groupTotal > 0 ? (
+                          <Text style={[styles.summaryLabel, { color: '#111827', fontWeight: '600' }]}>
+                            {formatCurrency(groupTotal)}
+                          </Text>
+                        ) : null}
+                      </View>
                       <Text style={[styles.summaryLabel, { color: '#6B7280', fontSize: 12, marginTop: 4 }]}>
                         {t('ordersFlow.checkout.pricingNote', { distributor: name })}
                       </Text>
@@ -1597,6 +1646,21 @@ const copyPickupAddress = () => {
                     </Text>
                   </View>,
                 ])}
+            {checkoutBaseTotal > 0 ? (
+              <View style={{ borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 10, marginBottom: 8 }}>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: '#111827', fontWeight: '600', flex: 1 }]}>
+                    {t('ordersFlow.checkout.summary.subtotal')}
+                  </Text>
+                  <Text style={[styles.summaryLabel, { color: '#0a61d7', fontWeight: '700' }]}>
+                    {formatCurrency(checkoutBaseTotal)}
+                  </Text>
+                </View>
+                <Text style={[styles.summaryLabel, { color: '#6B7280', fontSize: 12, marginTop: 4 }]}>
+                  {t('ordersFlow.checkout.summary.basePriceNote')}
+                </Text>
+              </View>
+            ) : null}
             {distributorsInfo.length > 1 ? (
               <View style={[styles.summaryRow, { marginBottom: 8 }]}>
                 <Text style={[styles.summaryLabel, { color: '#6B7280', fontSize: 12, flex: 1 }]}>
@@ -1626,7 +1690,12 @@ const copyPickupAddress = () => {
       <View style={styles.bottomBar}>
         <View style={styles.totalSection}>
           <Text style={styles.bottomTotalLabel}>{t('ordersFlow.checkout.summary.total')}</Text>
-          <Text style={styles.bottomTotalValue}>
+          {checkoutBaseTotal > 0 ? (
+            <Text style={styles.bottomTotalValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+              {formatCurrency(checkoutBaseTotal)}
+            </Text>
+          ) : null}
+          <Text style={checkoutBaseTotal > 0 ? styles.bottomTotalLabel : styles.bottomTotalValue}>
             {t('ordersFlow.checkout.summary.totalItems', { count: checkoutItemCount })}
           </Text>
         </View>
@@ -2542,6 +2611,11 @@ const styles = StyleSheet.create({
   bottomTotalLabel: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  linePrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0a61d7',
   },
   bottomTotalValue: {
     fontSize: 20,

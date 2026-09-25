@@ -1261,6 +1261,7 @@
     "moqWarning": "Minimal pembelian: {{moq}} pcs (Anda punya {{have}})",
     "saved": "Hemat {{amount}}",
     "pricingNote": "Harga akan dikonfirmasi oleh {{distributor}}",
+    "basePriceNote": "Harga akhir PO dikonfirmasi oleh distributor.",
     "splitNote": "Pesanan akan dipecah menjadi {{count}} pesanan terpisah, satu per distributor",
     "loginPrompt": {
       "title": "Buat akun untuk dapat manfaat pesanan pertama!",
@@ -2276,6 +2277,7 @@
         "total": "Total",
         "pendingPrice": "Menunggu harga",
         "distributorGroupLine": "{{distributor}}: {{count}} item",
+        "basePriceNote": "Harga akhir PO dikonfirmasi oleh distributor.",
         "multiDistributorShort": "{{count}} distributor",
         "splitNote": "Pesanan akan dipecah menjadi {{count}} pesanan terpisah",
         "totalItems_one": "{{count}} item",

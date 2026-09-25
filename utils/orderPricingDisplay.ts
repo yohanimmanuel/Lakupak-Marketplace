@@ -1,8 +1,8 @@
 /**
- * Buyer-facing money display — match Marketplace-Web.
- * The mobile orders API already hides catalog prices unless a client rate,
- * first-order auto-apply, or Send pricing applies. Show an amount only when
- * the returned line or order total is above zero.
+ * Buyer-facing money display, matching Marketplace-Web.
+ * The mobile orders API returns the sent/discounted PO price when released,
+ * otherwise the base price saved when the order was placed. Show an amount
+ * only when the line or order total is above zero.
  */
 
 export function moneyAmount(value: unknown): number {

@@ -236,7 +236,6 @@ export default function OrderDetailsModal() {
   const [invoiceModalVisible, setInvoiceModalVisible] = useState(false);
   const fetchGeneration = useRef(0);
   const storedOrders = useDataStore((state) => state.orders);
-
   const applyOrder = useCallback((fetched: { seller?: MarketplaceOrder['seller'] }) => {
     fetchGeneration.current += 1;
     const orderData = mapSellerIntoOrder(fetched);

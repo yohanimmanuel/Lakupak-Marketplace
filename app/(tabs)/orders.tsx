@@ -98,7 +98,6 @@ export default function OrdersScreen() {
     loadOrdersData(false);
     }
   }, [isAuthenticated, authUser?.id, loadOrdersData]);
-
   const showOrdersSkeleton =
     refreshing || (isOrdersLoading && orders.length === 0);
 

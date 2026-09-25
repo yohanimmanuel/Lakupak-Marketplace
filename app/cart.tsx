@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { resolveVariantMoq, resolveVariantPricing } from '../utils/variantRules';
 import { getDistributorDisplayName, resolveDistributorId } from '../utils/cartDistributor';
 import QuantitySelector from './components/productcatalog/QuantitySelector';
+import { formatCurrency } from '../utils/currencyUtils';
 
 const KEYBOARD_BOTTOM_GAP = 5;
 const CHECKOUT_BAR_HEIGHT = 72;
@@ -247,6 +248,17 @@ export default function CartScreen() {
     [products],
   );
 
+  // Catalog base price only; the distributor confirms the PO price after submit.
+  const getItemBaseTotal = (item: CartItem): number => {
+    const product = getItemProduct(item);
+    const piecesPerPackage = product.piecesPerPackage || 1;
+    const { unitPrice } = resolveVariantPricing(product, item.variant, product.sellingPrice || 0);
+    const total = Number(unitPrice) * piecesPerPackage * item.quantity;
+    return Number.isFinite(total) && total > 0 ? total : 0;
+  };
+
+  const selectedBaseTotal = selectedItems.reduce((sum, item) => sum + getItemBaseTotal(item), 0);
+
   const distributorGroups = useMemo(() => {
     const grouped = new Map<string, { name: string; items: CartItem[] }>();
 
@@ -383,6 +395,11 @@ export default function CartScreen() {
                     });
                   }}
                 >
+                  {getItemBaseTotal(item) > 0 ? (
+                    <Text style={styles.price} numberOfLines={1}>
+                      {formatCurrency(getItemBaseTotal(item))}
+                    </Text>
+                  ) : null}
                   {promotionGift?.freeQty ? (
                     <Text style={styles.promotionGiftText}>
                       +{promotionGift.freeQty} Free pieces
@@ -583,6 +600,19 @@ export default function CartScreen() {
             )}
             <Text style={styles.selectAllText}>{t('cart.selectAll')}</Text>
           </TouchableOpacity>
+
+          <View style={styles.totalContainer}>
+            {selectedBaseTotal > 0 ? (
+              <>
+                <Text style={styles.totalPrice} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                  {formatCurrency(selectedBaseTotal)}
+                </Text>
+                <Text style={styles.pricingNoteFooter} numberOfLines={2}>
+                  {t('cart.basePriceNote')}
+                </Text>
+              </>
+            ) : null}
+          </View>
 
           <TouchableOpacity 
             style={[styles.checkoutButton, !canCheckout && styles.checkoutButtonDisabled]}
