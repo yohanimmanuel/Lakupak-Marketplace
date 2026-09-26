@@ -842,7 +842,27 @@ export default function OrderDetailsModal() {
         );
 
     const offersVisible = isBuyerOfferVisible(orderData);
+    const lineFreeQuantity = (item: OrderItem) => {
+      if (!offersVisible) return 0;
+      const promotionDetails = item.promotionDetails || item.promotionDetailsSnapshot;
+      if (!promotionDetails) return 0;
+      const piecesPerPackage = item.piecesPerPackage || 1;
+      const quantity = item.packageQuantity || item.quantity || 1;
+      let moq: number | null = null;
+      try {
+        const parsed =
+          typeof promotionDetails === 'string' ? JSON.parse(promotionDetails) : promotionDetails;
+        moq = parsed.moq || null;
+      } catch {
+        moq = null;
+      }
+      return (
+        calculateOrderItemPromotion(promotionDetails, quantity, piecesPerPackage, moq)?.freeQty ??
+        0
+      );
+    };
     const renderProductItem = (item: OrderItem, index: number) => {
+      const freeQty = lineFreeQuantity(item);
       const shownDiscount = offersVisible
         ? getShownOrderDiscount(item)
         : { show: false, originalLineTotal: 0, percent: null, amount: null };
@@ -900,46 +920,14 @@ export default function OrderDetailsModal() {
               )}
             </View>
             <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
-              {(() => {
-                // Calculate promotion using standardized function for order items
-                const promotionDetails = item.promotionDetails || item.promotionDetailsSnapshot;
-                const piecesPerPackage = item.piecesPerPackage || 1;
-                const quantity = item.packageQuantity || item.quantity || 1;
-                
-                // Extract MOQ directly from this item's promotion details (variant-specific)
-                let moq: number | null = null;
-                if (promotionDetails) {
-                  try {
-                    const parsed = typeof promotionDetails === 'string' 
-                      ? JSON.parse(promotionDetails) 
-                      : promotionDetails;
-                    moq = parsed.moq || null;
-                  } catch (e) {
-                    moq = null;
-                  }
-                }
-                
-                const promotionGift = offersVisible
-                  ? calculateOrderItemPromotion(
-                      promotionDetails,
-                      quantity,
-                      piecesPerPackage,
-                      moq
-                    )
-                  : null;
-                
-                if (promotionGift) {
-                  return (
-                    <View style={styles.promotionGiftBadge}>
-                      <Gift size={12} color="#9333EA" />
-                      <Text style={styles.promotionGiftText}>
-                        +{t('ordersFlow.orderDetails.product.freePieces', { count: promotionGift.freeQty })}
-                      </Text>
-                    </View>
-                  );
-                }
-                return null;
-              })()}
+              {freeQty > 0 ? (
+                <View style={styles.promotionGiftBadge}>
+                  <Gift size={12} color="#9333EA" />
+                  <Text style={styles.promotionGiftText}>
+                    +{t('ordersFlow.orderDetails.product.freePieces', { count: freeQty })}
+                  </Text>
+                </View>
+              ) : null}
               <Text style={styles.quantityBadge}>x{item.packageQuantity || item.quantity || 1}</Text>
             </View>
           </View>
@@ -971,14 +959,28 @@ export default function OrderDetailsModal() {
           )}
           
           {orderData.orderItems && orderData.orderItems.length > 0 ? (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>{t('ordersFlow.orderDetails.sections2.productTotal')}</Text>
-              <Text style={styles.summaryValue}>
-                {isOrderPricingPending(orderData)
-                  ? pendingPriceLabel
-                  : formatOrderMoney(calculateProductTotal())}
-              </Text>
-            </View>
+            <>
+              <View style={[styles.summaryRow, styles.summaryRowFirst]}>
+                <Text style={styles.summaryLabel}>{t('ordersFlow.orderDetails.sections2.totalItems')}</Text>
+                <Text style={styles.summaryValue}>
+                  {orderData.orderItems.reduce(
+                    (total, item) =>
+                      total +
+                      (item.packageQuantity || item.quantity || 1) +
+                      lineFreeQuantity(item),
+                    0,
+                  )}
+                </Text>
+              </View>
+              <View style={[styles.summaryRow, styles.summaryRowNext]}>
+                <Text style={styles.summaryLabel}>{t('ordersFlow.orderDetails.sections2.productTotal')}</Text>
+                <Text style={styles.summaryValue}>
+                  {isOrderPricingPending(orderData)
+                    ? pendingPriceLabel
+                    : formatOrderMoney(calculateProductTotal())}
+                </Text>
+              </View>
+            </>
           ) : null}
 
           {(() => {
@@ -1004,12 +1006,11 @@ export default function OrderDetailsModal() {
           })()}
           
           <View style={styles.orderTotal}>
+            <Text style={styles.summaryLabel}>{t('ordersFlow.orderDetails.totals.orderTotal')}</Text>
             <Text style={styles.orderTotalText}>
-              {t('ordersFlow.orderDetails.totals.orderTotal', {
-                amount: isOrderPricingPending(orderData)
-                  ? pendingPriceLabel
-                  : formatOrderMoney(orderData.totalAmount || orderData.total || 0),
-              })}
+              {isOrderPricingPending(orderData)
+                ? pendingPriceLabel
+                : formatOrderMoney(orderData.totalAmount || orderData.total || 0)}
             </Text>
           </View>
         </View>
@@ -2173,6 +2174,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  summaryRowFirst: {
+    marginTop: 12,
+  },
+  summaryRowNext: {
+    marginTop: 8,
+  },
   summaryLabel: {
     fontSize: 14,
     color: '#6B7280',
@@ -2187,7 +2194,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   orderTotalText: {
     fontSize: 16,

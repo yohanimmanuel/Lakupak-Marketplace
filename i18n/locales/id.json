@@ -2088,7 +2088,7 @@
         "noSpecific": "Tidak ada tanggal khusus yang ditetapkan"
       },
       "totals": {
-        "orderTotal": "Total pesanan: {{amount}}"
+        "orderTotal": "Total pesanan"
       },
       "pendingPrice": "Menunggu harga",
       "payment": {
@@ -2114,6 +2114,7 @@
       },
       "sections2": {
         "productInformation": "Informasi produk",
+        "totalItems": "Total item",
         "productTotal": "Total produk",
         "shipping": "Pengiriman"
       },

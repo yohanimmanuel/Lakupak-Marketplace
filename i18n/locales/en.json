@@ -2090,7 +2090,7 @@
         "noSpecific": "No specific date set"
       },
       "totals": {
-        "orderTotal": "Order Total: {{amount}}"
+        "orderTotal": "Order Total"
       },
       "pendingPrice": "Pending price",
       "payment": {
@@ -2116,6 +2116,7 @@
       },
       "sections2": {
         "productInformation": "Product Information",
+        "totalItems": "Total items",
         "productTotal": "Product Total",
         "shipping": "Shipping"
       },
