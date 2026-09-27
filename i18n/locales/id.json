@@ -352,6 +352,8 @@
       "steps": {
         "fullName": "Nama Lengkap",
         "fullNamePlaceholder": "Masukkan nama lengkap",
+        "phone": "Nomor HP",
+        "phonePlaceholder": "Masukkan nomor HP",
         "email": "Alamat Email",
         "storeName": "Nama Toko",
         "storeNamePlaceholder": "Masukkan nama toko",
@@ -374,7 +376,7 @@
       },
       "alerts": {
         "missingTitle": "Data belum lengkap",
-        "missingNameEmail": "Mohon isi nama dan email.",
+        "missingNameEmail": "Mohon isi nama, nomor HP, dan email.",
         "invalidEmailTitle": "Email tidak valid",
         "invalidEmailBody": "Silakan masukkan alamat email yang valid.",
         "missingStoreName": "Mohon isi nama toko.",

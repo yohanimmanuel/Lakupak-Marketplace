@@ -122,6 +122,7 @@ export default function SignUpModal() {
       setSignupData((prev) => ({
         ...prev,
         deliveryFullName: prev.deliveryFullName || prev.name,
+        deliveryPhone: prev.deliveryPhone || prev.phone,
       }));
     }
   }, [signupStep]);
@@ -393,6 +394,32 @@ export default function SignUpModal() {
                     />
                   </View>
                 </View>
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
+                    {t('auth.signup.steps.phone')}
+                  </Text>
+                  <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
+                    <TextInput
+                      value={signupData.phone}
+                      onChangeText={(text) =>
+                        setSignupData((prev) => {
+                          const copied =
+                            !prev.deliveryPhone.trim() ||
+                            prev.deliveryPhone.trim() === prev.phone.trim();
+                          return {
+                            ...prev,
+                            phone: text,
+                            deliveryPhone: copied ? text : prev.deliveryPhone,
+                          };
+                        })
+                      }
+                      placeholder={t('auth.signup.steps.phonePlaceholder')}
+                      placeholderTextColor="#9ca3af"
+                      style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                </View>
                 <View style={{ marginBottom: 24 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
                     {t('auth.signup.steps.email')}
@@ -412,7 +439,7 @@ export default function SignUpModal() {
                 </View>
                 <Pressable
                   onPress={async () => {
-                    if (!signupData.name.trim() || !signupData.email.trim()) {
+                    if (!signupData.name.trim() || !signupData.phone.trim() || !signupData.email.trim()) {
                       Alert.alert(t('auth.signup.alerts.missingTitle'), t('auth.signup.alerts.missingNameEmail'));
                       return;
                     }

@@ -352,6 +352,8 @@
       "steps": {
         "fullName": "Full Name",
         "fullNamePlaceholder": "Enter your full name",
+        "phone": "Phone Number",
+        "phonePlaceholder": "Enter your phone number",
         "email": "Email Address",
         "storeName": "Store Name",
         "storeNamePlaceholder": "Enter your store name",
@@ -374,7 +376,7 @@
       },
       "alerts": {
         "missingTitle": "Missing Information",
-        "missingNameEmail": "Please enter both name and email.",
+        "missingNameEmail": "Please enter your name, phone number, and email.",
         "invalidEmailTitle": "Invalid Email",
         "invalidEmailBody": "Please enter a valid email address.",
         "missingStoreName": "Please enter a store name.",
