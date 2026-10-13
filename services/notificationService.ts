@@ -15,6 +15,46 @@ export type Notification = {
 };
 
 const NOTIFICATIONS_KEY_PREFIX = 'laku_notifications_';
+/** Stored and shown order updates expire three days after they are received. */
+export const ORDER_NOTIFICATION_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+
+const ORDER_STATUS_VALUES = new Set([
+  'pending',
+  'confirmed',
+  'packed',
+  'shipped',
+  'delivered',
+  'received',
+  'cancelled',
+  'returned',
+  'failed',
+]);
+
+export function isWithinOrderNotificationWindow(iso?: string | null, now = Date.now()): boolean {
+  if (!iso) return false;
+  const at = Date.parse(String(iso));
+  if (Number.isNaN(at)) return false;
+  return now - at <= ORDER_NOTIFICATION_TTL_MS;
+}
+
+function notificationReceivedAt(notification: Notification & { receivedAt?: string }): number | null {
+  if (notification.receivedAt) {
+    const at = Date.parse(notification.receivedAt);
+    if (!Number.isNaN(at)) return at;
+  }
+  const parsed = Date.parse(notification.timestamp);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+/** Pricing, checkout summaries, and promo alerts are not order-status updates. */
+function isOrderStatusNotification(notification: Notification): boolean {
+  if (notification.type !== 'order') return false;
+  const status = (notification.status || '').toLowerCase();
+  if (!ORDER_STATUS_VALUES.has(status)) return false;
+  const title = notification.title.toLowerCase();
+  if (title.includes('pricing') || title.includes('multiple orders')) return false;
+  return true;
+}
 
 export class NotificationService {
   // Get user-specific storage key
@@ -27,10 +67,19 @@ export class NotificationService {
     try {
       const key = this.getUserKey(userId);
       const notificationsJson = await AsyncStorage.getItem(key);
-      if (notificationsJson) {
-        return JSON.parse(notificationsJson);
+      if (!notificationsJson) return [];
+      const parsed = JSON.parse(notificationsJson) as Notification[];
+      if (!Array.isArray(parsed)) return [];
+      const now = Date.now();
+      const kept = parsed.filter((notification) => {
+        const receivedAt = notificationReceivedAt(notification);
+        if (receivedAt == null || now - receivedAt > ORDER_NOTIFICATION_TTL_MS) return false;
+        return isOrderStatusNotification(notification);
+      });
+      if (kept.length !== parsed.length) {
+        await AsyncStorage.setItem(key, JSON.stringify(kept));
       }
-      return [];
+      return kept;
     } catch (error) {
       return [];
     }
@@ -69,10 +118,13 @@ export class NotificationService {
   // Add a new notification for a specific user
   static async addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>, userId: number | null = null): Promise<void> {
     try {
+      if (!isOrderStatusNotification({ ...notification, id: '', timestamp: '', isRead: false })) return;
       const notifications = await this.getNotifications(userId);
-      const newNotification: Notification = {
+      const receivedAt = new Date().toISOString();
+      const newNotification: Notification & { receivedAt: string } = {
         ...notification,
         id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        receivedAt,
         timestamp: new Date().toLocaleString('en-US', {
           day: '2-digit',
           month: '2-digit',
@@ -133,7 +185,7 @@ export class NotificationService {
   // Create order-related notifications
   static async createOrderNotifications(
     orderId: string, 
-    orderCount: number = 1, 
+    _orderCount: number = 1, 
     productImages?: string[], 
     userId: number | null = null,
     orderStatus?: string,
@@ -190,17 +242,6 @@ export class NotificationService {
         productImage: productImages?.[0] // Use first product image
       }, userId);
 
-      // If multiple orders, add a summary notification
-      if (orderCount > 1) {
-        await this.addNotification({
-          type: 'order',
-          title: 'Multiple Orders Created',
-          message: `You have successfully placed ${orderCount} orders. Each order will be processed separately by their respective distributors.`,
-          orderId: orderId,
-          status: 'confirmed',
-          productImage: productImages?.[0] // Use first product image
-        }, userId);
-      }
     } catch (error) {
       // Handle error silently
     }
@@ -208,24 +249,12 @@ export class NotificationService {
 
   /** Distributor sent or updated PO pricing — buyer should review amounts on the order. */
   static async createPricingSentNotification(
-    orderId: string,
-    userId: number | null = null,
-    title?: string,
-    message?: string,
+    _orderId: string,
+    _userId: number | null = null,
+    _title?: string,
+    _message?: string,
   ): Promise<void> {
-    try {
-      await this.addNotification({
-        type: 'order',
-        title: title || 'Order Pricing Ready',
-        message:
-          message ||
-          `Your distributor sent pricing for order ${orderId}. Open the order to review the amounts.`,
-        orderId,
-        status: 'pending',
-      }, userId);
-    } catch {
-      // Handle error silently
-    }
+    // Pricing is not an order-status update. The phone banner can still show it.
   }
 
   // Create shipping notification

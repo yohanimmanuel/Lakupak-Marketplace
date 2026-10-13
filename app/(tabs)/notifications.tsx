@@ -22,7 +22,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { NotificationService, Notification } from '../../services/notificationService';
+import { isWithinOrderNotificationWindow, NotificationService, Notification } from '../../services/notificationService';
 import {
   fetchPublishedLatestUpdates,
   getDismissedAnnouncementIds,
@@ -326,12 +326,20 @@ export default function NotificationsScreen() {
     const validOrders = cachedUserId === userId ? orders : [];
 
     void (async () => {
-      const storedOrder = await NotificationService.getStoredOrderNotifications(userId);
       if (cancelled) return;
 
       setOrderNotifications((prev) => {
         const previousMap = new Map(prev.map((notification) => [notification.id, notification]));
-        const derived = validOrders.map((order) => {
+        const derived = validOrders
+          .filter((order) =>
+            isWithinOrderNotificationWindow(order.updatedAt || order.createdAt || order.orderDate),
+          )
+          .sort((left, right) => {
+            const leftAt = Date.parse(left.updatedAt || left.createdAt || left.orderDate || '') || 0;
+            const rightAt = Date.parse(right.updatedAt || right.createdAt || right.orderDate || '') || 0;
+            return rightAt - leftAt;
+          })
+          .map((order) => {
           const { title, message } = getOrderPreviewStrings(
             {
               orderId: order.orderId,
@@ -346,7 +354,7 @@ export default function NotificationsScreen() {
             t,
           );
 
-          let timestampSource = order.createdAt || order.orderDate;
+          let timestampSource = order.updatedAt || order.createdAt || order.orderDate;
           if (!timestampSource) {
             const orderKey = order.orderId ?? String(order.id ?? '');
             if (orderKey && !warnedOrderIds.has(orderKey)) {
@@ -381,13 +389,7 @@ export default function NotificationsScreen() {
           } as Notification;
         });
 
-        return NotificationService.mergeDerivedWithStoredOrderNotifications(
-          derived,
-          storedOrder.map((n) => ({
-            ...n,
-            isRead: previousMap.get(n.id)?.isRead ?? n.isRead,
-          })),
-        );
+        return derived;
       });
     })();
 
