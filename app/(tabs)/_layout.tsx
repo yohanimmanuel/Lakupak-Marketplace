@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Link, Tabs, usePathname, useRouter } from 'expo-router';
 import { Pressable, View, TextInput, Animated, Text, StatusBar } from 'react-native';
-import { Home as HomeIcon, Boxes, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquareText } from 'lucide-react-native';
+import { Home as HomeIcon, FileText, User, Bell, ShoppingCart, Search, Store, MessageSquareText } from 'lucide-react-native';
 import { Settings } from 'lucide-react-native';
 import { useAuthStore } from '../../stores/authStore';
 import { useHeaderScrollStore } from '../../stores/headerScrollStore';
@@ -86,14 +86,6 @@ export default function TabLayout() {
   );
 
   function renderHeaderContent() {
-    if (pathname?.endsWith('/categories') || pathname === '/categories') {
-      return (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingLeft: 0, paddingRight: 20, paddingVertical: 16, marginTop: -5 }}>
-          {SearchPill}
-          {rightIconsBlue}
-        </View>
-      );
-    }
     if (!pathname || pathname === '/' || pathname?.endsWith('/home') || pathname === '/home') {
       return (
         <Animated.View style={{ 
@@ -170,11 +162,10 @@ export default function TabLayout() {
   }
 
   const isOrders = pathname?.endsWith('/orders') || pathname === '/orders';
-  const isCategories = pathname?.endsWith('/categories') || pathname === '/categories';
   const isMessages = pathname?.endsWith('/notifications') || pathname === '/notifications';
   const isAccount = pathname?.endsWith('/account') || pathname === '/account';
-  const isHome = (!isOrders && !isCategories && !isMessages && !isAccount) || pathname?.endsWith('/home') || pathname === '/home';
-  const useWhiteHeader = isOrders || isCategories || isMessages;
+  const isHome = (!isOrders && !isMessages && !isAccount) || pathname?.endsWith('/home') || pathname === '/home';
+  const useWhiteHeader = isOrders || isMessages;
 
   return (
     <>
@@ -270,7 +261,6 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen name="home" options={{ title: t('tabs.home'), headerShown: false, tabBarIcon: ({ color }) => <HomeIcon color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.home')}</Text> }} />
-      <Tabs.Screen name="categories" options={{ title: t('tabs.categories'), tabBarIcon: ({ color }) => <Boxes color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.categories')}</Text> }} />
       <Tabs.Screen name="orders" options={{ title: t('tabs.orders'), tabBarIcon: ({ color }) => <FileText color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.orders')}</Text> }} />
       <Tabs.Screen name="notifications" options={{ title: t('tabs.notifications'), tabBarIcon: ({ color }) => <Bell color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.notifications')}</Text> }} />
       <Tabs.Screen name="account" options={{ title: t('tabs.account'), tabBarIcon: ({ color }) => <User color={color} size={22} />, tabBarLabel: ({ color }) => <Text style={{ color, fontSize: 11 }}>{t('tabs.account')}</Text> }} />
