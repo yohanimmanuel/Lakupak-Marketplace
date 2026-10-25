@@ -8,6 +8,16 @@ function getAuthStore(): typeof UseAuthStoreType {
   return require('../stores/authStore').useAuthStore;
 }
 
+/** Signed-in marketplace token, for reads that the closed storefront scopes per retailer. */
+export function currentAuthToken(): string | undefined {
+  return getAuthStore().getState().token || undefined;
+}
+
+export function authHeaders(): Record<string, string> {
+  const token = currentAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 interface GraphQLResponse<T> {
   data?: T;
   errors?: { message: string; path?: string[]; extensions?: { code?: string; reason?: string | null } }[];
@@ -22,7 +32,7 @@ interface GraphQLRequest {
  * Decode JWT token to extract userId (without verification)
  * This is safe because we're just reading the payload, and the server will verify the token
  */
-export function decodeToken(token: string): { userId?: number } {
+export function decodeToken(token: string): { userId?: number; distributorId?: number | null } {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) {
@@ -32,8 +42,13 @@ export function decodeToken(token: string): { userId?: number } {
     const payload = parts[1];
     const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
     const userId = typeof decoded.sub === 'string' ? parseInt(decoded.sub, 10) : decoded.sub;
-    
-    return { userId: typeof userId === 'number' && !isNaN(userId) ? userId : undefined };
+    const rawDistributorId = (decoded as { distributorId?: unknown }).distributorId;
+    const distributorId =
+      typeof rawDistributorId === 'number' && Number.isInteger(rawDistributorId) && rawDistributorId > 0
+        ? rawDistributorId
+        : null;
+
+    return { userId: typeof userId === 'number' && !isNaN(userId) ? userId : undefined, distributorId };
   } catch {
     return {};
   }

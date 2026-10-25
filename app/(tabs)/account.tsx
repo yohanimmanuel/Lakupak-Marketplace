@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, Pressable, Image, RefreshControl } from 'react-native';
-import { User as UserIcon, MapPin, WalletMinimal, Truck, PackageCheck, Star, ChevronRight, RotateCcw, Gift, Tag, DollarSign, Wallet, Heart, Clock, RotateCw, Users } from 'lucide-react-native';
+import { User as UserIcon, MapPin, WalletMinimal, Truck, PackageCheck, CheckCircle, ChevronRight, RotateCcw, Gift, Tag, DollarSign, Wallet, Heart, Clock, RotateCw, Users } from 'lucide-react-native';
 import { Link, useRouter } from 'expo-router';
 import { useAuthStore } from '../../stores/authStore';
 import { API_BASE_URL } from '../../services/config';
-import type { MarketplaceProduct } from '../../services/marketplace';
+import { decodeToken, authHeaders } from '../../services/graphql';
 import { useDataStore } from '../../stores/dataStore';
 import { useTranslation } from 'react-i18next';
 import { AccountProfileSkeleton } from '../components/SkeletonLoader';
@@ -56,7 +56,18 @@ export default function AccountScreen() {
   const isUserLoading = useDataStore(state => state.isUserLoading);
   const forceRefreshProducts = useDataStore(state => state.forceRefreshProducts);
   const products = useDataStore(state => state.products);
+  const storefrontDistributorId = useDataStore(state => state.storefrontDistributorId);
   const [refreshing, setRefreshing] = useState(false);
+  const [storefrontProfile, setStorefrontProfile] = useState<{
+    name: string;
+    logo?: string;
+  } | null>(null);
+
+  const tokenStorefrontId = React.useMemo(() => {
+    if (!token) return null;
+    return decodeToken(token).distributorId ?? null;
+  }, [token]);
+  const activeStorefrontId = storefrontDistributorId ?? tokenStorefrontId;
 
   useEffect(() => {
     hydrate();
@@ -75,60 +86,77 @@ export default function AccountScreen() {
     }
   }, [token, user?.id, loadOrdersData]);
 
-  const recentDistributors: Distributor[] = React.useMemo(() => {
-    if (!token || !user?.id) return [];
-    try {
-      const successfulOrders = orders.filter(order =>
-        order.userId !== null &&
+  // Closed marketplace: load the session storefront profile even when there are no orders.
+  useEffect(() => {
+    if (!token || !activeStorefrontId) {
+      setStorefrontProfile(null);
+      return;
+    }
+    setStorefrontProfile(null);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/mobile/distributor/${encodeURIComponent(String(activeStorefrontId))}`,
+          { headers: authHeaders() },
+        );
+        if (cancelled) return;
+        if (!res.ok) {
+          setStorefrontProfile(null);
+          return;
+        }
+        const json = (await res.json()) as {
+          companyName?: string | null;
+          name?: string | null;
+          logo?: string | null;
+        };
+        if (cancelled) return;
+        setStorefrontProfile({
+          name: json.companyName?.trim() || json.name?.trim() || t('tabsAccount.networks.distributor'),
+          logo: normalizeUrl(json.logo),
+        });
+      } catch {
+        if (!cancelled) setStorefrontProfile(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, activeStorefrontId, t]);
+
+  const storefrontDistributors: Distributor[] = React.useMemo(() => {
+    if (!token || !user?.id || !activeStorefrontId) return [];
+
+    const totalOrders = orders.filter(
+      (order) =>
+        order.userId === activeStorefrontId &&
         order.isDeleted !== true &&
         !order.deletedAt &&
         order.orderStatus !== 'Deleted' &&
-        order.orderStatus !== 'Cancelled'
-      );
+        order.orderStatus !== 'Cancelled',
+    ).length;
 
-      const uniqueDistributors = new Map<number, { storeName: string; orderCount: number }>();
+    const productMatch = products.find((product) => product.userId === activeStorefrontId);
+    const companyInfo = productMatch?.seller?.company;
+    const nameFromCatalog =
+      companyInfo?.name?.trim() ||
+      productMatch?.seller?.name?.trim() ||
+      null;
+    const logoFromCatalog =
+      normalizeUrl(companyInfo?.logo) || normalizeUrl(productMatch?.seller?.avatar);
 
-      successfulOrders.forEach(order => {
-        const distributorId = order.userId!;
-        if (!uniqueDistributors.has(distributorId)) {
-          uniqueDistributors.set(distributorId, {
-            storeName: order.storeName || `Distributor #${distributorId}`,
-            orderCount: 0
-          });
-        }
-        uniqueDistributors.get(distributorId)!.orderCount++;
-      });
-
-      // Use products from websocket-enabled dataStore instead of fetching
-      const sellerInfoMap = new Map<number, { seller?: MarketplaceProduct['seller'] }>();
-      products.forEach((product) => {
-        if (product.userId && !sellerInfoMap.has(product.userId)) {
-          sellerInfoMap.set(product.userId, { seller: product.seller });
-        }
-      });
-
-      const distributorProfiles = Array.from(uniqueDistributors.keys()).map((distributorId) => {
-        const distributorData = uniqueDistributors.get(distributorId)!;
-        const sellerData = sellerInfoMap.get(distributorId);
-        const companyInfo = sellerData?.seller?.company;
-
-        const logoUrl = normalizeUrl(companyInfo?.logo) || normalizeUrl(sellerData?.seller?.avatar);
-
-        return {
-          id: distributorId,
-          name: companyInfo?.name || distributorData.storeName || `Distributor #${distributorId}`,
-          logo: logoUrl,
-          totalOrders: distributorData.orderCount
-        };
-      });
-
-      return distributorProfiles
-        .sort((a, b) => b.totalOrders - a.totalOrders)
-        .slice(0, 2);
-    } catch {
-      return [];
-    }
-  }, [orders, products, token, user?.id]);
+    return [
+      {
+        id: activeStorefrontId,
+        name:
+          storefrontProfile?.name ||
+          nameFromCatalog ||
+          t('tabsAccount.networks.distributor'),
+        logo: storefrontProfile?.logo || logoFromCatalog,
+        totalOrders,
+      },
+    ];
+  }, [orders, products, token, user?.id, activeStorefrontId, storefrontProfile, t]);
 
   const isAuthenticated = !!token && !!user;
   const showProfileSkeleton = !!token && isUserLoading && !refreshing;
@@ -226,149 +254,129 @@ export default function AccountScreen() {
       {/* Section 1: User Section */}
       {renderUserSection()}
 
-      {/* Section 2: Purchase History (full width) */}
+      {/* Section 2: My Purchases — horizontal bordered status tabs, full-width view button below */}
       <View style={{ backgroundColor: '#ffffff', padding: 16, marginBottom: 10, opacity: isAuthenticated ? 1 : 0.6 }}>
         <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 16 }}>{t('tabsAccount.sections.myPurchases')}</Text>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 3, marginBottom: 6 }}>
-          {isAuthenticated ? (
-            <>
-              <Link href="/useraccounts/purchases/mypurchases?tab=to-pay" asChild>
-                <Pressable style={{ alignItems: 'center', padding: 8 }}>
-                  <WalletMinimal color={iconGray} size={22} />
-                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toPay')}</Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+          {(
+            [
+              { href: '/useraccounts/purchases/mypurchases?tab=to-pay', label: t('tabsAccount.purchaseStatus.toPay'), Icon: WalletMinimal },
+              { href: '/useraccounts/purchases/mypurchases?tab=to-ship', label: t('tabsAccount.purchaseStatus.toShip'), Icon: Truck },
+              { href: '/useraccounts/purchases/mypurchases?tab=to-receive', label: t('tabsAccount.purchaseStatus.toReceive'), Icon: PackageCheck },
+              { href: '/useraccounts/purchases/mypurchases?tab=completed', label: t('tabsAccount.purchaseStatus.completed'), Icon: CheckCircle },
+            ] as const
+          ).map((item) =>
+            isAuthenticated ? (
+              <Link key={item.href} href={item.href} asChild>
+                <Pressable
+                  style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 4, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff' }}
+                >
+                  <item.Icon color={iconGray} size={20} />
+                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 11, fontWeight: '500', textAlign: 'center' }} numberOfLines={1}>
+                    {item.label}
+                  </Text>
                 </Pressable>
               </Link>
-              <Link href="/useraccounts/purchases/mypurchases?tab=to-ship" asChild>
-                <Pressable style={{ alignItems: 'center', padding: 8 }}>
-                  <Truck color={iconGray} size={22} />
-                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toShip')}</Text>
-                </Pressable>
-              </Link>
-              <Link href="/useraccounts/purchases/mypurchases?tab=to-receive" asChild>
-                <Pressable style={{ alignItems: 'center', padding: 8 }}>
-                  <PackageCheck color={iconGray} size={22} />
-                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toReceive')}</Text>
-                </Pressable>
-              </Link>
-              <Link href="/useraccounts/purchases/mypurchases?tab=to-rate" asChild>
-                <Pressable style={{ alignItems: 'center', padding: 8 }}>
-                  <Star color={iconGray} size={22} />
-                  <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toRate')}</Text>
-                </Pressable>
-              </Link>
-            </>
-          ) : (
-            <>
-              <View style={{ alignItems: 'center', padding: 8 }}>
-                <WalletMinimal color={iconGray} size={22} />
-                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toPay')}</Text>
+            ) : (
+              <View
+                key={item.href}
+                style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 4, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff', opacity: 0.5 }}
+              >
+                <item.Icon color={iconGray} size={20} />
+                <Text style={{ marginTop: 6, color: '#111827', fontSize: 11, fontWeight: '500', textAlign: 'center' }} numberOfLines={1}>
+                  {item.label}
+                </Text>
               </View>
-              <View style={{ alignItems: 'center', padding: 8 }}>
-                <Truck color={iconGray} size={22} />
-                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toShip')}</Text>
-              </View>
-              <View style={{ alignItems: 'center', padding: 8 }}>
-                <PackageCheck color={iconGray} size={22} />
-                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toReceive')}</Text>
-              </View>
-              <View style={{ alignItems: 'center', padding: 8 }}>
-                <Star color={iconGray} size={22} />
-                <Text style={{ marginTop: 6, color: '#111827', fontSize: 12 }}>{t('tabsAccount.purchaseStatus.toRate')}</Text>
-              </View>
-            </>
+            ),
           )}
         </View>
         {isAuthenticated ? (
           <Link href="/useraccounts/purchases/mypurchases" asChild>
-            <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
-              <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.viewPurchaseHistory')}</Text>
-              <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
+            <Pressable
+              style={{ width: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff', paddingVertical: 12, paddingHorizontal: 14 }}
+            >
+              <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600' }}>
+                {t('tabsAccount.actions.viewPurchaseHistory')}
+              </Text>
             </Pressable>
           </Link>
         ) : (
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
-            <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.viewPurchaseHistory')}</Text>
-            <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
+          <View
+            style={{ width: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff', paddingVertical: 12, paddingHorizontal: 14, opacity: 0.5 }}
+          >
+            <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600' }}>
+              {t('tabsAccount.actions.viewPurchaseHistory')}
+            </Text>
           </View>
         )}
       </View>
 
-      {/* Section 2.5: My Networks */}
+      {/* Section 2.5: Distributor Storefront */}
       <View style={{ backgroundColor: '#ffffff', padding: 16, marginBottom: 10, opacity: isAuthenticated ? 1 : 0.6 }}>
-        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 16 }}>{t('tabsAccount.sections.myNetworks')}</Text>
+        <Text style={{ color: '#111827', fontSize: 16, fontWeight: '700', marginBottom: 16 }}>{t('tabsAccount.sections.distributorStorefront')}</Text>
         {isAuthenticated ? (
           <>
-            {recentDistributors.length > 0 ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
-                {recentDistributors.map((distributor) => (
-                  <Pressable 
-                    key={distributor.id}
-                    onPress={() => router.push(`/useraccounts/buyernetworks/distributor-detail?id=${distributor.id}`)}
-                    style={{ width: '47%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb' }}
-                  >
-                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8, overflow: 'hidden' }}>
-                      {distributor.logo ? (
-                        <Image source={{ uri: distributor.logo }} style={{ width: 48, height: 48 }} />
-                      ) : (
-                        <Users color={primaryBlue} size={24} />
-                      )}
-                    </View>
-                    <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>
-                      {distributor.name}
-                    </Text>
-                    <Text style={{ color: '#6b7280', fontSize: 12 }}>
-                      {t('tabsAccount.networks.ordersCount', { count: distributor.totalOrders })}
-                    </Text>
-                  </Pressable>
+            {storefrontDistributors.length > 0 ? (
+              <View style={{ gap: 12 }}>
+                {storefrontDistributors.map((distributor) => (
+                  <View key={distributor.id} style={{ gap: 8 }}>
+                    <Pressable
+                      onPress={() => router.push(`/useraccounts/buyernetworks/distributor-detail?id=${distributor.id}`)}
+                      style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb' }}
+                    >
+                      <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                        {distributor.logo ? (
+                          <Image source={{ uri: distributor.logo }} style={{ width: 48, height: 48 }} />
+                        ) : (
+                          <Users color={primaryBlue} size={24} />
+                        )}
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>
+                          {distributor.name}
+                        </Text>
+                        <Text style={{ color: '#6b7280', fontSize: 12 }}>
+                          {t('tabsAccount.networks.ordersCount', { count: distributor.totalOrders })}
+                        </Text>
+                      </View>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => router.push(`/useraccounts/buyernetworks/distributor-information?id=${distributor.id}`)}
+                      style={{ width: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb', backgroundColor: '#ffffff', paddingVertical: 12, paddingHorizontal: 14 }}
+                    >
+                      <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600' }}>
+                        {t('tabsAccount.actions.viewDistributorInformation')}
+                      </Text>
+                    </Pressable>
+                  </View>
                 ))}
               </View>
             ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
-                <View style={{ width: '47%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', opacity: 0.5 }}>
-                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+              <View style={{ width: '100%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', opacity: 0.5 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' }}>
                     <Users color={iconGray} size={24} />
                   </View>
-                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>{t('tabsAccount.networks.noNetworksYet')}</Text>
-                  <Text style={{ color: '#6b7280', fontSize: 12 }}>--</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>{t('tabsAccount.networks.noNetworksYet')}</Text>
+                    <Text style={{ color: '#6b7280', fontSize: 12 }}>--</Text>
+                  </View>
                 </View>
               </View>
             )}
-            <Link href="/useraccounts/buyernetworks/mynetworks" asChild>
-              <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
-                <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.viewAllNetworks')}</Text>
-                <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
-              </Pressable>
-            </Link>
-            <Link href="/useraccounts/buyernetworks/followings" asChild>
-              <Pressable style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6', marginTop: 14 }}>
-                <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.viewAllFollowings')}</Text>
-                <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
-              </Pressable>
-            </Link>
           </>
         ) : (
-          <>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
-              <View style={{ width: '47%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', opacity: 0.5 }}>
-                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                  <Users color={iconGray} size={24} />
-                </View>
-                <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>{t('tabsAccount.networks.distributor')}</Text>
-                <Text style={{ color: '#6b7280', fontSize: 12 }}>--</Text>
+          <View style={{ width: '100%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', opacity: 0.5 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ width: 48, height: 48, borderRadius: 12, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' }}>
+                <Users color={iconGray} size={24} />
               </View>
-              <View style={{ width: '47%', backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e5e7eb', opacity: 0.5 }}>
-                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
-                  <Users color={iconGray} size={24} />
-                </View>
+              <View style={{ flex: 1 }}>
                 <Text style={{ color: '#111827', fontSize: 14, fontWeight: '600', marginBottom: 4 }} numberOfLines={1}>{t('tabsAccount.networks.distributor')}</Text>
                 <Text style={{ color: '#6b7280', fontSize: 12 }}>--</Text>
               </View>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderTopWidth: 1, borderTopColor: '#f3f4f6' }}>
-              <Text style={{ color: iconGray, fontWeight: '500', marginTop: 14 }}>{t('tabsAccount.actions.viewAllNetworks')}</Text>
-              <ChevronRight color={iconGray} size={18} style={{ marginTop: 14 }} />
-            </View>
-          </>
+          </View>
         )}
       </View>
 

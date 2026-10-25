@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, Alert, StyleSheet, Pressable, TouchableOpacity, Share, Animated, Modal } from 'react-native';
+import { View, Text, ScrollView, Image, Alert, StyleSheet, Pressable, Share, Animated, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Users, MapPin, Phone, Mail, Star, Package, MessageSquare, Store, Calendar, Building2, FileText, Clock, ArrowLeft, MoreVertical, Share2, Flag, HelpCircle } from 'lucide-react-native';
@@ -89,13 +89,13 @@ export default function DistributorDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token, user: authUser } = useAuthStore();
   const storeOrders = useDataStore(state => state.orders);
-  const isOrdersLoading = useDataStore(state => state.isOrdersLoading);
   const loadOrdersData = useDataStore(state => state.loadOrdersData);
   const products = useDataStore(state => state.products);
   const [distributor, setDistributor] = useState<Distributor | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [menuVisible, setMenuVisible] = useState(false);
+  const loadRequestIdRef = useRef(0);
   const menuOpacity = useRef(new Animated.Value(0)).current;
   const menuScale = useRef(new Animated.Value(0.95)).current;
   const insets = useSafeAreaInsets();
@@ -126,6 +126,8 @@ export default function DistributorDetailScreen() {
       return;
     }
 
+    const requestId = ++loadRequestIdRef.current;
+
     try {
       setIsLoading(true);
       const distributorOrders = sourceOrders.filter((order) => {
@@ -133,23 +135,15 @@ export default function DistributorDetailScreen() {
         return orderDistributorId === distributorId;
       }) as OrderResponse[];
 
-      if (distributorOrders.length === 0) {
-        // Orders may still be loading (websocket/refresh). Keep skeleton until we know for sure.
-        if (isOrdersLoading) return;
-        setDistributor(null);
-        setOrders([]);
-        return;
-      }
-
-      // Use products from websocket-enabled dataStore instead of fetching
+      // Prefer catalog seller info, then order user, then the distributor profile API.
+      // Zero orders is valid for a closed storefront membership.
       const storeProducts = useDataStore.getState().products;
       const match = storeProducts.find((product) => product?.userId === distributorId);
       let sellerCompany = match?.seller?.company;
 
-      const distributorUser = distributorOrders[0].user;
+      const distributorUser = distributorOrders[0]?.user;
       const nameFallback = distributorUser?.company?.name || distributorUser?.name || distributorUser?.username;
-      
-      // If company data not found in products, try to get from order user
+
       if (!sellerCompany && distributorUser?.company && distributorUser.company.name) {
         sellerCompany = {
           name: distributorUser.company.name,
@@ -164,9 +158,43 @@ export default function DistributorDetailScreen() {
         };
       }
 
+      let profileFallback: {
+        companyName?: string | null;
+        name?: string | null;
+        logo?: string | null;
+        bannerImage?: string | null;
+        businessAddress?: string | null;
+        businessPhone?: string | null;
+        businessEmail?: string | null;
+        businessDescription?: string | null;
+        industryType?: string | null;
+        yearsInOperation?: string | null;
+      } | null = null;
+
+      if (!sellerCompany?.name && !nameFallback) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/mobile/distributor/${encodeURIComponent(String(distributorId))}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (requestId !== loadRequestIdRef.current) return;
+          if (res.ok) {
+            profileFallback = await res.json();
+          }
+        } catch {
+          profileFallback = null;
+        }
+      }
+
+      if (requestId !== loadRequestIdRef.current) return;
+
+      if (!sellerCompany?.name && !nameFallback && !profileFallback?.companyName && !profileFallback?.name) {
+        setDistributor(null);
+        setOrders([]);
+        return;
+      }
+
       const totalSpent = distributorOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
-      // Get last order date, validating it's a valid date
       let lastOrderDate: string | undefined = undefined;
       if (distributorOrders.length > 0 && distributorOrders[0].orderDate) {
         const parsedDate = new Date(distributorOrders[0].orderDate);
@@ -175,40 +203,86 @@ export default function DistributorDetailScreen() {
         }
       }
 
+      const displayName =
+        sellerCompany?.name ||
+        nameFallback ||
+        profileFallback?.companyName?.trim() ||
+        profileFallback?.name?.trim() ||
+        `Distributor #${distributorId}`;
+
       const distributorData: Distributor = {
         id: distributorId,
-        name: sellerCompany?.name || nameFallback || `Distributor #${distributorId}`,
-        logo: normalizeUrl(sellerCompany?.logo) || normalizeUrl(distributorUser?.company?.logo) || normalizeUrl(distributorUser?.image),
-        banner: normalizeUrl(sellerCompany?.bannerImage) || normalizeUrl(distributorUser?.company?.bannerImage),
-        address: sellerCompany?.businessAddress || distributorUser?.company?.businessAddress || distributorUser?.chosenAddress,
-        phone: sellerCompany?.businessPhone || distributorUser?.company?.businessPhone || distributorUser?.phone,
-        email: sellerCompany?.businessEmail || distributorUser?.company?.businessEmail || distributorUser?.email,
+        name: displayName,
+        logo:
+          normalizeUrl(sellerCompany?.logo) ||
+          normalizeUrl(distributorUser?.company?.logo) ||
+          normalizeUrl(distributorUser?.image) ||
+          normalizeUrl(profileFallback?.logo),
+        banner:
+          normalizeUrl(sellerCompany?.bannerImage) ||
+          normalizeUrl(distributorUser?.company?.bannerImage) ||
+          normalizeUrl(profileFallback?.bannerImage),
+        address:
+          sellerCompany?.businessAddress ||
+          distributorUser?.company?.businessAddress ||
+          distributorUser?.chosenAddress ||
+          profileFallback?.businessAddress ||
+          undefined,
+        phone:
+          sellerCompany?.businessPhone ||
+          distributorUser?.company?.businessPhone ||
+          distributorUser?.phone ||
+          profileFallback?.businessPhone ||
+          undefined,
+        email:
+          sellerCompany?.businessEmail ||
+          distributorUser?.company?.businessEmail ||
+          distributorUser?.email ||
+          profileFallback?.businessEmail ||
+          undefined,
         rating: 4.5,
         totalOrders: distributorOrders.length,
-        totalSpent: totalSpent,
-        lastOrderDate: lastOrderDate,
-        description: sellerCompany?.businessDescription || distributorUser?.company?.businessDescription,
-        industryType: sellerCompany?.industryType || distributorUser?.company?.industryType,
-        yearsInOperation: sellerCompany?.yearsInOperation || distributorUser?.company?.yearsInOperation,
-        verified: !!(sellerCompany?.name || distributorUser?.company?.name),
+        totalSpent,
+        lastOrderDate,
+        description:
+          sellerCompany?.businessDescription ||
+          distributorUser?.company?.businessDescription ||
+          profileFallback?.businessDescription ||
+          undefined,
+        industryType:
+          sellerCompany?.industryType ||
+          distributorUser?.company?.industryType ||
+          profileFallback?.industryType ||
+          undefined,
+        yearsInOperation:
+          sellerCompany?.yearsInOperation ||
+          distributorUser?.company?.yearsInOperation ||
+          profileFallback?.yearsInOperation ||
+          undefined,
+        verified: !!(
+          sellerCompany?.name ||
+          distributorUser?.company?.name ||
+          profileFallback?.companyName ||
+          profileFallback?.name
+        ),
       };
+
+      if (requestId !== loadRequestIdRef.current) return;
 
       setDistributor(distributorData);
 
       const transformedOrders: Order[] = distributorOrders
         .map(order => {
-          // Validate order date
           let orderDate = order.orderDate;
           if (orderDate) {
             const parsedDate = new Date(orderDate);
             if (isNaN(parsedDate.getTime())) {
-              // If orderDate is invalid, try createdAt
               orderDate = order.createdAt || new Date().toISOString();
             }
           } else {
             orderDate = order.createdAt || new Date().toISOString();
           }
-          
+
           return {
             orderId: order.orderId,
             date: orderDate,
@@ -224,14 +298,19 @@ export default function DistributorDetailScreen() {
           if (isNaN(dateB.getTime())) return -1;
           return dateB.getTime() - dateA.getTime();
         })
-        .slice(0, 5); // Limit to most recent 5 orders
+        .slice(0, 5);
+
+      if (requestId !== loadRequestIdRef.current) return;
 
       setOrders(transformedOrders);
     } catch (error) {
+      if (requestId !== loadRequestIdRef.current) return;
       setDistributor(null);
       setOrders([]);
     } finally {
-      setIsLoading(false);
+      if (requestId === loadRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -247,22 +326,6 @@ export default function DistributorDetailScreen() {
 
   const handleViewStore = () => {
     Alert.alert(t('buyerNetworks.distributorDetail.alerts.viewStoreTitle'), t('buyerNetworks.distributorDetail.alerts.viewStoreBody'));
-  };
-
-  const handleLeaveReview = () => {
-    if (!distributor) return;
-
-    router.push({
-      pathname: '/useraccounts/buyernetworks/distributorrating',
-      params: {
-        id: String(distributor.id),
-        name: distributor.name,
-        logo: distributor.logo ?? '',
-        description: distributor.description ?? '',
-        industryType: distributor.industryType ?? '',
-        totalOrders: String(distributor.totalOrders ?? 0),
-      },
-    });
   };
 
   const handleShareDistributor = async () => {
@@ -491,17 +554,6 @@ export default function DistributorDetailScreen() {
           )}
         </View>
       </ScrollView>
-
-      <View style={[styles.bottomContainer, { paddingBottom: 3 + insets.bottom }]}>
-        <TouchableOpacity
-          style={styles.reviewButton}
-          onPress={handleLeaveReview}
-          accessibilityLabel={t('buyerNetworks.distributorDetail.a11y.rateReview')}
-          accessibilityRole="button"
-        >
-          <Text style={styles.reviewButtonText}>{t('buyerNetworks.distributorDetail.cta.rateReview')}</Text>
-        </TouchableOpacity>
-      </View>
 
       <Modal
         visible={menuVisible}

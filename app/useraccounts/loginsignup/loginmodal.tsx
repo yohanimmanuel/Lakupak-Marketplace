@@ -20,6 +20,7 @@ export default function LoginModal() {
   const menuScale = useRef(new Animated.Value(0.95)).current;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -142,6 +143,28 @@ export default function LoginModal() {
               </View>
             </View>
 
+            {/* Distributor Referral Code */}
+            <View style={{ marginTop: 8, marginBottom: 16 }}>
+              <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
+                {t('auth.referralCode.label')}
+              </Text>
+              <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
+                <TextInput
+                  value={referralCode}
+                  onChangeText={(value) => setReferralCode(value.toUpperCase())}
+                  placeholder={t('auth.referralCode.placeholder')}
+                  placeholderTextColor="#9ca3af"
+                  style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={24}
+                />
+              </View>
+              <Text style={{ color: '#6b7280', fontSize: 12, marginTop: 6 }}>
+                {t('auth.referralCode.loginHint')}
+              </Text>
+            </View>
+
             {/* Forgot Password */}
             <Pressable
               onPress={() => router.push('/useraccounts/loginsignup/forgotpasswordmodal')}
@@ -160,10 +183,14 @@ export default function LoginModal() {
                   Alert.alert(t('auth.login.alerts.missingTitle'), t('auth.login.alerts.missingBody'));
                   return;
                 }
+                if (!referralCode.trim()) {
+                  Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.required'));
+                  return;
+                }
                 
                 setIsLoggingIn(true);
                 try {
-                  const result = await loginWithCredentials(username.trim(), password);
+                  const result = await loginWithCredentials(username.trim(), password, referralCode);
                   
                   // CRITICAL: Set token and user FIRST to ensure proper user isolation
                   await setToken(result.token);
@@ -221,6 +248,14 @@ export default function LoginModal() {
                         { text: t('auth.login.alerts.signUp'), style: 'default', onPress: () => router.push('/useraccounts/loginsignup/signupmodal') },
                       ],
                     );
+                    return;
+                  }
+                  if (code === AUTH_ERROR_CODE.REFERRAL_CODE_REQUIRED) {
+                    Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.required'));
+                    return;
+                  }
+                  if (code === AUTH_ERROR_CODE.REFERRAL_CODE_INVALID) {
+                    Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.invalid'));
                     return;
                   }
                   if (code === AUTH_ERROR_CODE.INVALID_CREDENTIALS) {

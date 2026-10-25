@@ -24,31 +24,11 @@ import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
 import { API_BASE_URL } from '../../../services/config';
 import { useTranslation } from 'react-i18next';
-import { ProductReviewsInlineSkeleton } from '../SkeletonLoader';
 import { translateProductType } from '../../../utils/translateProductType';
 // Removed theme color imports - using explicit colors
 
 const { width: screenWidth } = Dimensions.get('window');
 const cardWidth = (screenWidth - 48) / 2; // 2 columns with padding
-
-/** Product reviews from API (by productId) */
-interface ProductReviewItem {
-  id: number;
-  rating: number;
-  title?: string;
-  comment?: string;
-  imageUrls: string[];
-  createdAt: string;
-  reviewerDisplayName: string;
-  reviewerProfileImage?: string;
-}
-interface ProductReviewsData {
-  productId: string;
-  totalReviews: number;
-  overallRating: number;
-  breakdown: Record<number, number>;
-  reviews: ProductReviewItem[];
-}
 
 // Normalize relative image paths to absolute URLs
 const normalizeUrl = (url?: string | null): string | undefined => {
@@ -111,11 +91,6 @@ export default function ProductMarketplace({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showImageModal, setShowImageModal] = useState(false);
   const [showAddToCartModal, setShowAddToCartModal] = useState(false);
-  const [productReviewsData, setProductReviewsData] = useState<ProductReviewsData | null>(null);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [reviewImageModalVisible, setReviewImageModalVisible] = useState(false);
-  const [reviewImageModalImages, setReviewImageModalImages] = useState<string[]>([]);
-  const [reviewImageModalInitialIndex, setReviewImageModalInitialIndex] = useState(0);
   const trackedViewProductIdRef = useRef<string | null>(null);
 
   // Safe value getters to prevent undefined/null errors
@@ -294,27 +269,6 @@ export default function ProductMarketplace({
     addViewedProduct(productId, product as MarketplaceProduct);
   }, [product.id, type, user?.id, originalPriceForTracking]);
 
-  // Fetch product reviews by productId for Customer Reviews section
-  const productIdForReviews = safeGetString(product.id) || (product as { productId?: string }).productId || '';
-  useEffect(() => {
-    if (!productIdForReviews || type !== 'full') return;
-    let cancelled = false;
-    setReviewsLoading(true);
-    setProductReviewsData(null);
-    fetch(`${API_BASE_URL}/api/mobile/reviews/product?productId=${encodeURIComponent(productIdForReviews)}`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error('Failed to load reviews'))))
-      .then((data: ProductReviewsData) => {
-        if (!cancelled) setProductReviewsData(data);
-      })
-      .catch(() => {
-        if (!cancelled) setProductReviewsData(null);
-      })
-      .finally(() => {
-        if (!cancelled) setReviewsLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [productIdForReviews, type]);
-
   // Get related products from the same category using websocket-enabled products from dataStore
   const relatedProducts = React.useMemo(() => {
     const category = safeGetString(product.category);
@@ -391,23 +345,6 @@ export default function ProductMarketplace({
     const r = safeGetNumber(rating);
     if (!Number.isFinite(r) || r <= 0) return '0.0';
     return (Math.round(r * 10) / 10).toFixed(1);
-  };
-
-  const renderStars = (rating: number, size: number = 16) => {
-    const safeRating = safeGetNumber(rating);
-    const stars = [];
-    for (let i = 1; i <= 5; i++) {
-      stars.push(
-        <Ionicons
-          key={i}
-          name={i <= safeRating ? 'star' : 'star-outline'}
-          size={size}
-          color="#FCD34D"
-          style={{ marginRight: 2 }}
-        />
-      );
-    }
-    return <View style={{ flexDirection: 'row' }}>{stars}</View>;
   };
 
   /** Bordered pill: star + numeric rating (product card & PDP header). */
@@ -737,12 +674,11 @@ export default function ProductMarketplace({
         </View>
       </View>
 
-      {/* Rating badge + reviews */}
+      {/* Rating badge */}
       <View style={styles.ratingContainer}>
         {renderRatingBadge('full')}
         <Text style={styles.reviewCount}>
-          ({productReviewsData ? productReviewsData.totalReviews : safeGetNumber(product.reviewCount)}{' '}
-          {t('product.reviews.reviews')})
+          ({safeGetNumber(product.reviewCount)} {t('product.reviews.reviews')})
         </Text>
       </View>
 
@@ -815,15 +751,6 @@ export default function ProductMarketplace({
                   <Text style={styles.officialText}>{t('product.badges.officialStore')}</Text>
                 </View>
               )}
-            </View>
-            <View style={styles.sellerRating}>
-              {renderStars(safeGetNumber(product.seller?.rating), 12)}
-              <Text style={styles.sellerRatingText}>
-                {t('product.sellerRating', {
-                  rating: safeGetNumber(product.seller?.rating),
-                  count: safeGetNumber(product.seller?.reviewCount),
-                })}
-              </Text>
             </View>
           </View>
         </View>
@@ -971,185 +898,6 @@ export default function ProductMarketplace({
     </View>
   );
 
-  const formatReviewDate = (iso: string) => {
-    try {
-      const d = new Date(iso);
-      const now = new Date();
-      const diffMs = now.getTime() - d.getTime();
-      const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-      if (diffDays === 0) return t('product.relativeTime.today');
-      if (diffDays === 1) return t('product.relativeTime.yesterday');
-      if (diffDays < 7) return t('product.relativeTime.daysAgo', { count: diffDays });
-      if (diffDays < 30) {
-        const weeks = Math.floor(diffDays / 7);
-        return weeks === 1
-          ? t('product.relativeTime.weekAgo')
-          : t('product.relativeTime.weeksAgo', { count: weeks });
-      }
-      return d.toLocaleDateString();
-    } catch {
-      return t('product.relativeTime.recently');
-    }
-  };
-
-  const totalReviewsFromApi = productReviewsData?.totalReviews ?? 0;
-  const overallRatingFromApi = productReviewsData?.overallRating ?? 0;
-  const breakdownFromApi = productReviewsData?.breakdown ?? { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-  const reviewsList = productReviewsData?.reviews ?? [];
-
-  const renderReviews = () => (
-    <View style={styles.section}>
-      <View style={styles.reviewsHeader}>
-        <Text style={[styles.sectionTitle, { color: textColor }]}>
-          {t('product.sections.customerReviews')}
-        </Text>
-        <TouchableOpacity
-          onPress={() => {
-            if (!productIdForReviews) return;
-            router.push({
-              pathname: '/components/productcatalog/ProductReviewsList',
-              params: { productId: productIdForReviews, productName: safeGetString(product.name) },
-            });
-          }}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel={t('product.reviews.moreReviewsA11y')}
-          disabled={!productIdForReviews || totalReviewsFromApi === 0}
-          style={{ opacity: !productIdForReviews || totalReviewsFromApi === 0 ? 0.5 : 1 }}
-        >
-          <Text style={[styles.viewAllText, { color: primaryColor }]}>
-            {t('product.reviews.moreReviews')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {reviewsLoading ? (
-        <ProductReviewsInlineSkeleton />
-      ) : totalReviewsFromApi === 0 ? (
-        <View style={styles.noReviewsContainer}>
-          <Ionicons name="chatbubbles-outline" size={30} color="#9CA3AF" />
-          <Text style={[styles.noReviewsTitle, { color: textColor }]}>
-            {t('product.states.noReviewsYet')}
-          </Text>
-        </View>
-      ) : (
-        <>
-          <View style={styles.ratingBreakdown}>
-            <View style={styles.overallRating}>
-              <Text style={[styles.overallRatingNumber, { color: textColor }]}>
-                {overallRatingFromApi}
-              </Text>
-              {renderStars(overallRatingFromApi, 16)}
-              <Text style={styles.totalReviews}>
-                {totalReviewsFromApi} {t('product.reviews.reviews')}
-              </Text>
-            </View>
-            <View style={styles.ratingBars}>
-              {[5, 4, 3, 2, 1].map((rating) => (
-                <View key={rating} style={styles.ratingBar}>
-                  <Text style={styles.ratingLabel}>{rating}</Text>
-                  <View style={styles.barContainer}>
-                    <View
-                      style={[
-                        styles.bar,
-                        { width: `${totalReviewsFromApi > 0 ? ((breakdownFromApi[rating] ?? 0) / totalReviewsFromApi) * 100 : 0}%` }
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.barCount}>
-                    {breakdownFromApi[rating] ?? 0}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {reviewsList.map((review) => {
-            const avatarUri = review.reviewerProfileImage
-              ? (review.reviewerProfileImage.startsWith('http')
-                  ? review.reviewerProfileImage
-                  : normalizeUrl(review.reviewerProfileImage))
-              : null;
-            const normalizedImageUrls = (review.imageUrls ?? [])
-              .map((url) => normalizeUrl(url))
-              .filter((u): u is string => u != null);
-            return (
-            <View key={review.id} style={styles.sampleReview}>
-              <TouchableOpacity
-                style={styles.reviewerAvatar}
-                onPress={() => {
-                  if (avatarUri) {
-                    setReviewImageModalImages([avatarUri]);
-                    setReviewImageModalInitialIndex(0);
-                    setReviewImageModalVisible(true);
-                  }
-                }}
-                activeOpacity={avatarUri ? 0.8 : 1}
-                disabled={!avatarUri}
-              >
-                {avatarUri ? (
-                  <Image source={{ uri: avatarUri }} style={styles.reviewerAvatarImage} resizeMode="cover" />
-                ) : (
-                  <Text style={styles.reviewerAvatarText}>
-                    {safeGetString(review.reviewerDisplayName, 'U').charAt(0).toUpperCase()}
-                  </Text>
-                )}
-              </TouchableOpacity>
-              <View style={styles.reviewContent}>
-                <View style={styles.reviewHeader}>
-                  {renderStars(review.rating, 12)}
-                  <Text style={styles.reviewerName}>
-                    {safeGetString(review.reviewerDisplayName, 'Customer')}
-                  </Text>
-                  <Text style={styles.reviewDate}>
-                    {formatReviewDate(review.createdAt)}
-                  </Text>
-                </View>
-                {review.title ? (
-                  <Text style={[styles.reviewComment, { color: textColor, fontWeight: '600', marginBottom: 4 }]}>
-                    {review.title}
-                  </Text>
-                ) : null}
-                {review.comment ? (
-                  <Text style={[styles.reviewComment, { color: textColor }]}>
-                    {`\u201c${review.comment}\u201d`}
-                  </Text>
-                ) : null}
-                {normalizedImageUrls.length > 0 ? (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.reviewImagesScroll}
-                    contentContainerStyle={styles.reviewImagesContainer}
-                  >
-                    {normalizedImageUrls.map((uri, idx) => (
-                      <TouchableOpacity
-                        key={idx}
-                        onPress={() => {
-                          setReviewImageModalImages(normalizedImageUrls);
-                          setReviewImageModalInitialIndex(idx);
-                          setReviewImageModalVisible(true);
-                        }}
-                        activeOpacity={0.9}
-                      >
-                        <Image
-                          source={{ uri }}
-                          style={styles.reviewImage}
-                          resizeMode="cover"
-                        />
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                ) : null}
-              </View>
-            </View>
-          );
-          })}
-        </>
-      )}
-    </View>
-  );
-
   const renderAssurance = () => (
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, { color: textColor }]}>
@@ -1227,7 +975,6 @@ export default function ProductMarketplace({
         {renderProductInfo()}
         {renderProductDetails()}
         {renderAssurance()}
-        {renderReviews()}
         {renderSellerInfo()}
         {renderYouMayAlsoLike()}
       </ScrollView>
@@ -1243,14 +990,6 @@ export default function ProductMarketplace({
         images={images}
         onClose={() => setShowImageModal(false)}
         initialIndex={currentImageIndex}
-      />
-
-      {/* Review / profile image modal (reused same component) */}
-      <ProductImageModal
-        visible={reviewImageModalVisible}
-        images={reviewImageModalImages}
-        onClose={() => setReviewImageModalVisible(false)}
-        initialIndex={reviewImageModalInitialIndex}
       />
       
       {/* Add to Cart Modal */}

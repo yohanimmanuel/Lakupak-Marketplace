@@ -112,6 +112,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     // Once a new token is set, allow suspension UI again.
     set({ token: t, blockSuspensionUntilNextToken: t ? false : get().blockSuspensionUntilNextToken })
+    const { useDataStore } = await import('./dataStore')
+    useDataStore.getState().retainStorefront(t)
   },
   setUser: async (u) => {
     // If setting a new user (different from current), clear previous user's data
@@ -151,6 +153,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const t = await SecureStore.getItemAsync('auth_token')
     if (t) {
       set({ token: t })
+      const { useDataStore } = await import('./dataStore')
+      useDataStore.getState().retainStorefront(t)
       try {
         const { getMe } = await import('../services/user')
         const me = await getMe(t)

@@ -1,46 +1,37 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, Image, ImageBackground, Modal, PanResponder, Pressable, ScrollView, Share, StatusBar, StyleSheet, Text, View } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  Image,
+  StyleSheet,
+  Pressable,
+  Modal,
+  Animated,
+  Alert,
+  Share,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, ChevronDown, ChevronUp, HelpCircle, MoreVertical, Share2, Star, Flag } from 'lucide-react-native';
-import { marketplaceService, type MarketplaceProduct } from '../../../services/marketplace';
-import ProductMarketplace from '../../components/productcatalog/ProductMarketplace';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import {
+  ArrowLeft,
+  Building2,
+  Store,
+  Truck,
+  Check,
+  MapPin,
+  MoreVertical,
+  Share2,
+  Flag,
+  HelpCircle,
+} from 'lucide-react-native';
 import { API_BASE_URL } from '../../../services/config';
-import { websocketService } from '../../../services/websocket';
-import { useAuthStore } from '../../../stores/authStore';
-import { followDistributor, isFollowingDistributor, unfollowDistributor } from '../../../services/distributorFollowing';
+import { authHeaders } from '../../../services/graphql';
 import { useTranslation } from 'react-i18next';
-import { ProductGridSkeleton } from '../../components/SkeletonLoader';
+import { SellerInformationSkeleton } from '../../components/SkeletonLoader';
 
 const primaryBlue = '#0a61d7';
-const { height: screenHeight } = Dimensions.get('window');
-
-type SortKey = 'popular' | 'latest' | 'top_sales' | 'price';
-
-type ProductWithOptionalDates = MarketplaceProduct & {
-  publishedAt?: string | null;
-  lastSyncAt?: string | null;
-};
-
-type DistributorProfile = {
-  id: number;
-  name: string;
-  logo: string | null;
-  bannerImage?: string | null;
-  companyName: string | null;
-  followersCount?: number;
-};
-
-type DistributorReviewsData = {
-  distributorId: number;
-  totalReviews: number;
-  overallRating: number;
-};
-
-function safeNum(v: unknown, fallback = 0): number {
-  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
-  return Number.isFinite(n) ? n : fallback;
-}
+const iconGray = '#6B7280';
 
 const normalizeUrl = (url?: string | null): string | undefined => {
   if (!url) return undefined;
@@ -50,226 +41,81 @@ const normalizeUrl = (url?: string | null): string | undefined => {
   return `${base}${path}`;
 };
 
-function parseSoldCount(v: unknown): number {
-  if (typeof v === 'number') return v;
-  if (typeof v === 'string') {
-    // soldCount often comes as string, sometimes "1.2k"
-    const s = v.trim().toLowerCase();
-    const mult = s.endsWith('k') ? 1000 : s.endsWith('m') ? 1_000_000 : 1;
-    const raw = mult === 1 ? s : s.slice(0, -1);
-    const n = Number(raw);
-    if (Number.isFinite(n)) return n * mult;
-  }
-  return 0;
-}
-
-function getLatestTimestamp(p: ProductWithOptionalDates): number {
-  const candidates = [p.publishedAt, p.lastSyncAt].filter((x): x is string => typeof x === 'string' && x.length > 0);
-  for (const c of candidates) {
-    const t = Date.parse(c);
-    if (Number.isFinite(t)) return t;
-  }
-  return 0;
+interface DistributorProfile {
+  id: number;
+  name: string;
+  logo: string | null;
+  bannerImage: string | null;
+  companyName: string | null;
+  businessRegistrationNumber: string | null;
+  industryType: string | null;
+  businessDescription: string | null;
+  yearsInOperation: string | null;
+  businessAddress: string | null;
+  businessPhone: string | null;
+  businessEmail: string | null;
+  shippingPreferences?: string[];
+  deliveryTimeSlots?: string[];
+  preferredDeliveryDays?: string[];
+  pickupAddress?: string | null;
 }
 
 export default function DistributorInformationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ id?: string; name?: string }>();
-  const token = useAuthStore((s) => s.token);
+  const params = useLocalSearchParams<{ id: string }>();
   const { t } = useTranslation();
+  const id = params.id;
 
-  const distributorId = useMemo(() => {
-    const raw = params.id ? String(params.id) : '';
-    const n = parseInt(raw, 10);
-    return Number.isFinite(n) && n > 0 ? n : NaN;
-  }, [params.id]);
-
-  const distributorNameFromParams = useMemo(
-    () => (params.name ? String(params.name) : t('buyerNetworks.distributorInformation.fallbackDistributor')),
-    [params.name, t]
-  );
-
-  const [sortKey, setSortKey] = useState<SortKey>('popular');
-  const [priceDir, setPriceDir] = useState<'asc' | 'desc'>('asc');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [profile, setProfile] = useState<DistributorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [allProducts, setAllProducts] = useState<ProductWithOptionalDates[]>([]);
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followBusy, setFollowBusy] = useState(false);
-  const [profile, setProfile] = useState<DistributorProfile | null>(null);
-  const [reviews, setReviews] = useState<DistributorReviewsData | null>(null);
   const [menuVisible, setMenuVisible] = useState(false);
   const menuOpacity = useRef(new Animated.Value(0)).current;
   const menuScale = useRef(new Animated.Value(0.95)).current;
-  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
-  const [categorySlideAnim] = useState(new Animated.Value(screenHeight));
-  const [categoryClosing, setCategoryClosing] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    if (!Number.isFinite(distributorId)) return;
-    setLoading(true);
-    setError(null);
-
-    try {
-      const idStr = String(distributorId);
-      const [profileRes, reviewsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/mobile/distributor/${encodeURIComponent(idStr)}`),
-        fetch(`${API_BASE_URL}/api/mobile/reviews/distributor?distributorId=${encodeURIComponent(idStr)}`),
-      ]);
-
-      if (profileRes.ok) {
-        const p = (await profileRes.json()) as DistributorProfile;
-        setProfile(p);
-      } else {
-        setProfile(null);
-      }
-
-      if (reviewsRes.ok) {
-        const r = (await reviewsRes.json()) as DistributorReviewsData;
-        setReviews(r);
-      } else {
-        setReviews(null);
-      }
-
-      // We don't have a dedicated "sellerId" filter in the current mobile query.
-      // Fetch a reasonable window and filter by product.userId (distributor owner id).
-      const limit = 50;
-      const maxPages = 6; // up to 300 products scanned
-      const matches: ProductWithOptionalDates[] = [];
-
-      for (let page = 1; page <= maxPages; page += 1) {
-        const res = await marketplaceService.getProducts({ page, limit });
-        const filtered = (res.products as ProductWithOptionalDates[]).filter((p) => p.userId === distributorId);
-        matches.push(...filtered);
-        // Stop early once we have enough to render a useful page.
-        if (matches.length >= 80) break;
-        if (page >= (res.pagination?.totalPages ?? page)) break;
-      }
-
-      setAllProducts(matches);
-
-      if (token) {
-        try {
-          const state = await isFollowingDistributor(token, distributorId);
-          setIsFollowing(state);
-        } catch {
-          // non-blocking
-        }
-      }
-    } catch {
-      setAllProducts([]);
-      setError(t('buyerNetworks.distributorInformation.errors.loadProductsFailed'));
-    } finally {
-      setLoading(false);
-    }
-  }, [distributorId, token]);
+  const distributorId = id ? parseInt(id, 10) : NaN;
 
   useEffect(() => {
-    if (!Number.isFinite(distributorId)) {
+    if (!id || !Number.isFinite(distributorId)) {
       setLoading(false);
-      setError(t('buyerNetworks.distributorInformation.errors.invalidDistributor'));
+      setError(t('buyerNetworks.sellerInformation.errors.invalidSeller'));
       return;
     }
-    void fetchData();
-  }, [distributorId, fetchData]);
 
-  // Real-time updates (like homepage): refresh when products/offers/prices change via WebSocket
-  useEffect(() => {
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const unsubscribe = websocketService.subscribe((message) => {
-      if (message.type === 'product_updated') {
-        // Fast-path for unpublish: remove locally in 0ms without full network refetch
-        if (message.action === 'unpublish' && message.productIds && message.productIds.length > 0) {
-          const unpublishedIds = new Set(message.productIds);
-          setAllProducts((prev) => prev.filter((p) => !unpublishedIds.has(p.id)));
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const profileRes = await fetch(
+          `${API_BASE_URL}/api/mobile/distributor/${encodeURIComponent(id)}`,
+          { headers: authHeaders() },
+        );
+
+        if (cancelled) return;
+
+        if (!profileRes.ok) {
+          setError(t('buyerNetworks.sellerInformation.errors.failedToLoad'));
+          setProfile(null);
           return;
         }
 
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          debounceTimer = null;
-          void fetchData();
-        }, 300);
-      } else if (message.type === 'offer_updated' || message.type === 'prices_updated') {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          debounceTimer = null;
-          void fetchData();
-        }, 300);
+        const profileJson = await profileRes.json();
+        setProfile(profileJson);
+      } catch {
+        if (!cancelled) {
+          setError(t('buyerNetworks.sellerInformation.errors.failedToLoad'));
+          setProfile(null);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    });
-    return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      unsubscribe();
-    };
-  }, [fetchData]);
+    })();
 
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of allProducts) {
-      const c = (p.productCategory || p.category || '').trim();
-      if (c) set.add(c);
-    }
-    return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
-  }, [allProducts]);
-
-  const visibleProducts = useMemo(() => {
-    const base = selectedCategory === 'all'
-      ? allProducts
-      : allProducts.filter((p) => (p.productCategory || p.category || '').trim() === selectedCategory);
-
-    const sorted = [...base];
-
-    if (sortKey === 'popular') {
-      sorted.sort((a, b) => {
-        const scoreA = safeNum(a.rating) * 10 + safeNum(a.reviewCount) + parseSoldCount(a.soldCount) * 0.01;
-        const scoreB = safeNum(b.rating) * 10 + safeNum(b.reviewCount) + parseSoldCount(b.soldCount) * 0.01;
-        return scoreB - scoreA;
-      });
-    } else if (sortKey === 'latest') {
-      sorted.sort((a, b) => getLatestTimestamp(b) - getLatestTimestamp(a));
-    } else if (sortKey === 'top_sales') {
-      sorted.sort((a, b) => parseSoldCount(b.soldCount) - parseSoldCount(a.soldCount));
-    } else if (sortKey === 'price') {
-      sorted.sort((a, b) => {
-        const diff = safeNum(a.sellingPrice) - safeNum(b.sellingPrice);
-        return priceDir === 'asc' ? diff : -diff;
-      });
-    }
-
-    return sorted;
-  }, [allProducts, priceDir, selectedCategory, sortKey]);
-
-  const onPressPrice = () => {
-    if (sortKey !== 'price') {
-      setSortKey('price');
-      setPriceDir('asc');
-      return;
-    }
-    setPriceDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-  };
-
-  const storeRating = useMemo(() => {
-    const r = reviews?.overallRating;
-    return safeNum(r);
-  }, [reviews?.overallRating]);
-
-  const storeTotalRatings = useMemo(() => safeNum(reviews?.totalReviews), [reviews?.totalReviews]);
-
-  const storeFollowersLabel = useMemo(() => {
-    const n = safeNum(profile?.followersCount);
-    if (n <= 0) return '';
-    return t('buyerNetworks.distributorInformation.followers', { count: n });
-  }, [profile?.followersCount]);
-
-  const canViewSellerInfo = Number.isFinite(distributorId);
-  const noop = useCallback(() => {}, []);
-
-  const displayName = (profile?.companyName || profile?.name || distributorNameFromParams || 'Distributor').trim();
-  const logoUri = normalizeUrl(profile?.logo);
-  const bannerUri = normalizeUrl(profile?.bannerImage ?? null);
+    return () => { cancelled = true; };
+  }, [id, distributorId]);
 
   const openMenu = () => {
     setMenuVisible(true);
@@ -290,11 +136,15 @@ export default function DistributorInformationScreen() {
 
   const handleShareDistributor = async () => {
     try {
-      await Share.share({ message: t('buyerNetworks.distributorInformation.share.message', { name: displayName }) });
+      await Share.share({
+        message: t('buyerNetworks.distributorInformation.share.message', {
+          name: profile?.companyName || profile?.name || 'Distributor',
+        }),
+      });
     } catch {
       Alert.alert(
         t('buyerNetworks.distributorInformation.share.title'),
-        t('buyerNetworks.distributorInformation.share.failed')
+        t('buyerNetworks.distributorInformation.share.failed'),
       );
     }
   };
@@ -303,80 +153,68 @@ export default function DistributorInformationScreen() {
     if (!Number.isFinite(distributorId)) return;
     router.push({
       pathname: '/useraccounts/buyernetworks/ReportDistributorModal',
-      params: { distributorId: String(distributorId), distributorName: displayName },
+      params: {
+        distributorId: String(distributorId),
+        distributorName: profile?.companyName || profile?.name || 'Distributor',
+      },
     });
   };
 
   const handleNeedHelp = () => {
     Alert.alert(
       t('buyerNetworks.distributorInformation.help.title'),
-      t('buyerNetworks.distributorInformation.help.body')
+      t('buyerNetworks.distributorInformation.help.body'),
     );
   };
 
-  const openCategoryPicker = () => {
-    setCategoryPickerOpen(true);
-    setCategoryClosing(false);
-    categorySlideAnim.setValue(screenHeight);
-    Animated.timing(categorySlideAnim, { toValue: 0, duration: 260, useNativeDriver: true }).start();
-  };
+  // Same behaviour as distributor-detail: loading and not-found are early returns with no Stack.Screen (layout header shows)
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <SellerInformationSkeleton />
+      </SafeAreaView>
+    );
+  }
 
-  const closeCategoryPicker = () => {
-    if (categoryClosing) return;
-    setCategoryClosing(true);
-    Animated.timing(categorySlideAnim, { toValue: screenHeight, duration: 240, useNativeDriver: true }).start(() => {
-      setCategoryClosing(false);
-      setCategoryPickerOpen(false);
-    });
-  };
+  if (error || !profile) {
+    return (
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <View style={styles.centeredPadded}>
+          <Store color={iconGray} size={48} />
+          <Text style={styles.notFoundTitle}>{t('buyerNetworks.sellerInformation.states.sellerNotFound')}</Text>
+          <Text style={styles.notFoundText}>{error || t('buyerNetworks.sellerInformation.states.sellerMayNotExist')}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
-  const categoryPanResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, gestureState) => {
-          return Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && gestureState.dy > 5;
-        },
-        onPanResponderGrant: () => {
-          categorySlideAnim.setOffset((categorySlideAnim as Animated.Value & { _value: number })._value);
-          categorySlideAnim.setValue(0);
-        },
-        onPanResponderMove: (_, gestureState) => {
-          if (gestureState.dy > 0) categorySlideAnim.setValue(gestureState.dy);
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          categorySlideAnim.flattenOffset();
-          if (gestureState.dy > 120 || gestureState.vy > 0.55) closeCategoryPicker();
-          else Animated.timing(categorySlideAnim, { toValue: 0, duration: 180, useNativeDriver: true }).start();
-        },
-      }),
-    [categorySlideAnim, closeCategoryPicker]
-  );
+  const logoUri = normalizeUrl(profile.logo);
+  const bannerUri = normalizeUrl(profile.bannerImage);
+  const displayName = profile.companyName || profile.name || '—';
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <Stack.Screen
         options={{
           presentation: 'modal',
-          headerShown: true,
           header: () => (
             <View style={{ backgroundColor: '#ffffff', paddingTop: Math.max(insets.top, 44) + 8, borderBottomColor: '#e5e7eb', borderBottomWidth: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 }}>
                 <Pressable
                   onPress={() => router.back()}
                   hitSlop={10}
-                  accessibilityLabel={t('buyerNetworks.distributorInformation.a11y.back')}
+                  accessibilityLabel={t('buyerNetworks.sellerInformation.a11y.back')}
                   accessibilityRole="button"
                 >
                   <ArrowLeft color={primaryBlue} size={24} />
                 </Pressable>
-                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 }} numberOfLines={1}>
-                  {t('buyerNetworks.distributorInformation.title')}
+                <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 }}>
+                  {t('buyerNetworks.sellerInformation.title')}
                 </Text>
                 <Pressable
                   onPress={openMenu}
                   hitSlop={10}
-                  accessibilityLabel={t('buyerNetworks.distributorInformation.a11y.moreOptions')}
+                  accessibilityLabel={t('buyerNetworks.sellerInformation.a11y.moreOptions')}
                   accessibilityRole="button"
                 >
                   <MoreVertical color={primaryBlue} size={22} />
@@ -387,282 +225,171 @@ export default function DistributorInformationScreen() {
         }}
       />
 
-      {/* Top section (store header) */}
-      <ImageBackground
-        source={bannerUri ? { uri: bannerUri } : undefined}
-        style={styles.bannerBg}
-        imageStyle={styles.bannerBgImage}
-      >
-        <View style={styles.bannerOverlay} />
-        <View style={styles.storeHeaderOnBanner}>
-          <View style={styles.storeHeaderLeft}>
-            <View style={styles.storeAvatar}>
-              {logoUri ? (
-                <Image source={{ uri: logoUri }} style={styles.storeAvatarImg} />
-              ) : (
-                <View style={styles.storeAvatarPlaceholder}>
-                  <Text style={styles.storeAvatarText}>{displayName.charAt(0).toUpperCase()}</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.storeHeaderTextCol}>
-              <Text style={styles.storeNameOnBanner}>
-                {displayName}
-              </Text>
-              <View style={styles.storeMetaRow}>
-                <Pressable
-                  onPress={() => {
-                    if (!Number.isFinite(distributorId) || !storeTotalRatings) return;
-                    router.push({
-                      pathname: '/useraccounts/buyernetworks/DistributorReviewsList',
-                      params: {
-                        distributorId: String(distributorId),
-                        distributorName: displayName,
-                      },
-                    });
-                  }}
-                  disabled={!storeTotalRatings}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('distributorReviewsList.a11y.more')}
-                  style={{ flexDirection: 'row', alignItems: 'center' }}
-                >
-                  <Star size={14} color="#fbbf24" fill="#fbbf24" />
-                  <Text style={styles.storeMetaTextOnBanner}>
-                    {storeRating.toFixed(1)}
-                    {storeTotalRatings ? ` (${storeTotalRatings})` : ''}
-                  </Text>
-                </Pressable>
-                {storeFollowersLabel ? <Text style={styles.storeFollowersTextOnBanner}> · {storeFollowersLabel}</Text> : null}
+      <ScrollView style={styles.scroll} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+        {/* Company Information - same UI as Distributor Operations (read-only) */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Building2 color={iconGray} size={20} />
+            <Text style={styles.sectionTitle}>{t('buyerNetworks.sellerInformation.labels.companyInformation')}</Text>
+          </View>
+
+          {/* Logo */}
+          <View style={styles.logoBlock}>
+            {logoUri ? (
+              <Image source={{ uri: logoUri }} style={styles.logoImage} resizeMode="contain" />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Text style={styles.logoPlaceholderText}>{displayName.charAt(0).toUpperCase()}</Text>
               </View>
-            </View>
+            )}
           </View>
 
-          <View style={styles.storeHeaderRight}>
-            <Pressable
-              onPress={async () => {
-                if (!Number.isFinite(distributorId) || !token || followBusy) return;
-                const next = !isFollowing;
-                setFollowBusy(true);
-                setIsFollowing(next); // optimistic
-                try {
-                  if (next) await followDistributor(token, distributorId);
-                  else await unfollowDistributor(token, distributorId);
-                } catch {
-                  setIsFollowing(!next);
-                } finally {
-                  setFollowBusy(false);
-                }
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isFollowing
-                  ? t('buyerNetworks.distributorInformation.follow.unfollowA11y')
-                  : t('buyerNetworks.distributorInformation.follow.followA11y')
-              }
-              style={[styles.followBtn, isFollowing && styles.followBtnActive, followBusy && { opacity: 0.7 }]}
-              disabled={followBusy || !token}
-            >
-              <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
-                {isFollowing
-                  ? t('buyerNetworks.distributorInformation.follow.following')
-                  : t('buyerNetworks.distributorInformation.follow.follow')}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                if (!canViewSellerInfo) return;
-                router.push({
-                  pathname: '/useraccounts/buyernetworks/seller-information',
-                  params: { id: String(distributorId) },
-                });
-              }}
-              accessibilityRole="button"
-              accessibilityLabel={t('buyerNetworks.distributorInformation.view.a11y')}
-              style={[styles.viewBtn, !canViewSellerInfo && styles.viewBtnDisabled]}
-              disabled={!canViewSellerInfo}
-            >
-              <Text style={[styles.viewBtnText, !canViewSellerInfo && styles.viewBtnTextDisabled]}>
-                {t('buyerNetworks.distributorInformation.view.label')}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </ImageBackground>
-
-      <>
-        {/* Filter tabs (fixed row; underline for active). No dedicated loading UI for this page. */}
-        <View style={styles.filterTabsRow}>
-          <Pressable onPress={() => setSortKey('popular')} style={styles.filterTabBtn} accessibilityRole="button">
-            <Text style={[styles.filterTabText, sortKey === 'popular' && styles.filterTabTextActive]}>
-              {t('buyerNetworks.distributorInformation.sort.popular')}
-            </Text>
-            {sortKey === 'popular' ? <View style={styles.filterUnderlineFull} /> : null}
-          </Pressable>
-          <Pressable onPress={() => setSortKey('latest')} style={styles.filterTabBtn} accessibilityRole="button">
-            <Text style={[styles.filterTabText, sortKey === 'latest' && styles.filterTabTextActive]}>
-              {t('buyerNetworks.distributorInformation.sort.latest')}
-            </Text>
-            {sortKey === 'latest' ? <View style={styles.filterUnderlineFull} /> : null}
-          </Pressable>
-          <Pressable onPress={() => setSortKey('top_sales')} style={styles.filterTabBtn} accessibilityRole="button">
-            <Text style={[styles.filterTabText, sortKey === 'top_sales' && styles.filterTabTextActive]}>
-              {t('buyerNetworks.distributorInformation.sort.topSales')}
-            </Text>
-            {sortKey === 'top_sales' ? <View style={styles.filterUnderlineFull} /> : null}
-          </Pressable>
-          <Pressable onPress={onPressPrice} style={styles.filterTabBtn} accessibilityRole="button">
-            <View style={styles.filterTabInline}>
-              <Text style={[styles.filterTabText, sortKey === 'price' && styles.filterTabTextActive]}>
-                {t('buyerNetworks.distributorInformation.sort.price')}
-              </Text>
-              {sortKey === 'price' ? (
-                priceDir === 'asc' ? (
-                  <ChevronUp size={14} color={primaryBlue} />
-                ) : (
-                  <ChevronDown size={14} color={primaryBlue} />
-                )
-              ) : (
-                <ChevronDown size={14} color="#9ca3af" />
-              )}
-            </View>
-            {sortKey === 'price' ? <View style={styles.filterUnderlineFull} /> : null}
-          </Pressable>
-          <Pressable
-            onPress={openCategoryPicker}
-            style={styles.filterTabBtn}
-            accessibilityRole="button"
-            accessibilityLabel={t('buyerNetworks.distributorInformation.a11y.chooseCategory')}
-          >
-            <View style={styles.filterTabInline}>
-              <Text style={[styles.filterTabText, selectedCategory !== 'all' && styles.filterTabTextActive]} numberOfLines={1}>
-                {selectedCategory === 'all' ? t('buyerNetworks.distributorInformation.category.label') : selectedCategory}
-              </Text>
-              <ChevronDown size={14} color={selectedCategory !== 'all' ? primaryBlue : '#6b7280'} />
-            </View>
-            {selectedCategory !== 'all' ? <View style={styles.filterUnderlineFull} /> : null}
-          </Pressable>
-        </View>
-
-        {error ? (
-          <View style={styles.inlineError}>
-            <Text style={styles.inlineErrorTitle}>{t('buyerNetworks.distributorInformation.errors.unableToLoadUpdates')}</Text>
-            <Text style={styles.inlineErrorText}>{error}</Text>
-            <Pressable onPress={() => void fetchData()} style={styles.inlineRetryBtn} accessibilityRole="button">
-              <Text style={styles.inlineRetryText}>{t('buyerNetworks.distributorInformation.errors.retry')}</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        <ScrollView
-          style={styles.body}
-          contentContainerStyle={{ paddingTop: 12, paddingBottom: 24 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {loading ? (
-            <ProductGridSkeleton rowsPerColumn={4} style={{ paddingBottom: 8 }} />
-          ) : visibleProducts.length === 0 ? (
-            <View style={styles.emptyBlock}>
-              <Text style={styles.muted}>{t('buyerNetworks.distributorInformation.empty.noProducts')}</Text>
-            </View>
+          {/* Banner */}
+          {bannerUri ? (
+            <Image source={{ uri: bannerUri }} style={styles.bannerImage} resizeMode="cover" />
           ) : (
-            <View style={styles.productsGrid}>
-              <View style={styles.productsCol}>
-                {visibleProducts
-                  .filter((_, idx) => idx % 2 === 0)
-                  .map((p) => (
-                    <View key={p.id} style={styles.productItemWrap}>
-                      <ProductMarketplace
-                        product={p}
-                        type="card"
-                        onPress={() => {
-                          router.push({ pathname: '/product', params: { productId: p.id } });
-                        }}
-                        onAddToCart={noop}
-                        onBuyNow={noop}
-                        onChatSeller={noop}
-                        onShare={noop}
-                        onToggleFavorite={noop as unknown as (productId: string) => void}
-                        isFavorite={false}
-                      />
-                    </View>
-                  ))}
-              </View>
-              <View style={styles.productsCol}>
-                {visibleProducts
-                  .filter((_, idx) => idx % 2 === 1)
-                  .map((p) => (
-                    <View key={p.id} style={styles.productItemWrap}>
-                      <ProductMarketplace
-                        product={p}
-                        type="card"
-                        onPress={() => {
-                          router.push({ pathname: '/product', params: { productId: p.id } });
-                        }}
-                        onAddToCart={noop}
-                        onBuyNow={noop}
-                        onChatSeller={noop}
-                        onShare={noop}
-                        onToggleFavorite={noop as unknown as (productId: string) => void}
-                        isFavorite={false}
-                      />
-                    </View>
-                  ))}
-              </View>
+            <View style={styles.bannerPlaceholder}>
+              <Store color={iconGray} size={40} />
             </View>
           )}
-        </ScrollView>
-      </>
 
-      {/* Category picker */}
+          {/* Company Name */}
+          <View style={styles.fieldBlock}>
+            <Text style={styles.fieldLabel}>{t('buyerNetworks.sellerInformation.labels.companyName')}</Text>
+            <Text style={styles.fieldValue}>{displayName || '—'}</Text>
+          </View>
+
+          {/* Business Registration Number */}
+          <View style={styles.fieldBlock}>
+            <Text style={styles.fieldLabel}>{t('buyerNetworks.sellerInformation.labels.businessRegistrationNumber')}</Text>
+            <Text style={styles.fieldValue}>{profile.businessRegistrationNumber || '—'}</Text>
+          </View>
+
+          {profile.industryType ? (
+            <View style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>{t('buyerNetworks.sellerInformation.labels.industry')}</Text>
+              <Text style={styles.fieldValue}>{profile.industryType}</Text>
+            </View>
+          ) : null}
+          {profile.businessDescription ? (
+            <View style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>{t('buyerNetworks.sellerInformation.labels.businessDescription')}</Text>
+              <Text style={[styles.fieldValue]}>{profile.businessDescription}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Shipping & Delivery Preferences */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Truck color={iconGray} size={20} />
+            <Text style={styles.sectionTitle}>
+              {t('buyerNetworks.sellerInformation.labels.shippingDeliveryPreferences')}
+            </Text>
+          </View>
+
+          {/* Shipping options */}
+          <Text style={styles.subsectionLabel}>{t('buyerNetworks.sellerInformation.labels.shippingOptions')}</Text>
+          {(() => {
+            const shippingOptions: { key: string; label: string }[] = [
+              { key: 'Self Pickup', label: t('buyerNetworks.sellerInformation.shippingOptions.selfPickup') },
+              { key: 'Seller/Distributor Delivery', label: t('buyerNetworks.sellerInformation.shippingOptions.sellerDelivery') },
+              { key: 'Buyer-arranged Courier', label: t('buyerNetworks.sellerInformation.shippingOptions.buyerCourier') },
+            ];
+            const prefs = profile.shippingPreferences ?? [];
+            return (
+              <View style={styles.checkList}>
+                {shippingOptions.map(({ key, label }) => {
+                  const enabled = prefs.includes(key);
+                  return (
+                    <View key={key} style={styles.checkRow}>
+                      {enabled ? <Check size={18} color={primaryBlue} strokeWidth={2.5} /> : <View style={styles.checkEmpty} />}
+                      <Text style={[styles.checkLabel, !enabled && styles.checkLabelMuted]}>{label}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })()}
+
+          {profile.pickupAddress ? (
+            <>
+              <Text style={[styles.subsectionLabel, { marginTop: 16 }]}>
+                {t('buyerNetworks.sellerInformation.labels.pickupAddress')}
+              </Text>
+              <View style={styles.pickupAddressBlock}>
+                <MapPin color={iconGray} size={16} style={{ marginTop: 2 }} />
+                <Text style={styles.pickupAddressText}>{profile.pickupAddress}</Text>
+              </View>
+            </>
+          ) : null}
+
+          {(profile.deliveryTimeSlots?.length ?? 0) > 0 && (
+            <>
+              <Text style={[styles.subsectionLabel, { marginTop: 16 }]}>
+                {t('buyerNetworks.sellerInformation.labels.preferredDeliveryTimeSlots')}
+              </Text>
+              <View style={styles.checkList}>
+                {[
+                  { raw: 'Morning (8:00 AM - 12:00 PM)', label: t('buyerNetworks.sellerInformation.deliveryTimeSlots.morning') },
+                  { raw: 'Afternoon (12:00 PM - 5:00 PM)', label: t('buyerNetworks.sellerInformation.deliveryTimeSlots.afternoon') },
+                  { raw: 'Evening (5:00 PM - 8:00 PM)', label: t('buyerNetworks.sellerInformation.deliveryTimeSlots.evening') },
+                  { raw: 'Flexible', label: t('buyerNetworks.sellerInformation.deliveryTimeSlots.flexible') },
+                ].map(({ raw, label }) => {
+                  const enabled = (profile.deliveryTimeSlots ?? []).some((s) => s === raw || raw.startsWith(s));
+                  return (
+                    <View key={raw} style={styles.checkRow}>
+                      {enabled ? <Check size={18} color={primaryBlue} strokeWidth={2.5} /> : <View style={styles.checkEmpty} />}
+                      <Text style={[styles.checkLabel, !enabled && styles.checkLabelMuted]}>{label}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+          {(profile.preferredDeliveryDays?.length ?? 0) > 0 && (
+            <>
+              <Text style={[styles.subsectionLabel, { marginTop: 16 }]}>
+                {t('buyerNetworks.sellerInformation.labels.preferredDeliveryDays')}
+              </Text>
+              <View style={styles.checkList}>
+                {[
+                  { raw: 'Monday', label: t('buyerNetworks.sellerInformation.days.monday') },
+                  { raw: 'Tuesday', label: t('buyerNetworks.sellerInformation.days.tuesday') },
+                  { raw: 'Wednesday', label: t('buyerNetworks.sellerInformation.days.wednesday') },
+                  { raw: 'Thursday', label: t('buyerNetworks.sellerInformation.days.thursday') },
+                  { raw: 'Friday', label: t('buyerNetworks.sellerInformation.days.friday') },
+                  { raw: 'Saturday', label: t('buyerNetworks.sellerInformation.days.saturday') },
+                  { raw: 'Sunday', label: t('buyerNetworks.sellerInformation.days.sunday') },
+                ].map(({ raw, label }) => {
+                  const enabled = (profile.preferredDeliveryDays ?? []).some((d) => d.toLowerCase() === raw.toLowerCase());
+                  return (
+                    <View key={raw} style={styles.checkRow}>
+                      {enabled ? <Check size={18} color={primaryBlue} strokeWidth={2.5} /> : <View style={styles.checkEmpty} />}
+                      <Text style={[styles.checkLabel, !enabled && styles.checkLabelMuted]}>{label}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+        </View>
+      </ScrollView>
+
       <Modal
-        visible={categoryPickerOpen}
+        visible={menuVisible}
         transparent
         animationType="none"
-        onRequestClose={closeCategoryPicker}
+        onRequestClose={closeMenu}
         statusBarTranslucent
       >
-        <StatusBar backgroundColor="rgba(0, 0, 0, 0.35)" barStyle="light-content" />
-        <View style={styles.sheetRoot}>
-          <Pressable
-            style={styles.sheetBackdrop}
-            onPress={closeCategoryPicker}
-            accessibilityRole="button"
-            accessibilityLabel={t('buyerNetworks.distributorInformation.a11y.closeCategoryPicker')}
-          />
-          <Animated.View style={[styles.sheet, { transform: [{ translateY: categorySlideAnim }] }]} {...categoryPanResponder.panHandlers}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>{t('buyerNetworks.distributorInformation.category.sheetTitle')}</Text>
-            </View>
-            <View style={styles.sheetDivider} />
-            <ScrollView style={{ maxHeight: Math.min(420, screenHeight * 0.55) }} showsVerticalScrollIndicator={false}>
-              {categories.map((c) => (
-                <Pressable
-                  key={c}
-                  onPress={() => {
-                    setSelectedCategory(c);
-                    closeCategoryPicker();
-                  }}
-                  style={styles.sheetRow}
-                  accessibilityRole="button"
-                >
-                  <Text style={[styles.sheetRowText, selectedCategory === c && styles.sheetRowTextActive]}>
-                    {c === 'all' ? t('buyerNetworks.distributorInformation.category.all') : c}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </Animated.View>
-        </View>
-      </Modal>
-
-      {/* 3-dot menu */}
-      <Modal visible={menuVisible} transparent animationType="none" onRequestClose={closeMenu} statusBarTranslucent>
         <View style={styles.menuRoot}>
           <Pressable
             style={styles.menuBackdrop}
             onPress={closeMenu}
-            accessibilityLabel={t('buyerNetworks.distributorInformation.a11y.closeMenu')}
+            accessibilityLabel={t('buyerNetworks.sellerInformation.a11y.closeMenu')}
             accessibilityRole="button"
           />
           <Animated.View
@@ -683,7 +410,9 @@ export default function DistributorInformationScreen() {
               style={styles.menuRow}
             >
               <Share2 size={18} color="#111827" />
-              <Text style={styles.menuRowText}>{t('buyerNetworks.distributorInformation.menu.share')}</Text>
+              <Text style={styles.menuRowText}>
+                {t('buyerNetworks.distributorInformation.menu.share')}
+              </Text>
             </Pressable>
             <View style={styles.menuDivider} />
             <Pressable
@@ -719,131 +448,55 @@ export default function DistributorInformationScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFFFFF' },
-  viewBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#ffffff',
-    backgroundColor: 'transparent',
-  },
-  viewBtnDisabled: { borderColor: '#ffffff', backgroundColor: 'transparent', opacity: 0.55 },
-  viewBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 12, textAlign: 'center' },
-  viewBtnTextDisabled: { color: '#9ca3af' },
-
-  bannerBg: { width: '100%', minHeight: 110, justifyContent: 'center' },
-  bannerBgImage: { resizeMode: 'cover' },
-  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.4)' },
-  storeHeaderOnBanner: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  storeHeaderLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  storeHeaderTextCol: { flex: 1, minWidth: 0 },
-  storeNameOnBanner: { fontSize: 16, fontWeight: '800', color: '#ffffff' },
-  storeMetaRow: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  storeMetaTextOnBanner: { fontSize: 12, color: 'rgba(255,255,255,0.9)', fontWeight: '700' },
-  storeFollowersTextOnBanner: { fontSize: 12, color: 'rgba(255,255,255,0.9)' },
-  storeAvatar: { width: 44, height: 44, borderRadius: 22, overflow: 'hidden', backgroundColor: '#f3f4f6' },
-  storeAvatarImg: { width: 44, height: 44 },
-  storeAvatarPlaceholder: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  storeAvatarText: { fontSize: 18, fontWeight: '800', color: '#6b7280' },
-  storeHeaderRight: { flexDirection: 'column', alignItems: 'stretch', gap: 10 },
-  followBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#ffffff',
-  },
-  followBtnActive: { backgroundColor: 'transparent', borderColor: '#ffffff' },
-  followBtnText: { fontSize: 12, fontWeight: '800', color: '#ffffff' },
-  followBtnTextActive: { color: '#ffffff' },
-
-  body: { flex: 1, backgroundColor: '#F5F5F5' },
-  muted: { color: '#6b7280', fontSize: 12, textAlign: 'center' },
-  inlineError: {
-    marginHorizontal: 14,
-    marginTop: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    backgroundColor: '#fff1f2',
-    padding: 12,
-  },
-  inlineErrorTitle: { fontSize: 12, fontWeight: '800', color: '#991b1b' },
-  inlineErrorText: { marginTop: 4, fontSize: 12, color: '#7f1d1d' },
-  inlineRetryBtn: {
-    marginTop: 10,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: '#ef4444',
-  },
-  inlineRetryText: { color: '#ffffff', fontWeight: '800', fontSize: 12 },
-
-  // Filter tabs: follow mypurchases TabItem style (normal weight)
-  filterTabText: { fontSize: 13, fontWeight: '500', color: '#6b7280' },
-  filterTabTextActive: { color: primaryBlue },
-  filterUnderlineFull: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: primaryBlue },
-  filterTabsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    paddingHorizontal: 15,
-    paddingTop: 4,
-    paddingBottom: 6,
-    gap: 15,
-  },
-  filterTabBtn: { paddingVertical: 12, paddingHorizontal: 5, position: 'relative', alignItems: 'center' },
-  filterTabInline: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-
-  emptyBlock: { padding: 20, alignItems: 'center' },
-
-  // Match homepage product list spacing (HomeScreen styles.productsContainer/productItem)
-  productsGrid: { flexDirection: 'row', paddingHorizontal: 18, gap: 14, alignItems: 'flex-start' },
-  productsCol: { flex: 1 },
-  productItemWrap: { width: '100%', marginBottom: 4 },
-
-  sheetRoot: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'flex-end' },
-  sheetBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
-  sheet: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    paddingTop: 8,
-    paddingBottom: 16,
-    paddingHorizontal: 14,
-  },
-  sheetHandle: {
-    alignSelf: 'center',
-    width: 44,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: '#e5e7eb',
-    marginBottom: 10,
-  },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10 },
-  sheetTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
-  sheetDivider: { height: 2, backgroundColor: '#f3f4f6', marginBottom: 6, marginHorizontal: -14 },
-  sheetRow: { paddingVertical: 12 },
-  sheetRowText: { fontSize: 13, color: '#374151', fontWeight: '500' },
-  sheetRowTextActive: { color: primaryBlue },
-
-  menuRoot: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  scroll: { flex: 1 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  centeredPadded: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  muted: { color: '#6b7280', fontSize: 14 },
+  notFoundTitle: { fontSize: 16, fontWeight: '600', color: '#111827', marginTop: 16, marginBottom: 8 },
+  notFoundText: { fontSize: 14, color: '#6b7280', textAlign: 'center' },
+  header: { backgroundColor: '#ffffff', borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 },
+  headerTitle: { color: '#111827', fontSize: 20, fontWeight: '500', flex: 1, textAlign: 'left', marginLeft: 35 },
+  section: { padding: 20, backgroundColor: '#ffffff', borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
+  logoBlock: { alignItems: 'center', marginBottom: 16 },
+  logoImage: { width: 120, height: 120, borderRadius: 8 },
+  logoPlaceholder: { width: 120, height: 120, borderRadius: 8, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' },
+  logoPlaceholderText: { fontSize: 36, fontWeight: '600', color: '#6b7280' },
+  bannerImage: { width: '100%', height: 160, borderRadius: 8, marginBottom: 16 },
+  bannerPlaceholder: { width: '100%', height: 120, borderRadius: 8, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  fieldBlock: { marginBottom: 16 },
+  fieldLabel: { fontSize: 14, color: '#6b7280', marginBottom: 4 },
+  fieldValue: { fontSize: 16, color: '#111827' },
+  subsectionLabel: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
+  checkList: { gap: 6 },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  checkEmpty: { width: 18, height: 18, borderRadius: 2, borderWidth: 1.5, borderColor: '#d1d5db' },
+  checkLabel: { fontSize: 15, color: '#111827' },
+  checkLabelMuted: { color: '#9ca3af' },
+  pickupAddressBlock: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: '#f9fafb', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' },
+  pickupAddressText: { flex: 1, fontSize: 14, color: '#374151', lineHeight: 20 },
+  ratingSummary: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 },
+  overallRatingNumber: { fontSize: 24, fontWeight: '700', color: '#111827' },
+  totalReviewsText: { fontSize: 14, color: '#6b7280' },
+  reviewCard: { backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#e5e7eb' },
+  reviewHeader: { flexDirection: 'row', marginBottom: 8 },
+  reviewerAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  reviewerAvatarImage: { width: 36, height: 36, borderRadius: 18 },
+  reviewerInitial: { fontSize: 14, fontWeight: '600', color: '#6b7280' },
+  reviewMeta: { flex: 1, marginLeft: 12 },
+  reviewMetaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  reviewerName: { fontSize: 14, color: '#6b7280' },
+  reviewDate: { fontSize: 12, color: '#9ca3af', marginTop: 2 },
+  wouldOrderAgain: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  reviewComment: { fontSize: 14, color: '#374151', lineHeight: 20, fontStyle: 'italic' },
+  noReviews: { alignItems: 'center', paddingVertical: 32 },
+  noReviewsText: { fontSize: 16, color: '#6b7280', marginTop: 12 },
+  moreReviewsBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  moreReviewsText: { fontSize: 13, fontWeight: '600', color: primaryBlue },
+  menuRoot: { flex: 1 },
   menuBackdrop: { flex: 1 },
   menuSheet: {
     position: 'absolute',
@@ -858,10 +511,15 @@ const styles = StyleSheet.create({
     elevation: 6,
     width: 200,
   },
-  menuRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12, gap: 10 },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 10,
+  },
   menuRowText: { fontSize: 14, color: '#111827' },
   menuRowTextPrimary: { color: '#0a61d7', fontWeight: '600' },
   menuRowTextDanger: { color: '#ef4444', fontWeight: '600' },
   menuDivider: { height: 1, backgroundColor: '#f3f4f6', marginVertical: 2 },
 });
-

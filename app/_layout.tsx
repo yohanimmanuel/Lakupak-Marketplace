@@ -387,18 +387,6 @@ function RootLayoutNav() {
             headerTintColor: '#0a61d7',
           }}
         />
-        {/* Buyer Networks (My Networks) modal */}
-        <Stack.Screen
-          name="useraccounts/buyernetworks/mynetworks"
-          options={{
-            presentation: 'modal',
-            headerShown: true,
-            title: t('nav.myNetworks'),
-            headerStyle: { backgroundColor: '#ffffff' },
-            headerTitleStyle: { color: '#111827', fontWeight: '600' },
-            headerTintColor: '#0a61d7',
-          }}
-        />
         {/* Distributor Detail modal */}
         <Stack.Screen
           name="useraccounts/buyernetworks/distributor-detail"
@@ -413,22 +401,11 @@ function RootLayoutNav() {
         />
         {/* Seller Information modal - same pattern as distributor-detail */}
         <Stack.Screen
-          name="useraccounts/buyernetworks/seller-information"
-          options={{
-            presentation: 'modal',
-            headerShown: true,
-            title: t('nav.sellerInformation'),
-            headerStyle: { backgroundColor: '#ffffff' },
-            headerTitleStyle: { color: '#111827', fontWeight: '600' },
-            headerTintColor: '#0a61d7',
-          }}
-        />
-        <Stack.Screen
           name="useraccounts/buyernetworks/distributor-information"
           options={{
             presentation: 'modal',
             headerShown: true,
-            title: t('nav.distributor'),
+            title: t('nav.sellerInformation'),
             headerStyle: { backgroundColor: '#ffffff' },
             headerTitleStyle: { color: '#111827', fontWeight: '600' },
             headerTintColor: '#0a61d7',

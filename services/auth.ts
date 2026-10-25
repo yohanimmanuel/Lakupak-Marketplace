@@ -24,7 +24,14 @@ export const AUTH_ERROR_CODE = {
   SIGNUP_MISSING_PHONE: 'SIGNUP_MISSING_PHONE',
   FORGOT_PASSWORD_FAILED: 'FORGOT_PASSWORD_FAILED',
   VERIFICATION_CODE_REQUIRED: 'VERIFICATION_CODE_REQUIRED',
+  REFERRAL_CODE_REQUIRED: 'REFERRAL_CODE_REQUIRED',
+  REFERRAL_CODE_INVALID: 'REFERRAL_CODE_INVALID',
 } as const
+
+function throwIfReferralError(code: unknown) {
+  if (code === AUTH_ERROR_CODE.REFERRAL_CODE_REQUIRED) throwAuth(AUTH_ERROR_CODE.REFERRAL_CODE_REQUIRED)
+  if (code === AUTH_ERROR_CODE.REFERRAL_CODE_INVALID) throwAuth(AUTH_ERROR_CODE.REFERRAL_CODE_INVALID)
+}
 
 export type AuthThrownError = Error & { code?: string }
 
@@ -90,23 +97,25 @@ export async function verifyOtp(params: {
   return res.json() as Promise<{ token: string; user: { id: number; name?: string | null; email: string; address?: string | null } }>
 }
 
-export async function loginWithCredentials(username: string, password: string): Promise<{ token: string; user: { id: number; name?: string | null; email: string; address?: string | null } }> {
+export async function loginWithCredentials(username: string, password: string, referralCode?: string): Promise<{ token: string; user: { id: number; name?: string | null; email: string; address?: string | null } }> {
   const res = await fetch(`${API_BASE_URL}/api/mobile/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, referralCode: referralCode?.trim() || undefined }),
   })
 
   if (res.ok) {
     return res.json()
   }
 
-  let errorData: { error?: string; message?: string } = {}
+  let errorData: { error?: string; message?: string; code?: string } = {}
   try {
     errorData = await res.json()
   } catch {
     // ignore parse errors
   }
+
+  throwIfReferralError(errorData?.code)
 
   const msg = String(errorData?.message ?? '')
   if (res.status === 403 && (errorData?.error === 'ACCOUNT_SUSPENDED' || msg.toLowerCase().includes('suspend'))) {
@@ -191,6 +200,7 @@ export async function registerAccount(params: {
   phone: string
   countryCode?: string
   countryDialCode?: string
+  referralCode: string
 }): Promise<{ token: string; user: { id: number; name?: string | null; email: string; chosenAddress?: string | null; address?: string | null } }> {
   const res = await fetch(`${API_BASE_URL}/api/mobile/auth/register`, {
     method: 'POST',
@@ -201,6 +211,7 @@ export async function registerAccount(params: {
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { code?: string; error?: string }
     if (res.status === 429) throwAuth(AUTH_ERROR_CODE.RATE_LIMITED)
+    throwIfReferralError(data.code)
     if (res.status === 409) {
       if (data.code === 'EMAIL_ALREADY_REGISTERED') throwAuth(AUTH_ERROR_CODE.SIGNUP_EMAIL_TAKEN)
       if (data.code === 'USERNAME_ALREADY_TAKEN') throwAuth(AUTH_ERROR_CODE.SIGNUP_USERNAME_TAKEN)

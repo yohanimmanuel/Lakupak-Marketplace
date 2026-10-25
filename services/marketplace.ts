@@ -1,5 +1,5 @@
 // Marketplace API service
-import { graphqlRequest } from './graphql';
+import { currentAuthToken, decodeToken, graphqlRequest } from './graphql';
 import { API_BASE_URL } from './config';
 
 /** Homepage sale banner + detail (Laku Admin → Offers). */
@@ -445,6 +445,7 @@ export const marketplaceService = {
   }
 `;
 
+      const authToken = params?.token ?? currentAuthToken();
       const result = await graphqlRequest<MobileMarketplaceProductsResponse>(
         query,
         {
@@ -454,11 +455,13 @@ export const marketplaceService = {
           search: params?.search,
           marketplaceUserId: params?.marketplaceUserId,
         },
-        params?.token
+        authToken
       );
-      
-      // Transform products to calculate discount and format variants
-      const transformedProducts = result.mobileMarketplaceProducts.nodes.map(transformGraphQLProduct);
+
+      const distributorId = authToken ? decodeToken(authToken).distributorId ?? null : null;
+      const transformedProducts = result.mobileMarketplaceProducts.nodes
+        .map(transformGraphQLProduct)
+        .filter((product) => distributorId == null || product.userId === distributorId);
       
       return {
         products: transformedProducts,

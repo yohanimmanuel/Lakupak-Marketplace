@@ -30,7 +30,7 @@
     "welcomeToLaku": "Selamat datang di Lakupak",
     "myNetworks": "Jaringan Saya",
     "distributorDetails": "Detail Distributor",
-    "sellerInformation": "Informasi Penjual",
+    "sellerInformation": "Informasi Distributor",
     "distributor": "Distributor",
     "myPurchases": "Pembelian Saya",
     "myWallet": "Dompet Saya",
@@ -287,6 +287,15 @@
         "apple": "Daftar dengan Apple ID"
       },
       "createAccount": "Buat Akun"
+    },
+    "referralCode": {
+      "title": "Kode Referral Distributor",
+      "label": "Kode referral distributor",
+      "placeholder": "contoh: TOKOMAJU-2026",
+      "signupHint": "Minta kode ini ke distributor Anda. Anda hanya akan melihat produk dan harga mereka.",
+      "loginHint": "Masukkan kode referral dari distributor Anda untuk masuk.",
+      "required": "Masukkan kode referral dari distributor Anda.",
+      "invalid": "Kode referral ini tidak valid. Periksa kembali dengan distributor Anda."
     },
     "forgotPassword": {
       "title": "Lupa Kata Sandi",
@@ -1027,6 +1036,7 @@
     "sections": {
       "myPurchases": "Pembelian Saya",
       "myNetworks": "Jaringan Saya",
+      "distributorStorefront": "Storefront Distributor",
       "myWallet": "Dompet Saya",
       "moreServices": "Layanan Lainnya"
     },
@@ -1034,12 +1044,14 @@
       "toPay": "Belum bayar",
       "toShip": "Dikemas",
       "toReceive": "Dalam pengiriman",
+      "completed": "Selesai",
       "toRate": "Beri penilaian"
     },
     "actions": {
       "viewPurchaseHistory": "Lihat riwayat pembelian",
       "viewAllNetworks": "Lihat semua jaringan",
       "viewAllFollowings": "Lihat semua yang diikuti",
+      "viewDistributorInformation": "Lihat Informasi Distributor",
       "manageWallet": "Kelola dompet"
     },
     "networks": {
@@ -1180,7 +1192,7 @@
     },
     "stockLabel": "Status stok:",
     "soldLabel": "{{count}} terjual",
-    "sellerInformation": "Informasi penjual",
+    "sellerInformation": "Informasi distributor",
     "sellerRating": "{{rating}} ({{count}}+ rating)",
     "pricingConfirmedBy": "Harga akan dikonfirmasi oleh {{distributor}}",
     "youMayAlsoLike": "Mungkin Anda suka",
@@ -1363,15 +1375,15 @@
         "moreOptions": "Opsi lainnya",
         "closeMenu": "Tutup menu"
       },
-      "title": "Informasi Penjual",
+      "title": "Informasi Distributor",
       "errors": {
-        "invalidSeller": "Penjual tidak valid",
-        "failedToLoad": "Gagal memuat informasi penjual"
+        "invalidSeller": "Distributor tidak valid",
+        "failedToLoad": "Gagal memuat informasi distributor"
       },
       "states": {
         "loading": "Memuat…",
-        "sellerNotFound": "Penjual tidak ditemukan",
-        "sellerMayNotExist": "Penjual ini mungkin tidak tersedia."
+        "sellerNotFound": "Distributor tidak ditemukan",
+        "sellerMayNotExist": "Distributor ini mungkin tidak tersedia."
       },
       "labels": {
         "recently": "Baru-baru ini",

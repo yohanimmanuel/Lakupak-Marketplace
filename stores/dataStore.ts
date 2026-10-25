@@ -8,6 +8,7 @@ import { websocketService } from '../services/websocket'
 import { ordersService } from '../services/orders'
 import { AppState } from 'react-native'
 import { useAuthStore } from './authStore'
+import { decodeToken } from '../services/graphql'
 import { pushNotificationService } from '../services/pushNotifications'
 import { supabaseRealtimeService } from '../services/supabaseRealtime'
 import { usePlatformAnnouncementsRealtimeStore } from './platformAnnouncementsRealtimeStore'
@@ -134,6 +135,8 @@ interface DataState {
 
   /** Published special offers for home carousel and /offers list. */
   homeOffers: MarketplaceHomeOfferPayload[]
+  /** Distributor whose products are currently cached. Null until a storefront token is applied. */
+  storefrontDistributorId: number | null
   
   // Loading states
   isUserLoading: boolean
@@ -165,6 +168,8 @@ interface DataState {
   stopAutoRefresh: () => void
   clearProductsCache: () => void
   clearCache: () => void
+  /** Drops the cached catalog when this token belongs to a different distributor storefront. */
+  retainStorefront: (token: string | null) => void
 }
 
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes - increased from 1min to reduce unnecessary requests
@@ -205,6 +210,7 @@ export const useDataStore = create<DataState>()(
       ordersLastUpdated: null,
       ordersLoadError: null,
       homeOffers: [],
+      storefrontDistributorId: null,
       isUserLoading: false,
       isProductsLoading: false,
       isOrdersLoading: false,
@@ -252,6 +258,7 @@ export const useDataStore = create<DataState>()(
       },
 
       loadProductsData: async (forceRefresh = false) => {
+        get().retainStorefront(useAuthStore.getState().token)
         const { productsLastUpdated } = get()
         const now = Date.now()
         
@@ -280,6 +287,7 @@ export const useDataStore = create<DataState>()(
       },
 
       loadOrdersData: async (forceRefresh = false) => {
+        get().retainStorefront(useAuthStore.getState().token)
         const { ordersLastUpdated } = get()
         const now = Date.now()
 
@@ -398,6 +406,7 @@ export const useDataStore = create<DataState>()(
       },
 
       forceRefreshProducts: async () => {
+        get().retainStorefront(useAuthStore.getState().token)
         if (get().isProductsLoading) {
           productsRefreshPending = true
           return
@@ -799,6 +808,22 @@ export const useDataStore = create<DataState>()(
         })
       },
 
+      retainStorefront: (token) => {
+        const next = token ? (decodeToken(token).distributorId ?? null) : null
+        const cached = get().products
+        const cachedOtherDistributor =
+          next != null && cached.some((product) => product.userId != null && product.userId !== next)
+        if (get().storefrontDistributorId === next && !cachedOtherDistributor) return
+        set({
+          storefrontDistributorId: next,
+          products: [],
+          productsLastUpdated: null,
+          orders: [],
+          ordersLastUpdated: null,
+          ordersLoadError: null,
+        })
+      },
+
       clearCache: () => {
         const { pollingInterval, websocketUnsubscribe } = get()
         if (pollingInterval) {
@@ -821,6 +846,7 @@ export const useDataStore = create<DataState>()(
           isUserLoading: false,
           isProductsLoading: false,
            isOrdersLoading: false,
+          storefrontDistributorId: null,
           pollingInterval: null,
           isPolling: false,
           isWebSocketConnected: false,
@@ -838,6 +864,7 @@ export const useDataStore = create<DataState>()(
         productsLastUpdated: state.productsLastUpdated,
         orders: state.orders,
         ordersLastUpdated: state.ordersLastUpdated,
+        storefrontDistributorId: state.storefrontDistributorId,
       }),
       onRehydrateStorage: () => (state) => {
         // Validate that rehydrated orders belong to current user

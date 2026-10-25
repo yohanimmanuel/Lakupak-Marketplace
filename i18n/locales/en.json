@@ -30,7 +30,7 @@
     "welcomeToLaku": "Welcome to Lakupak",
     "myNetworks": "My Networks",
     "distributorDetails": "Distributor Details",
-    "sellerInformation": "Seller Information",
+    "sellerInformation": "Distributor Information",
     "distributor": "Distributor",
     "myPurchases": "My Purchases",
     "myWallet": "My Wallet",
@@ -287,6 +287,15 @@
         "apple": "Sign up with Apple Id"
       },
       "createAccount": "Create Account"
+    },
+    "referralCode": {
+      "title": "Distributor Referral Code",
+      "label": "Distributor referral code",
+      "placeholder": "e.g. TOKOMAJU-2026",
+      "signupHint": "Ask your distributor for this code. You will only see their products and prices.",
+      "loginHint": "Enter the referral code from your distributor to sign in.",
+      "required": "Enter the referral code from your distributor.",
+      "invalid": "This referral code is not valid. Check it with your distributor."
     },
     "forgotPassword": {
       "title": "Forgot Password",
@@ -1029,6 +1038,7 @@
     "sections": {
       "myPurchases": "My Purchases",
       "myNetworks": "My Networks",
+      "distributorStorefront": "Distributor Storefront",
       "myWallet": "My Wallet",
       "moreServices": "More Services"
     },
@@ -1036,12 +1046,14 @@
       "toPay": "To Pay",
       "toShip": "To Ship",
       "toReceive": "To Receive",
+      "completed": "Completed",
       "toRate": "To Rate"
     },
     "actions": {
       "viewPurchaseHistory": "View Purchases History",
       "viewAllNetworks": "View All Networks",
       "viewAllFollowings": "View All Followings",
+      "viewDistributorInformation": "View Distributor Information",
       "manageWallet": "Manage your wallet"
     },
     "networks": {
@@ -1182,7 +1194,7 @@
     },
     "stockLabel": "Stock status:",
     "soldLabel": "{{count}} sold",
-    "sellerInformation": "Seller Information",
+    "sellerInformation": "Distributor Information",
     "sellerRating": "{{rating}} ({{count}}+ ratings)",
     "pricingConfirmedBy": "Pricing will be confirmed by {{distributor}}",
     "youMayAlsoLike": "You may also like",
@@ -1365,15 +1377,15 @@
         "moreOptions": "More options",
         "closeMenu": "Close menu"
       },
-      "title": "Seller Information",
+      "title": "Distributor Information",
       "errors": {
-        "invalidSeller": "Invalid seller",
-        "failedToLoad": "Failed to load seller information"
+        "invalidSeller": "Invalid distributor",
+        "failedToLoad": "Failed to load distributor information"
       },
       "states": {
         "loading": "Loading…",
-        "sellerNotFound": "Seller not found",
-        "sellerMayNotExist": "This seller may not exist."
+        "sellerNotFound": "Distributor not found",
+        "sellerMayNotExist": "This distributor may not exist."
       },
       "labels": {
         "recently": "Recently",

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, MessageSquareText, Search, ChevronRight, Star, Package, Truck, CheckCircle, Clock, MapPin, Phone } from 'lucide-react-native';
+import { ArrowLeft, MessageSquareText, Search, ChevronRight, Package, Truck, CheckCircle, Clock, MapPin, Phone } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { MyPurchasesListSkeleton } from '../../components/SkeletonLoader';
@@ -73,12 +73,14 @@ export default function MyPurchasesModal() {
   const inactiveGrey = '#6B7280';
   const orange = '#f97316';
   
-  const initialTab = (typeof params.tab === 'string' ? params.tab : 'to-pay') as 'to-pay' | 'to-ship' | 'to-receive' | 'completed' | 'returns' | 'cancelled' | 'to-rate';
-  const [activeTab, setActiveTab] = useState<'to-pay' | 'to-ship' | 'to-receive' | 'completed' | 'returns' | 'cancelled' | 'to-rate'>(initialTab);
+  type PurchaseTab = 'to-pay' | 'to-ship' | 'to-receive' | 'completed' | 'returns' | 'cancelled';
+  const allowedTabs: PurchaseTab[] = ['to-pay', 'to-ship', 'to-receive', 'completed', 'returns', 'cancelled'];
+  const initialTabParam = typeof params.tab === 'string' ? params.tab : 'to-pay';
+  const initialTab = (allowedTabs.includes(initialTabParam as PurchaseTab) ? initialTabParam : 'to-pay') as PurchaseTab;
+  const [activeTab, setActiveTab] = useState<PurchaseTab>(initialTab);
   const [query, setQuery] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
-  const [orderHasReview, setOrderHasReview] = useState<Record<string, boolean>>({});
   const [reorderingOrderId, setReorderingOrderId] = useState<string | null>(null);
 
   const isAuthenticated = !!token && !!authUser;
@@ -129,69 +131,7 @@ export default function MyPurchasesModal() {
     });
 
     setOrders(transformedOrders);
-    // Orders refreshed via websocket/load → reset cached review flags to avoid stale "Edit review"
-    setOrderHasReview({});
   }, [storeOrders, isAuthenticated, authUser?.id]);
-
-  // Best-effort: cache whether each order already has an existing review (for "Edit review" label).
-  useEffect(() => {
-    let cancelled = false;
-    const loadFlags = async () => {
-      if (!token || !isAuthenticated) return;
-      const candidateOrderIds = Array.from(
-        new Set(
-          orders
-            .filter((o) => o.orderStatus === 'Delivered' || o.orderStatus === 'Received')
-            .map((o) => o.orderId)
-            .filter(Boolean),
-        ),
-      );
-      const toFetch = candidateOrderIds.filter((id) => orderHasReview[id] === undefined).slice(0, 25);
-      if (toFetch.length === 0) return;
-
-      try {
-        const results = await Promise.all(
-          toFetch.map(async (orderId) => {
-            try {
-              const res = await fetch(
-                `${API_BASE_URL}/api/mobile/reviews/order?orderId=${encodeURIComponent(orderId)}`,
-                { headers: { Authorization: `Bearer ${token}` } },
-              );
-              const json = (await res.json().catch(() => null)) as
-                | {
-                    productReviews?: unknown[];
-                    deliveryReview?: { deliveryRating?: number | null; deliveryComment?: string | null } | null;
-                  }
-                | null;
-              if (!res.ok || !json) return { orderId, has: false };
-              const hasProduct = Array.isArray(json.productReviews) && json.productReviews.length > 0;
-              const hasDelivery =
-                !!json.deliveryReview &&
-                ((typeof json.deliveryReview.deliveryRating === 'number' && json.deliveryReview.deliveryRating > 0) ||
-                  (typeof json.deliveryReview.deliveryComment === 'string' && json.deliveryReview.deliveryComment.trim().length > 0));
-              return { orderId, has: hasProduct || hasDelivery };
-            } catch {
-              return { orderId, has: false };
-            }
-          }),
-        );
-
-        if (cancelled) return;
-        setOrderHasReview((prev) => {
-          const next = { ...prev };
-          for (const r of results) next[r.orderId] = r.has;
-          return next;
-        });
-      } catch {
-        // ignore
-      }
-    };
-
-    void loadFlags();
-    return () => {
-      cancelled = true;
-    };
-  }, [orders, token, isAuthenticated, orderHasReview]);
 
   const getFilteredOrders = () => {
     let filtered = orders;
@@ -215,9 +155,6 @@ export default function MyPurchasesModal() {
         break;
       case 'cancelled':
         filtered = orders.filter(order => order.orderStatus === 'Cancelled');
-        break;
-      case 'to-rate':
-        filtered = orders.filter(order => ['Delivered', 'Received'].includes(order.orderStatus));
         break;
     }
     
@@ -286,11 +223,6 @@ export default function MyPurchasesModal() {
         buttons.push({ text: t('myPurchases.actions.reorder'), type: 'secondary', action: 'reorder' });
       }
       buttons.push({ text: t('myPurchases.actions.returnRefund'), type: 'secondary', action: 'return' });
-      buttons.push({
-        text: orderHasReview[order.orderId] ? t('ordersFlow.orderDetails.actions.editReview') : t('tabsAccount.purchaseStatus.toRate'),
-        type: 'primary',
-        action: 'rate',
-      });
     } else if (order.orderStatus === 'Returned') {
       buttons.push({ text: t('ordersFlow.orderDetails.orderIdInfo.viewMore'), type: 'secondary', action: 'details' });
     }
@@ -354,21 +286,6 @@ export default function MyPurchasesModal() {
         break;
       case 'received':
         updateOrderStatus(order.orderId, 'Received');
-        break;
-      case 'rate':
-        {
-          const reviewItems = (order.orderItems ?? [])
-            .filter((it) => it.productId)
-            .map((it) => ({
-              productId: String(it.productId),
-              productName: it.productName ?? 'Product',
-              image: (it.images && it.images[0]) ? it.images[0] : '',
-            }));
-          router.push({
-            pathname: '/components/productcatalog/ProductReview',
-            params: { orderId: order.orderId, itemsJson: JSON.stringify(reviewItems) },
-          });
-        }
         break;
       case 'details':
         router.push({
@@ -566,7 +483,7 @@ export default function MyPurchasesModal() {
               key={index}
               style={[
                 styles.actionButton,
-                button.action === 'rate' ? styles.ratePrimaryButton : button.type === 'primary' ? styles.primaryButton : styles.secondaryButton
+                button.type === 'primary' ? styles.primaryButton : styles.secondaryButton
               ]}
               onPress={(e) => {
                 e?.stopPropagation?.();
@@ -574,19 +491,12 @@ export default function MyPurchasesModal() {
               }}
               disabled={button.action === 'reorder' && reorderingOrderId === order.orderId}
             >
-              {button.action === 'rate' ? (
-                <>
-                  <Star size={16} color="#ffffff" />
-                  <Text style={[styles.actionButtonText, styles.primaryButtonText]}>{button.text}</Text>
-                </>
-              ) : (
-                <Text style={[
-                  styles.actionButtonText,
-                  button.type === 'primary' ? styles.primaryButtonText : styles.secondaryButtonText
-                ]}>
-                  {button.text}
-                </Text>
-              )}
+              <Text style={[
+                styles.actionButtonText,
+                button.type === 'primary' ? styles.primaryButtonText : styles.secondaryButtonText
+              ]}>
+                {button.text}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -605,7 +515,6 @@ export default function MyPurchasesModal() {
         {activeTab === 'completed' && t('myPurchases.empty.completed')}
         {activeTab === 'returns' && t('myPurchases.empty.returns')}
         {activeTab === 'cancelled' && t('myPurchases.empty.cancelled')}
-        {activeTab === 'to-rate' && t('myPurchases.empty.toRate')}
       </Text>
     </View>
   );
@@ -647,7 +556,6 @@ export default function MyPurchasesModal() {
                 <TabItem label={t('myPurchases.tabs.toPay')} value={'to-pay'} />
                 <TabItem label={t('myPurchases.tabs.toShip')} value={'to-ship'} />
                 <TabItem label={t('myPurchases.tabs.toReceive')} value={'to-receive'} />
-                <TabItem label={t('myPurchases.tabs.toRate')} value={'to-rate'} />
                 <TabItem label={t('myPurchases.tabs.completed')} value={'completed'} />
                 <TabItem label={t('myPurchases.tabs.returns')} value={'returns'} />
                 <TabItem label={t('myPurchases.tabs.cancelled')} value={'cancelled'} />
@@ -847,12 +755,6 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: '#f97316',
-  },
-  ratePrimaryButton: {
-    backgroundColor: '#f59e0b',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
   },
   secondaryButton: {
     backgroundColor: '#ffffff',

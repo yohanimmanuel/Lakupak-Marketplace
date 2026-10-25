@@ -46,6 +46,7 @@ export default function SignUpModal() {
   // Combined signup state - 0 = initial screen, 1-4 = signup steps
   const [signupStep, setSignupStep] = useState(0);
   const [signupData, setSignupData] = useState({
+    referralCode: '',
     name: '',
     email: '',
     storeName: '',
@@ -646,6 +647,26 @@ export default function SignUpModal() {
                     />
                   </View>
                 </View>
+                <View style={{ marginBottom: 24 }}>
+                  <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
+                    {t('auth.referralCode.label')}
+                  </Text>
+                  <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
+                    <TextInput
+                      value={signupData.referralCode}
+                      onChangeText={(text) => setSignupData(prev => ({ ...prev, referralCode: text.toUpperCase() }))}
+                      placeholder={t('auth.referralCode.placeholder')}
+                      placeholderTextColor="#9ca3af"
+                      style={{ paddingVertical: 16, fontSize: 16, color: '#111827' }}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      maxLength={24}
+                    />
+                  </View>
+                  <Text style={{ color: '#6b7280', fontSize: 12, marginTop: 6 }}>
+                    {t('auth.referralCode.signupHint')}
+                  </Text>
+                </View>
                 <Pressable
                   onPress={async () => {
                     if (isCreatingAccount) return;
@@ -662,6 +683,11 @@ export default function SignUpModal() {
                     
                     if (signupData.password.length < 6) {
                       Alert.alert(t('auth.signup.alerts.weakPasswordTitle'), t('auth.signup.alerts.weakPasswordBody'));
+                      return;
+                    }
+
+                    if (!signupData.referralCode.trim()) {
+                      Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.required'));
                       return;
                     }
                     
@@ -684,6 +710,7 @@ export default function SignUpModal() {
                         phone: deliveryPhone,
                         countryCode: signupData.countryCode,
                         countryDialCode: signupData.countryDialCode,
+                        referralCode: signupData.referralCode.trim(),
                       });
                       
                       await setToken(result.token);
@@ -714,6 +741,14 @@ export default function SignUpModal() {
                       const code = getAuthErrorCode(error);
                       if (code === AUTH_ERROR_CODE.RATE_LIMITED) {
                         Alert.alert(t('auth.login.alerts.rateLimitedTitle'), t('auth.login.alerts.rateLimitedBody'));
+                        return;
+                      }
+                      if (code === AUTH_ERROR_CODE.REFERRAL_CODE_REQUIRED || code === AUTH_ERROR_CODE.REFERRAL_CODE_INVALID) {
+                        setSignupStep(4);
+                        Alert.alert(
+                          t('auth.referralCode.title'),
+                          t(code === AUTH_ERROR_CODE.REFERRAL_CODE_REQUIRED ? 'auth.referralCode.required' : 'auth.referralCode.invalid'),
+                        );
                         return;
                       }
                       if (code === AUTH_ERROR_CODE.SIGNUP_MISSING_CREDENTIALS) {
