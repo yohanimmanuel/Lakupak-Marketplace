@@ -455,7 +455,10 @@
     "endMessage": "Products displays reached the end.",
     "noProducts": "No products available",
     "storeFallback": "My Store",
-    "addressFallback": "Set your address"
+    "addressFallback": "Set your address",
+    "greeting": "Hi, {{name}}",
+    "heroTitle": "Stock your store straight from verified distributors",
+    "heroTitleWithDistributor": "Stock your store straight from {{distributor}}"
   }
   ,
   "tabsCategories": {

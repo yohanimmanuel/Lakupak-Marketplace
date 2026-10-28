@@ -455,7 +455,10 @@
     "endMessage": "Anda sudah mencapai akhir daftar produk.",
     "noProducts": "Belum ada produk tersedia",
     "storeFallback": "Toko Saya",
-    "addressFallback": "Atur alamat"
+    "addressFallback": "Atur alamat",
+    "greeting": "Halo, {{name}}",
+    "heroTitle": "Belanja stok warung langsung dari distributor terverifikasi",
+    "heroTitleWithDistributor": "Belanja stok warung langsung dari {{distributor}}"
   }
   ,
   "tabsCategories": {

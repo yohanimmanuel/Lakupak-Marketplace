@@ -34,18 +34,20 @@ import { useUserActivityStore } from '../../stores/userActivityStore';
 import { useCartStore } from '../../stores/cartStore';
 import { useHeaderScrollStore } from '../../stores/headerScrollStore';
 import { useTabBarScrollCollapse } from '../../hooks/useTabBarScrollCollapse';
-import { FLOATING_TAB_BAR_CONTENT_INSET } from '../../components/FloatingTabBar';
 import { Product } from '../../data/sampleProducts';
 import { marketplaceService, MarketplaceProduct } from '../../services/marketplace';
+import { API_BASE_URL } from '../../services/config';
+import { decodeToken, authHeaders } from '../../services/graphql';
 import { ProductGridSkeleton } from '../components/SkeletonLoader';
 import { buildCategoryDirectory } from '../../utils/categoryUtils';
 // Removed theme color imports - using explicit colors
 
-// Header constants
-const HEADER_VISUAL_HEIGHT = 220; // Visual height of the blue header (taller for rounded corners)
-const MAX_HEADER_HEIGHT = 154; // Content area initial position
-const MIN_HEADER_HEIGHT = 99; // Search bar area with proper top padding
-const SCROLL_DISTANCE = MAX_HEADER_HEIGHT - MIN_HEADER_HEIGHT; // 55
+// Header constants — blue promo band under search (Foodpanda-style)
+const HEADER_VISUAL_HEIGHT = 280;
+const MIN_HEADER_HEIGHT = 99; // Sticky search slot
+const SHEET_START = HEADER_VISUAL_HEIGHT - 12; // White sheet overlaps the blue slightly
+const SHEET_SPACER = SHEET_START - MIN_HEADER_HEIGHT;
+const COLLAPSE = 55; // Store row + search travel; list itself scrolls 1:1
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -59,6 +61,7 @@ export default function HomeScreen() {
   const token = useAuthStore(s => s.token);
   const user = useAuthStore(s => s.user);
   const isAuthenticated = !!token && !!user;
+  const [storefrontName, setStorefrontName] = useState<string | null>(null);
 
   // Redirect to welcome if not authenticated - use useEffect to avoid render-time navigation
   useEffect(() => {
@@ -79,6 +82,7 @@ export default function HomeScreen() {
     loadProductsData,
     refreshAllData,
     forceRefreshProducts,
+    storefrontDistributorId,
   } = useDataStore();
 
   // User activity store
@@ -98,40 +102,75 @@ export default function HomeScreen() {
     scrollY.setValue(0);
   }, [setScrollY, scrollY]);
 
-  // Header scroll interpolations
+  // Header scroll interpolations — short collapse only. The list is not counter-translated
+  // (that opposing transform was twitching the product grid).
   const headerContentTranslateY = scrollY.interpolate({
-    inputRange: [0, SCROLL_DISTANCE],
-    outputRange: [0, -SCROLL_DISTANCE],
+    inputRange: [0, COLLAPSE],
+    outputRange: [0, -COLLAPSE],
     extrapolate: 'clamp',
   });
 
   const addressOpacity = scrollY.interpolate({
-    inputRange: [0, SCROLL_DISTANCE * 0.5],
+    inputRange: [0, COLLAPSE * 0.7],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
 
-  // Search bar moves up from top:105 to top:50 (translateY: 0 to -55)
+  const promoOpacity = scrollY.interpolate({
+    inputRange: [0, SHEET_SPACER * 0.55],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+
+  const promoTranslateY = scrollY.interpolate({
+    inputRange: [0, SHEET_SPACER * 0.55],
+    outputRange: [0, -40],
+    extrapolate: 'clamp',
+  });
+
   const searchBarTranslateY = scrollY.interpolate({
-    inputRange: [0, SCROLL_DISTANCE],
+    inputRange: [0, COLLAPSE],
     outputRange: [0, -55],
     extrapolate: 'clamp',
   });
 
-  // Content area background starts lower (full header visible), moves up as you scroll
-  const contentTranslateY = scrollY.interpolate({
-    inputRange: [0, SCROLL_DISTANCE],
-    outputRange: [SCROLL_DISTANCE, 0],
-    extrapolate: 'clamp',
-  });
+  const tokenStorefrontId = React.useMemo(() => {
+    if (!token) return null;
+    return decodeToken(token).distributorId ?? null;
+  }, [token]);
+  const activeStorefrontId = storefrontDistributorId ?? tokenStorefrontId;
 
-  // Content elements stay in place until header is collapsed, then scroll normally
-  // This counters the internal scroll for the first SCROLL_DISTANCE pixels
-  const contentElementsTranslateY = scrollY.interpolate({
-    inputRange: [0, SCROLL_DISTANCE],
-    outputRange: [0, SCROLL_DISTANCE],
-    extrapolate: 'clamp',
-  });
+  useEffect(() => {
+    if (!token || !activeStorefrontId) {
+      setStorefrontName(null);
+      return;
+    }
+    setStorefrontName(null);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/mobile/distributor/${encodeURIComponent(String(activeStorefrontId))}`,
+          { headers: authHeaders() },
+        );
+        if (cancelled || !res.ok) {
+          if (!cancelled) setStorefrontName(null);
+          return;
+        }
+        const json = (await res.json()) as {
+          companyName?: string | null;
+          name?: string | null;
+        };
+        if (cancelled) return;
+        setStorefrontName(json.companyName?.trim() || json.name?.trim() || null);
+      } catch {
+        if (!cancelled) setStorefrontName(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, activeStorefrontId]);
 
   // Scroll tracking for progress bar
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -290,14 +329,14 @@ export default function HomeScreen() {
     <RNView style={{ flex: 1, backgroundColor: '#f9fafb' }}>
       <StatusBar barStyle="light-content" backgroundColor={primaryColor} translucent={false} />
       
-      {/* Header - rendered BEHIND content (zIndex: 0) */}
+      {/* Blue only behind the header and the sheet’s top curve, not the rest of the page */}
       <RNView 
         style={{ 
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          height: HEADER_VISUAL_HEIGHT,
+          height: HEADER_VISUAL_HEIGHT + 28,
           zIndex: 0,
           backgroundColor: primaryColor,
         }}
@@ -341,31 +380,48 @@ export default function HomeScreen() {
             </Link>
           </RNView>
         </Animated.View>
-        {/* Search bar - stays fixed, moves up slightly to stick at top */}
-        <Animated.View style={{ 
-          position: 'absolute',
-          top: 100,
-          left: 16,
-          right: 16,
-          transform: [{ translateY: searchBarTranslateY }]
-        }}>
-          <Pressable onPress={() => router.push('/search')}>
-            <RNView style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              backgroundColor: '#ffffff', 
-              borderRadius: 22, 
-              paddingHorizontal: 12, 
-              height: 40,
-              borderWidth: 1,
-              borderColor: '#e5e7eb',
-            }}>
-              <Search color="#6B7280" size={20} />
-              <Text style={{ flex: 1, marginLeft: 8, color: '#6B7280', paddingVertical: 0 }}>
-                {t('tabsHome.searchPlaceholder')}
-              </Text>
-            </RNView>
-          </Pressable>
+
+        {/* Promo copy, centered in the blue gap between search and the sheet */}
+        <Animated.View
+          style={{
+            position: 'absolute',
+            top: 148,
+            left: 16,
+            right: 16,
+            height: SHEET_START - 148 - 8,
+            justifyContent: 'center',
+            opacity: promoOpacity,
+            transform: [{ translateY: promoTranslateY }],
+          }}
+          pointerEvents="none"
+        >
+          <RNText
+            style={{
+              color: 'rgba(255,255,255,0.88)',
+              fontSize: 14,
+              fontWeight: '600',
+            }}
+            numberOfLines={1}
+          >
+            {t('tabsHome.greeting', {
+              name: (user?.name || user?.storeName || '').trim().split(/\s+/)[0] || t('tabsHome.storeFallback'),
+            })}
+          </RNText>
+          <RNText
+            style={{
+              marginTop: 8,
+              color: '#ffffff',
+              fontSize: 20,
+              fontWeight: '700',
+              lineHeight: 27,
+              letterSpacing: -0.15,
+            }}
+            numberOfLines={3}
+          >
+            {storefrontName
+              ? t('tabsHome.heroTitleWithDistributor', { distributor: storefrontName })
+              : t('tabsHome.heroTitle')}
+          </RNText>
         </Animated.View>
       </RNView>
 
@@ -376,12 +432,12 @@ export default function HomeScreen() {
           flex: 1, 
           zIndex: 1, 
           marginTop: MIN_HEADER_HEIGHT, 
-          backgroundColor: '#f9fafb', 
-          borderTopLeftRadius: 24, 
+          backgroundColor: 'transparent',
+          borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          transform: [{ translateY: contentTranslateY }]
+          overflow: 'hidden',
         }}
-        contentContainerStyle={{ paddingTop: 10, paddingBottom: FLOATING_TAB_BAR_CONTENT_INSET }}
+        contentContainerStyle={{ flexGrow: 1 }}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -398,10 +454,9 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Content area - background scrolls immediately */}
-        <View style={{ backgroundColor: '#f9fafb' }}>
-          {/* Content elements - stay in place until header is collapsed */}
-          <Animated.View style={{ transform: [{ translateY: contentElementsTranslateY }] }}>
+        {/* Transparent spacer lets the blue tagline show; the sheet then scrolls over it 1:1 */}
+        <View style={{ height: SHEET_SPACER, backgroundColor: 'transparent' }} />
+        <View style={{ flexGrow: 1, backgroundColor: '#f9fafb', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 10, paddingBottom: 72, overflow: 'hidden' }}>
           {/* Special Offers — horizontal carousel of all published offers */}
           {homeOffers.length > 0 ? (
             <View style={{ backgroundColor: '#f9fafb', paddingTop: 5 }}>
@@ -579,9 +634,38 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
-          </Animated.View>
         </View>
       </Animated.ScrollView>
+
+      {/* Above the scroll view so the bar stays tappable; the viewport still starts at the sticky slot */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 100,
+          left: 16,
+          right: 16,
+          zIndex: 2,
+          transform: [{ translateY: searchBarTranslateY }],
+        }}
+      >
+        <Pressable onPress={() => router.push('/search')}>
+          <RNView style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#ffffff',
+            borderRadius: 22,
+            paddingHorizontal: 12,
+            height: 40,
+            borderWidth: 1,
+            borderColor: '#e5e7eb',
+          }}>
+            <Search color="#6B7280" size={20} />
+            <Text style={{ flex: 1, marginLeft: 8, color: '#6B7280', paddingVertical: 0 }}>
+              {t('tabsHome.searchPlaceholder')}
+            </Text>
+          </RNView>
+        </Pressable>
+      </Animated.View>
     </RNView>
   );
 }
@@ -673,7 +757,7 @@ const styles = StyleSheet.create({
   endMessageContainer: {
     paddingHorizontal: 16,
     paddingTop: 4,
-    paddingBottom: 60,
+    paddingBottom: 30,
     alignItems: 'center',
     backgroundColor: '#f9fafb',
     marginTop: -4,
