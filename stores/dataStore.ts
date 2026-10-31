@@ -135,6 +135,8 @@ interface DataState {
 
   /** Published special offers for home carousel and /offers list. */
   homeOffers: MarketplaceHomeOfferPayload[]
+  /** Bumped when this storefront's campaign feed changes, so Latest updates can refetch. */
+  storefrontFeedVersion: number
   /** Distributor whose products are currently cached. Null until a storefront token is applied. */
   storefrontDistributorId: number | null
   
@@ -160,7 +162,7 @@ interface DataState {
   loadProductsData: (forceRefresh?: boolean) => Promise<void>
   loadOrdersData: (forceRefresh?: boolean) => Promise<void>
   refreshAllData: (token?: string) => Promise<void>
-  loadHomeOffers: (token: string) => Promise<void>
+  loadHomeOffers: (token: string) => Promise<boolean>
   forceRefreshProducts: () => Promise<void>
   forceRefreshOrders: () => Promise<void>
   updateOrdersFromWebSocket: (orderIds: string[]) => Promise<void>
@@ -198,6 +200,19 @@ function scheduleProductsRefresh(run: () => void): void {
   }, WS_REFRESH_DEBOUNCE_MS)
 }
 
+function signedInStorefrontId(): number | null {
+  const token = useAuthStore.getState().token
+  if (!token) return null
+  return decodeToken(token).distributorId ?? null
+}
+
+/** Events without a distributor id are legacy broadcasts and still refresh this device. */
+function eventMatchesStorefront(distributorId?: number): boolean {
+  if (typeof distributorId !== 'number') return true
+  const mine = signedInStorefrontId()
+  return mine != null && mine === distributorId
+}
+
 export const useDataStore = create<DataState>()(
   persist(
     (set, get) => ({
@@ -210,6 +225,7 @@ export const useDataStore = create<DataState>()(
       ordersLastUpdated: null,
       ordersLoadError: null,
       homeOffers: [],
+      storefrontFeedVersion: 0,
       storefrontDistributorId: null,
       isUserLoading: false,
       isProductsLoading: false,
@@ -397,11 +413,14 @@ export const useDataStore = create<DataState>()(
       },
 
       loadHomeOffers: async (token) => {
+        const requestedDistributorId = decodeToken(token).distributorId ?? null
         try {
           const offers = await marketplaceService.getHomeOffersList(token)
+          if (signedInStorefrontId() !== requestedDistributorId) return false
           set({ homeOffers: offers })
+          return true
         } catch {
-          set({ homeOffers: [] })
+          return false
         }
       },
 
@@ -524,6 +543,7 @@ export const useDataStore = create<DataState>()(
             
             // Handle different message types
             if (message.type === 'product_updated') {
+              if (!eventMatchesStorefront(message.distributorId)) return
               // Targeted optimization for unpublish: remove products locally in 0ms without network roundtrip
               if (message.action === 'unpublish' && message.productIds && message.productIds.length > 0) {
                 const unpublishedIds = new Set(message.productIds)
@@ -541,6 +561,7 @@ export const useDataStore = create<DataState>()(
             }
 
             if (message.type === 'offer_updated' || message.type === 'prices_updated') {
+              if (!eventMatchesStorefront(message.distributorId)) return
               // Catalog only. Order totals stay put until the distributor sends pricing.
               scheduleProductsRefresh(() => {
                 void get().forceRefreshProducts()
@@ -588,9 +609,11 @@ export const useDataStore = create<DataState>()(
             }
 
             if (message.type === 'home_offers_updated') {
+              if (!eventMatchesStorefront(message.distributorId)) return
               const t = useAuthStore.getState().token
               if (t) {
                 void get().loadHomeOffers(t)
+                set((state) => ({ storefrontFeedVersion: state.storefrontFeedVersion + 1 }))
               }
             }
 
@@ -678,6 +701,11 @@ export const useDataStore = create<DataState>()(
               // publish/unpublish can't leave the catalog stale indefinitely.
               if (isConnected) {
                 void get().forceRefreshProducts()
+                const token = useAuthStore.getState().token
+                if (token) {
+                  void get().loadHomeOffers(token)
+                  set((state) => ({ storefrontFeedVersion: state.storefrontFeedVersion + 1 }))
+                }
               }
             }
             
@@ -690,6 +718,13 @@ export const useDataStore = create<DataState>()(
                 if (!websocketService.isConnected()) {
                   if (!state.isProductsLoading) {
                     state.forceRefreshProducts()
+                  }
+                  const token = useAuthStore.getState().token
+                  if (token) {
+                    void state.loadHomeOffers(token).then((ok) => {
+                      if (!ok) return
+                      set((state) => ({ storefrontFeedVersion: state.storefrontFeedVersion + 1 }))
+                    })
                   }
                   // Polling fallback - only refresh if WebSocket is disconnected
                   if (!state.isOrdersLoading) {
@@ -737,6 +772,13 @@ export const useDataStore = create<DataState>()(
             const state = get()
             if (!state.isProductsLoading) {
               state.forceRefreshProducts()
+            }
+            const token = useAuthStore.getState().token
+            if (token) {
+              void state.loadHomeOffers(token).then((ok) => {
+                if (!ok) return
+                set((state) => ({ storefrontFeedVersion: state.storefrontFeedVersion + 1 }))
+              })
             }
             // Polling fallback - only refresh if WebSocket is disconnected
             if (!state.isOrdersLoading) {
@@ -810,10 +852,11 @@ export const useDataStore = create<DataState>()(
 
       retainStorefront: (token) => {
         const next = token ? (decodeToken(token).distributorId ?? null) : null
+        const distributorChanged = get().storefrontDistributorId !== next
         const cached = get().products
         const cachedOtherDistributor =
           next != null && cached.some((product) => product.userId != null && product.userId !== next)
-        if (get().storefrontDistributorId === next && !cachedOtherDistributor) return
+        if (!distributorChanged && !cachedOtherDistributor) return
         set({
           storefrontDistributorId: next,
           products: [],
@@ -821,6 +864,7 @@ export const useDataStore = create<DataState>()(
           orders: [],
           ordersLastUpdated: null,
           ordersLoadError: null,
+          ...(distributorChanged ? { homeOffers: [] } : {}),
         })
       },
 
@@ -843,6 +887,7 @@ export const useDataStore = create<DataState>()(
            ordersLastUpdated: null,
           ordersLoadError: null,
           homeOffers: [],
+          storefrontFeedVersion: 0,
           isUserLoading: false,
           isProductsLoading: false,
            isOrdersLoading: false,

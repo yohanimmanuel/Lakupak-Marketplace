@@ -49,8 +49,14 @@ async function withReadIdsWriteLock<T>(key: string, fn: () => Promise<T>): Promi
   }
 }
 
-export async function fetchPublishedLatestUpdateById(id: number): Promise<PlatformAnnouncement | null> {
-  const url = `${API_BASE_URL}/api/marketplace/latest-updates/${id}`;
+export async function fetchPublishedLatestUpdateById(
+  id: number,
+  distributorId?: number | null,
+): Promise<PlatformAnnouncement | null> {
+  const params = new URLSearchParams();
+  if (distributorId != null && distributorId > 0) params.set('distributorId', String(distributorId));
+  const query = params.toString();
+  const url = `${API_BASE_URL}/api/marketplace/latest-updates/${id}${query ? `?${query}` : ''}`;
   const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
   if (res.status === 404) return null;
   if (!res.ok) {
@@ -64,11 +70,15 @@ export async function fetchPublishedLatestUpdateById(id: number): Promise<Platfo
 export async function fetchPublishedLatestUpdates(options?: {
   category?: string | null;
   limit?: number;
+  distributorId?: number | null;
 }): Promise<PlatformAnnouncement[]> {
   const limit = Math.max(1, Math.min(options?.limit ?? 50, 100));
   const params = new URLSearchParams({ limit: String(limit) });
   if (options?.category && options.category !== 'all') {
     params.set('category', options.category);
+  }
+  if (options?.distributorId != null && options.distributorId > 0) {
+    params.set('distributorId', String(options.distributorId));
   }
   const url = `${API_BASE_URL}/api/marketplace/latest-updates?${params.toString()}`;
   const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });

@@ -80,6 +80,7 @@ export default function HomeScreen() {
     isProductsLoading,
     isUserLoading,
     loadProductsData,
+    loadHomeOffers,
     refreshAllData,
     forceRefreshProducts,
     storefrontDistributorId,
@@ -297,6 +298,7 @@ export default function HomeScreen() {
   useFocusEffect(
     React.useCallback(() => {
       forceRefreshProducts();
+      if (token) void loadHomeOffers(token);
       // Reset scroll position when screen gains focus (returning to home)
       // First scroll to top, then reset the animated value
       if (scrollViewRef.current) {
@@ -308,17 +310,8 @@ export default function HomeScreen() {
         // Re-sync the scrollY in store to trigger listener re-attachment
         setScrollY(scrollY);
       });
-    }, [forceRefreshProducts, scrollY, setScrollY])
+    }, [forceRefreshProducts, loadHomeOffers, token, scrollY, setScrollY])
   );
-
-  // Light background refresh removed - dataStore already handles auto-refresh via WebSocket + polling fallback
-  // This was causing duplicate requests and unnecessary backend load
-  // useEffect(() => {
-  //   const intervalId = setInterval(() => {
-  //     forceRefreshProducts();
-  //   }, 120000); // 2 minutes
-  //   return () => clearInterval(intervalId);
-  // }, [forceRefreshProducts]);
 
   // Early return after all hooks to prevent rendering unauthenticated content
   if (!isAuthenticated) {

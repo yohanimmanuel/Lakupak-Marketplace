@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -33,6 +33,7 @@ import {
 } from '../../services/latestUpdatesService';
 import { useAuthStore } from '../../stores/authStore';
 import { useDataStore } from '../../stores/dataStore';
+import { decodeToken } from '../../services/graphql';
 import { usePlatformAnnouncementsRealtimeStore } from '../../stores/platformAnnouncementsRealtimeStore';
 import { OrderUpdateRow } from '../../components/notifications/OrderUpdateRow';
 import { useTranslation } from 'react-i18next';
@@ -88,6 +89,7 @@ export default function NotificationsScreen() {
   const onTabBarScroll = useTabBarScrollCollapse();
   const orderPreviewLocale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
   const token = useAuthStore((s) => s.token);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const authUser = useAuthStore((s) => s.user);
   const hydrate = useAuthStore((s) => s.hydrateFromStorage);
   const LATEST_UPDATE_TABS: { id: LatestUpdateTabId; label: string }[] = [
@@ -102,6 +104,7 @@ export default function NotificationsScreen() {
   const [orderNotifications, setOrderNotifications] = useState<Notification[]>([]);
   const [error, setError] = useState<string | null>(null);
   const orders = useDataStore((state) => state.orders);
+  const storefrontFeedVersion = useDataStore((state) => state.storefrontFeedVersion);
   const loadOrdersData = useDataStore((state) => state.loadOrdersData);
 
   const [latestUpdates, setLatestUpdates] = useState<PlatformAnnouncement[]>([]);
@@ -170,23 +173,33 @@ export default function NotificationsScreen() {
     };
   }, [isAuthenticated, authUser?.id]);
 
+  const latestUpdatesRequestId = useRef(0);
+
   const loadLatestUpdates = useCallback(async () => {
+    const requestId = ++latestUpdatesRequestId.current;
     setLatestLoading(true);
     setLatestError(null);
     try {
-      const list = await fetchPublishedLatestUpdates({ limit: 80 });
+      const currentToken = useAuthStore.getState().token;
+      useDataStore.getState().retainStorefront(currentToken);
+      const distributorId = currentToken ? (decodeToken(currentToken).distributorId ?? null) : null;
+      const list = await fetchPublishedLatestUpdates({ limit: 80, distributorId });
+      if (requestId !== latestUpdatesRequestId.current) return;
       setLatestUpdates(list);
     } catch {
+      if (requestId !== latestUpdatesRequestId.current) return;
       setLatestError(t('tabsNotifications.errors.latestUpdatesFailed'));
-      setLatestUpdates([]);
     } finally {
-      setLatestLoading(false);
+      if (requestId === latestUpdatesRequestId.current) {
+        setLatestLoading(false);
+      }
     }
   }, [t]);
 
   useEffect(() => {
+    if (!hasHydrated) return;
     loadLatestUpdates();
-  }, [loadLatestUpdates]);
+  }, [loadLatestUpdates, storefrontFeedVersion, hasHydrated, token]);
 
   useEffect(() => {
     if (!latestLoading && !refreshing) {

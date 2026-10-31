@@ -15,7 +15,7 @@ export const LakuTheme = {
   tabBar: {
     active: primaryBlue,
     inactive: '#6B7280',
-    background: 'rgba(255, 255, 255, 0.95)',
+    background: '#ffffff',
     activePill: 'rgba(10, 97, 215, 0.12)',
   },
 } as const;

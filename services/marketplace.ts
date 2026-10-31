@@ -603,7 +603,9 @@ export const marketplaceService = {
     const r = await fetch(`${API_BASE_URL}/api/mobile/offers`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!r.ok) return [];
+    if (!r.ok) {
+      throw new Error(`Failed to load home offers (${r.status})`);
+    }
     const j = (await r.json()) as { offers?: Partial<MarketplaceHomeOfferPayload>[] };
     const raw = j.offers ?? [];
     return raw.map((o) => normalizeHomeOffer(o)).filter((x): x is MarketplaceHomeOfferPayload => x != null);

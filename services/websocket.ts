@@ -28,6 +28,8 @@ interface WebSocketMessage {
     | 'pong';
   data?: unknown;
   productIds?: string[];
+  /** Distributor storefront this event belongs to. Absent on older broadcasts. */
+  distributorId?: number;
   action?: 'publish' | 'unpublish' | 'update';
   offerIds?: string[];
   orderIds?: string[];
@@ -67,7 +69,7 @@ class WebSocketService {
 
     // Extract hostname and optional port from API_BASE_URL
     const hostWithPort = API_BASE_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const [hostname, urlPort] = hostWithPort.split(':');
+    const hostname = hostWithPort.split(':')[0];
 
     // In production (https), WebSockets route through the standard 443 proxy (no custom port needed)
     // unless EXPO_PUBLIC_WS_PORT is explicitly specified as a non-standard port.
@@ -77,8 +79,9 @@ class WebSocketService {
       const portPart = explicitPort && explicitPort !== '443' && explicitPort !== 'none' && explicitPort !== '3001' ? `:${explicitPort}` : '';
       this.url = `${protocol}://${hostname}${portPart}/api/marketplace/ws`;
     } else {
-      // In local development (http), default to 3001 or EXPO_PUBLIC_WS_PORT
-      const devPort = process.env.EXPO_PUBLIC_WS_PORT || urlPort || '3001';
+      // The REST API is on :3000 (`next dev`). Realtime listens on :3001 (`npm run ws`).
+      // Do not reuse the API port or publish events never reach the app.
+      const devPort = process.env.EXPO_PUBLIC_WS_PORT || '3001';
       const portPart = devPort && devPort !== 'none' ? `:${devPort}` : '';
       this.url = `${protocol}://${hostname}${portPart}/api/marketplace/ws`;
     }

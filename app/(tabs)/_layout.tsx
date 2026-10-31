@@ -50,41 +50,6 @@ export default function TabLayout() {
     );
   };
 
-  const SearchPill = (
-    <Pressable
-      onPress={() => router.push('/search')}
-      style={{
-        flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 22, paddingHorizontal: 12,
-        height: 40, flexGrow: 1, flexBasis: 0, marginRight: 7, marginLeft: 20, minWidth: 280, borderWidth: 1, borderColor: '#e5e7eb',
-      }}
-    >
-      <Search color="#6B7280" size={20} />
-      <Text
-        style={{ flex: 1, marginLeft: 8, color: '#6B7280', fontSize: 14 }}
-      >
-        {t('header.searchProducts')}
-      </Text>
-    </Pressable>
-  );
-
-  const rightIconsBlue = (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 20 }}>
-      <Link href="/messages" asChild>
-        <ShrinkIcon style={{ marginLeft: 8, marginRight: 6, paddingHorizontal: 8 }}>
-          <MessageSquareText color={inactiveGrey} size={22} />
-        </ShrinkIcon>
-      </Link>
-      <Link href="/cart" asChild>
-        <ShrinkIcon>
-          <View style={{ position: 'relative' }}>
-            <ShoppingCart color={inactiveGrey} size={22} />
-            <CartBadge size={16} color="#ffffff" backgroundColor="#EF4444" />
-          </View>
-        </ShrinkIcon>
-      </Link>
-    </View>
-  );
-
   function renderHeaderContent() {
     if (!pathname || pathname === '/' || pathname?.endsWith('/home') || pathname === '/home') {
       return (

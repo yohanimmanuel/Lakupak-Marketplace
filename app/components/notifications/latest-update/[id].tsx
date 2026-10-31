@@ -18,6 +18,8 @@ import {
   type PlatformAnnouncement,
 } from '../../../../services/latestUpdatesService';
 import { useAuthStore } from '../../../../stores/authStore';
+import { useDataStore } from '../../../../stores/dataStore';
+import { decodeToken } from '../../../../services/graphql';
 import { useTranslation } from 'react-i18next';
 import { ArticleDetailSkeleton } from '../../SkeletonLoader';
 
@@ -28,6 +30,8 @@ export default function LatestUpdateDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const authUser = useAuthStore((s) => s.user);
+  const token = useAuthStore((s) => s.token);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const { t, i18n } = useTranslation();
   const locale = i18n.language?.toLowerCase().startsWith('id') ? 'id-ID' : 'en-US';
   const [item, setItem] = useState<PlatformAnnouncement | null>(null);
@@ -44,15 +48,22 @@ export default function LatestUpdateDetailScreen() {
       setErr(t('latestUpdatesDetail.states.invalid'));
       return;
     }
+    if (!hasHydrated) return;
     let cancelled = false;
+    setLoading(true);
+    setErr(null);
     (async () => {
       try {
-        const a = await fetchPublishedLatestUpdateById(id);
+        const currentToken = useAuthStore.getState().token;
+        useDataStore.getState().retainStorefront(currentToken);
+        const distributorId = currentToken ? (decodeToken(currentToken).distributorId ?? null) : null;
+        const a = await fetchPublishedLatestUpdateById(id, distributorId);
         if (cancelled) return;
         if (!a) {
           setErr(t('latestUpdatesDetail.states.noLongerAvailable'));
           setItem(null);
         } else {
+          setErr(null);
           setItem(a);
           const uid = authUser?.id ?? null;
           // Fire-and-forget: marking read is non-critical
@@ -67,7 +78,7 @@ export default function LatestUpdateDetailScreen() {
     return () => {
       cancelled = true;
     };
-  }, [id, validId, authUser?.id]);
+  }, [id, validId, authUser?.id, token, hasHydrated, t]);
 
   const openLink = async () => {
     if (!item?.linkUrl?.trim()) return;
