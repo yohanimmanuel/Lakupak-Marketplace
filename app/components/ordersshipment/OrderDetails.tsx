@@ -159,9 +159,9 @@ interface Order {
   shippingMethodLabel?: string;
   shippingMethod?: string;
   deliveryOption?: string;
-  estimatedDeliveryDate?: string | null;
-  estimatedDeliveryMinDays?: number | null;
-  estimatedDeliveryMaxDays?: number | null;
+  estimatedArrivalDate?: string | null;
+  estimatedArrivalMinDays?: number | null;
+  estimatedArrivalMaxDays?: number | null;
   /** Fallback from distributor's shipping option when order has no estimated duration */
   shippingOptionMinDays?: number | null;
   shippingOptionMaxDays?: number | null;
@@ -705,8 +705,8 @@ export default function OrderDetailsModal() {
             if (hideEstimated) return null;
 
             // Use order-level duration if distributor set it; otherwise fall back to shipping option duration from company
-            const minDays = orderData.estimatedDeliveryMinDays ?? orderData.shippingOptionMinDays;
-            const maxDays = orderData.estimatedDeliveryMaxDays ?? orderData.shippingOptionMaxDays;
+            const minDays = orderData.estimatedArrivalMinDays ?? orderData.shippingOptionMinDays;
+            const maxDays = orderData.estimatedArrivalMaxDays ?? orderData.shippingOptionMaxDays;
             const hasRange = minDays != null || maxDays != null;
             const rangeText = hasRange
               ? minDays != null && maxDays != null
@@ -717,8 +717,8 @@ export default function OrderDetailsModal() {
                     ? t('ordersFlow.orderDetails.estimatedDelivery.upToBusinessDays', { max: maxDays })
                     : t('ordersFlow.orderDetails.estimatedDelivery.unknown')
               : t('ordersFlow.orderDetails.estimatedDelivery.unknown');
-            const estimatedDateText = orderData.estimatedDeliveryDate
-              ? new Date(orderData.estimatedDeliveryDate).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+            const estimatedDateText = orderData.estimatedArrivalDate
+              ? new Date(orderData.estimatedArrivalDate).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
               : t('ordersFlow.orderDetails.estimatedDelivery.pending');
 
               return (
