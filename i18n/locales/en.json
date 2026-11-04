@@ -1905,7 +1905,9 @@
         "bank": "Bank",
         "accountName": "Account name",
         "accountNumber": "Account number",
-        "paymentTerm": "Term of payment"
+        "paymentTerm": "Term of payment",
+        "paid": "Paid",
+        "unpaid": "Unpaid"
       },
       "values": {
         "paymentTermDays_one": "{{count}} day",

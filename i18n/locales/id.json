@@ -1903,7 +1903,9 @@
         "bank": "Bank",
         "accountName": "Nama rekening",
         "accountNumber": "Nomor rekening",
-        "paymentTerm": "Jangka waktu pembayaran"
+        "paymentTerm": "Jangka waktu pembayaran",
+        "paid": "Dibayar",
+        "unpaid": "Belum dibayar"
       },
       "values": {
         "paymentTermDays_one": "{{count}} hari",

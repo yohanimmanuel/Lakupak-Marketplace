@@ -34,6 +34,12 @@ type OrderDetails = {
   id: string;
   orderId: string;
   paymentTerms?: string | null;
+  paymentStatus?: string | null;
+  amountPaid?: number | null;
+  subtotal?: number | null;
+  discounts?: number | null;
+  shippingFee?: number | null;
+  totalAmount?: number | null;
   distributorUserId?: number | null;
   userId?: number | null;
   sellerId?: number | null;
@@ -111,6 +117,22 @@ export default function PayOrder() {
       setBank(null);
     }
   }, [fetchOrder, token, isEditingProof, syncProofFromOrder]);
+
+  const paymentSplit = useMemo(() => {
+    const subtotal = Number(order?.subtotal || 0);
+    const shippingFee = Number(order?.shippingFee || 0);
+    const discounts = Number(order?.discounts || 0);
+    const computed = Math.max(0, subtotal + shippingFee - discounts);
+    const orderTotal = computed > 0 ? computed : Math.max(0, Number(order?.totalAmount || 0));
+    const recorded =
+      order?.amountPaid != null && Number.isFinite(Number(order.amountPaid))
+        ? Math.min(orderTotal, Math.max(0, Number(order.amountPaid)))
+        : String(order?.paymentStatus || '').toLowerCase() === 'paid'
+          ? orderTotal
+          : 0;
+    return { paid: recorded, unpaid: Math.max(0, orderTotal - recorded) };
+  }, [order]);
+  const formatRupiah = (amount: number) => `Rp${Math.round(amount).toLocaleString('id-ID')}`;
 
   const isCod = useMemo(() => isCodPaymentTerms(order?.paymentTerms), [order?.paymentTerms]);
   const isBankTransfer = useMemo(
@@ -411,6 +433,21 @@ export default function PayOrder() {
           </View>
         </View>
 
+        <View style={styles.section}>
+          <View style={styles.productCard}>
+            <View style={styles.nettRow}>
+              <View style={styles.nettCell}>
+                <Text style={styles.paidLabel}>{t('ordersFlow.payOrder.labels.paid')}</Text>
+                <Text style={styles.nettValue}>{formatRupiah(paymentSplit.paid)}</Text>
+              </View>
+              <View style={styles.nettCell}>
+                <Text style={styles.unpaidLabel}>{t('ordersFlow.payOrder.labels.unpaid')}</Text>
+                <Text style={styles.nettValue}>{formatRupiah(paymentSplit.unpaid)}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
         {isCod ? (
           <View style={styles.section}>
             <View style={styles.productCard}>
@@ -619,6 +656,29 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingVertical: 4,
     gap: 12,
+  },
+  nettRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  nettCell: {
+    flex: 1,
+  },
+  paidLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#16a34a',
+  },
+  unpaidLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#dc2626',
+  },
+  nettValue: {
+    marginTop: 4,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
   },
   infoLabel: {
     fontSize: 14,
