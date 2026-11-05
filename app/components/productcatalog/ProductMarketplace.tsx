@@ -60,6 +60,7 @@ interface ProductMarketplaceProps {
   onPress?: (product: ProductType) => void;
   showBackButton?: boolean;
   onBackPress?: () => void;
+  appendOrderId?: string;
 }
 
 export default function ProductMarketplace({
@@ -75,6 +76,7 @@ export default function ProductMarketplace({
   onPress,
   showBackButton = false,
   onBackPress,
+  appendOrderId,
 }: ProductMarketplaceProps) {
   const router = useRouter();
   const { t } = useTranslation();
@@ -598,7 +600,11 @@ export default function ProductMarketplace({
             style={styles.actionButton}
             onPress={() => {
               onAddToCart(product, 1);
-              router.push('/cart');
+              router.push(
+                appendOrderId
+                  ? { pathname: '/cart', params: { appendOrderId } }
+                  : '/cart',
+              );
             }}
           >
             <View style={{ position: 'relative' }}>
@@ -815,7 +821,10 @@ export default function ProductMarketplace({
                     // Navigate to the product modal
                     router.push({
                       pathname: '/product',
-                      params: { productId: relatedProduct.id }
+                      params: {
+                        productId: relatedProduct.id,
+                        ...(appendOrderId ? { appendOrderId } : {}),
+                      },
                     });
                   }}
                   onAddToCart={onAddToCart}
@@ -825,6 +834,7 @@ export default function ProductMarketplace({
                   onToggleFavorite={onToggleFavorite}
                   isFavorite={likedProducts.includes(relatedProduct.id)}
                   type="card"
+                  appendOrderId={appendOrderId}
                 />
               </View>
             ))}
@@ -835,10 +845,12 @@ export default function ProductMarketplace({
                 <ProductMarketplace
                   product={relatedProduct}
                   onPress={() => {
-                    // Navigate to the product modal
                     router.push({
                       pathname: '/product',
-                      params: { productId: relatedProduct.id }
+                      params: {
+                        productId: relatedProduct.id,
+                        ...(appendOrderId ? { appendOrderId } : {}),
+                      },
                     });
                   }}
                   onAddToCart={onAddToCart}
@@ -848,6 +860,7 @@ export default function ProductMarketplace({
                   onToggleFavorite={onToggleFavorite}
                   isFavorite={likedProducts.includes(relatedProduct.id)}
                   type="card"
+                  appendOrderId={appendOrderId}
                 />
               </View>
             ))}
@@ -952,11 +965,11 @@ export default function ProductMarketplace({
       </TouchableOpacity>
       
       <TouchableOpacity
-        style={[styles.buyNowButton, { backgroundColor: '#059c2d' }]}
+        style={[styles.buyNowButton, { backgroundColor: appendOrderId ? '#0a61d7' : '#059c2d' }]}
         onPress={handleBuyNowPress}
       >
         <Text style={styles.buyNowText}>
-          {t('product.actions.buyNow')}
+          {appendOrderId ? t('product.actions.addToThisOrder') : t('product.actions.buyNow')}
         </Text>
       </TouchableOpacity>
     </View>

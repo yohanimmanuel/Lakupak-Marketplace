@@ -370,7 +370,7 @@ export default function OrdersScreen() {
                       ) : null}
                       {productLines.length > 0 ? (
                         <View style={styles.orderProductsList}>
-                          {productLines.map((line, index) => (
+                          {productLines.slice(0, 3).map((line, index) => (
                             <View key={`${order.orderId}-item-${index}`} style={styles.orderProductLine}>
                               <Text style={styles.orderProductQty}>{line.orderedQuantity}x</Text>
                               {line.freePieces > 0 ? (
@@ -386,6 +386,11 @@ export default function OrdersScreen() {
                               </Text>
                             </View>
                           ))}
+                          {productLines.length > 3 ? (
+                            <Text style={styles.orderProductsMore}>
+                              {t('tabsOrders.moreProducts', { count: productLines.length - 3 })}
+                            </Text>
+                          ) : null}
                         </View>
                       ) : (
                         <Text style={[styles.orderProductsText, { marginTop: 6 }]}>
@@ -621,6 +626,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     lineHeight: 18,
+  },
+  orderProductsMore: {
+    fontSize: 13,
+    color: '#6b7280',
   },
   orderProductsText: {
     flex: 1,

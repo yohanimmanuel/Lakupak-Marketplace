@@ -106,6 +106,9 @@ export interface CartItem {
 
 interface CartState {
   items: CartItem[]
+  /** Normal cart hidden while products are being added to an existing order. */
+  savedItems: CartItem[] | null
+  editOrderId: string
   isOpen: boolean
   userId: number | null
   isLoading: boolean
@@ -132,6 +135,8 @@ interface CartState {
   loadCartOnStart: () => void
   checkAuthAndLoadCart: () => void
   initializeCart: () => void
+  beginEditOrder: (orderId: string) => void
+  endEditOrder: () => void
   
   // Getters
   getSelectedItems: () => CartItem[]
@@ -351,6 +356,8 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      savedItems: null,
+      editOrderId: '',
       isOpen: false,
       userId: null, // Will be set when user logs in
       isLoading: false,
@@ -387,6 +394,9 @@ export const useCartStore = create<CartState>()(
           set({ items: sortCartItemsByAddedAtDesc([updatedItem, ...state.items]) });
         }
 
+        // Products added while editing an order stay off the normal cart.
+        if (get().editOrderId) return;
+
         // Sync to database in background if user is logged in and online
         if (currentUserId && state.isOnline) {
           const token = authState.token;
@@ -410,6 +420,8 @@ export const useCartStore = create<CartState>()(
         set({
           items: state.items.filter((entry) => entry.id !== itemId),
         });
+
+        if (get().editOrderId) return;
 
         if (currentUserId && state.isOnline) {
           const token = authState.token;
@@ -442,6 +454,8 @@ export const useCartStore = create<CartState>()(
           ),
         });
 
+        if (get().editOrderId) return;
+
         if (currentUserId && state.isOnline) {
           const token = authState.token;
           void (async () => {
@@ -473,7 +487,9 @@ export const useCartStore = create<CartState>()(
           ),
         });
 
-        void syncCartItemSelectionToDatabase(item, selected, state.isOnline, set, get);
+        if (!get().editOrderId) {
+          void syncCartItemSelectionToDatabase(item, selected, state.isOnline, set, get);
+        }
       },
 
       setItemsSelected: (itemIds, selected) => {
@@ -489,9 +505,11 @@ export const useCartStore = create<CartState>()(
           ),
         });
 
-        changedItems.forEach((entry) => {
-          void syncCartItemSelectionToDatabase(entry, selected, state.isOnline, set, get);
-        });
+        if (!get().editOrderId) {
+          changedItems.forEach((entry) => {
+            void syncCartItemSelectionToDatabase(entry, selected, state.isOnline, set, get);
+          });
+        }
       },
 
       selectAll: () => {
@@ -518,6 +536,10 @@ export const useCartStore = create<CartState>()(
       },
 
       clearCart: async (options?: { trackAbandonment?: boolean }) => {
+        if (get().editOrderId) {
+          set({ items: [] });
+          return;
+        }
         const { isOnline } = get()
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
@@ -542,7 +564,7 @@ export const useCartStore = create<CartState>()(
 
       clearCartLocal: () => {
         // Clear local state only (for logout/user switch)
-        set({ items: [], userId: null })
+        set({ items: [], savedItems: null, editOrderId: '', userId: null })
       },
 
       setCartOpen: (isOpen) => {
@@ -551,7 +573,7 @@ export const useCartStore = create<CartState>()(
 
       setUserId: (userId) => {
         set({ userId })
-        if (userId) {
+        if (userId && !get().editOrderId) {
           // Preserve locally added (possibly offline / not-yet-synced) items across a
           // cold start: when local items exist, upload + merge them with the server
           // cart instead of overwriting with server-only rows. On a genuine user switch
@@ -567,12 +589,35 @@ export const useCartStore = create<CartState>()(
       setOnlineStatus: (isOnline) => {
         set({ isOnline })
         // Sync with database when coming back online
-        if (isOnline && get().userId) {
+        if (isOnline && get().userId && !get().editOrderId) {
           get().syncWithDatabase()
         }
       },
 
+      beginEditOrder: (orderId: string) => {
+        const id = orderId.trim();
+        if (!id) return;
+        const state = get();
+        if (state.editOrderId === id) return;
+        if (!state.editOrderId) {
+          set({ editOrderId: id, savedItems: state.items, items: [] });
+          return;
+        }
+        set({ editOrderId: id, items: [] });
+      },
+
+      endEditOrder: () => {
+        const { editOrderId, savedItems } = get();
+        if (!editOrderId) return;
+        set({
+          editOrderId: '',
+          savedItems: null,
+          items: savedItems ?? [],
+        });
+      },
+
       syncWithDatabase: async () => {
+        if (get().editOrderId) return;
         const { items: localItems, isOnline } = get()
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
@@ -586,6 +631,8 @@ export const useCartStore = create<CartState>()(
         try {
           const serverRows = await cartService.getCart(currentUserId, token || undefined)
           if (requestId !== loadFromDatabaseRequestId) return
+
+          if (get().editOrderId) return;
 
           const serverByKey = new Map<string, CartItem>()
           for (const row of serverRows) {
@@ -623,6 +670,8 @@ export const useCartStore = create<CartState>()(
           const freshRows = await cartService.getCart(currentUserId, token || undefined)
           if (requestId !== loadFromDatabaseRequestId) return
 
+          if (get().editOrderId) return;
+
           const mergedLocalItems = get().items
           applyLoadedCartItems(
             set,
@@ -639,6 +688,7 @@ export const useCartStore = create<CartState>()(
       },
 
       loadFromDatabase: async () => {
+        if (get().editOrderId) return;
         const { isOnline, items: previousItems } = get()
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
@@ -651,6 +701,7 @@ export const useCartStore = create<CartState>()(
         try {
           const cartItems = await cartService.getCart(currentUserId, token || undefined)
           if (requestId !== loadFromDatabaseRequestId) return
+          if (get().editOrderId) return
 
           applyLoadedCartItems(
             set,
@@ -706,7 +757,7 @@ export const useCartStore = create<CartState>()(
         
         if (currentUserId) {
           get().loadFromDatabase()
-        } else {
+        } else if (!get().editOrderId) {
           set({ items: [], isLoading: false })
         }
       },
@@ -760,7 +811,7 @@ export const useCartStore = create<CartState>()(
       version: 2,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
-        items: compactCartItemsForPersist(state.items),
+        items: compactCartItemsForPersist(state.editOrderId ? (state.savedItems ?? []) : state.items),
         userId: state.userId,
       }),
       migrate: (persisted, version) => {
@@ -777,6 +828,12 @@ export const useCartStore = create<CartState>()(
         // added, still-unsynced items (the rehydration race). Ownership is instead
         // reconciled once auth resolves: authStore.setUser clears the cart on a genuine
         // user switch, and setUserId merges the same user's local + server carts.
+        if (state.editOrderId) {
+          state.items = state.savedItems ?? [];
+          state.savedItems = null;
+          state.editOrderId = '';
+        }
+
         const authUserId = useAuthStore.getState().user?.id ?? null;
         if (state.userId != null && authUserId != null && state.userId !== authUserId) {
           state.items = [];

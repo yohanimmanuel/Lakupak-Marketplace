@@ -6,8 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -246,10 +244,19 @@ export default function SearchScreen() {
     }
   }, [userId, token]);
 
+  const appendOrderId =
+    typeof params.appendOrderId === 'string' ? params.appendOrderId.trim() : '';
+
+  useEffect(() => {
+    const cart = useCartStore.getState();
+    if (appendOrderId) cart.beginEditOrder(appendOrderId);
+    else cart.endEditOrder();
+  }, [appendOrderId]);
+
   const openSearchPage = useCallback(
-    (params: { q?: string; category?: string }) => {
-      const q = params.q?.trim();
-      if (!q && !params.category) return;
+    (next: { q?: string; category?: string }) => {
+      const q = next.q?.trim();
+      if (!q && !next.category) return;
 
       Keyboard.dismiss();
       searchRequestIdRef.current += 1;
@@ -258,11 +265,12 @@ export default function SearchScreen() {
         pathname: '/search',
         params: {
           q: q || undefined,
-          category: params.category && params.category !== 'All' ? params.category : undefined,
+          category: next.category && next.category !== 'All' ? next.category : undefined,
+          ...(appendOrderId ? { appendOrderId } : {}),
         },
       });
     },
-    [router],
+    [router, appendOrderId],
   );
 
   const performSearch = useCallback(async (
@@ -568,10 +576,13 @@ export default function SearchScreen() {
     (product: Product) => {
       router.push({
         pathname: '/product',
-        params: { productId: product.id },
+        params: {
+          productId: product.id,
+          ...(appendOrderId ? { appendOrderId } : {}),
+        },
       });
     },
-    [router]
+    [router, appendOrderId]
   );
 
   const handleAddToCart = useCallback(
@@ -781,12 +792,14 @@ export default function SearchScreen() {
         topOffset={headerOffset}
       />
 
-      {/* Content */}
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoidingView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
+      {/* Content. The search field sits above this list, so the list must not
+          stay shrunk after the keyboard closes. */}
+      <View style={styles.keyboardAvoidingView}>
+        {appendOrderId ? (
+          <Text style={styles.appendBanner}>
+            {t('ordersFlow.orderDetails.sections2.addingToOrder', { orderId: appendOrderId })}
+          </Text>
+        ) : null}
         {showInitialState ? (
         <ScrollView
           style={styles.content}
@@ -855,7 +868,7 @@ export default function SearchScreen() {
           onLoadMore={handleLoadMore}
         />
       ) : null}
-      </KeyboardAvoidingView>
+      </View>
 
       <SearchFilterSheet
         visible={filtersOpen}
@@ -902,6 +915,13 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
+  },
+  appendBanner: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0a61d7',
   },
   headerContainer: {
     backgroundColor: '#ffffff',

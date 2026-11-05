@@ -369,6 +369,33 @@ class OrdersService {
       throw error;
     }
   }
+
+  async updateOrderDetails(
+    userId: number,
+    orderData: {
+      orderId: string;
+      contactPerson: string;
+      contactPhone: string;
+      storeName: string;
+      deliveryAddress: string;
+      deliveryOption: 'self_pickup' | 'seller_delivery' | 'buyer_courier';
+      paymentMethod: 'cod' | 'bank_transfer';
+    },
+    token?: string,
+  ): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/mobile/orders`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ ...orderData, userId }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Failed to update order' }));
+      throw new Error(errorData.error || `HTTP ${response.status}: Failed to update order`);
+    }
+  }
 }
 
 export const ordersService = new OrdersService();

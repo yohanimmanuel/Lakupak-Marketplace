@@ -51,6 +51,7 @@ import { getMe } from '../../../services/user';
 import { CheckoutSkeleton } from '../SkeletonLoader';
 import { resolveVariantPricing } from '../../../utils/variantRules';
 import { formatCurrency } from '../../../utils/currencyUtils';
+import { ordersService, type OrderItem } from '../../../services/orders';
 import {
   extractCreatedOrderId,
   generateCheckoutOrderId,
@@ -74,6 +75,8 @@ type CheckoutParams = {
   piecesPerPackage?: string;
   variantId?: string;
   variantName?: string;
+  appendOrderId?: string;
+  editOrderId?: string;
 };
 
 interface DistributorInfo {
@@ -141,17 +144,21 @@ export default function CheckoutScreen() {
   const productImage = params.productImage || '';
   const packageType = params.packageType || t('ordersFlow.checkout.defaults.box');
   const piecesPerPackage = parseInt(params.piecesPerPackage || '1');
+  const appendOrderId = (params.appendOrderId || '').trim();
+  const editOrderId = (params.editOrderId || '').trim();
 
-  // Determine checkout mode from explicit source param (avoids cart/direct ambiguity)
-  const checkoutSource =
-    params.checkoutSource === 'cart' || params.checkoutSource === 'direct'
+  // Edit order reuses this screen, but it is not a cart checkout.
+  const isEditingOrder = Boolean(editOrderId) && !appendOrderId;
+  const checkoutSource = isEditingOrder
+    ? 'direct'
+    : params.checkoutSource === 'cart' || params.checkoutSource === 'direct'
       ? params.checkoutSource
       : params.productId
         ? 'direct'
         : 'cart';
-  const isDirectCheckout = checkoutSource === 'direct';
-  const isCartCheckout = checkoutSource === 'cart' && selectedCartItems.length > 0;
-  const isCartCheckoutEmpty = checkoutSource === 'cart' && selectedCartItems.length === 0;
+  const isDirectCheckout = checkoutSource === 'direct' && !isEditingOrder;
+  const isCartCheckout = !isEditingOrder && checkoutSource === 'cart' && selectedCartItems.length > 0;
+  const isCartCheckoutEmpty = !isEditingOrder && checkoutSource === 'cart' && selectedCartItems.length === 0;
   
   // Get the actual product data (for single product checkout) - memoized to update when products change
   const product = useMemo(() => products.find(p => p.id === productId), [products, productId]);
@@ -214,6 +221,15 @@ const distributorGroups = useMemo(
   const [selectedAddress, setSelectedAddress] = useState('default');
   const [selectedPayment, setSelectedPayment] = useState<'bank_transfer' | 'cod'>('bank_transfer');
   const [selectedShipping, setSelectedShipping] = useState('');
+  const [editingItems, setEditingItems] = useState<OrderItem[]>([]);
+  const [editingSeller, setEditingSeller] = useState<{
+    name?: string | null;
+    companyName?: string | null;
+    companyAddress?: string | null;
+    companyPhone?: string | null;
+    companyEmail?: string | null;
+  } | null>(null);
+  const [editingReady, setEditingReady] = useState(!(editOrderId || appendOrderId));
   // Per-distributor shipping selection for cart checkout
   const [selectedShippingByDistributor, setSelectedShippingByDistributor] = useState<Record<string, string>>({});
   const [activeDistributorId, setActiveDistributorId] = useState<string | null>(null);
@@ -280,10 +296,39 @@ const distributorGroups = useMemo(
       // Single product checkout
       return [getDistributorInfo(product as MarketplaceProduct)];
     }
+
+    const orderProducts = editingItems
+      .map((item) => getFreshProductById(item.productId || undefined))
+      .filter((item): item is MarketplaceProduct => Boolean(item));
+    if (orderProducts.length > 0) {
+      const distributors = new Map<string, DistributorInfo>();
+      orderProducts.forEach((orderProduct) => {
+        const info = getDistributorInfo(orderProduct);
+        if (!distributors.has(info.id)) distributors.set(info.id, info);
+      });
+      return Array.from(distributors.values());
+    }
+
+    const companyName = editingSeller?.companyName?.trim() || editingSeller?.name?.trim();
+    if (companyName) {
+      return [{
+        id: 'order-seller',
+        companyName,
+        industryType: t('ordersFlow.checkout.distributorDefaults.notSpecified'),
+        pickupAddress: null,
+        businessAddress: editingSeller?.companyAddress?.trim() || null,
+        contactPerson: editingSeller?.name?.trim() || t('ordersFlow.checkout.distributorDefaults.notProvided'),
+        phone: editingSeller?.companyPhone?.trim() || t('ordersFlow.checkout.distributorDefaults.notProvided'),
+        email: editingSeller?.companyEmail || undefined,
+      }];
+    }
     return [];
   };
 
-const distributorsInfo = useMemo(() => getDistributorsInfo(), [isCartCheckout, selectedCartItems, product, products]);
+const distributorsInfo = useMemo(
+  () => getDistributorsInfo(),
+  [isCartCheckout, selectedCartItems, product, products, editingItems, editingSeller],
+);
 
 const distributorsInfoMap = useMemo(() => {
   return distributorsInfo.reduce<Record<string, DistributorInfo>>((acc, info) => {
@@ -366,7 +411,51 @@ const copyPickupAddress = () => {
   const waitingForProduct = !isCartCheckout && !!productId && !product;
   const showCheckoutSkeleton =
     (!!token && isProfileRefreshing) ||
-    (waitingForProduct && isProductsLoading);
+    (waitingForProduct && isProductsLoading) ||
+    (!!(editOrderId || appendOrderId) && !editingReady);
+
+  useEffect(() => {
+    const id = appendOrderId || editOrderId;
+    if (id) useCartStore.getState().beginEditOrder(id);
+  }, [appendOrderId, editOrderId]);
+
+  useEffect(() => {
+    const orderIdToLoad = appendOrderId || editOrderId;
+    if (!orderIdToLoad || !authUser?.id) return;
+    let active = true;
+    void ordersService.getOrderById(orderIdToLoad, authUser.id, token || undefined).then((order) => {
+      if (!active) return;
+      if (!order || order.orderStatus !== 'Pending' || order.paymentStatus !== 'Unpaid') {
+        router.replace({
+          pathname: '/components/ordersshipment/OrderDetails',
+          params: { orderId: orderIdToLoad },
+        });
+        return;
+      }
+      setEditingItems(order.orderItems || []);
+      setEditingSeller(order.seller ?? null);
+      const deliveryValue = `${order.deliveryOption ?? ''} ${order.deliveryMethod ?? ''}`.toLowerCase();
+      const delivery = deliveryValue.includes('pickup')
+        ? 'self_pickup'
+        : deliveryValue.includes('courier') || deliveryValue.includes('buyer')
+          ? 'buyer_courier'
+          : 'seller_delivery';
+      setSelectedShipping(delivery);
+      if (delivery === 'seller_delivery') setSellerDeliveryMode('distributor_managed');
+      if (delivery === 'buyer_courier') setBuyerCourierMode('self_managed');
+      setSelectedPayment(/cod|cash/i.test(order.paymentTerms ?? '') ? 'cod' : 'bank_transfer');
+      setEditingReady(true);
+    }).catch(() => {
+      if (!active) return;
+      router.replace({
+        pathname: '/components/ordersshipment/OrderDetails',
+        params: { orderId: orderIdToLoad },
+      });
+    });
+    return () => {
+      active = false;
+    };
+  }, [editOrderId, appendOrderId, authUser?.id, token, router]);
 
   // The selected-items list is briefly empty in two non-error windows: while the cart
   // is still loading/syncing from the server on a cold entry, and right after a
@@ -749,9 +838,16 @@ const copyPickupAddress = () => {
   }, [showPickupModal, pickupSlideAnim]);
 
   // Item count for bottom bar (packages selected, not money)
-  const checkoutItemCount = isCartCheckout
-    ? selectedCartItems.reduce((sum, item) => sum + item.quantity, 0)
-    : quantity;
+  const existingPackageCount = editingItems.reduce((sum, item) => sum + (item.packageQuantity || 1), 0);
+  const existingSubtotal = editingItems.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
+  const cartPackageCount = selectedCartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const checkoutItemCount = isEditingOrder
+    ? existingPackageCount
+    : isCartCheckout
+      ? cartPackageCount + (appendOrderId ? existingPackageCount : 0)
+      : appendOrderId
+        ? existingPackageCount + quantity
+        : quantity;
 
   // Display only: catalog base price. Checkout still sends 0 and the server
   // stores the PO price (client rate or base) on submit.
@@ -767,17 +863,23 @@ const copyPickupAddress = () => {
     const total = Number(unitPrice) * pieces * packages;
     return Number.isFinite(total) && total > 0 ? total : 0;
   };
-  const checkoutBaseTotal = isCartCheckout
-    ? selectedCartItems.reduce(
-        (sum, item) => sum + getBaseLineTotal(getItemProduct(item), item.variant, item.quantity),
-        0,
-      )
-    : getBaseLineTotal(
-        product as MarketplaceProduct | undefined,
-        params.variantName || null,
-        quantity,
-        piecesPerPackage,
-      );
+  const addedLineTotal = getBaseLineTotal(
+    product as MarketplaceProduct | undefined,
+    params.variantName || null,
+    quantity,
+    piecesPerPackage,
+  );
+  const cartSubtotal = selectedCartItems.reduce(
+    (sum, item) => sum + getBaseLineTotal(getItemProduct(item), item.variant, item.quantity),
+    0,
+  );
+  const checkoutBaseTotal = isEditingOrder
+    ? existingSubtotal
+    : isCartCheckout
+    ? cartSubtotal + (appendOrderId ? existingSubtotal : 0)
+    : appendOrderId
+      ? existingSubtotal + addedLineTotal
+      : addedLineTotal;
 
   // Validate that all shipping requirements are met before allowing order placement
   const isOrderReady = useMemo(() => {
@@ -794,6 +896,11 @@ const copyPickupAddress = () => {
         if (chosen === 'buyer_courier') return !!buyerCourierModeByDist[distributorId];
         return true; // self_pickup is always ready once selected
       });
+    } else if (editOrderId && !appendOrderId) {
+      if (!selectedShipping) return false;
+      if (selectedShipping === 'seller_delivery') return !!sellerDeliveryMode;
+      if (selectedShipping === 'buyer_courier') return !!buyerCourierMode;
+      return true;
     } else {
       if (!product) return false;
       if (!selectedShipping) return false;
@@ -801,10 +908,72 @@ const copyPickupAddress = () => {
       if (selectedShipping === 'buyer_courier') return !!buyerCourierMode;
       return true; // self_pickup
     }
-  }, [showCheckoutSkeleton, hasDeliveryAddress, isCartCheckout, product, selectedShipping, selectedShippingByDistributor, sellerDeliveryMode, buyerCourierMode, sellerDeliveryModeByDist, buyerCourierModeByDist, selectedCartItems]);
+  }, [showCheckoutSkeleton, hasDeliveryAddress, isCartCheckout, product, selectedShipping, selectedShippingByDistributor, sellerDeliveryMode, buyerCourierMode, sellerDeliveryModeByDist, buyerCourierModeByDist, selectedCartItems, editOrderId, appendOrderId]);
 
   const handlePlaceOrder = async () => {
     if (isPlacingOrder || showCheckoutSkeleton) return;
+    if (editOrderId && !appendOrderId) {
+      if (!hasDeliveryAddress) {
+        Alert.alert(
+          t('ordersFlow.checkout.address.missingAddressTitle'),
+          t('ordersFlow.checkout.address.missingAddressBody'),
+          [
+            { text: t('ordersFlow.checkout.alerts.cancel'), style: 'cancel' },
+            { text: t('ordersFlow.checkout.address.addAddressAction'), onPress: openAddressEditor },
+          ],
+        );
+        return;
+      }
+      if (!authUser?.id || !selectedShipping) return;
+      const contactPerson = (addresses[0].name || authUser.name || '').trim();
+      const contactPhone = (addresses[0].phone || authUser.phone || '').trim();
+      if (!contactPerson || !contactPhone) {
+        Alert.alert(t('ordersFlow.checkout.alerts.errorTitle'), t('ordersFlow.checkout.edit.missingDetails'));
+        return;
+      }
+      const deliveryOption = selectedShipping as 'self_pickup' | 'seller_delivery' | 'buyer_courier';
+      Alert.alert(
+        t('ordersFlow.checkout.edit.title'),
+        t('ordersFlow.checkout.edit.confirm'),
+        [
+          { text: t('ordersFlow.checkout.alerts.cancel'), style: 'cancel' },
+          {
+            text: t('ordersFlow.checkout.edit.confirm'),
+            onPress: async () => {
+              setIsPlacingOrder(true);
+              try {
+                await ordersService.updateOrderDetails(
+                  authUser.id,
+                  {
+                    orderId: editOrderId,
+                    contactPerson,
+                    contactPhone,
+                    storeName: addresses[0].company || authUser.storeName || '',
+                    deliveryAddress: addresses[0].address,
+                    deliveryOption,
+                    paymentMethod: selectedPayment,
+                  },
+                  token || undefined,
+                );
+                await useDataStore.getState().forceRefreshOrders();
+                router.replace({
+                  pathname: '/components/ordersshipment/OrderDetails',
+                  params: { orderId: editOrderId },
+                });
+              } catch (error) {
+                Alert.alert(
+                  t('ordersFlow.checkout.alerts.errorTitle'),
+                  error instanceof Error ? error.message : t('ordersFlow.checkout.alerts.genericError'),
+                );
+              } finally {
+                setIsPlacingOrder(false);
+              }
+            },
+          },
+        ],
+      );
+      return;
+    }
     if (!hasDeliveryAddress) {
       Alert.alert(
         t('ordersFlow.checkout.address.missingAddressTitle'),
@@ -819,12 +988,18 @@ const copyPickupAddress = () => {
     try {
       // Show loading state
     Alert.alert(
-      t('ordersFlow.checkout.alerts.orderConfirmationTitle'),
-      t('ordersFlow.checkout.alerts.orderConfirmationBody'),
+      appendOrderId
+        ? t('ordersFlow.checkout.alerts.addToOrderTitle')
+        : t('ordersFlow.checkout.alerts.orderConfirmationTitle'),
+      appendOrderId
+        ? t('ordersFlow.checkout.alerts.addToOrderBody', { orderId: appendOrderId })
+        : t('ordersFlow.checkout.alerts.orderConfirmationBody'),
       [
         { text: t('ordersFlow.checkout.alerts.cancel'), style: 'cancel' },
         { 
-          text: t('ordersFlow.checkout.alerts.placeOrder'), 
+          text: appendOrderId
+            ? t('ordersFlow.checkout.alerts.addToOrder')
+            : t('ordersFlow.checkout.alerts.placeOrder'), 
           style: 'default',
             onPress: async () => {
               if (isPlacingOrder) return;
@@ -861,6 +1036,13 @@ const copyPickupAddress = () => {
                   const distributorGroups = groupByDistributor(itemsToCheckout);
                   const createdOrderIds: string[] = [];
                   const groupEntries = Object.entries(distributorGroups);
+                  if (appendOrderId && groupEntries.length !== 1) {
+                    Alert.alert(
+                      t('ordersFlow.checkout.alerts.errorTitle'),
+                      t('ordersFlow.checkout.alerts.singleDistributor'),
+                    );
+                    return;
+                  }
 
                   try {
                     for (let groupIndex = 0; groupIndex < groupEntries.length; groupIndex++) {
@@ -948,7 +1130,8 @@ const copyPickupAddress = () => {
                       orderStatus: 'Pending',
                       paymentStatus: 'Unpaid',
                       paymentTerms: paymentTermsForOrder,
-                      userId: authUser?.id || null
+                      userId: authUser?.id || null,
+                      ...(appendOrderId ? { appendToOrderId: appendOrderId } : {}),
                     };
                     
                     const response = await fetch(`${API_BASE_URL}/api/mobile/orders`, {
@@ -972,8 +1155,11 @@ const copyPickupAddress = () => {
                     createdOrderIds.push(persistedOrderId);
                     }
 
-                    // Remove only checked-out items after all distributor orders succeed
-                    await cartStore.removeItems(itemsToCheckout.map((item) => item.id));
+                    if (useCartStore.getState().editOrderId) {
+                      useCartStore.getState().endEditOrder();
+                    } else {
+                      await cartStore.removeItems(itemsToCheckout.map((item) => item.id));
+                    }
                   } catch (checkoutError) {
                     if (createdOrderIds.length > 0 && token && authUser?.id) {
                       const rollbackFailures = await rollbackCheckoutOrders(
@@ -1058,7 +1244,8 @@ const copyPickupAddress = () => {
                     orderStatus: 'Pending',
                     paymentStatus: 'Unpaid',
                     paymentTerms: paymentTermsForOrder,
-                    userId: authUser?.id || null
+                    userId: authUser?.id || null,
+                    ...(appendOrderId ? { appendToOrderId: appendOrderId } : {}),
                   };
                   
                   const response = await fetch(`${API_BASE_URL}/api/mobile/orders`, {
@@ -1092,44 +1279,64 @@ const copyPickupAddress = () => {
                   const orderId = (firstOrder?.orderId ?? o?.orderId ?? firstOrder?.order_id) || t('ordersFlow.checkout.defaults.unknown');
                   const orderStatus = firstOrder?.orderStatus ?? o?.orderStatus ?? firstOrder?.order_status ?? o?.order_status ?? 'Pending';
                   
-                  // In-app list (AsyncStorage)
-                  await NotificationService.createOrderNotifications(
-                    orderId, 
-                    createdOrders.length, 
-                    productImages, 
-                    authUser?.id || null,
-                    orderStatus,
-                    undefined
-                  );
-
-                  // System notification (tray) so buyer sees "Order Placed" on their phone
-                  try {
-                    await pushNotificationService.showOrderNotification(
+                  if (!appendOrderId) {
+                    await NotificationService.createOrderNotifications(
                       orderId,
-                      'Pending',
-                      t('ordersFlow.checkout.notifications.orderPlacedTitle'),
-                      createdOrders.length > 1
-                        ? t('ordersFlow.checkout.notifications.orderPlacedBodyMultiple', { count: createdOrders.length })
-                        : t('ordersFlow.checkout.notifications.orderPlacedBodySingle', { orderId })
+                      createdOrders.length,
+                      productImages,
+                      authUser?.id || null,
+                      orderStatus,
+                      undefined
                     );
-                  } catch (_) { /* best-effort */ }
+
+                    try {
+                      await pushNotificationService.showOrderNotification(
+                        orderId,
+                        'Pending',
+                        t('ordersFlow.checkout.notifications.orderPlacedTitle'),
+                        createdOrders.length > 1
+                          ? t('ordersFlow.checkout.notifications.orderPlacedBodyMultiple', { count: createdOrders.length })
+                          : t('ordersFlow.checkout.notifications.orderPlacedBodySingle', { orderId })
+                      );
+                    } catch (_) { /* best-effort */ }
+                  }
 
                   void useDataStore.getState().forceRefreshOrders();
 
-                  // Navigate to payment success page with the first order's details
-                  router.push({
-                    pathname: '/payment-success',
-                    params: {
-                      orderId,
-                      totalAmount: '0',
-                      orderStatus,
-                      orderCount: createdOrders.length.toString()
-                    }
-                  });
+                  if (appendOrderId) {
+                    useCartStore.getState().endEditOrder();
+                    router.replace({
+                      pathname: '/components/ordersshipment/OrderDetails',
+                      params: { orderId: appendOrderId },
+                    });
+                  } else {
+                    router.push({
+                      pathname: '/payment-success',
+                      params: {
+                        orderId,
+                        totalAmount: '0',
+                        orderStatus,
+                        orderCount: createdOrders.length.toString()
+                      }
+                    });
+                  }
                 }
 
-              } catch {
-                Alert.alert(t('ordersFlow.checkout.alerts.errorTitle'), t('ordersFlow.checkout.alerts.placeOrderFailed'));
+              } catch (error) {
+                const raw = error instanceof Error ? error.message : '';
+                const jsonStart = raw.indexOf('{');
+                let message = t('ordersFlow.checkout.alerts.placeOrderFailed');
+                if (jsonStart >= 0) {
+                  try {
+                    const parsed = JSON.parse(raw.slice(jsonStart)) as { error?: unknown };
+                    if (typeof parsed.error === 'string' && parsed.error.trim()) {
+                      message = parsed.error;
+                    }
+                  } catch {
+                    // Keep the generic message when the response is not JSON.
+                  }
+                }
+                Alert.alert(t('ordersFlow.checkout.alerts.errorTitle'), message);
               } finally {
                 setIsPlacingOrder(false);
               }
@@ -1141,6 +1348,8 @@ const copyPickupAddress = () => {
       Alert.alert(t('ordersFlow.checkout.alerts.errorTitle'), t('ordersFlow.checkout.alerts.genericError'));
     }
   };
+
+  const orderBeingEdited = editOrderId || appendOrderId;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
@@ -1154,7 +1363,9 @@ const copyPickupAddress = () => {
                   <ArrowLeft color={primaryBlue} size={24} />
                 </TouchableOpacity>
                 <Text style={{ color: '#111827', fontSize: 20, fontWeight: '500', marginLeft: 35, flex: 1 }}>
-                  {t('ordersFlow.checkout.title')}
+                  {editOrderId && !appendOrderId
+                    ? t('ordersFlow.checkout.edit.title')
+                    : t('ordersFlow.checkout.title')}
                 </Text>
               </View>
             </View>
@@ -1245,7 +1456,7 @@ const copyPickupAddress = () => {
               <Text style={styles.sectionTitle}>{t('ordersFlow.checkout.sections.deliveryAddress')}</Text>
               <TouchableOpacity onPress={openAddressEditor}>
                 <Text style={[styles.editText, !hasDeliveryAddress && styles.editTextMissing]}>
-                  {hasDeliveryAddress ? t('ordersFlow.checkout.edit') : t('ordersFlow.checkout.address.addAddressAction')}
+                  {hasDeliveryAddress ? t('common.edit') : t('ordersFlow.checkout.address.addAddressAction')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1296,9 +1507,40 @@ const copyPickupAddress = () => {
                     </Text>
                   </View>
                   
+                  {groupIndex === 0 && appendOrderId
+                    ? editingItems.map((item, index) => (
+                        <View key={`existing-${item.productId ?? index}-${item.variantNameSnapshot ?? ''}`} style={[styles.productRow, index > 0 && styles.productRowSpacing]}>
+                          <View style={styles.productImageContainer}>
+                            {item.images?.[0] ? (
+                              <Image source={{ uri: item.images[0] }} style={styles.productImage} />
+                            ) : (
+                              <View style={styles.imagePlaceholder}>
+                                <Package size={32} color="#9CA3AF" />
+                              </View>
+                            )}
+                          </View>
+                          <View style={styles.productDetails}>
+                            <Text style={styles.productName} numberOfLines={2}>
+                              {item.productName || item.productNameSnapshot || t('ordersFlow.checkout.defaults.product')}
+                            </Text>
+                            {item.variantNameSnapshot && item.variantNameSnapshot !== 'Default' ? (
+                              <Text style={styles.variantName} numberOfLines={2}>{item.variantNameSnapshot}</Text>
+                            ) : null}
+                            <View style={styles.priceRow}>
+                              <View style={styles.priceContainer}>
+                                {item.subtotal > 0 ? (
+                                  <Text style={styles.linePrice}>{formatCurrency(item.subtotal)}</Text>
+                                ) : null}
+                              </View>
+                              <Text style={styles.quantityBadge}>x{item.packageQuantity || 1}</Text>
+                            </View>
+                          </View>
+                        </View>
+                      ))
+                    : null}
                   {/* Products from this distributor */}
                   {items.map((item, index) => (
-                    <View key={item.id} style={[styles.productRow, index > 0 && styles.productRowSpacing]}>
+                    <View key={item.id} style={[styles.productRow, (index > 0 || (groupIndex === 0 && !!appendOrderId && editingItems.length > 0)) && styles.productRowSpacing]}>
                       <View style={styles.productImageContainer}>
                         {item.product.images?.[0] ? (
                           <Image source={{ uri: item.product.images[0] }} style={styles.productImage} />
@@ -1361,6 +1603,22 @@ const copyPickupAddress = () => {
                       </View>
                     </View>
                   ))}
+
+                  {appendOrderId && groupIndex === 0 ? (
+                    <TouchableOpacity
+                      style={styles.addMoreProducts}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/search',
+                          params: { appendOrderId },
+                        })
+                      }
+                    >
+                      <Text style={styles.addMoreProductsText}>
+                        {t('ordersFlow.orderDetails.sections2.addMoreProducts')}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
                   
                   {/* Shipping Options for this distributor */}
                   <View style={styles.shippingSection}>
@@ -1442,8 +1700,37 @@ const copyPickupAddress = () => {
                 <Text style={styles.sectionTitle}>{t('ordersFlow.checkout.orderDetailsShippingTitle')}</Text>
               </View>
               
-              {/* Product Row - Shopee Style */}
-              <View style={styles.productRow}>
+              {editingItems.map((item, index) => (
+                    <View key={`existing-${item.productId ?? index}-${item.variantNameSnapshot ?? ""}`} style={[styles.productRow, index > 0 && styles.productRowSpacing]}>
+                      <View style={styles.productImageContainer}>
+                        {item.images?.[0] ? (
+                          <Image source={{ uri: item.images[0] }} style={styles.productImage} />
+                        ) : (
+                          <View style={styles.imagePlaceholder}>
+                            <Package size={32} color="#9CA3AF" />
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.productDetails}>
+                        <Text style={styles.productName} numberOfLines={2}>
+                          {item.productName || item.productNameSnapshot || t('ordersFlow.checkout.defaults.product')}
+                        </Text>
+                        {item.variantNameSnapshot && item.variantNameSnapshot !== 'Default' ? (
+                          <Text style={styles.variantName} numberOfLines={2}>{item.variantNameSnapshot}</Text>
+                        ) : null}
+                        <View style={styles.priceRow}>
+                          <View style={styles.priceContainer}>
+                            {item.subtotal > 0 ? (
+                              <Text style={styles.linePrice}>{formatCurrency(item.subtotal)}</Text>
+                            ) : null}
+                          </View>
+                          <Text style={styles.quantityBadge}>x{item.packageQuantity || 1}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+              {isEditingOrder ? null : (
+              <View style={[styles.productRow, editingItems.length > 0 && styles.productRowSpacing]}>
                 <View style={styles.productImageContainer}>
                   {productImage ? (
                     <Image source={{ uri: productImage }} style={styles.productImage} />
@@ -1465,8 +1752,8 @@ const copyPickupAddress = () => {
                   </Text>
                   <View style={styles.priceRow}>
                     <View style={styles.priceContainer}>
-                      {checkoutBaseTotal > 0 ? (
-                        <Text style={styles.linePrice}>{formatCurrency(checkoutBaseTotal)}</Text>
+                      {addedLineTotal > 0 ? (
+                        <Text style={styles.linePrice}>{formatCurrency(addedLineTotal)}</Text>
                       ) : null}
                     </View>
                     <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
@@ -1496,6 +1783,23 @@ const copyPickupAddress = () => {
                   </View>
                 </View>
               </View>
+              )}
+
+              {orderBeingEdited ? (
+                <TouchableOpacity
+                  style={styles.addMoreProducts}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/search',
+                      params: { appendOrderId: orderBeingEdited },
+                    })
+                  }
+                >
+                  <Text style={styles.addMoreProductsText}>
+                    {t('ordersFlow.orderDetails.sections2.addMoreProducts')}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               
               {/* Shipping Options */}
               <View style={styles.shippingSection}>
@@ -1634,7 +1938,7 @@ const copyPickupAddress = () => {
                         distributor:
                           distributorsInfo[0]?.companyName ||
                           t('ordersFlow.checkout.distributorDefaults.company'),
-                        count: quantity,
+                        count: checkoutItemCount,
                       })}
                     </Text>
                     <Text style={[styles.summaryLabel, { color: '#6B7280', fontSize: 12, marginTop: 4 }]}>
@@ -1676,6 +1980,13 @@ const copyPickupAddress = () => {
           </View>
         </View>
 
+        {appendOrderId ? (
+          <View style={styles.appendNotice}>
+            <Text style={styles.appendNoticeText}>
+              {t('ordersFlow.checkout.addingToOrder', { orderId: appendOrderId })}
+            </Text>
+          </View>
+        ) : null}
         {/* Terms and Conditions */}
         <View style={styles.termsSection}>
           <Text style={styles.termsText}>
@@ -1708,7 +2019,17 @@ const copyPickupAddress = () => {
           disabled={!isOrderReady || isPlacingOrder}
         >
           <Text style={styles.placeOrderText}>
-            {isPlacingOrder ? t('ordersFlow.checkout.cta.placing') : t('ordersFlow.checkout.cta.placeOrder')}
+            {isPlacingOrder
+              ? t(editOrderId && !appendOrderId
+                ? 'ordersFlow.checkout.edit.confirming'
+                : appendOrderId
+                  ? 'ordersFlow.checkout.cta.adding'
+                  : 'ordersFlow.checkout.cta.placing')
+              : t(editOrderId && !appendOrderId
+                ? 'ordersFlow.checkout.edit.confirm'
+                : appendOrderId
+                  ? 'ordersFlow.checkout.cta.addToOrder'
+                  : 'ordersFlow.checkout.cta.placeOrder')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -2621,6 +2942,34 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
+  },
+  addMoreProducts: {
+    marginTop: 12,
+    marginBottom: 4,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#0a61d7',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  addMoreProductsText: {
+    color: '#0a61d7',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  appendNotice: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+  },
+  appendNoticeText: {
+    color: '#0a61d7',
+    fontSize: 13,
+    fontWeight: '600',
   },
   placeOrderButton: {
     backgroundColor: '#0a61d7',

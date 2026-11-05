@@ -8,12 +8,14 @@ import {
   Image,
   StatusBar,
   Alert,
+  BackHandler,
   Clipboard,
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCartStore } from '../../../stores/cartStore';
 import {
   CheckCircle,
   Truck,
@@ -25,6 +27,7 @@ import {
   MessageCircle,
   HelpCircle,
   Star,
+  Pencil,
   ChevronRight,
   ChevronUp,
   ChevronDown,
@@ -227,6 +230,20 @@ interface OrderDetailsModalProps {
 
 export default function OrderDetailsModal() {
   const router = useRouter();
+  const leaveToOrders = useCallback(() => {
+    useCartStore.getState().endEditOrder();
+    router.dismissTo('/(tabs)/orders');
+  }, [router]);
+  useFocusEffect(
+    useCallback(() => {
+      useCartStore.getState().endEditOrder();
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        leaveToOrders();
+        return true;
+      });
+      return () => subscription.remove();
+    }, [leaveToOrders]),
+  );
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const { token, user } = useAuthStore();
@@ -957,7 +974,7 @@ export default function OrderDetailsModal() {
               {nonDiscountedItems.map(renderProductItem)}
             </>
           )}
-          
+
           {orderData.orderItems && orderData.orderItems.length > 0 ? (
             <>
               <View style={[styles.summaryRow, styles.summaryRowFirst]}>
@@ -1436,7 +1453,7 @@ export default function OrderDetailsModal() {
     if (orderData.orderStatus === 'Cancelled') {
       return (
         <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.goBackButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.goBackButton} onPress={leaveToOrders}>
             <Text style={styles.goBackButtonText}>{t('ordersFlow.orderDetails.actions.backToOrders')}</Text>
           </TouchableOpacity>
         </View>
@@ -1492,7 +1509,7 @@ export default function OrderDetailsModal() {
     <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 44) + 8 }]}>
       <View style={styles.headerContent}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={leaveToOrders}
           hitSlop={10}
           accessibilityLabel={t('ordersFlow.common.a11y.goBack')}
           accessibilityRole="button"
@@ -1500,12 +1517,28 @@ export default function OrderDetailsModal() {
           <ArrowLeft color={primaryBlue} size={24} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('ordersFlow.orderDetails.title')}</Text>
+        {order?.orderStatus === 'Pending' && order?.paymentStatus === 'Unpaid' ? (
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: '/components/productcatalog/checkout',
+                params: { editOrderId: order.orderId },
+              })
+            }
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={t('ordersFlow.orderDetails.actions.editOrder')}
+          >
+            <Pencil size={22} color={primaryBlue} />
+          </TouchableOpacity>
+        ) : null}
       </View>
     </View>
   );
 
   const orderDetailsScreenOptions = {
     presentation: 'modal' as const,
+    gestureEnabled: false,
     header: orderDetailsHeader,
   };
 
@@ -2094,6 +2127,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#6b7280',
+  },
+  addProductsButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#0a61d7',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  addProductsButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0a61d7',
   },
   payButton: {
     flex: 1,

@@ -39,6 +39,7 @@ interface BuyNowModalProps {
   mode?: 'buy' | 'cart';
   initialQuantity?: number;
   initialVariantName?: string;
+  appendOrderId?: string;
 }
 
 export default function BuyNowModal({
@@ -49,6 +50,7 @@ export default function BuyNowModal({
   mode = 'buy',
   initialQuantity,
   initialVariantName,
+  appendOrderId,
 }: BuyNowModalProps) {
   const { t } = useTranslation();
   const { addItem } = useCartStore();
@@ -438,6 +440,7 @@ export default function BuyNowModal({
       variantId: currentVariantOption?.id?.toString() || '',
       variantName: variantName,
       moq: moq?.toString() || '',
+      ...(appendOrderId ? { appendOrderId } : {}),
     };
 
     const promotionDetails = product?.promotionDetails;
@@ -450,7 +453,7 @@ export default function BuyNowModal({
       params: checkoutParams
     });
     handleClose();
-  }, [product, computedValues, mode, addItem, quantity, handleClose, safeGetString, router]);
+  }, [product, computedValues, mode, addItem, quantity, handleClose, safeGetString, router, appendOrderId]);
 
   if (!product || !computedValues) return null;
 
@@ -651,7 +654,11 @@ export default function BuyNowModal({
               disabled={!isFormValid}
             >
               <Text style={styles.confirmButtonText}>
-                {mode === 'cart' ? t('buyNow.cta.addToCart') : t('buyNow.cta.buyNow')}
+                {appendOrderId
+                  ? t('buyNow.cta.addToThisOrder')
+                  : mode === 'cart'
+                    ? t('buyNow.cta.addToCart')
+                    : t('buyNow.cta.buyNow')}
               </Text>
             </TouchableOpacity>
           </View>

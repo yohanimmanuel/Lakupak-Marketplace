@@ -488,6 +488,8 @@
     },
     "orderDateLabel": "Tanggal pesanan:",
     "seeDetails": "Lihat detail",
+    "moreProducts_one": "+{{count}} produk lainnya",
+    "moreProducts_other": "+{{count}} produk lainnya",
     "summaryLine_one": "{{count}} item • {{amount}}",
     "summaryLine_other": "{{count}} item • {{amount}}",
     "pendingPrice": "Menunggu harga",
@@ -1208,7 +1210,8 @@
     "actions": {
       "chatNow": "Chat sekarang",
       "addToCart": "Keranjang",
-      "buyNow": "Beli sekarang"
+      "buyNow": "Beli sekarang",
+      "addToThisOrder": "Tambah ke pesanan ini"
     },
     "share": {
       "withPrice": "Lihat \"{{productName}}\" di Lakupak Marketplace.\nHarga: Rp{{price}}\n{{link}}",
@@ -1310,7 +1313,8 @@
     },
     "cta": {
       "buyNow": "Beli sekarang",
-      "addToCart": "Tambah ke keranjang"
+      "addToCart": "Tambah ke keranjang",
+      "addToThisOrder": "Tambah ke pesanan ini"
     }
   }
   ,
@@ -2044,6 +2048,7 @@
       "actions": {
         "cancelOrder": "Batalkan pesanan",
         "payOrder": "Bayar pesanan",
+        "editOrder": "Ubah pesanan",
         "returnRefund": "Retur/Refund",
         "contactSupport": "Hubungi dukungan",
         "orderReceived": "Pesanan diterima",
@@ -2133,6 +2138,8 @@
       },
       "sections2": {
         "productInformation": "Informasi produk",
+        "addMoreProducts": "Tambah produk",
+        "addingToOrder": "Menambahkan produk ke pesanan {{orderId}}",
         "totalItems": "Total item",
         "productTotal": "Total produk",
         "shipping": "Pengiriman"
@@ -2202,6 +2209,10 @@
         "orderConfirmationAmount": "Anda yakin ingin membuat pesanan ini sebesar {{amount}}?",
         "cancel": "Batal",
         "placeOrder": "Buat pesanan",
+        "addToOrderTitle": "Tambah ke pesanan ini",
+        "addToOrderBody": "Produk ini akan ditambahkan ke pesanan {{orderId}}. Harga tetap dikonfirmasi distributor, dan ini tidak membuat pesanan baru.",
+        "addToOrder": "Tambah ke pesanan",
+        "singleDistributor": "Tambahkan produk dari satu distributor ke pesanan ini.",
         "errorTitle": "Error",
         "placeOrderFailed": "Gagal membuat pesanan. Silakan coba lagi.",
         "genericError": "Terjadi kesalahan. Silakan coba lagi.",
@@ -2270,7 +2281,6 @@
         "otherDistributors": "Distributor lainnya"
       },
       "productsFrom": "Produk dari {{name}}",
-      "edit": "Ubah",
       "distributorDefaults": {
         "company": "Perusahaan distributor",
         "notSpecified": "Belum ditentukan",
@@ -2308,10 +2318,29 @@
         "totalItems_other": "{{count}} item"
       },
       "pricingNote": "Harga akan dikonfirmasi oleh {{distributor}}",
+      "addingToOrder": "Produk ini akan ditambahkan ke pesanan {{orderId}}.",
+      "edit": {
+        "title": "Ubah pesanan",
+        "confirm": "Konfirmasi",
+        "confirming": "Mengonfirmasi…",
+        "contactName": "Nama kontak",
+        "phone": "Telepon",
+        "store": "Nama toko",
+        "address": "Alamat",
+        "deliveryTitle": "Pengiriman",
+        "delivery": {
+          "seller": "Pengiriman penjual/distributor",
+          "pickup": "Ambil sendiri",
+          "courier": "Kurir yang diatur pembeli"
+        },
+        "missingDetails": "Isi nama kontak, telepon, dan alamat sebelum konfirmasi."
+      },
       "terms": "Dengan membuat pesanan ini, Anda menyetujui Syarat Layanan dan Kebijakan Privasi kami. Ini adalah transaksi B2B yang tunduk pada syarat dan ketentuan bisnis.",
       "cta": {
         "placing": "Memproses…",
-        "placeOrder": "Buat pesanan"
+        "placeOrder": "Buat pesanan",
+        "adding": "Menambahkan…",
+        "addToOrder": "Tambah ke pesanan"
       },
       "notifications": {
         "orderPlacedTitle": "Pesanan dibuat",

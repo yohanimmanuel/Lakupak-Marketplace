@@ -7,6 +7,7 @@ import BuyNowModal from './components/productcatalog/BuyNowModal';
 import { useDataStore } from '../stores/dataStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { useAuthStore } from '../stores/authStore';
+import { useCartStore } from '../stores/cartStore';
 import { useMessagesStore } from '../stores/messagesStore';
 import { marketplaceService, type MarketplaceProduct } from '../services/marketplace';
 import type { Product } from '../data/sampleProducts';
@@ -30,6 +31,13 @@ export default function ProductModal() {
   const hasAutoOpenedBuyNow = useRef(false);
 
   const productId = typeof params.productId === 'string' ? params.productId : '';
+  const appendOrderId = typeof params.appendOrderId === 'string' ? params.appendOrderId.trim() : '';
+
+  useEffect(() => {
+    const cart = useCartStore.getState();
+    if (appendOrderId) cart.beginEditOrder(appendOrderId);
+    else cart.endEditOrder();
+  }, [appendOrderId]);
   const shouldOpenBuyNow = params.openBuyNow === 'true';
   const initialQuantity = useMemo(() => {
     const raw = params.initialQuantity;
@@ -175,6 +183,7 @@ export default function ProductModal() {
       originalPrice: '0',
       packageType: targetProduct.packageType || 'Box',
       piecesPerPackage: targetProduct.piecesPerPackage?.toString() || '1',
+      ...(appendOrderId ? { appendOrderId } : {}),
     };
 
     router.push({
@@ -204,6 +213,7 @@ export default function ProductModal() {
         type="full"
         showBackButton={true}
         onBackPress={handleClose}
+        appendOrderId={appendOrderId || undefined}
       />
 
       <BuyNowModal
@@ -211,6 +221,7 @@ export default function ProductModal() {
         product={product}
         onClose={handleCloseBuyNowModal}
         onConfirm={handleBuyNowConfirm}
+        appendOrderId={appendOrderId || undefined}
         initialQuantity={shouldOpenBuyNow ? initialQuantity : undefined}
         initialVariantName={shouldOpenBuyNow ? initialVariantName : undefined}
       />

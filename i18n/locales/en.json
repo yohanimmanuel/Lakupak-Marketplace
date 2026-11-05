@@ -488,6 +488,8 @@
     },
     "orderDateLabel": "Order Date:",
     "seeDetails": "See details",
+    "moreProducts_one": "+{{count}} more product",
+    "moreProducts_other": "+{{count}} more products",
     "summaryLine_one": "{{count}} item • {{amount}}",
     "summaryLine_other": "{{count}} items • {{amount}}",
     "pendingPrice": "Pending price",
@@ -1210,7 +1212,8 @@
     "actions": {
       "chatNow": "Chat Now",
       "addToCart": "Add to Cart",
-      "buyNow": "Buy Now"
+      "buyNow": "Buy Now",
+      "addToThisOrder": "Add to this order"
     },
     "share": {
       "withPrice": "Check out \"{{productName}}\" on Lakupak Marketplace.\nPrice: Rp{{price}}\n{{link}}",
@@ -1312,7 +1315,8 @@
     },
     "cta": {
       "buyNow": "Buy Now",
-      "addToCart": "Add to Cart"
+      "addToCart": "Add to Cart",
+      "addToThisOrder": "Add to this order"
     }
   }
   ,
@@ -2046,6 +2050,7 @@
       "actions": {
         "cancelOrder": "Cancel Order",
         "payOrder": "Pay Order",
+        "editOrder": "Edit order",
         "returnRefund": "Return/Refund",
         "contactSupport": "Contact support",
         "orderReceived": "Order Received",
@@ -2135,6 +2140,8 @@
       },
       "sections2": {
         "productInformation": "Product Information",
+        "addMoreProducts": "Add more products",
+        "addingToOrder": "Adding products to order {{orderId}}",
         "totalItems": "Total items",
         "productTotal": "Product Total",
         "shipping": "Shipping"
@@ -2204,6 +2211,10 @@
         "orderConfirmationAmount": "Are you sure you want to place this order for {{amount}}?",
         "cancel": "Cancel",
         "placeOrder": "Place Order",
+        "addToOrderTitle": "Add to this order",
+        "addToOrderBody": "These products will be added to order {{orderId}}. Pricing stays with the distributor, and this does not start a new order.",
+        "addToOrder": "Add to order",
+        "singleDistributor": "Add products from one distributor to this order.",
         "errorTitle": "Error",
         "placeOrderFailed": "Failed to place order. Please try again.",
         "genericError": "Something went wrong. Please try again.",
@@ -2272,7 +2283,6 @@
         "otherDistributors": "Other Distributors"
       },
       "productsFrom": "Products from {{name}}",
-      "edit": "Edit",
       "distributorDefaults": {
         "company": "Distributor Company",
         "notSpecified": "Not specified",
@@ -2310,10 +2320,29 @@
         "totalItems_other": "{{count}} items"
       },
       "pricingNote": "Pricing will be confirmed by {{distributor}}",
+      "addingToOrder": "These products will be added to order {{orderId}}.",
+      "edit": {
+        "title": "Edit order",
+        "confirm": "Confirm",
+        "confirming": "Confirming…",
+        "contactName": "Contact name",
+        "phone": "Phone",
+        "store": "Store name",
+        "address": "Address",
+        "deliveryTitle": "Delivery",
+        "delivery": {
+          "seller": "Seller/Distributor Delivery",
+          "pickup": "Self Pickup",
+          "courier": "Buyer-arranged Courier"
+        },
+        "missingDetails": "Add a contact name, phone, and address before confirming."
+      },
       "terms": "By placing this order, you agree to our Terms of Service and Privacy Policy. This is a B2B transaction subject to business terms and conditions.",
       "cta": {
         "placing": "Placing…",
-        "placeOrder": "Place Order"
+        "placeOrder": "Place Order",
+        "adding": "Adding…",
+        "addToOrder": "Add to order"
       },
       "notifications": {
         "orderPlacedTitle": "Order Placed",

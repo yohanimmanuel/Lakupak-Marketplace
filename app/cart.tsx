@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, MessageSquareText, ShoppingBag, ChevronDown, Trash2, User as UserIcon, ChevronRight, Store } from 'lucide-react-native';
@@ -37,6 +37,11 @@ export default function CartScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const primaryBlue = '#0a61d7';
+  const routeParams = useLocalSearchParams<{ appendOrderId?: string }>();
+  const routeAppendOrderId =
+    typeof routeParams.appendOrderId === 'string' ? routeParams.appendOrderId.trim() : '';
+  const editOrderId = useCartStore((state) => state.editOrderId);
+  const appendOrderId = routeAppendOrderId || editOrderId;
   
   // Auth store
   const token = useAuthStore(s => s.token);
@@ -370,7 +375,10 @@ export default function CartScreen() {
                 onPress={() => {
                   router.push({
                     pathname: '/product',
-                    params: { productId: item.product.id },
+                    params: {
+                      productId: item.product.id,
+                      ...(appendOrderId ? { appendOrderId } : {}),
+                    },
                   });
                 }}
               >
@@ -391,7 +399,10 @@ export default function CartScreen() {
                   onPress={() => {
                     router.push({
                       pathname: '/product',
-                      params: { productId: item.product.id },
+                      params: {
+                        productId: item.product.id,
+                        ...(appendOrderId ? { appendOrderId } : {}),
+                      },
                     });
                   }}
                 >
@@ -577,6 +588,13 @@ export default function CartScreen() {
         keyboardDismissMode="none"
         nestedScrollEnabled
       >
+        {appendOrderId ? (
+          <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4, padding: 12, borderRadius: 8, backgroundColor: '#eff6ff' }}>
+            <Text style={{ color: '#0a61d7', fontSize: 13, fontWeight: '600' }}>
+              {t('ordersFlow.checkout.addingToOrder', { orderId: appendOrderId })}
+            </Text>
+          </View>
+        ) : null}
         {distributorGroups.map(renderDistributorGroup)}
       </ScrollView>
 
@@ -620,7 +638,10 @@ export default function CartScreen() {
               if (canCheckout) {
                 router.push({
                   pathname: '/components/productcatalog/checkout',
-                  params: { checkoutSource: 'cart' },
+                  params: {
+                    checkoutSource: 'cart',
+                    ...(appendOrderId ? { appendOrderId } : {}),
+                  },
                 });
               } else if (moqValidation.invalidItems.length > 0) {
                 // Show alert with MOQ requirements
