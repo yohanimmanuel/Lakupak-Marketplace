@@ -26,7 +26,6 @@ import {
   RotateCcw,
   MessageCircle,
   HelpCircle,
-  Star,
   Pencil,
   ChevronRight,
   ChevronUp,
@@ -251,7 +250,6 @@ export default function OrderDetailsModal() {
   const [isLoading, setIsLoading] = useState(true);
   const [isReceived, setIsReceived] = useState(false);
   const [isMarkingReceived, setIsMarkingReceived] = useState(false);
-  const [hasExistingReview, setHasExistingReview] = useState(false);
   const [showAllOrderInfo, setShowAllOrderInfo] = useState(false);
   const [productMOQs, setProductMOQs] = useState<Record<string, number | null>>({});
   const [invoiceModalVisible, setInvoiceModalVisible] = useState(false);
@@ -307,42 +305,6 @@ export default function OrderDetailsModal() {
       fetchOrderDetails(params.orderId);
     }
   }, [params.orderId, fetchOrderDetails]);
-
-  // Detect if this order already has a review (so CTA becomes "Edit review")
-  useEffect(() => {
-    let cancelled = false;
-    const loadExistingReviews = async () => {
-      const orderId = params.orderId;
-      if (!token || !orderId || typeof orderId !== 'string' || !orderId.trim()) return;
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/api/mobile/reviews/order?orderId=${encodeURIComponent(orderId.trim())}`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        const json = (await res.json().catch(() => null)) as
-          | {
-              productReviews?: Array<{ productId: string }>;
-              deliveryReview?: { deliveryRating?: number | null; deliveryComment?: string | null } | null;
-            }
-          | null;
-        if (!res.ok || !json) return;
-        if (cancelled) return;
-        const hasProduct = Array.isArray(json.productReviews) && json.productReviews.length > 0;
-        const hasDelivery =
-          !!json.deliveryReview &&
-          ((typeof json.deliveryReview.deliveryRating === 'number' && json.deliveryReview.deliveryRating > 0) ||
-            (typeof json.deliveryReview.deliveryComment === 'string' && json.deliveryReview.deliveryComment.trim().length > 0));
-        setHasExistingReview(hasProduct || hasDelivery);
-      } catch {
-        // best-effort
-      }
-    };
-
-    void loadExistingReviews();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, params.orderId]);
 
   // Same socket as the orders tab: pricing send, status, and the refreshed order list.
   useEffect(() => {
@@ -479,28 +441,6 @@ export default function OrderDetailsModal() {
     } finally {
       setIsMarkingReceived(false);
     }
-  };
-
-  const handleRateOrder = () => {
-    if (!order) return;
-
-    const orderData = order as Order;
-    const items = orderData.orderItems ?? orderData.items ?? [];
-    const reviewItems = items
-      .filter((item: OrderItem) => item.productId)
-      .map((item: OrderItem) => ({
-      productId: String(item.productId),
-      productName: item.productName ?? item.name ?? 'Product',
-      image: (item.images && item.images[0]) ? item.images[0] : (item.image ?? ''),
-    }));
-
-    router.push({
-      pathname: '/components/productcatalog/ProductReview',
-      params: {
-        orderId: orderData.orderId,
-        itemsJson: JSON.stringify(reviewItems),
-      },
-    });
   };
 
   const copyOrderId = () => {
@@ -1423,18 +1363,11 @@ export default function OrderDetailsModal() {
       router.push(`/components/ordersshipment/ReturnRefundModal?orderId=${orderData.orderId}`);
     };
 
-    // Received - show Return/Refund and Rate
     if (isReceived) {
       return (
         <View style={styles.bottomBar}>
           <TouchableOpacity style={styles.returnButton} onPress={handleReturnRefund}>
             <Text style={styles.returnButtonText}>{t('ordersFlow.orderDetails.actions.returnRefund')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.rateButton} onPress={handleRateOrder}>
-            <Star size={16} color="#ffffff" />
-            <Text style={styles.rateButtonText}>
-              {hasExistingReview ? t('ordersFlow.orderDetails.actions.editReview') : t('ordersFlow.orderDetails.actions.rate')}
-            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -1490,18 +1423,11 @@ export default function OrderDetailsModal() {
       );
     }
 
-    // Returned - show only Return/Refund and Rate (no Cancel Order or Order Received)
     if (orderData.orderStatus === 'Returned') {
       return (
         <View style={styles.bottomBar}>
-          <TouchableOpacity style={styles.returnButton} onPress={handleReturnRefund}>
-            <Text style={styles.returnButtonText}>{t('ordersFlow.orderDetails.actions.returnRefund')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.rateButton} onPress={handleRateOrder}>
-            <Star size={16} color="#ffffff" />
-            <Text style={styles.rateButtonText}>
-              {hasExistingReview ? t('ordersFlow.orderDetails.actions.editReview') : t('ordersFlow.orderDetails.actions.rate')}
-            </Text>
+          <TouchableOpacity style={styles.goBackButton} onPress={leaveToOrders}>
+            <Text style={styles.goBackButtonText}>{t('ordersFlow.orderDetails.actions.backToOrders')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -2111,22 +2037,6 @@ const styles = StyleSheet.create({
   disabledButtonText: {
     color: '#ffffff',
     opacity: 0.7,
-  },
-  rateButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#f59e0b',
-    borderRadius: 8,
-    gap: 8,
-  },
-  rateButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#ffffff',
   },
   cancelButton: {
     flex: 1,
