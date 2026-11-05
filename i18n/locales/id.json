@@ -2065,6 +2065,8 @@
         "partialBody_other": "{{count}} produk tidak dapat ditambahkan dan dilewati."
       },
       "estimatedDelivery": {
+        "pickupDateOn": "Tanggal pengambilan pada {{date}}",
+        "youArrangeLogistics": "Anda mengatur logistik",
         "dateLabel": "Perkiraan tanggal tiba:",
         "rangeLabel": "Perkiraan pengiriman:",
         "pending": "Menunggu",

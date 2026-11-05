@@ -264,6 +264,11 @@ export default function DeliveryInformation() {
     );
   }
 
+  const methodText = `${order.deliveryOption || ''} ${order.deliveryMethod || ''}`.toLowerCase();
+  const isPickupMethod = methodText.includes('pickup');
+  const isBuyerCourier = methodText.includes('courier') || methodText.includes('buyer');
+  const showDeliveryPhases = !isPickupMethod && !isBuyerCourier;
+
   const getDeliveryTimeline = () => {
     const timeline = [];
     const status = order.orderStatus?.toLowerCase();
@@ -542,8 +547,7 @@ export default function DeliveryInformation() {
       <StatusBar barStyle="dark-content" backgroundColor="#F5F5F5" />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Progress Bar */}
-        {renderProgressBar()}
+        {showDeliveryPhases ? renderProgressBar() : null}
 
         {/* Map GPS Section - Map display commented out */}
         <View style={styles.mapSection}>
@@ -581,7 +585,7 @@ export default function DeliveryInformation() {
           )} */}
           
           <View style={styles.deliveryInfoContainer}>
-            {(order.deliveryMethod || '').toLowerCase().includes('pickup') ? (
+            {isPickupMethod ? (
             <View style={styles.deliveryInfoRow}>
               <Clock size={16} color="#6B7280" />
               <View style={styles.deliveryInfoContent}>
@@ -592,7 +596,19 @@ export default function DeliveryInformation() {
               </View>
             </View>
             ) : null}
-            
+
+            {isBuyerCourier ? (
+            <View style={styles.deliveryInfoRow}>
+              <Truck size={16} color="#6B7280" />
+              <View style={styles.deliveryInfoContent}>
+                <Text style={styles.deliveryInfoValue}>
+                  {t('ordersFlow.orderDetails.estimatedDelivery.youArrangeLogistics')}
+                </Text>
+              </View>
+            </View>
+            ) : null}
+
+            {showDeliveryPhases ? (
             <View style={styles.deliveryInfoRow}>
               <Truck size={16} color="#6B7280" />
               <View style={styles.deliveryInfoContent}>
@@ -602,7 +618,9 @@ export default function DeliveryInformation() {
                 </Text>
               </View>
             </View>
-            
+            ) : null}
+
+            {showDeliveryPhases ? (
             <View style={styles.deliveryInfoRow}>
               <Package size={16} color="#6B7280" />
               <View style={styles.deliveryInfoContent}>
@@ -612,6 +630,7 @@ export default function DeliveryInformation() {
                 </Text>
               </View>
             </View>
+            ) : null}
             
             <View style={styles.deliveryInfoRow}>
               <MapPin size={16} color="#6B7280" />
@@ -672,8 +691,7 @@ export default function DeliveryInformation() {
             </View>
           </View>
 
-          {/* Timeline */}
-          {renderTimeline()}
+          {showDeliveryPhases ? renderTimeline() : null}
         </View>
       </ScrollView>
 

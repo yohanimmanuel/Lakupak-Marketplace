@@ -2067,6 +2067,8 @@
         "partialBody_other": "{{count}} products could not be added and were skipped."
       },
       "estimatedDelivery": {
+        "pickupDateOn": "Pickup Date on {{date}}",
+        "youArrangeLogistics": "You arrange logistics",
         "dateLabel": "Estimated delivery date:",
         "rangeLabel": "Estimated delivery:",
         "pending": "Pending",

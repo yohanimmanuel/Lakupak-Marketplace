@@ -707,7 +707,39 @@ export default function OrderDetailsModal() {
           {/* Delivery Status Information */}
           <View style={styles.deliveryStatusContainer}>
             {(() => {
+            const methodText = `${orderData.deliveryOption || ''} ${orderData.deliveryMethod || ''} ${orderData.shippingMethod || ''} ${orderData.shippingMethodLabel || ''}`.toLowerCase();
+            const isPickup = methodText.includes('pickup');
+            const isBuyerCourier = methodText.includes('courier') || methodText.includes('buyer');
             const hideEstimated = ['Delivered', 'Returned', 'Cancelled', 'Failed'].includes(orderData.orderStatus);
+
+            if (isPickup) {
+              const pickupDate = orderData.preferredPickupDate
+                ? new Date(orderData.preferredPickupDate)
+                : null;
+              const pickupDateText = pickupDate && !Number.isNaN(pickupDate.getTime())
+                ? pickupDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                : '';
+              const pickupWhen = [pickupDateText, orderData.preferredPickupTime].filter(Boolean).join(' • ');
+              if (!pickupWhen) return null;
+              return (
+                <View style={styles.estimatedDeliveryBlock}>
+                  <Text style={styles.deliveryEstimatedRangeValue}>
+                    {t('ordersFlow.orderDetails.estimatedDelivery.pickupDateOn', { date: pickupWhen })}
+                  </Text>
+                </View>
+              );
+            }
+
+            if (isBuyerCourier) {
+              return (
+                <View style={styles.estimatedDeliveryBlock}>
+                  <Text style={styles.deliveryEstimatedRangeValue}>
+                    {t('ordersFlow.orderDetails.estimatedDelivery.youArrangeLogistics')}
+                  </Text>
+                </View>
+              );
+            }
+
             if (hideEstimated) return null;
 
             // Use order-level duration if distributor set it; otherwise fall back to shipping option duration from company
@@ -740,6 +772,12 @@ export default function OrderDetailsModal() {
                 </View>
               );
             })()}
+            {(() => {
+              const methodText = `${orderData.deliveryOption || ''} ${orderData.deliveryMethod || ''} ${orderData.shippingMethod || ''} ${orderData.shippingMethodLabel || ''}`.toLowerCase();
+              const showDeliveryPhases = !methodText.includes('pickup') && !methodText.includes('courier') && !methodText.includes('buyer');
+              if (!showDeliveryPhases) return null;
+              return (
+                <>
             <View style={styles.deliveryStatusRow}>
               <Truck size={16} color="#10b981" />
               <Text style={styles.deliveryStatusText}>
@@ -769,9 +807,12 @@ export default function OrderDetailsModal() {
                 })}
               </Text>
             )}
+                </>
+              );
+            })()}
           </View>
           
-          {orderData.assignedLogistics && (
+          {orderData.assignedLogistics && !`${orderData.deliveryOption || ''} ${orderData.deliveryMethod || ''}`.toLowerCase().match(/pickup|courier|buyer/) && (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>{t('ordersFlow.orderDetails.fields.assignedLogistics')}:</Text>
               <Text style={[styles.infoValue, styles.infoValueMedium]}>
