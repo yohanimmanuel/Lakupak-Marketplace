@@ -582,33 +582,17 @@ export default function OrderDetailsModal() {
           })[0]
         : null;
 
-    const returnStatusColors = latestReturnRequest
-      ? (() => {
-          switch (latestReturnRequest.status) {
-            case 'Pending':
-              return {
-                backgroundColor: '#fef9c3', // soft yellow
-                textColor: '#854d0e',
-              };
-            case 'Accepted':
-              return {
-                backgroundColor: '#16a34a', // strong green
-                textColor: '#ffffff',
-              };
-            case 'Rejected':
-              return {
-                backgroundColor: '#b91c1c', // strong red
-                textColor: '#ffffff',
-              };
-            default:
-              return {
-                backgroundColor: '#f8fafc',
-                textColor: '#111827',
-              };
-          }
-        })()
-      : null;
-
+    // Only OrderReturnRequest rows drive this banner; deleting the request clears it.
+    // API statuses are Pending | Accepted | Rejected (no Approved).
+    const requestStatus = latestReturnRequest?.status;
+    const returnDecision =
+      requestStatus === 'Rejected'
+        ? 'Rejected'
+        : requestStatus === 'Pending' && orderData.orderStatus === 'Received'
+          ? 'Pending'
+          : orderData.orderStatus === 'Returned' && requestStatus === 'Accepted'
+            ? 'Accepted'
+            : null;
     return (
       <View style={styles.section}>
         <View style={styles.productCard}>
@@ -616,33 +600,60 @@ export default function OrderDetailsModal() {
             <Text style={[styles.sectionTitle, styles.shippingTitle]}>{getStatusText(orderData.orderStatus)}</Text>
           </View>
 
-          {['Received', 'Returned'].includes(orderData.orderStatus) && latestReturnRequest && returnStatusColors && (
-            <View
-              style={{
-                marginBottom: 12,
-                padding: 10,
-                borderRadius: 8,
-                backgroundColor: returnStatusColors.backgroundColor,
-              }}
-            >
-              <Text
+          {returnDecision ? (
+            <View style={{ marginBottom: 12 }}>
+              <View
                 style={{
-                  fontSize: 13,
-                  color: returnStatusColors.textColor,
-                  fontWeight: '500',
+                  padding: 10,
+                  borderRadius: 8,
+                  backgroundColor:
+                    returnDecision === 'Accepted'
+                      ? '#16a34a'
+                      : returnDecision === 'Rejected'
+                        ? '#b91c1c'
+                        : '#fef9c3',
                 }}
               >
-                {latestReturnRequest.status === 'Pending' &&
-                  t('ordersFlow.orderDetails.returnRequest.pending')}
-                {latestReturnRequest.status === 'Accepted' &&
-                  (orderData.returnItemsReceivedAt
-                    ? t('ordersFlow.orderDetails.returnRequest.acceptedReceived')
-                    : t('ordersFlow.orderDetails.returnRequest.accepted'))}
-                {latestReturnRequest.status === 'Rejected' &&
-                  t('ordersFlow.orderDetails.returnRequest.rejected')}
-              </Text>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: returnDecision === 'Pending' ? '#854d0e' : '#ffffff',
+                    fontWeight: '500',
+                  }}
+                >
+                  {returnDecision === 'Pending' &&
+                    t('ordersFlow.orderDetails.returnRequest.pending')}
+                  {returnDecision === 'Accepted' &&
+                    (orderData.returnItemsReceivedAt
+                      ? t('ordersFlow.orderDetails.returnRequest.acceptedReceived')
+                      : t('ordersFlow.orderDetails.returnRequest.accepted'))}
+                  {returnDecision === 'Rejected' &&
+                    t('ordersFlow.orderDetails.returnRequest.rejected')}
+                </Text>
+              </View>
+              <View style={{ marginTop: 8, paddingHorizontal: 2 }}>
+                <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 2 }}>
+                  {t('ordersFlow.orderDetails.support.returnRefundStatusLabel')}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '600',
+                    color:
+                      returnDecision === 'Accepted'
+                        ? '#16a34a'
+                        : returnDecision === 'Rejected'
+                          ? '#dc2626'
+                          : '#f59e0b',
+                  }}
+                >
+                  {returnDecision === 'Pending'
+                    ? t('ordersFlow.orderDetails.support.pendingReview')
+                    : returnDecision}
+                </Text>
+              </View>
             </View>
-          )}
+          ) : null}
         
           {/* Delivery Status Information */}
           <View style={styles.deliveryStatusContainer}>
@@ -1189,26 +1200,6 @@ export default function OrderDetailsModal() {
           </View>
           <ChevronRight size={16} color="#6b7280" />
         </TouchableOpacity>
-
-        {orderData.orderStatus === 'Returned' && (
-          <View style={{ marginTop: 8 }}>
-            <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 2 }}>{t('ordersFlow.orderDetails.support.returnRefundStatusLabel')}</Text>
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color:
-                  orderData.returnStatus === 'Accepted'
-                    ? '#16a34a'
-                    : orderData.returnStatus === 'Rejected'
-                    ? '#dc2626'
-                    : '#f59e0b',
-              }}
-            >
-              {orderData.returnStatus || t('ordersFlow.orderDetails.support.pendingReview')}
-            </Text>
-          </View>
-        )}
       </View>
     </View>
   );
