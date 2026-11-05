@@ -155,8 +155,6 @@ interface Order {
   receivedAt?: string | null;
   user?: OrderUserInfo;
   deliveryMethod?: string;
-  preferredDeliveryDate?: string;
-  preferredDeliveryTime?: string;
   preferredPickupDate?: string;
   preferredPickupTime?: string;
   shippingMethodLabel?: string;
@@ -595,17 +593,8 @@ export default function OrderDetailsModal() {
     const isBuyerCourier = lowerMethod.includes('courier') || lowerMethod.includes('buyer-arranged') || lowerMethod.includes('buyer arranged');
     const isSellerDelivery = lowerMethod.includes('seller') || lowerMethod.includes('distributor');
 
-    const preferredDate = shippingInfo?.scheduledDate
-      || (isPickup ? orderData.preferredPickupDate : orderData.preferredDeliveryDate)
-      || orderData.preferredDeliveryDate
-      || orderData.preferredPickupDate
-      || null;
-
-    const preferredTime = shippingInfo?.scheduledTime
-      || (isPickup ? orderData.preferredPickupTime : orderData.preferredDeliveryTime)
-      || orderData.preferredDeliveryTime
-      || orderData.preferredPickupTime
-      || null;
+    const preferredDate = isPickup ? orderData.preferredPickupDate || null : null;
+    const preferredTime = isPickup ? orderData.preferredPickupTime || null : null;
 
     const dateTimeText = formatScheduledDateTime(preferredDate || undefined, preferredTime || undefined);
 

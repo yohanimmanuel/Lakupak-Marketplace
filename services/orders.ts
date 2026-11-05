@@ -57,8 +57,6 @@ export interface Order {
   contactPhone?: string;
   customerEmail?: string;
   deliveryAddress?: string;
-  preferredDeliveryDate?: string;
-  preferredDeliveryTime?: string;
   preferredPickupDate?: string;
   preferredPickupTime?: string;
   assignedLogistics?: string;
@@ -189,8 +187,6 @@ class OrdersService {
               contactPhone
               customerEmail
               deliveryAddress
-              preferredDeliveryDate
-              preferredDeliveryTime
               preferredPickupDate
               preferredPickupTime
               assignedLogistics
@@ -335,8 +331,6 @@ class OrdersService {
       orderStatus?: string;
       paymentStatus?: string;
       paymentTerms?: string;
-      preferredDeliveryDate?: string;
-      preferredDeliveryTime?: string;
       preferredPickupDate?: string;
       preferredPickupTime?: string;
       shippingMethodLabel?: string;

@@ -76,8 +76,8 @@ interface DeliveryOrder {
   contactPerson?: string;
   contactPhone?: string;
   deliveryAddress?: string;
-  preferredDeliveryTime?: string;
-  preferredDeliveryDate?: string;
+  preferredPickupDate?: string;
+  preferredPickupTime?: string;
   assignedLogistics?: string;
   trackingNumber?: string;
   deliveryNote?: string;
@@ -581,15 +581,17 @@ export default function DeliveryInformation() {
           )} */}
           
           <View style={styles.deliveryInfoContainer}>
+            {(order.deliveryMethod || '').toLowerCase().includes('pickup') ? (
             <View style={styles.deliveryInfoRow}>
               <Clock size={16} color="#6B7280" />
               <View style={styles.deliveryInfoContent}>
-                <Text style={styles.deliveryInfoLabel}>{t('ordersFlow.deliveryInfo.details.preferredDeliveryTime')}</Text>
+                <Text style={styles.deliveryInfoLabel}>{t('ordersFlow.checkout.pickupModal.pickupTime')}</Text>
                 <Text style={styles.deliveryInfoValue}>
-                  {order.preferredDeliveryTime || t('ordersFlow.deliveryInfo.details.notSpecified')}
+                  {[order.preferredPickupDate, order.preferredPickupTime].filter(Boolean).join(' ') || t('ordersFlow.deliveryInfo.details.notSpecified')}
                 </Text>
               </View>
             </View>
+            ) : null}
             
             <View style={styles.deliveryInfoRow}>
               <Truck size={16} color="#6B7280" />

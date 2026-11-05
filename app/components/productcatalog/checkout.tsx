@@ -644,19 +644,9 @@ const copyPickupAddress = () => {
       setActiveDistributorId(distributorsInfo[0]?.id || null);
       setShowPickupModal(true);
     } else if (optionId === 'seller_delivery') {
-      setScheduleModalContext('seller_delivery');
-      setScheduleModalStep(1);
-      setScheduleStep1Mode(null);
-      initializeModalDateTime(scheduledDateTime);
-      setActiveDistributorId(distributorsInfo[0]?.id || null);
-      setShowScheduleModal(true);
+      setSellerDeliveryMode('distributor_managed');
     } else if (optionId === 'buyer_courier') {
-      setScheduleModalContext('buyer_courier');
-      setScheduleModalStep(1);
-      setScheduleStep1Mode(null);
-      initializeModalDateTime(scheduledDateTime);
-      setActiveDistributorId(distributorsInfo[0]?.id || null);
-      setShowScheduleModal(true);
+      setBuyerCourierMode('self_managed');
     }
   };
 
@@ -668,19 +658,9 @@ const copyPickupAddress = () => {
       setActiveDistributorId(distributorId);
       setShowPickupModal(true);
     } else if (optionId === 'seller_delivery') {
-      setScheduleModalContext('seller_delivery');
-      setScheduleModalStep(1);
-      setScheduleStep1Mode(null);
-      initializeModalDateTime(scheduledDateTimeByDistributor[distributorId]);
-      setActiveDistributorId(distributorId);
-      setShowScheduleModal(true);
+      setSellerDeliveryModeByDist(prev => ({ ...prev, [distributorId]: 'distributor_managed' }));
     } else if (optionId === 'buyer_courier') {
-      setScheduleModalContext('buyer_courier');
-      setScheduleModalStep(1);
-      setScheduleStep1Mode(null);
-      initializeModalDateTime(scheduledDateTimeByDistributor[distributorId]);
-      setActiveDistributorId(distributorId);
-      setShowScheduleModal(true);
+      setBuyerCourierModeByDist(prev => ({ ...prev, [distributorId]: 'self_managed' }));
     }
   };
 
@@ -1111,12 +1091,6 @@ const copyPickupAddress = () => {
                       : selectedId === 'seller_delivery' ? 'Seller/Distributor Delivery'
                       : 'Buyer-arranged Courier',
                       deliveryOption: selectedId,
-                      preferredDeliveryDate: (selectedId === 'seller_delivery' || selectedId === 'buyer_courier') && scheduledDateTimeByDistributor[distributorId]
-                        ? toISODate(scheduledDateTimeByDistributor[distributorId])
-                        : null,
-                      preferredDeliveryTime: (selectedId === 'seller_delivery' || selectedId === 'buyer_courier') && scheduledDateTimeByDistributor[distributorId]
-                        ? toTimeComponent(scheduledDateTimeByDistributor[distributorId])
-                        : null,
                       preferredPickupDate: selectedId === 'self_pickup' && pickupDateTimeByDistributor[distributorId]
                         ? toISODate(pickupDateTimeByDistributor[distributorId])
                         : null,
@@ -1225,12 +1199,6 @@ const copyPickupAddress = () => {
                       : selectedShipping === 'seller_delivery' ? 'Seller/Distributor Delivery'
                       : 'Buyer-arranged Courier',
                     deliveryOption: selectedShipping,
-                    preferredDeliveryDate: (selectedShipping === 'seller_delivery' || selectedShipping === 'buyer_courier') && scheduledDateTime
-                      ? toISODate(scheduledDateTime)
-                      : null,
-                    preferredDeliveryTime: (selectedShipping === 'seller_delivery' || selectedShipping === 'buyer_courier') && scheduledDateTime
-                      ? toTimeComponent(scheduledDateTime)
-                      : null,
                     preferredPickupDate: selectedShipping === 'self_pickup' && pickupDateTime
                       ? toISODate(pickupDateTime)
                       : null,
