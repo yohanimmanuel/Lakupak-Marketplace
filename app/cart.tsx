@@ -15,6 +15,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Link } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, MessageSquareText, ShoppingBag, ChevronDown, Trash2, User as UserIcon, ChevronRight, Store } from 'lucide-react-native';
 import { MarketplaceProduct } from '../services/marketplace';
@@ -113,6 +114,24 @@ export default function CartScreen() {
     );
     testItems.forEach(item => removeItem(item.id));
   }, []); // Empty deps - only run once on mount
+
+  // Refresh cart on focus: upload any not-yet-synced local rows first, otherwise
+  // just reload so unpublished/deleted products drop. Avoids loadFromDatabase
+  // cancelling an in-progress syncWithDatabase started from setUserId.
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) return;
+      const store = useCartStore.getState();
+      const hasUnsyncedLocal = store.items.some(
+        (item) => typeof item.id === 'string' && !item.id.startsWith('db-'),
+      );
+      if (hasUnsyncedLocal) {
+        void store.syncWithDatabase();
+      } else {
+        void store.loadFromDatabase();
+      }
+    }, [isAuthenticated]),
+  );
 
   // Subscribe to WebSocket for real-time cart updates
   useEffect(() => {

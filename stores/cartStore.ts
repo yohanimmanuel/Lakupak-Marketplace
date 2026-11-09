@@ -301,6 +301,8 @@ const cartItemKey = (productId: string, variant?: string) =>
 const pendingSyncKeys = new Set<string>();
 
 let loadFromDatabaseRequestId = 0;
+/** Blocks loadFromDatabase from cancelling an in-flight upload/merge. */
+let syncWithDatabaseInFlight = false;
 
 /** Newest additions first — matches server `orderBy: createdAt desc` and cart UX. */
 const sortCartItemsByAddedAtDesc = (items: CartItem[]): CartItem[] =>
@@ -341,11 +343,15 @@ const applyLoadedCartItems = (
     return { ...item, selected, addedAt };
   });
 
-  // Keep local-only rows while background sync is still in flight so opening the
-  // cart does not briefly drop a just-added item before the server round-trip finishes.
-  const unsyncedLocal = previousItems.filter(
-    (item) => !serverByKey.has(cartItemKey(item.product.id, item.variant)),
-  );
+  // Preserve not-yet-synced local rows (and in-flight uploads). Drop only rows that
+  // already had a DB id but the server cart omitted — unpublished/deleted products.
+  const unsyncedLocal = previousItems.filter((item) => {
+    const key = cartItemKey(item.product.id, item.variant);
+    if (serverByKey.has(key)) return false;
+    if (pendingSyncKeys.has(key)) return true;
+    if (parseDbCartItemId(item.id) != null) return false;
+    return true;
+  });
 
   set({
     items: sortCartItemsByAddedAtDesc([...unsyncedLocal, ...mergedFromServer]),
@@ -626,6 +632,7 @@ export const useCartStore = create<CartState>()(
         if (!currentUserId || !isOnline) return
 
         const requestId = ++loadFromDatabaseRequestId
+        syncWithDatabaseInFlight = true
         set({ isLoading: true })
 
         try {
@@ -659,6 +666,10 @@ export const useCartStore = create<CartState>()(
               continue
             }
 
+            // Already had a DB row but server cart omitted it (unpublished/deleted) —
+            // do not push it back; applyLoadedCartItems will drop it locally.
+            if (parseDbCartItemId(item.id) != null) continue
+
             const dbRowId = await syncItemToDatabase(item, currentUserId, token || undefined)
             if (dbRowId != null && requestId === loadFromDatabaseRequestId) {
               applySyncedCartItemId(set, get, item.product.id, item.variant ?? 'Default', dbRowId)
@@ -682,6 +693,7 @@ export const useCartStore = create<CartState>()(
           // Silently handle errors
         } finally {
           if (requestId === loadFromDatabaseRequestId) {
+            syncWithDatabaseInFlight = false
             set({ isLoading: false })
           }
         }
@@ -689,6 +701,9 @@ export const useCartStore = create<CartState>()(
 
       loadFromDatabase: async () => {
         if (get().editOrderId) return;
+        // Do not bump the shared request id while an upload/merge is in progress —
+        // that would abort sync before local items are pushed.
+        if (syncWithDatabaseInFlight) return;
         const { isOnline, items: previousItems } = get()
         const authState = useAuthStore.getState()
         const currentUserId = authState.user?.id || null
