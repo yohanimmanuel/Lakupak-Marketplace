@@ -1305,6 +1305,7 @@
     "labels": {
       "noImage": "Tidak ada gambar",
       "stock": "Stok",
+      "stockUnit": "Stok: {{unit}}",
       "quantity": "Jumlah",
       "freeItems": "+ {{count}} bonus item",
       "minimumOrder": "Minimal pembelian: {{count}} qty",

@@ -43,6 +43,7 @@ import { API_BASE_URL } from '../../../services/config';
 import { ordersService, type Order as MarketplaceOrder } from '../../../services/orders';
 import { websocketService } from '../../../services/websocket';
 import { calculateOrderItemPromotion } from '../../../utils/promotionUtils';
+import { displayStockUnitLabel } from '../../../utils/stockUnit';
 import { getShownOrderDiscount } from '../../../utils/orderItemDisplay';
 import {
   isOrderPricingPending,
@@ -895,6 +896,11 @@ export default function OrderDetailsModal() {
               {item.variantName}
             </Text>
           ) : null}
+          <Text style={styles.productSpecs}>
+            {t('buyNow.labels.stockUnit', {
+              unit: displayStockUnitLabel(item.packageType),
+            })}
+          </Text>
           <View style={styles.priceRow}>
             <View style={styles.priceContainer}>
               {pricingPending || isLinePricingPending(item) ? (

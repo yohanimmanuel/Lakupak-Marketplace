@@ -1307,6 +1307,7 @@
     "labels": {
       "noImage": "No Image",
       "stock": "Stock",
+      "stockUnit": "Stock: {{unit}}",
       "quantity": "Quantity",
       "freeItems": "+ {{count}} free items",
       "minimumOrder": "Minimum order: {{count}} qty",

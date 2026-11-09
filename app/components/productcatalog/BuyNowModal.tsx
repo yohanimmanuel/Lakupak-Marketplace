@@ -24,6 +24,7 @@ import { formatCurrency } from '../../../utils/currencyUtils';
 import { useTranslation } from 'react-i18next';
 import { matchesVariantAttributes, parseVariantNameToAttributes } from '../../../utils/variantRules';
 import { calculateProductPromotion } from '../../../utils/promotionUtils';
+import { displayStockUnit } from '../../../utils/stockUnit';
 import QuantitySelector from './QuantitySelector';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -310,7 +311,10 @@ export default function BuyNowModal({
     
     // Package info for display (from product level)
     const piecesPerPackage = safeGetNumber(product.piecesPerPackage, 1);
-    const packageType = safeGetString(product.packageType, 'Piece');
+    const packageType = safeGetString(
+      (product as MarketplaceProduct).stockUnit || product.packageType,
+      'Pieces',
+    );
     
     // Calculate prices
     const pricePerPackage = unitPrice * piecesPerPackage;
@@ -531,7 +535,11 @@ export default function BuyNowModal({
                 </Text>
                 <View style={styles.stockContainer}>
                   <Text style={styles.stock}>
-                    {t('buyNow.labels.stock')}: {stock}
+                    {t('buyNow.labels.stock')}: {stock}{' '}
+                    {displayStockUnit(
+                      (product as MarketplaceProduct)?.stockUnit ??
+                        (product as MarketplaceProduct)?.packageType,
+                    )}
                   </Text>
                   <Text style={[styles.stockStatus, { color: stock === 0 ? '#EF4444' : stock <= (currentVariantOption?.lowStockThreshold || 0) ? '#F59E0B' : '#10B981' }]}>
                     {stock === 0

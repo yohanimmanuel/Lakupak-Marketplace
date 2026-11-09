@@ -39,6 +39,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
 import { calculateProductPromotion } from '../../../utils/promotionUtils';
+import { displayStockUnitLabel } from '../../../utils/stockUnit';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore, CartItem } from '../../../stores/cartStore';
 import { useAuthStore } from '../../../stores/authStore';
@@ -142,7 +143,12 @@ export default function CheckoutScreen() {
   const quantity = parseInt(params.quantity || '1');
   const productName = params.productName || t('ordersFlow.checkout.defaults.product');
   const productImage = params.productImage || '';
-  const packageType = params.packageType || t('ordersFlow.checkout.defaults.box');
+  // Resolve product before packageType fallback so stockUnit is readable when params omit packageType
+  const product = useMemo(() => products.find(p => p.id === productId), [products, productId]);
+  const packageType =
+    params.packageType ||
+    (product as MarketplaceProduct | undefined)?.stockUnit ||
+    t('ordersFlow.checkout.defaults.box');
   const piecesPerPackage = parseInt(params.piecesPerPackage || '1');
   const appendOrderId = (params.appendOrderId || '').trim();
   const editOrderId = (params.editOrderId || '').trim();
@@ -159,9 +165,6 @@ export default function CheckoutScreen() {
   const isDirectCheckout = checkoutSource === 'direct' && !isEditingOrder;
   const isCartCheckout = !isEditingOrder && checkoutSource === 'cart' && selectedCartItems.length > 0;
   const isCartCheckoutEmpty = !isEditingOrder && checkoutSource === 'cart' && selectedCartItems.length === 0;
-  
-  // Get the actual product data (for single product checkout) - memoized to update when products change
-  const product = useMemo(() => products.find(p => p.id === productId), [products, productId]);
   const isDirectCheckoutMissingProduct =
     isDirectCheckout && !!productId && !product && !isProductsLoading;
   
@@ -1056,7 +1059,10 @@ const copyPickupAddress = () => {
                           item.variant,
                           (item.product as { price?: number }).price || item.product.sellingPrice || 0,
                         );
-                        const packageType = marketplaceProduct.packageType || 'Box';
+                        const packageType =
+                          marketplaceProduct.stockUnit ||
+                          marketplaceProduct.packageType ||
+                          'Pieces';
                         const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
 
                         return {
@@ -1494,6 +1500,11 @@ const copyPickupAddress = () => {
                             {item.variantNameSnapshot && item.variantNameSnapshot !== 'Default' ? (
                               <Text style={styles.variantName} numberOfLines={2}>{item.variantNameSnapshot}</Text>
                             ) : null}
+                            <Text style={styles.productSpecs}>
+                              {t('buyNow.labels.stockUnit', {
+                                unit: displayStockUnitLabel(item.packageType),
+                              })}
+                            </Text>
                             <View style={styles.priceRow}>
                               <View style={styles.priceContainer}>
                                 {item.subtotal > 0 ? (
@@ -1528,14 +1539,12 @@ const copyPickupAddress = () => {
                           </Text>
                         ) : null}
                         <Text style={styles.productSpecs}>
-                          {(() => {
-                            // Get package info from product level (piece-based system)
-                            const marketplaceProduct = item.product as MarketplaceProduct;
-                            const piecesPerPackage = marketplaceProduct.piecesPerPackage || 1;
-                            const packageType = marketplaceProduct.packageType || 'Box';
-                            
-                            return t('ordersFlow.checkout.productSpecs', { count: piecesPerPackage, package: packageType });
-                          })()}
+                          {t('buyNow.labels.stockUnit', {
+                            unit: displayStockUnitLabel(
+                              (item.product as MarketplaceProduct).stockUnit ??
+                                (item.product as MarketplaceProduct).packageType,
+                            ),
+                          })}
                         </Text>
                         <View style={styles.priceRow}>
                           <View style={styles.priceContainer}>
@@ -1686,6 +1695,11 @@ const copyPickupAddress = () => {
                         {item.variantNameSnapshot && item.variantNameSnapshot !== 'Default' ? (
                           <Text style={styles.variantName} numberOfLines={2}>{item.variantNameSnapshot}</Text>
                         ) : null}
+                        <Text style={styles.productSpecs}>
+                          {t('buyNow.labels.stockUnit', {
+                            unit: displayStockUnitLabel(item.packageType),
+                          })}
+                        </Text>
                         <View style={styles.priceRow}>
                           <View style={styles.priceContainer}>
                             {item.subtotal > 0 ? (
@@ -1716,7 +1730,11 @@ const copyPickupAddress = () => {
                     </Text>
                   ) : null}
                   <Text style={styles.productSpecs}>
-                    {t('ordersFlow.checkout.productSpecs', { count: piecesPerPackage, package: packageType })}
+                    {t('buyNow.labels.stockUnit', {
+                      unit: displayStockUnitLabel(
+                        (product as MarketplaceProduct | undefined)?.stockUnit ?? packageType,
+                      ),
+                    })}
                   </Text>
                   <View style={styles.priceRow}>
                     <View style={styles.priceContainer}>
