@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +11,16 @@ interface TopDistributor {
 interface TopDistributorsProps {
   distributors: TopDistributor[];
   onDistributorPress: (distributorName: string) => void;
+}
+
+function DistributorLogo({ uri }: { uri: string }) {
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  const normalized = uri?.trim();
+  const placeholder = normalized?.split('?')[0].endsWith('/default-avatar.png');
+  if (!normalized || placeholder || failedUri === normalized) {
+    return <Ionicons name="storefront-outline" size={28} color="#64748B" />;
+  }
+  return <Image source={{ uri: normalized }} style={styles.distributorLogo} resizeMode="cover" onError={() => setFailedUri(normalized)} />;
 }
 
 export default function TopDistributors({
@@ -42,15 +53,7 @@ export default function TopDistributors({
             onPress={() => onDistributorPress(distributor.name)}
           >
             <View style={[styles.distributorLogoContainer, { backgroundColor: grayBg }]}>
-              {distributor.logo ? (
-                <Image
-                  source={{ uri: distributor.logo }}
-                  style={styles.distributorLogo}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={styles.placeholderLogo} />
-              )}
+              <DistributorLogo uri={distributor.logo} />
             </View>
             <Text style={styles.distributorName} numberOfLines={1}>
               {distributor.name}
