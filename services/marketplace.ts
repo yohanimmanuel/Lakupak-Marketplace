@@ -369,7 +369,6 @@ export const marketplaceService = {
               salesChannel
               brand
               unit
-              sku
               supplier
               publishedAt
               lastSyncAt
@@ -512,7 +511,6 @@ export const marketplaceService = {
               salesChannel
               brand
               unit
-              sku
               supplier
               publishedAt
               lastSyncAt
