@@ -728,6 +728,8 @@ export default function ProductMarketplace({
     </View>
   );
 
+  const [failedSellerLogo, setFailedSellerLogo] = useState<string | null>(null);
+
   const renderSellerInfo = () => {
     const sellerCompany = 'company' in (product.seller || {}) ? (product.seller as { company?: { logo?: string } })?.company : undefined;
     const companyLogo = normalizeUrl(sellerCompany?.logo);
@@ -739,12 +741,14 @@ export default function ProductMarketplace({
         <Text style={[styles.sectionTitle, { color: textColor }]}>{t('product.sellerInformation')}</Text>
         <View style={styles.sellerHeader}>
           <View style={styles.sellerAvatar}>
-            {companyLogo ? (
-              <Image source={{ uri: companyLogo }} style={styles.sellerAvatarImage} />
+            {companyLogo && failedSellerLogo !== companyLogo ? (
+              <Image
+                source={{ uri: companyLogo }}
+                style={styles.sellerAvatarImage}
+                onError={() => setFailedSellerLogo(companyLogo)}
+              />
             ) : (
-              <Text style={styles.avatarText}>
-                {safeGetString(product.seller?.name, 'U').charAt(0).toUpperCase()}
-              </Text>
+              <Ionicons name="storefront-outline" size={24} color="#64748B" />
             )}
           </View>
           <View style={styles.sellerInfo}>
