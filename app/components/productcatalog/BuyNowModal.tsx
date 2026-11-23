@@ -58,6 +58,7 @@ export default function BuyNowModal({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [quantity, setQuantity] = useState(1);
+  const [selectedStockLevelName, setSelectedStockLevelName] = useState<string | null>(null);
   const [selectedVariantOptions, setSelectedVariantOptions] = useState<Record<string, string>>({});
   const [slideAnim] = useState(new Animated.Value(screenHeight));
   const keyboardOffset = useRef(new Animated.Value(0)).current;
@@ -310,11 +311,13 @@ export default function BuyNowModal({
     }
     
     // Package info for display (from product level)
-    const piecesPerPackage = safeGetNumber(product.piecesPerPackage, 1);
-    const packageType = safeGetString(
-      (product as MarketplaceProduct).stockUnit || product.packageType,
-      'Pieces',
-    );
+    const configuredLevels = (product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels;
+    const availableLevels = Array.isArray(configuredLevels) && configuredLevels.length
+      ? configuredLevels.filter(level => level.name && Number.isSafeInteger(level.piecesPerUnit) && level.piecesPerUnit > 0)
+      : [{ name: safeGetString((product as MarketplaceProduct).stockUnit || product.packageType, 'Pieces'), piecesPerUnit: safeGetNumber(product.piecesPerPackage, 1) }];
+    const selectedLevel = availableLevels.find(level => level.name === selectedStockLevelName) || availableLevels[0];
+    const piecesPerPackage = selectedLevel?.piecesPerUnit ?? 1;
+    const packageType = selectedLevel?.name ?? 'Pieces';
     
     // Calculate prices
     const pricePerPackage = unitPrice * piecesPerPackage;
@@ -354,7 +357,7 @@ export default function BuyNowModal({
       meetsMOQ,
       isFormValid
     };
-  }, [product, selectedVariantOptions, quantity, safeGetArray, safeGetString, safeGetNumber]);
+  }, [product, selectedVariantOptions, selectedStockLevelName, quantity, safeGetArray, safeGetString, safeGetNumber]);
 
   // Parse variant definitions and options from product for new structure
   const variantData = useMemo(() => {
@@ -607,6 +610,20 @@ export default function BuyNowModal({
               </View>
             )}
 
+            {product && Array.isArray((product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels) &&
+              ((product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels?.length ?? 0) > 1 ? (
+              <View style={{ marginBottom: 16 }}>
+                <Text style={styles.quantityLabel}>Stock level</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                  {(product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels?.map(level => (
+                    <TouchableOpacity key={level.name} onPress={() => { setSelectedStockLevelName(level.name); setQuantity(1); }}
+                      style={{ borderWidth: 1, borderColor: computedValues?.packageType === level.name ? '#2563eb' : '#d1d5db', borderRadius: 8, padding: 10 }}>
+                      <Text>{level.name} · {level.piecesPerUnit} pieces</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ) : null}
             {/* Quantity */}
             <View style={styles.quantitySection}>
               <View style={styles.quantityRow}>
