@@ -161,6 +161,7 @@ export interface MarketplaceProduct {
     sellingPrice: number;
     originalSellingPrice?: number;
     moq: number;
+    moqByStockLevel?: Record<string, number>;
     stockQuantity: number;
     lowStockThreshold: number;
     stockStatus: string;
@@ -286,6 +287,7 @@ export function transformGraphQLProduct(product: GraphQLMarketplaceProduct | Rec
     sellingPrice: Number(vo.sellingPrice) || 0,
     originalSellingPrice: vo.originalSellingPrice ? Number(vo.originalSellingPrice) : undefined,
     moq: Number(vo.moq) || 0,
+    moqByStockLevel: vo.moqByStockLevel && typeof vo.moqByStockLevel === 'object' && !Array.isArray(vo.moqByStockLevel) ? vo.moqByStockLevel as Record<string, number> : {},
     stockQuantity: Number(vo.stockQuantity) || 0,
     lowStockThreshold: Number(vo.lowStockThreshold) || 0,
     stockStatus: String(vo.stockStatus || 'In Stock'),

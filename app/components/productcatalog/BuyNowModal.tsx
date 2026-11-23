@@ -288,6 +288,7 @@ export default function BuyNowModal({
         sellingPrice: number;
         originalSellingPrice?: number;
         moq: number;
+        moqByStockLevel?: Record<string, number>;
         stockQuantity: number;
         lowStockThreshold: number;
         stockStatus: string;
@@ -324,8 +325,12 @@ export default function BuyNowModal({
     const totalPrice = pricePerPackage * quantity;
     const totalPieces = piecesPerPackage * quantity;
     
-    // MOQ validation (always in pieces)
-    const meetsMOQ = !moq || totalPieces >= moq;
+    // Stock-level MOQ is in selected units; legacy MOQ remains in pieces.
+    const stockLevelMoq = currentVariantOption?.moqByStockLevel?.[packageType];
+    const minPackages = stockLevelMoq != null && Number.isSafeInteger(stockLevelMoq) && stockLevelMoq >= 0
+      ? Math.max(1, stockLevelMoq)
+      : Math.max(1, Math.ceil((moq || 0) / piecesPerPackage));
+    const meetsMOQ = quantity >= minPackages;
     const isFormValid = quantity > 0 && totalPieces <= stock && meetsMOQ;
 
     // Build variant display name from the actual matched variant option's attributes
@@ -354,6 +359,7 @@ export default function BuyNowModal({
       packageType,
       variantName,
       moq,
+      minPackages,
       meetsMOQ,
       isFormValid
     };
@@ -475,7 +481,6 @@ export default function BuyNowModal({
     stock,
     packageType,
     variantName,
-    moq,
     meetsMOQ,
     isFormValid
   } = computedValues;
@@ -643,7 +648,7 @@ export default function BuyNowModal({
                       packageQuantity={quantity}
                       piecesPerPackage={computedValues.piecesPerPackage}
                       stockPieces={computedValues.stock}
-                      moq={computedValues.moq}
+                      moq={computedValues.minPackages * computedValues.piecesPerPackage}
                       syncParentWhileEditing
                       onPackageQuantityChange={setQuantity}
                       size="compact"
@@ -658,10 +663,10 @@ export default function BuyNowModal({
                 </Text>
               ) : null}
 
-              {moq != null && moq > 0 && !meetsMOQ ? (
+              {!meetsMOQ ? (
                 <View style={styles.moqWarning}>
                   <Text style={styles.moqWarningText}>
-                    {t('buyNow.labels.minimumOrder', { count: moq })}
+                    Minimum order: {computedValues.minPackages} {packageType}
                   </Text>
                 </View>
               ) : null}
