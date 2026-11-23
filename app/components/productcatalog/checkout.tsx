@@ -149,7 +149,14 @@ export default function CheckoutScreen() {
     params.packageType ||
     (product as MarketplaceProduct | undefined)?.stockUnit ||
     t('ordersFlow.checkout.defaults.box');
-  const piecesPerPackage = parseInt(params.piecesPerPackage || '1');
+  const requestedPiecesPerPackage = parseInt(params.piecesPerPackage || '1', 10);
+  const configuredLevel = (product as MarketplaceProduct | undefined)?.stockLevels?.find(
+    level => level.name === packageType && level.piecesPerUnit === requestedPiecesPerPackage,
+  );
+  const piecesPerPackage = configuredLevel?.piecesPerUnit ??
+    (product?.piecesPerPackage || 1);
+  const selectedPackageType = configuredLevel?.name ??
+    ((product as MarketplaceProduct | undefined)?.stockUnit || 'Pieces');
   const appendOrderId = (params.appendOrderId || '').trim();
   const editOrderId = (params.editOrderId || '').trim();
 
@@ -1182,7 +1189,7 @@ const copyPickupAddress = () => {
                       productId: productId,
                       productName: product?.name || 'Product',
                       packageQuantity: quantity,
-                      packageType: packageType,
+                      packageType: selectedPackageType,
                       piecesPerPackage: piecesPerPackage,
                       // Marketplace never sends catalog/offer prices — server resolves after Send pricing
                       pricePerPackage: 0,
@@ -1732,7 +1739,7 @@ const copyPickupAddress = () => {
                   <Text style={styles.productSpecs}>
                     {t('buyNow.labels.stockUnit', {
                       unit: displayStockUnitLabel(
-                        (product as MarketplaceProduct | undefined)?.stockUnit ?? packageType,
+                        selectedPackageType,
                       ),
                     })}
                   </Text>
