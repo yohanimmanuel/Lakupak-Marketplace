@@ -260,7 +260,7 @@ const ensureCartItemDbId = async (
     if (!pendingSyncKeys.has(key)) {
       const syncedId = await syncItemToDatabase(current, userId, authState.token || undefined);
       if (syncedId != null) {
-        applySyncedCartItemId(set, get, current.product.id, current.variant ?? 'Default', syncedId);
+        applySyncedCartItemId(set, get, current.product.id, current.variant ?? 'Default', current.product, syncedId);
         return syncedId;
       }
       return null;
@@ -298,12 +298,13 @@ const applySyncedCartItemId = (
   get: () => CartState,
   productId: string,
   variant: string,
+  product: CartItem['product'],
   dbRowId: number,
 ) => {
   const dbItemId = `db-${dbRowId}`;
   set({
     items: get().items.map((item) =>
-      item.product.id === productId && item.variant === variant && !item.id.startsWith('db-') ? { ...item, id: dbItemId } : item,
+      cartItemKey(item.product.id, item.variant, item.product) === cartItemKey(productId, variant, product) && !item.id.startsWith('db-') ? { ...item, id: dbItemId } : item,
     ),
   });
 };
@@ -423,7 +424,7 @@ export const useCartStore = create<CartState>()(
           const productId = product.id;
           void syncItemToDatabase(updatedItem, currentUserId, token || undefined).then((dbRowId) => {
             if (dbRowId == null) return;
-            applySyncedCartItemId(set, get, productId, variant, dbRowId);
+            applySyncedCartItemId(set, get, productId, variant, updatedItem.product, dbRowId);
           });
         }
       },
@@ -686,7 +687,7 @@ export const useCartStore = create<CartState>()(
 
             const dbRowId = await syncItemToDatabase(item, currentUserId, token || undefined)
             if (dbRowId != null && requestId === loadFromDatabaseRequestId) {
-              applySyncedCartItemId(set, get, item.product.id, item.variant ?? 'Default', dbRowId)
+              applySyncedCartItemId(set, get, item.product.id, item.variant ?? 'Default', item.product, dbRowId)
             }
           }
 
