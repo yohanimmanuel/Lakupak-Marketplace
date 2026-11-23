@@ -481,7 +481,6 @@ export default function BuyNowModal({
     stock,
     packageType,
     variantName,
-    moq,
     meetsMOQ,
     isFormValid
   } = computedValues;
