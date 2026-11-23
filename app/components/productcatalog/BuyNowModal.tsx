@@ -665,6 +665,9 @@ export default function BuyNowModal({
           {/* Sticky footer */}
           <View style={styles.footer}>
             <View style={styles.totalSection}>
+              <Text style={styles.pricingNoteFooter}>
+                1 {displayStockUnit(computedValues.packageType)} = {computedValues.piecesPerPackage} pieces
+              </Text>
               <Text style={styles.pricingNoteFooter} numberOfLines={2}>
                 {t('buyNow.labels.pricingNote', {
                   distributor: safeGetString(
