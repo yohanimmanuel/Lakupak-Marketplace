@@ -437,11 +437,7 @@ export default function CartScreen() {
                     <Text style={styles.promotionGiftText}>
                       +{promotionGift.freeQty} Free pieces
                     </Text>
-                  ) : (
-                    <Text style={styles.priceNote} numberOfLines={2}>
-                      {t('cart.pricingNote', { distributor: distributorName || t('tabsOrders.distributorFallback') })}
-                    </Text>
-                  )}
+                  ) : null}
                 </TouchableOpacity>
 
                 <View style={styles.qtyPickerWrap}>
@@ -651,9 +647,6 @@ export default function CartScreen() {
               <>
                 <Text style={styles.totalPrice} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                   {formatCurrency(selectedBaseTotal)}
-                </Text>
-                <Text style={styles.pricingNoteFooter} numberOfLines={2}>
-                  {t('cart.basePriceNote')}
                 </Text>
               </>
             ) : null}
