@@ -925,7 +925,8 @@ export default function OrderDetailsModal() {
                 </Text>
               )}
             </View>
-            <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
+            <View style={{alignItems: 'flex-end', gap: 6}}>
+              <Text style={styles.quantityBadge}>x{item.packageQuantity || item.quantity || 1} {displayStockUnitLabel(item.packageType || 'Pieces')}</Text>
               {freeQty > 0 ? (
                 <View style={styles.promotionGiftBadge}>
                   <Gift size={12} color="#9333EA" />
@@ -934,7 +935,6 @@ export default function OrderDetailsModal() {
                   </Text>
                 </View>
               ) : null}
-              <Text style={styles.quantityBadge}>x{item.packageQuantity || item.quantity || 1} {displayStockUnitLabel(item.packageType || 'Pieces')}</Text>
             </View>
           </View>
         </View>
