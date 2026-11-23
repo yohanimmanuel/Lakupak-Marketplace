@@ -153,7 +153,7 @@ interface CartState {
 // Helper function to convert database activity to cart item
 const convertDatabaseToCartItem = (dbItem: DatabaseUserActivity | { id: number; userId: number; productId: string; productData: unknown; activityType: string; metadata?: Record<string, unknown>; createdAt: string; updatedAt: string }): CartItem => {
   // Handle both DatabaseUserActivity and service CartItem types
-  const metadata = (dbItem.metadata as { quantity?: number; variant?: string; selected?: boolean; addedAt?: number }) || {};
+  const metadata = (dbItem.metadata as { quantity?: number; variant?: string; selected?: boolean; addedAt?: number; packageType?: string; piecesPerPackage?: number }) || {};
   const rawProduct = dbItem.productData as MarketplaceProduct;
   const selectedPackageType = typeof metadata.packageType === 'string' ? metadata.packageType : undefined;
   const selectedRatio = Number(metadata.piecesPerPackage);
