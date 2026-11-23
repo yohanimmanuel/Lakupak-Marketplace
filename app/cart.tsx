@@ -368,7 +368,7 @@ export default function CartScreen() {
     );
 
     return (
-    <View key={`${item.product.id}-${item.variant}`} style={styles.cartItemWrapper}>
+    <View key={item.id} style={styles.cartItemWrapper}>
       <ReanimatedSwipeable
         friction={2}
         overshootRight={false}
