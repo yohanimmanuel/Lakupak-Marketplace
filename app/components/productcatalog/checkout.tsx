@@ -126,7 +126,13 @@ export default function CheckoutScreen() {
   };
   const getItemProduct = (item: CartItem) => {
     const fresh = getFreshProductById((item?.product as MarketplaceProduct)?.id);
-    return (fresh || (item.product as MarketplaceProduct)) as MarketplaceProduct;
+    const saved = item.product as MarketplaceProduct;
+    return (fresh ? {
+      ...fresh,
+      stockUnit: saved.stockUnit ?? fresh.stockUnit,
+      packageType: saved.packageType ?? fresh.packageType,
+      piecesPerPackage: saved.piecesPerPackage ?? fresh.piecesPerPackage,
+    } : saved) as MarketplaceProduct;
   };
   
   // Get cart data

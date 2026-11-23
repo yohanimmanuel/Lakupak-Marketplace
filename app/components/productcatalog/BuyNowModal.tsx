@@ -429,7 +429,7 @@ export default function BuyNowModal({
     if (!isFormValid) return;
 
     if (mode === 'cart') {
-      addItem(product, quantity, variantName);
+      addItem({ ...product, packageType, stockUnit: packageType, piecesPerPackage } as MarketplaceProduct, quantity, variantName);
       handleClose();
       return;
     }

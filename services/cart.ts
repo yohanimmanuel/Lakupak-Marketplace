@@ -100,6 +100,8 @@ class CartService {
           $productData: JSONObject!
           $quantity: Int
           $variant: String
+          $packageType: String
+          $piecesPerPackage: Int
         ) {
           addToCart(
             input: {
@@ -108,6 +110,8 @@ class CartService {
               productData: $productData
               quantity: $quantity
               variant: $variant
+              packageType: $packageType
+              piecesPerPackage: $piecesPerPackage
             }
           ) {
             success
@@ -134,6 +138,8 @@ class CartService {
           productData,
           quantity,
           variant,
+          packageType: productData.stockUnit || productData.packageType || "Pieces",
+          piecesPerPackage: productData.piecesPerPackage || 1,
         },
         token
       );

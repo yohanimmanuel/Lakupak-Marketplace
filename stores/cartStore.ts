@@ -14,6 +14,8 @@ type CartProductSnapshot = {
   category?: string;
   sellingPrice?: number;
   piecesPerPackage?: number;
+  packageType?: string;
+  stockUnit?: string;
   originalSellingPrice?: number | string;
   variantOptions?: Array<{
     id: number;
@@ -51,6 +53,8 @@ function compactProductForCart(product: Product | MarketplaceProduct | CartProdu
     category: (p as { category?: string }).category,
     sellingPrice: (p as { sellingPrice?: number }).sellingPrice,
     piecesPerPackage: p.piecesPerPackage,
+    packageType: p.packageType,
+    stockUnit: p.stockUnit,
     originalSellingPrice: p.originalSellingPrice,
     variantOptions: Array.isArray(p.variantOptions)
       ? p.variantOptions.slice(0, 40).map((o) => ({
@@ -383,7 +387,11 @@ export const useCartStore = create<CartState>()(
         if (existingItem) {
           updatedItem = {
             ...existingItem,
-            quantity: existingItem.quantity + quantity,
+            product,
+            quantity: (existingItem.product.piecesPerPackage ?? 1) === (product.piecesPerPackage ?? 1) &&
+              (('stockUnit' in existingItem.product ? existingItem.product.stockUnit : undefined) ?? 'Pieces') ===
+              (('stockUnit' in product ? product.stockUnit : undefined) ?? 'Pieces')
+              ? existingItem.quantity + quantity : quantity,
             addedAt: Date.now(),
           };
           const rest = state.items.filter((item) => item.id !== existingItem.id);
