@@ -22,6 +22,7 @@ type CartProductSnapshot = {
     sellingPrice?: number | string;
     originalSellingPrice?: number | string;
     moq?: number;
+    moqByStockLevel?: Record<string, number>;
     attributes?: Record<string, string>;
   }>;
   variants?: Array<{
@@ -62,6 +63,7 @@ function compactProductForCart(product: Product | MarketplaceProduct | CartProdu
           sellingPrice: o.sellingPrice,
           originalSellingPrice: o.originalSellingPrice,
           moq: o.moq,
+          moqByStockLevel: o.moqByStockLevel,
           attributes: o.attributes,
         }))
       : undefined,
