@@ -94,6 +94,8 @@ interface DatabaseUserActivity {
     variant?: string;
     addedAt?: number;
     selected?: boolean;
+    packageType?: string;
+    piecesPerPackage?: number;
   };
   createdAt: string;
   updatedAt: string;
