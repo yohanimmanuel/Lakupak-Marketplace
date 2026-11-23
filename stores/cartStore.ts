@@ -187,7 +187,7 @@ const syncItemToDatabase = async (
   userId: number,
   token?: string,
 ): Promise<number | null> => {
-  const key = cartItemKey(item.product.id, item.variant);
+  const key = cartItemKey(item.product.id, item.variant, item.product);
   if (pendingSyncKeys.has(key)) {
     return null;
   }
@@ -203,7 +203,7 @@ const syncItemToDatabase = async (
     const serverRows = await cartService.getCart(userId, token).catch(() => []);
     const serverMatch = serverRows.find((row) => {
       const converted = convertDatabaseToCartItem(row);
-      return cartItemKey(converted.product.id, converted.variant) === key;
+      return cartItemKey(converted.product.id, converted.variant, converted.product) === key;
     });
     if (serverMatch) {
       return serverMatch.id;
@@ -246,7 +246,7 @@ const ensureCartItemDbId = async (
   const { isOnline } = get();
   if (!userId || !isOnline) return null;
 
-  const key = cartItemKey(item.product.id, item.variant);
+  const key = cartItemKey(item.product.id, item.variant, item.product);
   for (let attempt = 0; attempt < 15; attempt += 1) {
     const current = get().items.find(
       (entry) =>
@@ -303,13 +303,13 @@ const applySyncedCartItemId = (
   const dbItemId = `db-${dbRowId}`;
   set({
     items: get().items.map((item) =>
-      item.product.id === productId && item.variant === variant ? { ...item, id: dbItemId } : item,
+      item.product.id === productId && item.variant === variant && !item.id.startsWith('db-') ? { ...item, id: dbItemId } : item,
     ),
   });
 };
 
-const cartItemKey = (productId: string, variant?: string) =>
-  `${productId}::${variant ?? 'Default'}`;
+const cartItemKey = (productId: string, variant?: string, product?: { piecesPerPackage?: number; packageType?: string; stockUnit?: string }) =>
+  JSON.stringify([productId, variant ?? 'Default', product?.stockUnit ?? product?.packageType ?? 'Pieces', product?.piecesPerPackage ?? 1]);
 
 const pendingSyncKeys = new Set<string>();
 
@@ -328,13 +328,13 @@ const applyLoadedCartItems = (
 ) => {
   const previousSelectionById = new Map(previousItems.map((item) => [item.id, item.selected]));
   const previousSelectionByKey = new Map(
-    previousItems.map((item) => [cartItemKey(item.product.id, item.variant), item.selected]),
+    previousItems.map((item) => [cartItemKey(item.product.id, item.variant, item.product), item.selected]),
   );
   const previousByKey = new Map(
-    previousItems.map((item) => [cartItemKey(item.product.id, item.variant), item]),
+    previousItems.map((item) => [cartItemKey(item.product.id, item.variant, item.product), item]),
   );
   const serverByKey = new Set(
-    convertedItems.map((item) => cartItemKey(item.product.id, item.variant)),
+    convertedItems.map((item) => cartItemKey(item.product.id, item.variant, item.product)),
   );
 
   const mergedFromServer = convertedItems.map((item) => {
@@ -342,13 +342,13 @@ const applyLoadedCartItems = (
     if (previousSelectionById.has(item.id)) {
       selected = previousSelectionById.get(item.id)!;
     } else {
-      const key = cartItemKey(item.product.id, item.variant);
+      const key = cartItemKey(item.product.id, item.variant, item.product);
       if (previousSelectionByKey.has(key)) {
         selected = previousSelectionByKey.get(key)!;
       }
     }
 
-    const key = cartItemKey(item.product.id, item.variant);
+    const key = cartItemKey(item.product.id, item.variant, item.product);
     const prev = previousByKey.get(key);
     const addedAt =
       prev && prev.addedAt > item.addedAt ? prev.addedAt : item.addedAt;
@@ -359,7 +359,7 @@ const applyLoadedCartItems = (
   // Preserve not-yet-synced local rows (and in-flight uploads). Drop only rows that
   // already had a DB id but the server cart omitted — unpublished/deleted products.
   const unsyncedLocal = previousItems.filter((item) => {
-    const key = cartItemKey(item.product.id, item.variant);
+    const key = cartItemKey(item.product.id, item.variant, item.product);
     if (serverByKey.has(key)) return false;
     if (pendingSyncKeys.has(key)) return true;
     if (parseDbCartItemId(item.id) != null) return false;
@@ -388,7 +388,7 @@ export const useCartStore = create<CartState>()(
         const currentUserId = authState.user?.id || null;
         
         const existingItem = state.items.find(item => 
-          item.product.id === product.id && item.variant === variant
+          cartItemKey(item.product.id, item.variant, item.product) === cartItemKey(product.id, variant, product)
         )
 
         let updatedItem: CartItem;
@@ -397,10 +397,7 @@ export const useCartStore = create<CartState>()(
           updatedItem = {
             ...existingItem,
             product,
-            quantity: (existingItem.product.piecesPerPackage ?? 1) === (product.piecesPerPackage ?? 1) &&
-              (('stockUnit' in existingItem.product ? existingItem.product.stockUnit : undefined) ?? 'Pieces') ===
-              (('stockUnit' in product ? product.stockUnit : undefined) ?? 'Pieces')
-              ? existingItem.quantity + quantity : quantity,
+            quantity: existingItem.quantity + quantity,
             addedAt: Date.now(),
           };
           const rest = state.items.filter((item) => item.id !== existingItem.id);
@@ -661,11 +658,11 @@ export const useCartStore = create<CartState>()(
           const serverByKey = new Map<string, CartItem>()
           for (const row of serverRows) {
             const item = convertDatabaseToCartItem(row)
-            serverByKey.set(cartItemKey(item.product.id, item.variant), item)
+            serverByKey.set(cartItemKey(item.product.id, item.variant, item.product), item)
           }
 
           for (const item of localItems) {
-            const key = cartItemKey(item.product.id, item.variant)
+            const key = cartItemKey(item.product.id, item.variant, item.product)
             if (pendingSyncKeys.has(key)) continue
 
             const serverItem = serverByKey.get(key)
