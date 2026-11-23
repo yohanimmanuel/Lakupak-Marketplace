@@ -564,6 +564,21 @@ export default function BuyNowModal({
             nestedScrollEnabled
             bounces={false}
           >
+            {product && Array.isArray((product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels) &&
+              ((product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels?.length ?? 0) > 1 ? (
+              <View style={styles.stockLevelSection}>
+                <Text style={styles.variantLabel}>Stock level</Text>
+                <View style={styles.variantContainer}>
+                  {(product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels?.map(level => (
+                    <TouchableOpacity key={level.name} accessibilityRole="button" accessibilityState={{ selected: computedValues?.packageType === level.name }} onPress={() => { setSelectedStockLevelName(level.name); setQuantity(1); }}
+                      style={{ borderWidth: 1, borderColor: computedValues?.packageType === level.name ? '#2563eb' : '#e5e7eb', backgroundColor: computedValues?.packageType === level.name ? '#dbeafe' : '#fff', borderRadius: 7, paddingHorizontal: 13, paddingVertical: 10 }}>
+                      <Text style={{ color: computedValues?.packageType === level.name ? '#2563eb' : '#111827', fontWeight: '500', fontSize: 13 }}>{level.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
             {/* Variant selectors */}
             {variantData.definitions.length > 0 && (
               <View style={styles.variantSection}>
@@ -610,20 +625,6 @@ export default function BuyNowModal({
               </View>
             )}
 
-            {product && Array.isArray((product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels) &&
-              ((product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels?.length ?? 0) > 1 ? (
-              <View style={{ marginBottom: 16 }}>
-                <Text style={styles.quantityLabel}>Stock level</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                  {(product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels?.map(level => (
-                    <TouchableOpacity key={level.name} accessibilityRole="button" accessibilityState={{ selected: computedValues?.packageType === level.name }} onPress={() => { setSelectedStockLevelName(level.name); setQuantity(1); }}
-                      style={{ borderWidth: 1, borderColor: computedValues?.packageType === level.name ? '#2563eb' : '#e5e7eb', backgroundColor: computedValues?.packageType === level.name ? '#dbeafe' : '#fff', borderRadius: 7, paddingHorizontal: 13, paddingVertical: 10 }}>
-                      <Text style={{ color: computedValues?.packageType === level.name ? '#2563eb' : '#111827', fontWeight: '500', fontSize: 13 }}>{level.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            ) : null}
             {/* Quantity */}
             <View style={styles.quantitySection}>
               <View style={styles.quantityRow}>
@@ -803,6 +804,11 @@ const styles = StyleSheet.create({
   stockStatus: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  stockLevelSection: {
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   variantSection: {
     paddingHorizontal: 15,
