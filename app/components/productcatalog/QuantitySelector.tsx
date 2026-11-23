@@ -16,6 +16,8 @@ type QuantitySelectorProps = {
   /** When true, parent quantity updates while typing (e.g. Buy Now MOQ/button state). */
   syncParentWhileEditing?: boolean;
   size?: 'default' | 'compact';
+  /** Display and edit package count rather than canonical pieces. */
+  displayPackages?: boolean;
 };
 
 export default function QuantitySelector({
@@ -26,12 +28,13 @@ export default function QuantitySelector({
   onPackageQuantityChange,
   syncParentWhileEditing = false,
   size = 'default',
+  displayPackages = false,
 }: QuantitySelectorProps) {
   const pp = Math.max(1, piecesPerPackage);
   const stock = Math.max(0, stockPieces);
   const totalPieces = packageQuantity * pp;
 
-  const [piecesInput, setPiecesInput] = useState(String(totalPieces));
+  const [piecesInput, setPiecesInput] = useState(String(displayPackages ? packageQuantity : totalPieces));
   const [isEditingPieces, setIsEditingPieces] = useState(false);
 
   const longPressInterval = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -39,13 +42,13 @@ export default function QuantitySelector({
 
   useEffect(() => {
     if (!isEditingPieces) {
-      setPiecesInput(String(packageQuantity * pp));
+      setPiecesInput(String(displayPackages ? packageQuantity : packageQuantity * pp));
     }
-  }, [packageQuantity, pp, isEditingPieces]);
+  }, [packageQuantity, pp, isEditingPieces, displayPackages]);
 
   useEffect(() => {
     const parsed = parseInt(piecesInput.replace(/\D/g, ''), 10);
-    if (!Number.isFinite(parsed) || parsed <= 0 || parsed <= stock) return;
+    if (displayPackages || !Number.isFinite(parsed) || parsed <= 0 || parsed <= stock) return;
 
     const { packages, pieces } = normalizeCommittedPieces(stock, pp, stock, moq);
     onPackageQuantityChange(packages);
@@ -71,9 +74,9 @@ export default function QuantitySelector({
       const nextPieces = nextPackages * pp;
       if (nextPieces > stock) return;
       onPackageQuantityChange(nextPackages);
-      setPiecesInput(String(nextPieces));
+      setPiecesInput(String(displayPackages ? nextPackages : nextPieces));
     },
-    [packageQuantity, pp, stock, onPackageQuantityChange],
+    [packageQuantity, pp, stock, onPackageQuantityChange, displayPackages],
   );
 
   const startLongPress = useCallback(
@@ -91,6 +94,14 @@ export default function QuantitySelector({
     setIsEditingPieces(false);
 
     const parsed = parseInt(piecesInput.replace(/\D/g, ''), 10);
+    if (displayPackages) {
+      const minPackages = Math.max(1, Math.ceil((moq || 1) / pp));
+      const maxPackages = Math.floor(stock / pp);
+      const packages = Math.max(minPackages, Math.min(maxPackages, Number.isFinite(parsed) ? parsed : minPackages));
+      onPackageQuantityChange(packages);
+      setPiecesInput(String(packages));
+      return;
+    }
     if (!Number.isFinite(parsed) || parsed <= 0) {
       const { packages, pieces } = normalizeCommittedPieces(0, pp, stock, moq);
       onPackageQuantityChange(packages);
@@ -101,17 +112,25 @@ export default function QuantitySelector({
     const { packages, pieces } = normalizeCommittedPieces(parsed, pp, stock, moq);
     onPackageQuantityChange(packages);
     setPiecesInput(String(pieces));
-  }, [piecesInput, pp, stock, moq, onPackageQuantityChange]);
+  }, [piecesInput, pp, stock, moq, onPackageQuantityChange, displayPackages]);
 
   const handlePiecesInputChange = useCallback(
     (text: string) => {
+      if (displayPackages) {
+        const digits = text.replace(/\D/g, '');
+        const maxPackages = Math.floor(stock / pp);
+        const packages = Math.min(maxPackages, Number(digits) || 0);
+        setPiecesInput(digits ? String(packages) : '');
+        if (syncParentWhileEditing && packages > 0) onPackageQuantityChange(packages);
+        return;
+      }
       const { display, parsed } = clampPiecesToStock(text.replace(/\D/g, ''), stock);
       setPiecesInput(display);
       if (syncParentWhileEditing) {
         onPackageQuantityChange(piecesToLivePackageQuantity(parsed, pp, stock));
       }
     },
-    [stock, syncParentWhileEditing, pp, onPackageQuantityChange],
+    [stock, syncParentWhileEditing, pp, onPackageQuantityChange, displayPackages],
   );
 
   const atMin = packageQuantity <= 1;
