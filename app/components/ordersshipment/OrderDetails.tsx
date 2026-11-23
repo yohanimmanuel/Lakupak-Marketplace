@@ -970,8 +970,8 @@ export default function OrderDetailsModal() {
                   {orderData.orderItems.reduce(
                     (total, item) =>
                       total +
-                      (item.packageQuantity || item.quantity || 1) +
-                      lineFreeQuantity(item),
+                      Math.max(1, Number(item.packageQuantity || item.quantity) || 1) *
+                      Math.max(1, Number(item.piecesPerPackage) || 1),
                     0,
                   )}
                 </Text>

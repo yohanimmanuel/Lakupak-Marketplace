@@ -312,7 +312,6 @@ export default function OrdersScreen() {
               const distributorName =
                 getDistributorCompanyName(order) || t('tabsOrders.distributorFallback');
               const productLines = buildOrderProductLines(order);
-              // This summary counts ordered items; do not relabel it as base pieces.
               const itemSummary = getOrderItemCountSummary(order.orderItems ?? []);
               const amountLabel = isOrderPricingPending(order)
                 ? t('tabsOrders.pendingPrice')
@@ -320,7 +319,7 @@ export default function OrdersScreen() {
                   ? `Rp ${Math.round(moneyAmount(order.totalAmount)).toLocaleString('id-ID')}`
                   : t('tabsOrders.pendingPrice');
               const summaryLabel = t('tabsOrders.summaryLine', {
-                count: itemSummary.total,
+                count: itemSummary.orderedPieces,
                 amount: amountLabel,
               });
 
