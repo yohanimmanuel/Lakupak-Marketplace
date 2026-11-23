@@ -647,10 +647,16 @@ export default function BuyNowModal({
                       syncParentWhileEditing
                       onPackageQuantityChange={setQuantity}
                       size="compact"
+                      displayPackages
                     />
                   ) : null}
                 </View>
               </View>
+              {computedValues ? (
+                <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 6, textAlign: 'right' }}>
+                  {(quantity * computedValues.piecesPerPackage).toLocaleString()} pieces
+                </Text>
+              ) : null}
 
               {moq != null && moq > 0 && !meetsMOQ ? (
                 <View style={styles.moqWarning}>
@@ -665,9 +671,6 @@ export default function BuyNowModal({
           {/* Sticky footer */}
           <View style={styles.footer}>
             <View style={styles.totalSection}>
-              <Text style={styles.pricingNoteFooter}>
-                1 {displayStockUnit(computedValues.packageType)} = {computedValues.piecesPerPackage} pieces
-              </Text>
               <Text style={styles.pricingNoteFooter} numberOfLines={2}>
                 {t('buyNow.labels.pricingNote', {
                   distributor: safeGetString(
