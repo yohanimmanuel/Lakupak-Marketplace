@@ -14,6 +14,8 @@ type CartProductSnapshot = {
   category?: string;
   sellingPrice?: number;
   piecesPerPackage?: number;
+  packageType?: string;
+  stockUnit?: string;
   originalSellingPrice?: number | string;
   variantOptions?: Array<{
     id: number;
@@ -51,6 +53,8 @@ function compactProductForCart(product: Product | MarketplaceProduct | CartProdu
     category: (p as { category?: string }).category,
     sellingPrice: (p as { sellingPrice?: number }).sellingPrice,
     piecesPerPackage: p.piecesPerPackage,
+    packageType: p.packageType,
+    stockUnit: p.stockUnit,
     originalSellingPrice: p.originalSellingPrice,
     variantOptions: Array.isArray(p.variantOptions)
       ? p.variantOptions.slice(0, 40).map((o) => ({
