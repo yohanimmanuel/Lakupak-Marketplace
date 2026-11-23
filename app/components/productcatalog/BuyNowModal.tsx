@@ -664,10 +664,10 @@ export default function BuyNowModal({
                 </Text>
               ) : null}
 
-              {moq != null && moq > 0 && !meetsMOQ ? (
+              {!meetsMOQ ? (
                 <View style={styles.moqWarning}>
                   <Text style={styles.moqWarningText}>
-                    {t('buyNow.labels.minimumOrder', { count: moq })}
+                    Minimum order: {computedValues.minPackages} {packageType}
                   </Text>
                 </View>
               ) : null}
