@@ -3,6 +3,7 @@ export type VariantOptionLike = {
   sellingPrice?: number | string | null;
   originalSellingPrice?: number | string | null;
   moq?: number | null;
+  moqByStockLevel?: Record<string, number> | null;
   attributes?: Record<string, string> | null;
   isDefault?: boolean;
 };
@@ -160,3 +161,17 @@ export function resolveVariantMoq(
   return null;
 }
 
+
+/** MOQ expressed in selected package units, with legacy piece MOQ fallback. */
+export function resolveStockLevelMoqUnits(
+  product: ProductWithVariantOptions,
+  variantName: string | null | undefined,
+  packageType: string,
+  piecesPerPackage: number,
+): number {
+  const option = selectVariantOptionByVariantName(product, variantName);
+  const configured = option?.moqByStockLevel?.[packageType];
+  if (configured != null && Number.isSafeInteger(configured) && configured >= 0) return Math.max(1, configured);
+  const moqPieces = resolveVariantMoq(product, variantName) ?? 0;
+  return Math.max(1, Math.ceil(moqPieces / Math.max(1, piecesPerPackage)));
+}
