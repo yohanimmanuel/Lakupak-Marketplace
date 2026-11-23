@@ -899,7 +899,9 @@ export default function OrderDetailsModal() {
           <Text style={styles.productSpecs}>
             {t('buyNow.labels.stockUnit', {
               unit: displayStockUnitLabel(item.packageType || 'Pieces'),
-            })}
+            })}{Math.max(1, Number(item.piecesPerPackage) || 1) > 1
+              ? ` (${Math.max(1, Number(item.piecesPerPackage) || 1)} pieces)`
+              : ''}
           </Text>
           <View style={styles.priceRow}>
             <View style={styles.priceContainer}>
