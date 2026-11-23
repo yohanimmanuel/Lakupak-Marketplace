@@ -616,9 +616,9 @@ export default function BuyNowModal({
                 <Text style={styles.quantityLabel}>Stock level</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
                   {(product as MarketplaceProduct & { stockLevels?: Array<{ name: string; piecesPerUnit: number }> }).stockLevels?.map(level => (
-                    <TouchableOpacity key={level.name} onPress={() => { setSelectedStockLevelName(level.name); setQuantity(1); }}
-                      style={{ borderWidth: 1, borderColor: computedValues?.packageType === level.name ? '#2563eb' : '#d1d5db', borderRadius: 8, padding: 10 }}>
-                      <Text>{level.name} · {level.piecesPerUnit} pieces</Text>
+                    <TouchableOpacity key={level.name} accessibilityRole="button" accessibilityState={{ selected: computedValues?.packageType === level.name }} onPress={() => { setSelectedStockLevelName(level.name); setQuantity(1); }}
+                      style={{ borderWidth: 1, borderColor: computedValues?.packageType === level.name ? '#2563eb' : '#e5e7eb', backgroundColor: computedValues?.packageType === level.name ? '#dbeafe' : '#fff', borderRadius: 7, paddingHorizontal: 13, paddingVertical: 10 }}>
+                      <Text style={{ color: computedValues?.packageType === level.name ? '#2563eb' : '#111827', fontWeight: '500', fontSize: 13 }}>{level.name}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
