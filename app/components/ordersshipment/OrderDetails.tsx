@@ -898,7 +898,7 @@ export default function OrderDetailsModal() {
           ) : null}
           <Text style={styles.productSpecs}>
             {t('buyNow.labels.stockUnit', {
-              unit: displayStockUnitLabel(item.packageType),
+              unit: displayStockUnitLabel(item.packageType || 'Pieces'),
             })}
           </Text>
           <View style={styles.priceRow}>
@@ -932,7 +932,7 @@ export default function OrderDetailsModal() {
                   </Text>
                 </View>
               ) : null}
-              <Text style={styles.quantityBadge}>x{item.packageQuantity || item.quantity || 1}</Text>
+              <Text style={styles.quantityBadge}>x{item.packageQuantity || item.quantity || 1} {displayStockUnitLabel(item.packageType || 'Pieces')}</Text>
             </View>
           </View>
         </View>
