@@ -94,6 +94,7 @@ export interface MarketplaceProduct {
   // Default package for display
   packageType: string;
   piecesPerPackage: number;
+  stockLevels?: Array<{ name: string; piecesPerUnit: number; unitsPerPreviousLevel?: number }>;
   stockUnit?: string;
   seller: {
     name: string;
@@ -216,6 +217,7 @@ interface GraphQLMarketplaceProduct {
   publishedAt?: string;
   lastSyncAt?: string;
   piecesPerPackage: number;
+  stockLevels?: Array<{ name: string; piecesPerUnit: number; unitsPerPreviousLevel?: number }>;
   packageType: string;
   stockUnit?: string;
   seller: Record<string, unknown>;
@@ -303,6 +305,7 @@ export function transformGraphQLProduct(product: GraphQLMarketplaceProduct | Rec
     // Keep packaging distinct from catalog stock unit (UI falls back stockUnit ?? packageType).
     packageType: String(p.packageType || 'Pieces'),
     stockUnit: String(p.stockUnit || p.packageType || 'Pieces'),
+    stockLevels: Array.isArray(p.stockLevels) ? p.stockLevels : [{ name: 'Pieces', piecesPerUnit: 1 }],
     variants: originalVariants as unknown as ProductVariant[],
     variantOptions: transformedVariantOptions,
     seller: p.seller as MarketplaceProduct['seller'],
@@ -373,6 +376,7 @@ export const marketplaceService = {
               publishedAt
               lastSyncAt
               piecesPerPackage
+              stockLevels
               packageType
               stockUnit
         seller {
@@ -515,6 +519,7 @@ export const marketplaceService = {
               publishedAt
               lastSyncAt
               piecesPerPackage
+              stockLevels
               packageType
               stockUnit
               seller {
