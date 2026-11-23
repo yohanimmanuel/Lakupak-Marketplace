@@ -25,7 +25,7 @@ import { useDataStore } from '../stores/dataStore';
 import { useAuthStore } from '../stores/authStore';
 import { websocketService } from '../services/websocket';
 import { useTranslation } from 'react-i18next';
-import { resolveVariantMoq, resolveVariantPricing } from '../utils/variantRules';
+import { resolveVariantMoq, resolveVariantPricing, resolveStockLevelMoqUnits } from '../utils/variantRules';
 import { getDistributorDisplayName, resolveDistributorId } from '../utils/cartDistributor';
 import QuantitySelector from './components/productcatalog/QuantitySelector';
 import { formatCurrency } from '../utils/currencyUtils';
@@ -160,8 +160,12 @@ export default function CartScreen() {
     };
   }, [isAuthenticated, token]); // loadFromDatabase removed - using store method directly
 
-  const getItemMOQ = (item: CartItem): number | null =>
-    resolveVariantMoq(getItemProduct(item), item.variant);
+  const getItemMOQ = (item: CartItem): number | null => {
+    const product = getItemProduct(item);
+    const pieces = Math.max(1, Number(item.product.piecesPerPackage) || 1);
+    const unit = item.product.stockUnit ?? item.product.packageType ?? 'Pieces';
+    return resolveStockLevelMoqUnits(product, item.variant, unit, pieces) * pieces;
+  };
 
   // MOQ is always in base pieces; package count is the buyer's chosen unit.
   const getOrderedPieces = (item: CartItem): number =>
