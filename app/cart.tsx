@@ -163,6 +163,10 @@ export default function CartScreen() {
   const getItemMOQ = (item: CartItem): number | null =>
     resolveVariantMoq(getItemProduct(item), item.variant);
 
+  // MOQ is always in base pieces; package count is the buyer's chosen unit.
+  const getOrderedPieces = (item: CartItem): number =>
+    item.quantity * Math.max(1, Number((item.product as MarketplaceProduct).piecesPerPackage) || 1);
+
   const getItemStockPieces = (item: CartItem): number => {
     const product = getItemProduct(item);
     const { option } = resolveVariantPricing(
@@ -181,7 +185,7 @@ export default function CartScreen() {
     const moq = getItemMOQ(item);
     if (moq === null) return null;
 
-    const totalPieces = item.quantity * piecesPerPackage;
+    const totalPieces = getOrderedPieces(item);
     if (totalPieces >= moq) return null;
 
     return (
@@ -200,8 +204,7 @@ export default function CartScreen() {
     selectedItems.forEach(item => {
       const moq = getItemMOQ(item);
       if (moq !== null) {
-        const piecesPerPackage = (item.product as MarketplaceProduct).piecesPerPackage || 1;
-        const totalPieces = item.quantity * piecesPerPackage;
+        const totalPieces = getOrderedPieces(item);
         
         if (totalPieces < moq) {
           invalidItems.push({ item, moq, currentPieces: totalPieces });
