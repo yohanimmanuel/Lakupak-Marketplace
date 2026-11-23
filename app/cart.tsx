@@ -268,7 +268,15 @@ export default function CartScreen() {
       const productId = item.product?.id;
       if (productId) {
         const fresh = products.find((p) => p.id === productId);
-        if (fresh) return fresh as MarketplaceProduct;
+        if (fresh) {
+          const saved = item.product as MarketplaceProduct;
+          return {
+            ...fresh,
+            stockUnit: saved.stockUnit ?? fresh.stockUnit,
+            packageType: saved.packageType ?? fresh.packageType,
+            piecesPerPackage: saved.piecesPerPackage ?? fresh.piecesPerPackage,
+          } as MarketplaceProduct;
+        }
       }
       return item.product as MarketplaceProduct;
     },
