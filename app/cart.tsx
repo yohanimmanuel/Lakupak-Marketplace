@@ -163,7 +163,8 @@ export default function CartScreen() {
   const getItemMOQ = (item: CartItem): number | null => {
     const product = getItemProduct(item);
     const pieces = Math.max(1, Number(item.product.piecesPerPackage) || 1);
-    const unit = item.product.stockUnit ?? item.product.packageType ?? 'Pieces';
+    const selectedProduct = item.product as MarketplaceProduct;
+    const unit = selectedProduct.stockUnit ?? selectedProduct.packageType ?? 'Pieces';
     return resolveStockLevelMoqUnits(product, item.variant, unit, pieces) * pieces;
   };
 
