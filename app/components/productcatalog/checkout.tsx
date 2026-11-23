@@ -2005,9 +2005,6 @@ const copyPickupAddress = () => {
               {formatCurrency(checkoutBaseTotal)}
             </Text>
           ) : null}
-          <Text style={checkoutBaseTotal > 0 ? styles.bottomTotalLabel : styles.bottomTotalValue}>
-            {t('ordersFlow.checkout.summary.totalItems', { count: checkoutItemCount })}
-          </Text>
         </View>
         <TouchableOpacity
           style={[
