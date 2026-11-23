@@ -445,6 +445,9 @@ export default function CartScreen() {
                 </TouchableOpacity>
 
                 <View style={styles.qtyPickerWrap}>
+                  <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 4, textAlign: 'right' }}>
+                    {String(marketplaceProduct.stockUnit || marketplaceProduct.packageType || 'Pieces')}
+                  </Text>
                   <Text style={{ fontSize: 12, color: "#6B7280", marginBottom: 6, textAlign: "right" }}>{(item.quantity * piecesPerPackage).toLocaleString()} pieces</Text>
                   <QuantitySelector
                     size="compact"
