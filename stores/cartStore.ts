@@ -94,6 +94,8 @@ interface DatabaseUserActivity {
     variant?: string;
     addedAt?: number;
     selected?: boolean;
+    packageType?: string;
+    piecesPerPackage?: number;
   };
   createdAt: string;
   updatedAt: string;
@@ -153,8 +155,15 @@ interface CartState {
 // Helper function to convert database activity to cart item
 const convertDatabaseToCartItem = (dbItem: DatabaseUserActivity | { id: number; userId: number; productId: string; productData: unknown; activityType: string; metadata?: Record<string, unknown>; createdAt: string; updatedAt: string }): CartItem => {
   // Handle both DatabaseUserActivity and service CartItem types
-  const metadata = (dbItem.metadata as { quantity?: number; variant?: string; selected?: boolean; addedAt?: number }) || {};
-  const productData = dbItem.productData as Product | MarketplaceProduct;
+  const metadata = (dbItem.metadata as { quantity?: number; variant?: string; selected?: boolean; addedAt?: number; packageType?: string; piecesPerPackage?: number }) || {};
+  const rawProduct = dbItem.productData as MarketplaceProduct;
+  const selectedPackageType = typeof metadata.packageType === 'string' ? metadata.packageType : undefined;
+  const selectedRatio = Number(metadata.piecesPerPackage);
+  const productData = {
+    ...rawProduct,
+    ...(selectedPackageType ? { stockUnit: selectedPackageType, packageType: selectedPackageType } : {}),
+    ...(Number.isSafeInteger(selectedRatio) && selectedRatio > 0 ? { piecesPerPackage: selectedRatio } : {}),
+  } as MarketplaceProduct;
   
   return {
     id: `db-${dbItem.id}`,

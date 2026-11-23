@@ -437,14 +437,13 @@ export default function CartScreen() {
                     <Text style={styles.promotionGiftText}>
                       +{promotionGift.freeQty} Free pieces
                     </Text>
-                  ) : (
-                    <Text style={styles.priceNote} numberOfLines={2}>
-                      {t('cart.pricingNote', { distributor: distributorName || t('tabsOrders.distributorFallback') })}
-                    </Text>
-                  )}
+                  ) : null}
                 </TouchableOpacity>
 
                 <View style={styles.qtyPickerWrap}>
+                  <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 4, textAlign: 'right' }}>
+                    {String(marketplaceProduct.stockUnit || marketplaceProduct.packageType || 'Pieces')}
+                  </Text>
                   <Text style={{ fontSize: 12, color: "#6B7280", marginBottom: 6, textAlign: "right" }}>{(item.quantity * piecesPerPackage).toLocaleString()} pieces</Text>
                   <QuantitySelector
                     size="compact"
@@ -648,9 +647,6 @@ export default function CartScreen() {
               <>
                 <Text style={styles.totalPrice} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                   {formatCurrency(selectedBaseTotal)}
-                </Text>
-                <Text style={styles.pricingNoteFooter} numberOfLines={2}>
-                  {t('cart.basePriceNote')}
                 </Text>
               </>
             ) : null}
