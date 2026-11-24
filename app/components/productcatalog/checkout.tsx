@@ -38,7 +38,6 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Product } from '../../../data/sampleProducts';
 import { MarketplaceProduct } from '../../../services/marketplace';
-import { calculateProductPromotion } from '../../../utils/promotionUtils';
 import { displayStockUnitLabel } from '../../../utils/stockUnit';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore, CartItem } from '../../../stores/cartStore';
@@ -1569,24 +1568,6 @@ const copyPickupAddress = () => {
                             })()}
                           </View>
                           <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
-                            {(() => {
-                              const promotionGift = calculateProductPromotion(
-                                getItemProduct(item),
-                                item.quantity,
-                                item.variant,
-                              );
-
-                              if (!promotionGift?.freeQty) return null;
-
-                              return (
-                                <View style={styles.promotionGiftBadge}>
-                                  <Gift size={12} color="#9333EA" />
-                                  <Text style={styles.promotionGiftText}>
-                                    +{promotionGift.freeQty} {t('ordersFlow.checkout.free')}
-                                  </Text>
-                                </View>
-                              );
-                            })()}
                             <Text style={styles.quantityBadge}>x{item.quantity}</Text>
                           </View>
                         </View>
@@ -1756,27 +1737,6 @@ const copyPickupAddress = () => {
                       ) : null}
                     </View>
                     <View style={{alignItems: 'flex-end', flexDirection: 'row', gap: 6}}>
-                      {(() => {
-                        // Calculate promotion using standardized function
-                        const variantName = params.variantName || null;
-                        const promotionGift = calculateProductPromotion(
-                          product,
-                          quantity,
-                          variantName
-                        );
-                        
-                        if (promotionGift) {
-                          return (
-                            <View style={styles.promotionGiftBadge}>
-                              <Gift size={12} color="#9333EA" />
-                              <Text style={styles.promotionGiftText}>
-                                +{promotionGift.freeQty} {t('ordersFlow.checkout.free')}
-                              </Text>
-                            </View>
-                          );
-                        }
-                        return null;
-                      })()}
                       <Text style={styles.quantityBadge}>x{quantity}</Text>
                     </View>
                   </View>
