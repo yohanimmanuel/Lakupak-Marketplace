@@ -456,10 +456,8 @@ export default function BuyNowModal({
       ...(appendOrderId ? { appendOrderId } : {}),
     };
 
-    const promotionDetails = product?.promotionDetails;
-    if (promotionDetails) {
-      checkoutParams.promotionDetails = JSON.stringify(promotionDetails);
-    }
+    // Never forward product-level promotions into checkout. Only the
+    // distributor's approved order-item snapshot may disclose private offers.
 
     router.push({
       pathname: '/components/productcatalog/checkout',

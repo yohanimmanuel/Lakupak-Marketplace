@@ -2,8 +2,6 @@
  * Utility functions for promotion calculations that respect MOQ requirements
  */
 
-import { resolveVariantMoq } from './variantRules';
-
 export interface PromotionDetails {
   minQuantity: number;
   freeQuantity: number;
@@ -130,32 +128,41 @@ export function calculatePromotionGiftWithPackages(
 }
 
 /**
- * COMPREHENSIVE HELPER: Calculate promotion for a product with variant
- * This is the STANDARD function to use across all components (BuyNowModal, Cart, Checkout)
- * 
- * @param product - The product with promotion details and package info
- * @param quantityInPackages - Quantity ordered in packages (cartons, boxes, etc.)
- * @param variantName - The selected variant name (optional)
- * @returns PromotionGift object or null if no free items
+ * Promotion eligibility is determined by the distributor, not by public
+ * product metadata. A caller may pass an APPROVED order-line promotion
+ * snapshot, tied to its variant and stock level. Catalog/checkout calls that
+ * only have a product must not expose or calculate private offers.
  */
+export type ApprovedPromotionSnapshot = {
+  promotionDetails: PromotionDetails | null;
+  variantOptionId: number | null;
+  eligibleStockLevels: string[] | null;
+  stockLevelName: string;
+  piecesPerPackage: number;
+  moq: number | null;
+};
+
 export function calculateProductPromotion(
   product: ProductWithPromotion | null | undefined,
   quantityInPackages: number,
-  variantName?: string | null
+  _variantName?: string | null,
+  approved?: ApprovedPromotionSnapshot | null,
 ): PromotionGift | null {
-  if (!product?.promotionDetails) return null;
-  
-  // Get product-level package info (piece-based system)
-  const piecesPerPackage = product.piecesPerPackage || 1;
-  const totalPieces = quantityInPackages * piecesPerPackage;
-  
-  const moq =
-    variantName && variantName !== 'Default' ? resolveVariantMoq(product, variantName) : null;
-
+  if (!product || !approved?.promotionDetails) return null;
+  const selectedVariant = product.variantOptions?.find(option =>
+    option.id === approved.variantOptionId
+  );
+  // Explicit variant targeting must match a real option. Whole-product
+  // approved snapshots use null and apply to any variant.
+  if (approved.variantOptionId != null && !selectedVariant) return null;
+  if (approved.eligibleStockLevels !== null &&
+      !approved.eligibleStockLevels.includes(approved.stockLevelName)) return null;
+  const piecesPerPackage = Number(approved.piecesPerPackage);
+  if (!Number.isFinite(piecesPerPackage) || piecesPerPackage <= 0) return null;
   return calculatePromotionGift(
-    product.promotionDetails,
-    totalPieces,
-    moq
+    approved.promotionDetails,
+    quantityInPackages * piecesPerPackage,
+    approved.moq,
   );
 }
 
