@@ -145,7 +145,7 @@ export type ApprovedPromotionSnapshot = {
 export function calculateProductPromotion(
   product: ProductWithPromotion | null | undefined,
   quantityInPackages: number,
-  variantName?: string | null,
+  _variantName?: string | null,
   approved?: ApprovedPromotionSnapshot | null,
 ): PromotionGift | null {
   if (!product || !approved?.promotionDetails) return null;
@@ -154,9 +154,7 @@ export function calculateProductPromotion(
   );
   // Explicit variant targeting must match a real option. Whole-product
   // approved snapshots use null and apply to any variant.
-  if (approved.variantOptionId != null &&
-      (!selectedVariant || (variantName && variantName !== 'Default' &&
-        !matchesApprovedVariant(product, selectedVariant.id, variantName)))) return null;
+  if (approved.variantOptionId != null && !selectedVariant) return null;
   if (approved.eligibleStockLevels !== null &&
       !approved.eligibleStockLevels.includes(approved.stockLevelName)) return null;
   const piecesPerPackage = Number(approved.piecesPerPackage);
@@ -166,20 +164,6 @@ export function calculateProductPromotion(
     quantityInPackages * piecesPerPackage,
     approved.moq,
   );
-}
-
-function matchesApprovedVariant(
-  product: ProductWithPromotion,
-  optionId: number,
-  variantName: string,
-): boolean {
-  const option = product.variantOptions?.find(value => value.id === optionId);
-  const variant = product.variants?.find(value => value.id != null &&
-    String(value.id) === String(optionId));
-  return Boolean(option && (
-    variantName === variant?.variantName ||
-    variantName === String(optionId)
-  ));
 }
 
 /**
