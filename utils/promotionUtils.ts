@@ -136,6 +136,7 @@ export function calculatePromotionGiftWithPackages(
 export type ApprovedPromotionSnapshot = {
   promotionDetails: PromotionDetails | null;
   variantOptionId: number | null;
+  selectedVariantOptionId: number | null;
   eligibleStockLevels: string[] | null;
   stockLevelName: string;
   piecesPerPackage: number;
@@ -154,7 +155,8 @@ export function calculateProductPromotion(
   );
   // Explicit variant targeting must match a real option. Whole-product
   // approved snapshots use null and apply to any variant.
-  if (approved.variantOptionId != null && !selectedVariant) return null;
+  if (approved.variantOptionId != null &&
+      (!selectedVariant || approved.variantOptionId !== approved.selectedVariantOptionId)) return null;
   if (approved.eligibleStockLevels !== null &&
       !approved.eligibleStockLevels.includes(approved.stockLevelName)) return null;
   const piecesPerPackage = Number(approved.piecesPerPackage);

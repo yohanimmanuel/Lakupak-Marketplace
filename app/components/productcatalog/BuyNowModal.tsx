@@ -23,7 +23,6 @@ import { useCartStore } from '../../../stores/cartStore';
 import { formatCurrency } from '../../../utils/currencyUtils';
 import { useTranslation } from 'react-i18next';
 import { matchesVariantAttributes, parseVariantNameToAttributes } from '../../../utils/variantRules';
-import { calculateProductPromotion } from '../../../utils/promotionUtils';
 import { displayStockUnit } from '../../../utils/stockUnit';
 import QuantitySelector from './QuantitySelector';
 
@@ -407,18 +406,6 @@ export default function BuyNowModal({
     return { definitions: [], options: [] };
   }, [product]);
 
-  const promotionInfo = useMemo(() => {
-    if (!product?.promotionDetails || !computedValues) return null;
-
-    const promotionGift = calculateProductPromotion(
-      product,
-      quantity,
-      computedValues.variantName,
-    );
-
-    return promotionGift?.freeQty ?? null;
-  }, [product, quantity, computedValues]);
-
   const handleConfirm = useCallback(() => {
     if (!product || !computedValues) return;
     const {
@@ -634,13 +621,6 @@ export default function BuyNowModal({
                 <Text style={styles.quantityLabel}>{t('buyNow.labels.quantity')}</Text>
 
                 <View style={styles.quantityControlsGroup}>
-                  {promotionInfo != null && promotionInfo > 0 ? (
-                    <View style={styles.freeItemsContainer}>
-                      <Gift size={14} color="#9333EA" />
-                      <Text style={styles.freeItemsText}>{t('buyNow.labels.freeItems', { count: promotionInfo })}</Text>
-                    </View>
-                  ) : null}
-
                   {computedValues ? (
                     <QuantitySelector
                       packageQuantity={quantity}
