@@ -297,6 +297,10 @@
       "required": "Masukkan kode referral dari distributor Anda.",
       "invalid": "Kode referral ini tidak valid. Periksa kembali dengan distributor Anda."
     },
+    "invite": {
+      "banner": "Anda diundang oleh {{distributor}} sebagai {{store}}. Harga klien Anda berlaku setelah pendaftaran selesai.",
+      "lockedReferralHint": "Kode referral diisi dari undangan Anda."
+    },
     "forgotPassword": {
       "title": "Lupa Kata Sandi",
       "passwordHint": "Minimal 8 karakter, dengan huruf besar, huruf kecil, angka, dan karakter khusus.",

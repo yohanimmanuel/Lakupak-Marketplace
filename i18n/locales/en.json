@@ -297,6 +297,10 @@
       "required": "Enter the referral code from your distributor.",
       "invalid": "This referral code is not valid. Check it with your distributor."
     },
+    "invite": {
+      "banner": "You were invited by {{distributor}} as {{store}}. Your client pricing will apply after you finish.",
+      "lockedReferralHint": "Referral code filled from your invite."
+    },
     "forgotPassword": {
       "title": "Forgot Password",
       "passwordHint": "At least 8 characters, with uppercase, lowercase, number, and special character.",

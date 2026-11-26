@@ -42,9 +42,8 @@ import { useDataStore } from '../../../stores/dataStore';
 import { API_BASE_URL } from '../../../services/config';
 import { ordersService, type Order as MarketplaceOrder } from '../../../services/orders';
 import { websocketService } from '../../../services/websocket';
-import { calculateOrderItemPromotion } from '../../../utils/promotionUtils';
 import { displayStockUnitLabel } from '../../../utils/stockUnit';
-import { getShownOrderDiscount } from '../../../utils/orderItemDisplay';
+import { getOrderItemPromotionFreePieces, getShownOrderDiscount } from '../../../utils/orderItemDisplay';
 import {
   isOrderPricingPending,
   isLinePricingPending,
@@ -80,6 +79,7 @@ interface OrderItem {
   variantName?: string;
   variantNameSnapshot?: string;
   moq?: number;
+  moqSnapshot?: number | null;
   promotionDetails?: {
     minQuantity: number;
     freeQuantity: number;
@@ -843,22 +843,17 @@ export default function OrderDetailsModal() {
     const offersVisible = isBuyerOfferVisible(orderData);
     const lineFreeQuantity = (item: OrderItem) => {
       if (!offersVisible) return 0;
-      const promotionDetails = item.promotionDetails || item.promotionDetailsSnapshot;
-      if (!promotionDetails) return 0;
-      const piecesPerPackage = item.piecesPerPackage || 1;
-      const quantity = item.packageQuantity || item.quantity || 1;
-      let moq: number | null = null;
-      try {
-        const parsed =
-          typeof promotionDetails === 'string' ? JSON.parse(promotionDetails) : promotionDetails;
-        moq = parsed.moq || null;
-      } catch {
-        moq = null;
-      }
-      return (
-        calculateOrderItemPromotion(promotionDetails, quantity, piecesPerPackage, moq)?.freeQty ??
-        0
-      );
+      return getOrderItemPromotionFreePieces({
+        packageQuantity: item.packageQuantity || item.quantity || 1,
+        piecesPerPackage: item.piecesPerPackage || 1,
+        promotionDetailsSnapshot:
+          typeof item.promotionDetailsSnapshot === 'string'
+            ? item.promotionDetailsSnapshot
+            : item.promotionDetails
+              ? JSON.stringify(item.promotionDetails)
+              : null,
+        moqSnapshot: item.moqSnapshot ?? item.moq ?? null,
+      });
     };
     const renderProductItem = (item: OrderItem, index: number) => {
       const freeQty = lineFreeQuantity(item);

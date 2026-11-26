@@ -1,8 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, Image, Animated, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { AUTH_ERROR_CODE, getAuthErrorCode, loginWithCredentials } from '../../../services/auth';
+import { API_BASE_URL } from '../../../services/config';
 // import { signInWithGoogle } from '../../../services/auth'; // Temporarily disabled
 import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
@@ -13,6 +14,8 @@ import { useTranslation } from 'react-i18next';
 export default function LoginModal() {
   const router = useRouter();
   const { t } = useTranslation();
+  const params = useLocalSearchParams<{ invite?: string }>();
+  const inviteToken = String(params.invite || '').trim();
   const setToken = useAuthStore(s => s.setToken);
   const setUser = useAuthStore(s => s.setUser);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -23,6 +26,44 @@ export default function LoginModal() {
   const [referralCode, setReferralCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [inviteBanner, setInviteBanner] = useState<string | null>(null);
+  const [inviteLocksReferral, setInviteLocksReferral] = useState(false);
+
+  useEffect(() => {
+    if (!inviteToken) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/api/mobile/auth/invite/preview?token=${encodeURIComponent(inviteToken)}`,
+        );
+        const data = (await res.json().catch(() => ({}))) as {
+          distributorName?: string;
+          clientStoreName?: string;
+          referralCode?: string | null;
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!res.ok) {
+          Alert.alert(t('auth.referralCode.title'), data.error || t('auth.referralCode.invalid'));
+          return;
+        }
+        setInviteBanner(
+          t('auth.invite.banner', {
+            distributor: data.distributorName || 'Distributor',
+            store: data.clientStoreName || 'your store',
+          }),
+        );
+        setInviteLocksReferral(true);
+        if (data.referralCode) setReferralCode(String(data.referralCode).toUpperCase());
+      } catch {
+        if (!cancelled) Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.invalid'));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [inviteToken, t]);
 
 
   // (Keyboard listeners removed — state wasn't used)
@@ -143,12 +184,18 @@ export default function LoginModal() {
               </View>
             </View>
 
+            {inviteBanner ? (
+              <View style={{ marginTop: 8, marginBottom: 12, borderRadius: 12, borderWidth: 1, borderColor: '#bfdbfe', backgroundColor: '#eff6ff', paddingHorizontal: 12, paddingVertical: 10 }}>
+                <Text style={{ color: '#1e3a8a', fontSize: 13, lineHeight: 18 }}>{inviteBanner}</Text>
+              </View>
+            ) : null}
+
             {/* Distributor Referral Code */}
             <View style={{ marginTop: 8, marginBottom: 16 }}>
               <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
                 {t('auth.referralCode.label')}
               </Text>
-              <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
+              <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', opacity: inviteLocksReferral ? 0.7 : 1 }}>
                 <TextInput
                   value={referralCode}
                   onChangeText={(value) => setReferralCode(value.toUpperCase())}
@@ -158,10 +205,11 @@ export default function LoginModal() {
                   autoCapitalize="characters"
                   autoCorrect={false}
                   maxLength={24}
+                  editable={!inviteLocksReferral}
                 />
               </View>
               <Text style={{ color: '#6b7280', fontSize: 12, marginTop: 6 }}>
-                {t('auth.referralCode.loginHint')}
+                {inviteLocksReferral ? t('auth.invite.lockedReferralHint') : t('auth.referralCode.loginHint')}
               </Text>
             </View>
 
@@ -183,14 +231,19 @@ export default function LoginModal() {
                   Alert.alert(t('auth.login.alerts.missingTitle'), t('auth.login.alerts.missingBody'));
                   return;
                 }
-                if (!referralCode.trim()) {
+                if (!inviteToken && !referralCode.trim()) {
                   Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.required'));
                   return;
                 }
                 
                 setIsLoggingIn(true);
                 try {
-                  const result = await loginWithCredentials(username.trim(), password, referralCode);
+                  const result = await loginWithCredentials(
+                    username.trim(),
+                    password,
+                    referralCode,
+                    inviteToken || undefined,
+                  );
                   
                   // CRITICAL: Set token and user FIRST to ensure proper user isolation
                   await setToken(result.token);

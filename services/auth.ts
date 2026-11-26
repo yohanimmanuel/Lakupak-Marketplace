@@ -97,11 +97,21 @@ export async function verifyOtp(params: {
   return res.json() as Promise<{ token: string; user: { id: number; name?: string | null; email: string; address?: string | null } }>
 }
 
-export async function loginWithCredentials(username: string, password: string, referralCode?: string): Promise<{ token: string; user: { id: number; name?: string | null; email: string; address?: string | null } }> {
+export async function loginWithCredentials(
+  username: string,
+  password: string,
+  referralCode?: string,
+  inviteToken?: string,
+): Promise<{ token: string; user: { id: number; name?: string | null; email: string; address?: string | null } }> {
   const res = await fetch(`${API_BASE_URL}/api/mobile/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, referralCode: referralCode?.trim() || undefined }),
+    body: JSON.stringify({
+      username,
+      password,
+      referralCode: referralCode?.trim() || undefined,
+      inviteToken: inviteToken?.trim() || undefined,
+    }),
   })
 
   if (res.ok) {
@@ -200,12 +210,17 @@ export async function registerAccount(params: {
   phone: string
   countryCode?: string
   countryDialCode?: string
-  referralCode: string
+  referralCode?: string
+  inviteToken?: string
 }): Promise<{ token: string; user: { id: number; name?: string | null; email: string; chosenAddress?: string | null; address?: string | null } }> {
   const res = await fetch(`${API_BASE_URL}/api/mobile/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    body: JSON.stringify({
+      ...params,
+      referralCode: params.referralCode?.trim() || undefined,
+      inviteToken: params.inviteToken?.trim() || undefined,
+    }),
   })
 
   if (!res.ok) {
