@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type Notification = {
   id: string;
-  type: 'order' | 'discount' | 'promotion' | 'update';
+  type: 'order' | 'discount' | 'promotion' | 'update' | 'membership';
   title: string;
   message: string;
   timestamp: string;
@@ -12,7 +12,12 @@ export type Notification = {
   icon?: string;
   actionText?: string;
   productImage?: string;
+  /** Deep-link target for alert rows (e.g. membership pending). */
+  actionPath?: string;
 };
+
+export const MEMBERSHIP_PENDING_NOTIFICATION_ID = 'membership_pending';
+export const MEMBERSHIP_APPROVED_NOTIFICATION_ID = 'membership_approved';
 
 const NOTIFICATIONS_KEY_PREFIX = 'laku_notifications_';
 /** Stored and shown order updates expire three days after they are received. */
@@ -56,6 +61,22 @@ function isOrderStatusNotification(notification: Notification): boolean {
   return true;
 }
 
+function isAlertNotification(notification: Notification): boolean {
+  return (
+    notification.type === 'membership' ||
+    notification.type === 'discount' ||
+    notification.type === 'promotion' ||
+    notification.type === 'update'
+  );
+}
+
+function shouldKeepStoredNotification(notification: Notification, now = Date.now()): boolean {
+  if (notification.type === 'membership') return true;
+  const receivedAt = notificationReceivedAt(notification);
+  if (receivedAt == null || now - receivedAt > ORDER_NOTIFICATION_TTL_MS) return false;
+  return isOrderStatusNotification(notification) || isAlertNotification(notification);
+}
+
 export class NotificationService {
   // Get user-specific storage key
   private static getUserKey(userId: number | null): string {
@@ -71,11 +92,7 @@ export class NotificationService {
       const parsed = JSON.parse(notificationsJson) as Notification[];
       if (!Array.isArray(parsed)) return [];
       const now = Date.now();
-      const kept = parsed.filter((notification) => {
-        const receivedAt = notificationReceivedAt(notification);
-        if (receivedAt == null || now - receivedAt > ORDER_NOTIFICATION_TTL_MS) return false;
-        return isOrderStatusNotification(notification);
-      });
+      const kept = parsed.filter((notification) => shouldKeepStoredNotification(notification, now));
       if (kept.length !== parsed.length) {
         await AsyncStorage.setItem(key, JSON.stringify(kept));
       }
@@ -116,14 +133,23 @@ export class NotificationService {
   }
 
   // Add a new notification for a specific user
-  static async addNotification(notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'>, userId: number | null = null): Promise<void> {
+  static async addNotification(
+    notification: Omit<Notification, 'id' | 'timestamp' | 'isRead'> & { id?: string },
+    userId: number | null = null,
+  ): Promise<void> {
     try {
-      if (!isOrderStatusNotification({ ...notification, id: '', timestamp: '', isRead: false })) return;
+      const draft: Notification = {
+        ...notification,
+        id: notification.id || '',
+        timestamp: '',
+        isRead: false,
+      };
+      if (!isOrderStatusNotification(draft) && !isAlertNotification(draft)) return;
       const notifications = await this.getNotifications(userId);
       const receivedAt = new Date().toISOString();
       const newNotification: Notification & { receivedAt: string } = {
         ...notification,
-        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: notification.id || `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         receivedAt,
         timestamp: new Date().toLocaleString('en-US', {
           day: '2-digit',
@@ -135,11 +161,58 @@ export class NotificationService {
         }).replace(',', ''),
         isRead: false
       };
-      
-      notifications.unshift(newNotification); // Add to beginning
-      await this.saveNotifications(notifications, userId);
+
+      const withoutDupes = notification.id
+        ? notifications.filter((row) => row.id !== notification.id)
+        : notifications;
+      withoutDupes.unshift(newNotification);
+      await this.saveNotifications(withoutDupes, userId);
     } catch (error) {
       // Handle error silently
+    }
+  }
+
+  /** Account alert: waiting for distributor storefront approval. Deduped per user. */
+  static async createMembershipPendingNotification(
+    title: string,
+    message: string,
+    userId: number | null = null,
+  ): Promise<void> {
+    await this.addNotification(
+      {
+        id: MEMBERSHIP_PENDING_NOTIFICATION_ID,
+        type: 'membership',
+        title,
+        message,
+        actionPath: '/useraccounts/loginsignup/access-pending',
+      },
+      userId,
+    );
+  }
+
+  /** Remove the pending-access Alerts row (e.g. after distributor approval). */
+  static async clearMembershipPendingNotification(userId: number | null = null): Promise<void> {
+    try {
+      const notifications = await this.getNotifications(userId);
+      const next = notifications.filter((row) => row.id !== MEMBERSHIP_PENDING_NOTIFICATION_ID);
+      if (next.length !== notifications.length) {
+        await this.saveNotifications(next, userId);
+      }
+    } catch {
+      // best-effort
+    }
+  }
+
+  /** Remove legacy approved-access Alerts rows (OS push is enough). */
+  static async clearMembershipApprovedNotification(userId: number | null = null): Promise<void> {
+    try {
+      const notifications = await this.getNotifications(userId);
+      const next = notifications.filter((row) => row.id !== MEMBERSHIP_APPROVED_NOTIFICATION_ID);
+      if (next.length !== notifications.length) {
+        await this.saveNotifications(next, userId);
+      }
+    } catch {
+      // best-effort
     }
   }
 

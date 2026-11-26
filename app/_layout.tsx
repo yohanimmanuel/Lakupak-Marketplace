@@ -15,6 +15,10 @@ import { useDataStore } from '../stores/dataStore';
 import { useCartStore } from '../stores/cartStore';
 import { useUserActivityStore } from '../stores/userActivityStore';
 import { pushNotificationService } from '../services/pushNotifications';
+import {
+  notifyMembershipApproved,
+  syncMembershipApprovedFromSystemTray,
+} from '../services/membershipPendingNotify';
 import { applyStoredUserPreferences } from '../utils/applyStoredUserPreferences';
 import { getPreferredLanguage, getLanguageForPublicOrGuestSession } from '../utils/preferences';
 import SuspendedAccountModal from '../components/SuspendedAccountModal';
@@ -170,6 +174,10 @@ function RootLayoutNav() {
         const currentUser = useAuthStore.getState().user;
         startAutoRefresh(currentToken || undefined);
 
+        if (currentUser?.id) {
+          void syncMembershipApprovedFromSystemTray(currentUser.id);
+        }
+
         // Retry push registration if we still don't have a token (e.g. first run failed, permission granted later, FCM later available)
         if (currentUser?.id && currentToken && !pushNotificationService.getPushToken()) {
           try {
@@ -236,10 +244,12 @@ function RootLayoutNav() {
     };
 
     initializePushNotifications();
+    if (user?.id) {
+      void syncMembershipApprovedFromSystemTray(user.id);
+    }
 
     // When a push arrives in foreground, show one in-app notification with same title/body (no default; dedup with WebSocket)
     notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      if (AppState.currentState !== 'active') return;
       const trigger = notification.request.trigger as { type?: string } | null;
       const isRemote = trigger && trigger.type === 'push';
       if (!isRemote) return;
@@ -251,6 +261,17 @@ function RootLayoutNav() {
         paymentStatus?: string;
         event?: string;
       } | undefined;
+      if (data?.type === 'membership_approved' && user?.id) {
+        void notifyMembershipApproved({
+          userId: user.id,
+          title: content.title || i18n.t('tabsNotifications.membershipApproved.title'),
+          body: content.body || i18n.t('tabsNotifications.membershipApproved.body'),
+          showLocalBanner: false,
+          remotePushDelivered: true,
+        });
+        return;
+      }
+      if (AppState.currentState !== 'active') return;
       if (data?.type === 'order' && data?.orderId) {
         const isPricingEvent =
           data.event === 'pricing_sent' ||
@@ -306,6 +327,22 @@ function RootLayoutNav() {
             pathname: '/components/ordersshipment/OrderDetails',
             params: { orderId: String(data.orderId) },
           });
+        }
+        if (data?.type === 'membership_approved') {
+          if (user?.id) {
+            const content = response.notification.request.content;
+            void notifyMembershipApproved({
+              userId: user.id,
+              title: content.title || i18n.t('tabsNotifications.membershipApproved.title'),
+              body: content.body || i18n.t('tabsNotifications.membershipApproved.body'),
+              showLocalBanner: false,
+            });
+          }
+          router.push('/(tabs)/home');
+          return;
+        }
+        if (data?.type === 'membership') {
+          router.push('/useraccounts/loginsignup/access-pending');
         }
       }
     );

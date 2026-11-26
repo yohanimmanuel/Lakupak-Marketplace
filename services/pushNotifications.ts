@@ -28,7 +28,14 @@ export function resolvePushCategory(
 ): PushNotificationCategory {
   const type = typeof data?.type === 'string' ? data.type : undefined;
   if (type === 'order' || type === 'payment') return 'orders';
-  if (type === 'platform_announcement' || type === 'system') return 'latestUpdates';
+  if (
+    type === 'platform_announcement' ||
+    type === 'system' ||
+    type === 'membership' ||
+    type === 'membership_approved'
+  ) {
+    return 'latestUpdates';
+  }
   if (type === 'promotion') return 'promotions';
   if (channelId === 'promotions') return 'promotions';
   if (channelId === 'system') return 'latestUpdates';
@@ -486,8 +493,11 @@ Notifications.setNotificationHandler({
     }
 
     const dataType = typeof data?.type === 'string' ? data.type : undefined;
+    // Membership approval must surface while the app is open (same as announcements).
     const allowRemoteInForeground =
-      dataType === 'platform_announcement' || dataType === 'promotion';
+      dataType === 'platform_announcement' ||
+      dataType === 'promotion' ||
+      dataType === 'membership_approved';
 
     const shouldShow =
       !isRemoteNotification ||

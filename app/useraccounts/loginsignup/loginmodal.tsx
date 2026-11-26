@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, Pressable, Image, Animated, TextInput, ScrollView, Alert, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { AUTH_ERROR_CODE, getAuthErrorCode, loginWithCredentials } from '../../../services/auth';
-import { API_BASE_URL } from '../../../services/config';
 // import { signInWithGoogle } from '../../../services/auth'; // Temporarily disabled
+import { notifyMembershipPending } from '../../../services/membershipPendingNotify';
 import { useAuthStore } from '../../../stores/authStore';
 import { useDataStore } from '../../../stores/dataStore';
 import { useCartStore } from '../../../stores/cartStore';
@@ -14,8 +14,6 @@ import { useTranslation } from 'react-i18next';
 export default function LoginModal() {
   const router = useRouter();
   const { t } = useTranslation();
-  const params = useLocalSearchParams<{ invite?: string }>();
-  const inviteToken = String(params.invite || '').trim();
   const setToken = useAuthStore(s => s.setToken);
   const setUser = useAuthStore(s => s.setUser);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -26,45 +24,6 @@ export default function LoginModal() {
   const [referralCode, setReferralCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [inviteBanner, setInviteBanner] = useState<string | null>(null);
-  const [inviteLocksReferral, setInviteLocksReferral] = useState(false);
-
-  useEffect(() => {
-    if (!inviteToken) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/api/mobile/auth/invite/preview?token=${encodeURIComponent(inviteToken)}`,
-        );
-        const data = (await res.json().catch(() => ({}))) as {
-          distributorName?: string;
-          clientStoreName?: string;
-          referralCode?: string | null;
-          error?: string;
-        };
-        if (cancelled) return;
-        if (!res.ok) {
-          Alert.alert(t('auth.referralCode.title'), data.error || t('auth.referralCode.invalid'));
-          return;
-        }
-        setInviteBanner(
-          t('auth.invite.banner', {
-            distributor: data.distributorName || 'Distributor',
-            store: data.clientStoreName || 'your store',
-          }),
-        );
-        setInviteLocksReferral(true);
-        if (data.referralCode) setReferralCode(String(data.referralCode).toUpperCase());
-      } catch {
-        if (!cancelled) Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.invalid'));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [inviteToken, t]);
-
 
   // (Keyboard listeners removed — state wasn't used)
 
@@ -184,18 +143,12 @@ export default function LoginModal() {
               </View>
             </View>
 
-            {inviteBanner ? (
-              <View style={{ marginTop: 8, marginBottom: 12, borderRadius: 12, borderWidth: 1, borderColor: '#bfdbfe', backgroundColor: '#eff6ff', paddingHorizontal: 12, paddingVertical: 10 }}>
-                <Text style={{ color: '#1e3a8a', fontSize: 13, lineHeight: 18 }}>{inviteBanner}</Text>
-              </View>
-            ) : null}
-
             {/* Distributor Referral Code */}
             <View style={{ marginTop: 8, marginBottom: 16 }}>
               <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
                 {t('auth.referralCode.label')}
               </Text>
-              <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', opacity: inviteLocksReferral ? 0.7 : 1 }}>
+              <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
                 <TextInput
                   value={referralCode}
                   onChangeText={(value) => setReferralCode(value.toUpperCase())}
@@ -205,11 +158,10 @@ export default function LoginModal() {
                   autoCapitalize="characters"
                   autoCorrect={false}
                   maxLength={24}
-                  editable={!inviteLocksReferral}
                 />
               </View>
               <Text style={{ color: '#6b7280', fontSize: 12, marginTop: 6 }}>
-                {inviteLocksReferral ? t('auth.invite.lockedReferralHint') : t('auth.referralCode.loginHint')}
+                {t('auth.referralCode.loginHint')}
               </Text>
             </View>
 
@@ -231,10 +183,6 @@ export default function LoginModal() {
                   Alert.alert(t('auth.login.alerts.missingTitle'), t('auth.login.alerts.missingBody'));
                   return;
                 }
-                if (!inviteToken && !referralCode.trim()) {
-                  Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.required'));
-                  return;
-                }
                 
                 setIsLoggingIn(true);
                 try {
@@ -242,7 +190,6 @@ export default function LoginModal() {
                     username.trim(),
                     password,
                     referralCode,
-                    inviteToken || undefined,
                   );
                   
                   // CRITICAL: Set token and user FIRST to ensure proper user isolation
@@ -258,6 +205,16 @@ export default function LoginModal() {
                   
                   // Start loading products (non-blocking)
                   dataStore.forceRefreshProducts();
+
+                  if (result.membershipAccess === 'pending') {
+                    void notifyMembershipPending({
+                      userId: result.user.id,
+                      title: t('tabsNotifications.membershipPending.title'),
+                      body: t('tabsNotifications.membershipPending.body'),
+                    });
+                    router.replace('/useraccounts/loginsignup/access-pending');
+                    return;
+                  }
                   
                   // Navigate immediately while data loads
                   router.replace('/(tabs)/home');
@@ -309,6 +266,14 @@ export default function LoginModal() {
                   }
                   if (code === AUTH_ERROR_CODE.REFERRAL_CODE_INVALID) {
                     Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.invalid'));
+                    return;
+                  }
+                  if (code === AUTH_ERROR_CODE.ACCESS_REVOKED) {
+                    Alert.alert(t('auth.login.alerts.failedTitle'), t('auth.membership.revoked'));
+                    return;
+                  }
+                  if (code === AUTH_ERROR_CODE.MEMBERSHIP_PENDING) {
+                    router.replace('/useraccounts/loginsignup/access-pending');
                     return;
                   }
                   if (code === AUTH_ERROR_CODE.INVALID_CREDENTIALS) {

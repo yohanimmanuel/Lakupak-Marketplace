@@ -8,11 +8,13 @@ import {
   Text,
   Alert,
   RefreshControl,
+  DeviceEventEmitter,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import {
   Bell,
+  Clock,
   Gift,
   Tag,
   ChevronRight,
@@ -22,7 +24,13 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { isWithinOrderNotificationWindow, NotificationService, Notification } from '../../services/notificationService';
+import {
+  isWithinOrderNotificationWindow,
+  NotificationService,
+  Notification,
+  MEMBERSHIP_PENDING_NOTIFICATION_ID,
+} from '../../services/notificationService';
+import { MEMBERSHIP_ACCESS_EVENT } from '../../services/membershipPendingNotify';
 import {
   fetchPublishedLatestUpdates,
   getDismissedAnnouncementIds,
@@ -135,7 +143,9 @@ export default function NotificationsScreen() {
     try {
       const storedNotifications = await NotificationService.getNotifications(requestUserId);
       if (!isStillAuthenticatedUser(requestUserId)) return;
-      const nonOrderNotifications = storedNotifications.filter((n) => n.type !== 'order');
+      const nonOrderNotifications = storedNotifications.filter(
+        (n) => n.type !== 'order' && n.id !== 'membership_approved',
+      );
       setAlerts(nonOrderNotifications);
       setError(null);
     } catch {
@@ -147,6 +157,13 @@ export default function NotificationsScreen() {
 
   useEffect(() => {
     loadAlerts();
+  }, [loadAlerts]);
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(MEMBERSHIP_ACCESS_EVENT, () => {
+      void loadAlerts();
+    });
+    return () => sub.remove();
   }, [loadAlerts]);
 
   useEffect(() => {
@@ -301,6 +318,8 @@ export default function NotificationsScreen() {
         return <Tag size={20} color="#ef4444" />;
       case 'promotion':
         return <Gift size={20} color="#3b82f6" />;
+      case 'membership':
+        return <Clock size={20} color="#d97706" />;
       case 'update':
       default:
         return <Bell size={20} color="#ef4444" />;
@@ -426,6 +445,26 @@ export default function NotificationsScreen() {
     }
   };
 
+  const onAlertPress = async (notification: Notification) => {
+    await markAsRead(notification.id);
+    if (notification.type === 'membership' || notification.actionPath) {
+      router.push(
+        (notification.actionPath ||
+          '/useraccounts/loginsignup/access-pending') as '/useraccounts/loginsignup/access-pending',
+      );
+    }
+  };
+
+  const membershipAlertCopy = (notification: Notification) => {
+    if (notification.id === MEMBERSHIP_PENDING_NOTIFICATION_ID || notification.type === 'membership') {
+      return {
+        title: t('tabsNotifications.membershipPending.title'),
+        body: t('tabsNotifications.membershipPending.body'),
+      };
+    }
+    return { title: notification.title, body: notification.message };
+  };
+
   const onReadAllLatest = async () => {
     const uid = authUser?.id ?? null;
     const ids = visibleFilteredLatestUpdates.map((a) => a.id);
@@ -476,13 +515,21 @@ export default function NotificationsScreen() {
               <TouchableOpacity
                 key={notification.id}
                 style={[styles.notificationItem, !notification.isRead && styles.unreadNotification]}
-                onPress={() => markAsRead(notification.id)}
+                onPress={() => void onAlertPress(notification)}
               >
                 <View style={styles.notificationContent}>
                   <View style={styles.notificationIcon}>{getAlertIcon(notification)}</View>
                   <View style={styles.notificationText}>
-                    <Text style={styles.notificationTitle}>{notification.title}</Text>
-                    <Text style={styles.notificationMessage}>{notification.message}</Text>
+                    <Text style={styles.notificationTitle}>
+                      {notification.type === 'membership'
+                        ? membershipAlertCopy(notification).title
+                        : notification.title}
+                    </Text>
+                    <Text style={styles.notificationMessage}>
+                      {notification.type === 'membership'
+                        ? membershipAlertCopy(notification).body
+                        : notification.message}
+                    </Text>
                   </View>
                   <View style={styles.notificationRight}>
                     {!notification.isRead && <View style={styles.unreadBadge} />}

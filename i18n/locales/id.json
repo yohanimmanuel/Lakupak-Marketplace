@@ -297,9 +297,13 @@
       "required": "Masukkan kode referral dari distributor Anda.",
       "invalid": "Kode referral ini tidak valid. Periksa kembali dengan distributor Anda."
     },
-    "invite": {
-      "banner": "Anda diundang oleh {{distributor}} sebagai {{store}}. Harga klien Anda berlaku setelah pendaftaran selesai.",
-      "lockedReferralHint": "Kode referral diisi dari undangan Anda."
+    "membership": {
+      "pending": "Permintaan akses Anda menunggu persetujuan distributor.",
+      "pendingTitle": "Menunggu persetujuan",
+      "pendingBody": "Distributor Anda menerima permintaan sebagai Prospek. Mereka akan mengatur segmen pasar lalu menyetujui akses. Setelah itu Anda bisa melihat produk dan harga mereka.",
+      "revoked": "Akses Anda ke etalase ini dicabut oleh distributor.",
+      "backHome": "Kembali ke beranda",
+      "viewNotifications": "Lihat notifikasi"
     },
     "forgotPassword": {
       "title": "Lupa Kata Sandi",
@@ -528,6 +532,14 @@
     "errors": {
       "loadFailed": "Gagal memuat notifikasi. Tarik untuk memuat ulang atau coba lagi nanti.",
       "latestUpdatesFailed": "Tidak dapat memuat update terbaru."
+    },
+    "membershipPending": {
+      "title": "Menunggu persetujuan",
+      "body": "Distributor Anda menerima permintaan sebagai Prospek. Mereka akan mengatur segmen pasar lalu menyetujui akses. Setelah itu Anda bisa melihat produk dan harga mereka."
+    },
+    "membershipApproved": {
+      "title": "Akses disetujui",
+      "body": "Distributor Anda telah menyetujui akses. Anda sekarang dapat melihat produk dan harga mereka."
     },
     "orderUpdates": {
       "title": "Update pesanan",

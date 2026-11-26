@@ -26,11 +26,15 @@ export const AUTH_ERROR_CODE = {
   VERIFICATION_CODE_REQUIRED: 'VERIFICATION_CODE_REQUIRED',
   REFERRAL_CODE_REQUIRED: 'REFERRAL_CODE_REQUIRED',
   REFERRAL_CODE_INVALID: 'REFERRAL_CODE_INVALID',
+  ACCESS_REVOKED: 'ACCESS_REVOKED',
+  MEMBERSHIP_PENDING: 'MEMBERSHIP_PENDING',
 } as const
 
 function throwIfReferralError(code: unknown) {
   if (code === AUTH_ERROR_CODE.REFERRAL_CODE_REQUIRED) throwAuth(AUTH_ERROR_CODE.REFERRAL_CODE_REQUIRED)
   if (code === AUTH_ERROR_CODE.REFERRAL_CODE_INVALID) throwAuth(AUTH_ERROR_CODE.REFERRAL_CODE_INVALID)
+  if (code === AUTH_ERROR_CODE.ACCESS_REVOKED) throwAuth(AUTH_ERROR_CODE.ACCESS_REVOKED)
+  if (code === AUTH_ERROR_CODE.MEMBERSHIP_PENDING) throwAuth(AUTH_ERROR_CODE.MEMBERSHIP_PENDING)
 }
 
 export type AuthThrownError = Error & { code?: string }
@@ -101,8 +105,11 @@ export async function loginWithCredentials(
   username: string,
   password: string,
   referralCode?: string,
-  inviteToken?: string,
-): Promise<{ token: string; user: { id: number; name?: string | null; email: string; address?: string | null } }> {
+): Promise<{
+  token: string
+  membershipAccess?: 'active' | 'pending'
+  user: { id: number; name?: string | null; email: string; address?: string | null }
+}> {
   const res = await fetch(`${API_BASE_URL}/api/mobile/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -110,7 +117,6 @@ export async function loginWithCredentials(
       username,
       password,
       referralCode: referralCode?.trim() || undefined,
-      inviteToken: inviteToken?.trim() || undefined,
     }),
   })
 
@@ -211,15 +217,17 @@ export async function registerAccount(params: {
   countryCode?: string
   countryDialCode?: string
   referralCode?: string
-  inviteToken?: string
-}): Promise<{ token: string; user: { id: number; name?: string | null; email: string; chosenAddress?: string | null; address?: string | null } }> {
+}): Promise<{
+  token: string
+  membershipAccess?: 'active' | 'pending'
+  user: { id: number; name?: string | null; email: string; chosenAddress?: string | null; address?: string | null }
+}> {
   const res = await fetch(`${API_BASE_URL}/api/mobile/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       ...params,
       referralCode: params.referralCode?.trim() || undefined,
-      inviteToken: params.inviteToken?.trim() || undefined,
     }),
   })
 
@@ -238,12 +246,14 @@ export async function registerAccount(params: {
 
   const data = await res.json() as {
     token: string
+    membershipAccess?: 'active' | 'pending'
     user: { id: number; name?: string | null; email: string; chosenAddress?: string | null; address?: string | null }
   }
 
   const chosenAddress = data.user.chosenAddress ?? data.user.address ?? ''
   return {
     token: data.token,
+    membershipAccess: data.membershipAccess,
     user: {
       ...data.user,
       chosenAddress,

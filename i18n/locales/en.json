@@ -297,9 +297,13 @@
       "required": "Enter the referral code from your distributor.",
       "invalid": "This referral code is not valid. Check it with your distributor."
     },
-    "invite": {
-      "banner": "You were invited by {{distributor}} as {{store}}. Your client pricing will apply after you finish.",
-      "lockedReferralHint": "Referral code filled from your invite."
+    "membership": {
+      "pending": "Your access request is waiting for distributor approval.",
+      "pendingTitle": "Waiting for approval",
+      "pendingBody": "Your distributor received your request as a Prospect. They will set your market segment and approve access. After that, you can browse their products and prices.",
+      "revoked": "Your access to this storefront was revoked by the distributor.",
+      "backHome": "Back to home",
+      "viewNotifications": "View notifications"
     },
     "forgotPassword": {
       "title": "Forgot Password",
@@ -528,6 +532,14 @@
     "errors": {
       "loadFailed": "Failed to load notifications. Pull to refresh or try again later.",
       "latestUpdatesFailed": "Could not load latest updates."
+    },
+    "membershipPending": {
+      "title": "Waiting for approval",
+      "body": "Your distributor received your request as a Prospect. They will set your market segment and approve access. After that, you can browse their products and prices."
+    },
+    "membershipApproved": {
+      "title": "Access approved",
+      "body": "Your distributor approved your access. You can now browse their products and prices."
     },
     "orderUpdates": {
       "title": "Order updates",

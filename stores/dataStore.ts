@@ -14,6 +14,7 @@ import { supabaseRealtimeService } from '../services/supabaseRealtime'
 import { usePlatformAnnouncementsRealtimeStore } from './platformAnnouncementsRealtimeStore'
 import { getPricingSentNotificationStrings, getPricingUpdatedNotificationStrings } from '../utils/orderNotificationI18n'
 import { hideUnreleasedBuyerOffers, isBuyerOfferVisible } from '../utils/orderPricingDisplay'
+import i18n from '../i18n'
 
 export interface MarketplaceOrderItem {
   productId?: string | null
@@ -628,6 +629,18 @@ export const useDataStore = create<DataState>()(
               const currentUserId = authState.user?.id
 
               if (!targetUserId || targetUserId === currentUserId) {
+                if (type === 'membership_approved' && currentUserId) {
+                  void import('../services/membershipPendingNotify').then(({ notifyMembershipApproved }) =>
+                    notifyMembershipApproved({
+                      userId: currentUserId,
+                      title: title || i18n.t('tabsNotifications.membershipApproved.title'),
+                      body: body || i18n.t('tabsNotifications.membershipApproved.body'),
+                      // Remote push already banners when tokens exist; WS covers no-token / foreground inbox.
+                      showLocalBanner: AppState.currentState === 'active',
+                    }),
+                  )
+                  return
+                }
                 if (type === 'order') {
                   const orderId = data?.orderId as string
                   const orderStatus = data?.orderStatus as string

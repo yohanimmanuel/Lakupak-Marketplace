@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, Pressable, TextInput, ScrollView, Animated, Easing, Alert, KeyboardAvoidingView, Platform, Keyboard, StatusBar, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { AUTH_ERROR_CODE, getAuthErrorCode, requestOtp, verifyOtp, signupStep1, signupStep2, signupStepAddress, signupStep3, registerAccount } from '../../../services/auth';
-import { API_BASE_URL } from '../../../services/config';
+import { notifyMembershipPending } from '../../../services/membershipPendingNotify';
 import AddressMapPreview from '../../components/address/AddressMapPreview';
 import AddressLocationFields from '../../components/address/AddressLocationFields';
 import AddressLabelOptions, { type AddressLabel } from '../../components/address/AddressLabelOptions';
@@ -20,56 +20,9 @@ export default function SignUpModal() {
   const router = useRouter();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ invite?: string }>();
-  const inviteToken = String(params.invite || '').trim();
   const setToken = useAuthStore(s => s.setToken);
   const setUser = useAuthStore(s => s.setUser);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
-  const [inviteBanner, setInviteBanner] = useState<string | null>(null);
-  const [inviteLocksReferral, setInviteLocksReferral] = useState(false);
-
-  useEffect(() => {
-    if (!inviteToken) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/api/mobile/auth/invite/preview?token=${encodeURIComponent(inviteToken)}`,
-        );
-        const data = (await res.json().catch(() => ({}))) as {
-          distributorName?: string;
-          clientStoreName?: string;
-          referralCode?: string | null;
-          error?: string;
-        };
-        if (cancelled) return;
-        if (!res.ok) {
-          Alert.alert(t('auth.referralCode.title'), data.error || t('auth.referralCode.invalid'));
-          return;
-        }
-        setInviteBanner(
-          t('auth.invite.banner', {
-            distributor: data.distributorName || 'Distributor',
-            store: data.clientStoreName || 'your store',
-          }),
-        );
-        setInviteLocksReferral(true);
-        if (data.referralCode) {
-          setSignupData((prev) => ({
-            ...prev,
-            referralCode: String(data.referralCode).toUpperCase(),
-          }));
-        }
-      } catch {
-        if (!cancelled) {
-          Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.invalid'));
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [inviteToken, t]);
   const [isCountryPickerOpen, setIsCountryPickerOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [fingerEnabled, setFingerEnabled] = useState(false);
@@ -695,16 +648,11 @@ export default function SignUpModal() {
                     />
                   </View>
                 </View>
-                {inviteBanner ? (
-                  <View style={{ marginBottom: 16, borderRadius: 12, borderWidth: 1, borderColor: '#bfdbfe', backgroundColor: '#eff6ff', paddingHorizontal: 12, paddingVertical: 10 }}>
-                    <Text style={{ color: '#1e3a8a', fontSize: 13, lineHeight: 18 }}>{inviteBanner}</Text>
-                  </View>
-                ) : null}
                 <View style={{ marginBottom: 24 }}>
                   <Text style={{ color: '#111827', fontSize: 14, fontWeight: '500', marginBottom: 8 }}>
                     {t('auth.referralCode.label')}
                   </Text>
-                  <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb', opacity: inviteLocksReferral ? 0.7 : 1 }}>
+                  <View style={{ backgroundColor: '#f9fafb', borderRadius: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: '#e5e7eb' }}>
                     <TextInput
                       value={signupData.referralCode}
                       onChangeText={(text) => setSignupData(prev => ({ ...prev, referralCode: text.toUpperCase() }))}
@@ -714,11 +662,10 @@ export default function SignUpModal() {
                       autoCapitalize="characters"
                       autoCorrect={false}
                       maxLength={24}
-                      editable={!inviteLocksReferral}
                     />
                   </View>
                   <Text style={{ color: '#6b7280', fontSize: 12, marginTop: 6 }}>
-                    {inviteLocksReferral ? t('auth.invite.lockedReferralHint') : t('auth.referralCode.signupHint')}
+                    {t('auth.referralCode.signupHint')}
                   </Text>
                 </View>
                 <Pressable
@@ -740,7 +687,7 @@ export default function SignUpModal() {
                       return;
                     }
 
-                    if (!inviteToken && !signupData.referralCode.trim()) {
+                    if (!signupData.referralCode.trim()) {
                       Alert.alert(t('auth.referralCode.title'), t('auth.referralCode.required'));
                       return;
                     }
@@ -765,7 +712,6 @@ export default function SignUpModal() {
                         countryCode: signupData.countryCode,
                         countryDialCode: signupData.countryDialCode,
                         referralCode: signupData.referralCode.trim() || undefined,
-                        inviteToken: inviteToken || undefined,
                       });
                       
                       await setToken(result.token);
@@ -776,6 +722,16 @@ export default function SignUpModal() {
 
                       dataStore.clearCache();
                       dataStore.forceRefreshProducts();
+
+                      if (result.membershipAccess === 'pending') {
+                        void notifyMembershipPending({
+                          userId: result.user.id,
+                          title: t('tabsNotifications.membershipPending.title'),
+                          body: t('tabsNotifications.membershipPending.body'),
+                        });
+                        router.replace('/useraccounts/loginsignup/access-pending');
+                        return;
+                      }
 
                       router.replace('/(tabs)/home');
 
