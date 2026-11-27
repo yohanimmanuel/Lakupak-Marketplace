@@ -128,15 +128,6 @@ export default function EditProfileModal() {
           </View>
         )}
         {isUploading ? <ShimmerBone style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 0, zIndex: 1 }} /> : null}
-        {user?.image ? (
-          <Image source={{ uri: user.image }} style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: '#ffffff' }} />
-        ) : (
-          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#ffffff', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#ffffff' }}>
-            <Text style={{ color: '#0a61d7', fontSize: 24, fontWeight: '600' }}>
-              {user?.username?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || 'U'}
-            </Text>
-          </View>
-        )}
         
         {/* Edit Image Button */}
         <Pressable 
