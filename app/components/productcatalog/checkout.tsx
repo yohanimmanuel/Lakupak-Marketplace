@@ -48,6 +48,11 @@ import { pushNotificationService } from '../../../services/pushNotifications';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { getMe } from '../../../services/user';
+import {
+  clearEditCheckoutDraft,
+  readEditCheckoutDraft,
+  writeEditCheckoutDraft,
+} from '../../../utils/editCheckoutDraft';
 import { CheckoutSkeleton } from '../SkeletonLoader';
 import { resolveVariantPricing } from '../../../utils/variantRules';
 import { formatCurrency } from '../../../utils/currencyUtils';
@@ -438,39 +443,108 @@ const copyPickupAddress = () => {
     const orderIdToLoad = appendOrderId || editOrderId;
     if (!orderIdToLoad || !authUser?.id) return;
     let active = true;
-    void ordersService.getOrderById(orderIdToLoad, authUser.id, token || undefined).then((order) => {
-      if (!active) return;
-      if (!order || order.orderStatus !== 'Pending' || order.paymentStatus !== 'Unpaid') {
+    void (async () => {
+      try {
+        const [order, draft] = await Promise.all([
+          ordersService.getOrderById(orderIdToLoad, authUser.id, token || undefined),
+          readEditCheckoutDraft(orderIdToLoad),
+        ]);
+        if (!active) return;
+        if (!order || order.orderStatus !== 'Pending' || order.paymentStatus !== 'Unpaid') {
+          router.replace({
+            pathname: '/components/ordersshipment/OrderDetails',
+            params: { orderId: orderIdToLoad },
+          });
+          return;
+        }
+        setEditingItems(order.orderItems || []);
+        setEditingSeller(order.seller ?? null);
+
+        // Prefer in-progress draft (survives add-products remount) over stored order.
+        if (draft && draft.orderId === orderIdToLoad) {
+          setSelectedPayment(draft.paymentMethod);
+          if (draft.shipping) setSelectedShipping(draft.shipping);
+          if (draft.sellerDeliveryMode === 'buyer_scheduled' || draft.sellerDeliveryMode === 'distributor_managed') {
+            setSellerDeliveryMode(draft.sellerDeliveryMode);
+          }
+          if (draft.buyerCourierMode === 'buyer_scheduled' || draft.buyerCourierMode === 'self_managed') {
+            setBuyerCourierMode(draft.buyerCourierMode);
+          }
+          if (draft.shippingByDistributor) setSelectedShippingByDistributor(draft.shippingByDistributor);
+          if (draft.sellerDeliveryModeByDist) {
+            setSellerDeliveryModeByDist(
+              draft.sellerDeliveryModeByDist as Record<string, 'buyer_scheduled' | 'distributor_managed'>,
+            );
+          }
+          if (draft.buyerCourierModeByDist) {
+            setBuyerCourierModeByDist(
+              draft.buyerCourierModeByDist as Record<string, 'buyer_scheduled' | 'self_managed'>,
+            );
+          }
+        } else {
+          const deliveryValue = `${order.deliveryOption ?? ''} ${order.deliveryMethod ?? ''}`.toLowerCase();
+          const delivery = deliveryValue.includes('pickup')
+            ? 'self_pickup'
+            : deliveryValue.includes('courier') || deliveryValue.includes('buyer')
+              ? 'buyer_courier'
+              : 'seller_delivery';
+          setSelectedShipping(delivery);
+          if (delivery === 'seller_delivery') setSellerDeliveryMode('distributor_managed');
+          if (delivery === 'buyer_courier') setBuyerCourierMode('self_managed');
+          setSelectedPayment(/cod|cash/i.test(order.paymentTerms ?? '') ? 'cod' : 'bank_transfer');
+        }
+        // Always restore pickup schedule from the order when present.
+        if (order.preferredPickupDate) {
+          const pickup = new Date(order.preferredPickupDate);
+          if (!Number.isNaN(pickup.getTime())) {
+            const time = String(order.preferredPickupTime || '').trim();
+            const match = /^(\d{1,2}):(\d{2})/.exec(time);
+            if (match) {
+              pickup.setHours(Number(match[1]), Number(match[2]), 0, 0);
+            }
+            setPickupDateTime(pickup);
+          }
+        }
+        setEditingReady(true);
+      } catch {
+        if (!active) return;
         router.replace({
           pathname: '/components/ordersshipment/OrderDetails',
           params: { orderId: orderIdToLoad },
         });
-        return;
       }
-      setEditingItems(order.orderItems || []);
-      setEditingSeller(order.seller ?? null);
-      const deliveryValue = `${order.deliveryOption ?? ''} ${order.deliveryMethod ?? ''}`.toLowerCase();
-      const delivery = deliveryValue.includes('pickup')
-        ? 'self_pickup'
-        : deliveryValue.includes('courier') || deliveryValue.includes('buyer')
-          ? 'buyer_courier'
-          : 'seller_delivery';
-      setSelectedShipping(delivery);
-      if (delivery === 'seller_delivery') setSellerDeliveryMode('distributor_managed');
-      if (delivery === 'buyer_courier') setBuyerCourierMode('self_managed');
-      setSelectedPayment(/cod|cash/i.test(order.paymentTerms ?? '') ? 'cod' : 'bank_transfer');
-      setEditingReady(true);
-    }).catch(() => {
-      if (!active) return;
-      router.replace({
-        pathname: '/components/ordersshipment/OrderDetails',
-        params: { orderId: orderIdToLoad },
-      });
-    });
+    })();
     return () => {
       active = false;
     };
   }, [editOrderId, appendOrderId, authUser?.id, token, router]);
+
+  // Persist delivery/payment while editing so add-products doesn't wipe choices.
+  useEffect(() => {
+    const orderIdToSave = appendOrderId || editOrderId;
+    if (!orderIdToSave || !editingReady) return;
+    void writeEditCheckoutDraft({
+      orderId: orderIdToSave,
+      paymentMethod: selectedPayment,
+      shipping: selectedShipping,
+      sellerDeliveryMode,
+      buyerCourierMode,
+      shippingByDistributor: selectedShippingByDistributor,
+      sellerDeliveryModeByDist,
+      buyerCourierModeByDist,
+    });
+  }, [
+    appendOrderId,
+    editOrderId,
+    editingReady,
+    selectedPayment,
+    selectedShipping,
+    sellerDeliveryMode,
+    buyerCourierMode,
+    selectedShippingByDistributor,
+    sellerDeliveryModeByDist,
+    buyerCourierModeByDist,
+  ]);
 
   // The selected-items list is briefly empty in two non-error windows: while the cart
   // is still loading/syncing from the server on a cold entry, and right after a
@@ -937,6 +1011,14 @@ const copyPickupAddress = () => {
             onPress: async () => {
               setIsPlacingOrder(true);
               try {
+                const pickupIso =
+                  deliveryOption === 'self_pickup' && pickupDateTime
+                    ? pickupDateTime.toISOString()
+                    : null;
+                const pickupTime =
+                  deliveryOption === 'self_pickup' && pickupDateTime
+                    ? `${String(pickupDateTime.getHours()).padStart(2, '0')}:${String(pickupDateTime.getMinutes()).padStart(2, '0')}`
+                    : null;
                 await ordersService.updateOrderDetails(
                   authUser.id,
                   {
@@ -947,9 +1029,13 @@ const copyPickupAddress = () => {
                     deliveryAddress: addresses[0].address,
                     deliveryOption,
                     paymentMethod: selectedPayment,
+                    preferredPickupDate: pickupIso,
+                    preferredPickupTime: pickupTime,
                   },
                   token || undefined,
                 );
+                await clearEditCheckoutDraft();
+                useCartStore.getState().endEditOrder();
                 await useDataStore.getState().forceRefreshOrders();
                 router.replace({
                   pathname: '/components/ordersshipment/OrderDetails',
@@ -1037,6 +1123,41 @@ const copyPickupAddress = () => {
                       t('ordersFlow.checkout.alerts.singleDistributor'),
                     );
                     return;
+                  }
+
+                  // Append API only adds line items — PATCH delivery/payment/pickup first.
+                  if (appendOrderId && authUser?.id) {
+                    const [distributorId] = groupEntries[0];
+                    const selectedId =
+                      selectedShippingByDistributor[distributorId] || selectedShipping || '';
+                    const deliveryOption = (
+                      selectedId === 'self_pickup' ||
+                      selectedId === 'seller_delivery' ||
+                      selectedId === 'buyer_courier'
+                        ? selectedId
+                        : 'seller_delivery'
+                    ) as 'self_pickup' | 'seller_delivery' | 'buyer_courier';
+                    const pickupAt =
+                      deliveryOption === 'self_pickup'
+                        ? pickupDateTimeByDistributor[distributorId] || pickupDateTime
+                        : null;
+                    await ordersService.updateOrderDetails(
+                      authUser.id,
+                      {
+                        orderId: appendOrderId,
+                        contactPerson: (addresses[0].name || authUser.name || '').trim(),
+                        contactPhone: (addresses[0].phone || authUser.phone || '').trim(),
+                        storeName: addresses[0].company || authUser.storeName || '',
+                        deliveryAddress: addresses[0].address,
+                        deliveryOption,
+                        paymentMethod: selectedPayment,
+                        preferredPickupDate: pickupAt ? pickupAt.toISOString() : null,
+                        preferredPickupTime: pickupAt
+                          ? `${String(pickupAt.getHours()).padStart(2, '0')}:${String(pickupAt.getMinutes()).padStart(2, '0')}`
+                          : null,
+                      },
+                      token || undefined,
+                    );
                   }
 
                   try {
@@ -1290,6 +1411,7 @@ const copyPickupAddress = () => {
                   void useDataStore.getState().forceRefreshOrders();
 
                   if (appendOrderId) {
+                    await clearEditCheckoutDraft();
                     useCartStore.getState().endEditOrder();
                     router.replace({
                       pathname: '/components/ordersshipment/OrderDetails',

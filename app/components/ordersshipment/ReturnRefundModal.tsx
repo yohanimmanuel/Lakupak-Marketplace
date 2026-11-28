@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,10 +15,11 @@ import {
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AlertCircle, ArrowLeft, Camera, ImagePlus, X } from 'lucide-react-native';
+import { AlertCircle, ArrowLeft, Camera, Check, ImagePlus, X } from 'lucide-react-native';
 import { useAuthStore } from '../../../stores/authStore';
 import { API_BASE_URL } from '../../../services/config';
 import { pickMultipleImages, takePhoto } from '../../../services/imagePicker';
+import { marketplaceService } from '../../../services/marketplace';
 import { useTranslation } from 'react-i18next';
 import { ShimmerIcon } from '../SkeletonLoader';
 
@@ -33,6 +34,64 @@ const RETURN_REASON_IDS = [
 
 const primaryBlue = '#0a61d7';
 
+type StockLevelOption = { name: string; piecesPerUnit: number };
+
+type ReturnOrderLine = {
+  id: number;
+  productName: string;
+  variantNameSnapshot?: string | null;
+  packageType?: string | null;
+  packageQuantity: number;
+  piecesPerPackage: number;
+  stockLevels: StockLevelOption[];
+};
+
+function buildReturnStockLevels(
+  orderedType: string | null | undefined,
+  orderedPpp: number,
+  productLevels?: Array<{ name: string; piecesPerUnit: number }> | null,
+): StockLevelOption[] {
+  const levels: StockLevelOption[] = [{ name: 'Pieces', piecesPerUnit: 1 }];
+  const seen = new Set(['pieces|1']);
+  const add = (name: string, piecesPerUnit: number) => {
+    const key = `${name.toLocaleLowerCase()}|${piecesPerUnit}`;
+    if (seen.has(key) || piecesPerUnit < 1) return;
+    seen.add(key);
+    levels.push({ name, piecesPerUnit });
+  };
+  for (const level of productLevels ?? []) {
+    add(level.name, Math.max(1, Number(level.piecesPerUnit) || 1));
+  }
+  if (orderedPpp > 1 && orderedType?.trim()) {
+    add(orderedType.trim(), orderedPpp);
+  }
+  return levels;
+}
+
+function maxReturnQty(orderedQty: number, orderedPpp: number, returnPpp: number): number {
+  return Math.max(1, Math.floor((orderedQty * orderedPpp) / Math.max(1, returnPpp)));
+}
+
+/** 0 = unchecked; "" = checked while clearing input; 1..max = checked qty */
+type QtyDraft = number | '';
+
+function isReturnLineSelected(qty: QtyDraft | undefined): boolean {
+  return qty === '' || (typeof qty === 'number' && qty > 0);
+}
+
+function parseReturnQtyDraft(raw: string, maxQty: number): QtyDraft {
+  const digits = raw.replace(/[^\d]/g, '');
+  if (digits === '') return '';
+  const next = Math.trunc(Number(digits));
+  if (!Number.isFinite(next) || next < 1) return '';
+  return Math.min(maxQty, next);
+}
+
+function clampReturnQty(qty: QtyDraft | undefined, maxQty: number): number {
+  if (typeof qty === 'number' && qty > 0) return Math.min(maxQty, qty);
+  return Math.min(maxQty, 1);
+}
+
 export default function ReturnRefundModal() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -43,8 +102,121 @@ export default function ReturnRefundModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [orderLines, setOrderLines] = useState<ReturnOrderLine[]>([]);
+  const [selectedQty, setSelectedQty] = useState<Record<number, QtyDraft>>({});
+  const [selectedStockType, setSelectedStockType] = useState<Record<number, string>>({});
+  const [loadingOrder, setLoadingOrder] = useState(true);
   const scrollRef = useRef<ScrollView>(null);
   const { t } = useTranslation();
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadOrder() {
+      if (!orderId || typeof orderId !== 'string' || !token) {
+        setLoadingOrder(false);
+        return;
+      }
+      try {
+        setLoadingOrder(true);
+        const response = await fetch(
+          `${API_BASE_URL}/api/orders?id=${encodeURIComponent(orderId)}`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        if (!response.ok) throw new Error('Failed to load order');
+        const data = await response.json();
+        const rawLines = (data.orderItems || []) as Array<Record<string, unknown>>;
+        const productIds = Array.from(
+          new Set(
+            rawLines
+              .map((item) => (typeof item.productId === 'string' ? item.productId.trim() : ''))
+              .filter(Boolean),
+          ),
+        );
+        const stockLevelsByProductId = new Map<string, StockLevelOption[] | null>();
+        await Promise.all(
+          productIds.map(async (productId) => {
+            try {
+              const product = await marketplaceService.getProductById(productId, token);
+              stockLevelsByProductId.set(productId, product.stockLevels ?? null);
+            } catch {
+              stockLevelsByProductId.set(productId, null);
+            }
+          }),
+        );
+
+        const lines: ReturnOrderLine[] = rawLines
+          .map((item) => {
+            const piecesPerPackage = Math.max(1, Number(item.piecesPerPackage) || 1);
+            const packageType =
+              (typeof item.packageType === 'string' && item.packageType) ||
+              (piecesPerPackage === 1 ? 'Pieces' : 'Package');
+            const productId = typeof item.productId === 'string' ? item.productId : null;
+            return {
+              id: Number(item.id),
+              productName: String(item.productName || item.productNameSnapshot || 'Product'),
+              variantNameSnapshot: (item.variantNameSnapshot as string) || null,
+              packageType,
+              packageQuantity: Math.max(1, Number(item.packageQuantity) || 1),
+              piecesPerPackage,
+              stockLevels: buildReturnStockLevels(
+                packageType,
+                piecesPerPackage,
+                productId ? stockLevelsByProductId.get(productId) : null,
+              ),
+            };
+          })
+          .filter((line) => Number.isInteger(line.id) && line.id > 0);
+        if (!cancelled) {
+          setOrderLines(lines);
+          const initialQty: Record<number, QtyDraft> = {};
+          const initialType: Record<number, string> = {};
+          for (const line of lines) {
+            initialQty[line.id] = 0;
+            const preferred =
+              line.stockLevels.find((level) => level.name === line.packageType) ??
+              line.stockLevels[0];
+            initialType[line.id] = preferred?.name || 'Pieces';
+          }
+          setSelectedQty(initialQty);
+          setSelectedStockType(initialType);
+        }
+      } catch {
+        if (!cancelled) setOrderLines([]);
+      } finally {
+        if (!cancelled) setLoadingOrder(false);
+      }
+    }
+    void loadOrder();
+    return () => {
+      cancelled = true;
+    };
+  }, [orderId, token]);
+
+  const selectedItems = useMemo(
+    () =>
+      orderLines
+        .filter((line) => {
+          const qty = selectedQty[line.id];
+          return typeof qty === 'number' && qty > 0;
+        })
+        .map((line) => {
+          const selectedName = selectedStockType[line.id];
+          const level =
+            line.stockLevels.find((row) => row.name === selectedName) ??
+            line.stockLevels[0] ?? {
+              name: line.packageType || 'Pieces',
+              piecesPerUnit: line.piecesPerPackage,
+            };
+          const qty = selectedQty[line.id];
+          return {
+            orderItemId: line.id,
+            quantityReturned: typeof qty === 'number' ? qty : 0,
+            packageType: level.name,
+            piecesPerPackage: level.piecesPerUnit,
+          };
+        }),
+    [orderLines, selectedQty, selectedStockType],
+  );
 
   const scrollToInput = () => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 300);
@@ -111,6 +283,13 @@ export default function ReturnRefundModal() {
       );
       return;
     }
+    if (selectedItems.length === 0) {
+      Alert.alert(
+        t('ordersFlow.returnRefund.alerts.selectItemsTitle'),
+        t('ordersFlow.returnRefund.alerts.selectItemsBody')
+      );
+      return;
+    }
     if (!token) {
       Alert.alert(t('ordersFlow.common.errors.sessionExpiredTitle'), t('ordersFlow.common.errors.sessionExpiredBody'));
       return;
@@ -133,6 +312,7 @@ export default function ReturnRefundModal() {
           reason: selectedReason,
           reasonDetail: reasonDetail.trim() || undefined,
           imageUrls,
+          items: selectedItems,
         }),
       });
 
@@ -162,8 +342,10 @@ export default function ReturnRefundModal() {
     !!selectedReason &&
     (selectedReason !== 'other' || !!reasonDetail.trim()) &&
     imageUrls.length > 0 &&
+    selectedItems.length > 0 &&
     !uploadingPhotos &&
-    !isLoading;
+    !isLoading &&
+    !loadingOrder;
 
   return (
     <View style={styles.container}>
@@ -213,6 +395,141 @@ export default function ReturnRefundModal() {
           <View style={styles.orderInfoContainer}>
             <Text style={styles.orderIdLabel}>{t('ordersFlow.returnRefund.orderId')}</Text>
             <Text style={styles.orderIdValue}>{orderId}</Text>
+          </View>
+
+          <View style={styles.itemsContainer}>
+            <Text style={styles.sectionTitle}>{t('ordersFlow.returnRefund.itemsTitle')}</Text>
+            <Text style={styles.itemsHint}>{t('ordersFlow.returnRefund.itemsHint')}</Text>
+            {loadingOrder ? (
+              <ActivityIndicator color={primaryBlue} style={{ marginVertical: 12 }} />
+            ) : orderLines.length === 0 ? (
+              <Text style={styles.itemsHint}>{t('ordersFlow.returnRefund.itemsEmpty')}</Text>
+            ) : (
+              orderLines.map((line) => {
+                const qty = selectedQty[line.id] ?? 0;
+                const selected = isReturnLineSelected(qty);
+                const selectedName = selectedStockType[line.id];
+                const selectedLevel =
+                  line.stockLevels.find((level) => level.name === selectedName) ??
+                  line.stockLevels[0];
+                const maxQty = maxReturnQty(
+                  line.packageQuantity,
+                  line.piecesPerPackage,
+                  selectedLevel?.piecesPerUnit || 1,
+                );
+                return (
+                  <View
+                    key={line.id}
+                    style={[styles.itemRow, selected && styles.itemRowSelected]}
+                  >
+                    <TouchableOpacity
+                      style={styles.itemCheckRow}
+                      onPress={() =>
+                        setSelectedQty((prev) => ({
+                          ...prev,
+                          [line.id]: selected
+                            ? 0
+                            : Math.min(maxQty, Math.max(1, line.packageQuantity)),
+                        }))
+                      }
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
+                    >
+                      <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
+                        {selected ? <Check size={12} color="#fff" /> : null}
+                      </View>
+                      <View style={styles.itemTextWrap}>
+                        <Text style={styles.itemName}>{line.productName}</Text>
+                        {line.variantNameSnapshot ? (
+                          <Text style={styles.itemMeta}>{line.variantNameSnapshot}</Text>
+                        ) : null}
+                        <Text style={styles.itemMeta}>
+                          {t('ordersFlow.returnRefund.orderedQty', {
+                            qty: line.packageQuantity,
+                            unit: line.packageType || 'pcs',
+                          })}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                    {selected ? (
+                      <View style={styles.returnControls}>
+                        {line.stockLevels.length > 1 ? (
+                          <View style={styles.stockTypeSection}>
+                            <Text style={styles.qtyLabel}>
+                              {t('ordersFlow.returnRefund.returnStockType')}
+                            </Text>
+                            <View style={styles.stockTypeRow}>
+                              {line.stockLevels.map((level) => {
+                                const active = selectedLevel?.name === level.name;
+                                return (
+                                  <TouchableOpacity
+                                    key={`${level.name}-${level.piecesPerUnit}`}
+                                    style={[
+                                      styles.stockTypeChip,
+                                      active && styles.stockTypeChipSelected,
+                                    ]}
+                                    onPress={() => {
+                                      const nextMax = maxReturnQty(
+                                        line.packageQuantity,
+                                        line.piecesPerPackage,
+                                        level.piecesPerUnit,
+                                      );
+                                      setSelectedStockType((prev) => ({
+                                        ...prev,
+                                        [line.id]: level.name,
+                                      }));
+                                      setSelectedQty((prev) => ({
+                                        ...prev,
+                                        [line.id]: clampReturnQty(prev[line.id], nextMax),
+                                      }));
+                                    }}
+                                  >
+                                    <Text
+                                      style={[
+                                        styles.stockTypeChipText,
+                                        active && styles.stockTypeChipTextSelected,
+                                      ]}
+                                    >
+                                      {level.name}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          </View>
+                        ) : null}
+                        <View style={styles.qtyRow}>
+                          <Text style={styles.qtyLabel}>
+                            {t('ordersFlow.returnRefund.returnQty')}
+                            {selectedLevel ? ` (${selectedLevel.name})` : ''}
+                          </Text>
+                          <TextInput
+                            style={styles.qtyInput}
+                            keyboardType="number-pad"
+                            value={qty === '' ? '' : String(qty)}
+                            onChangeText={(text) => {
+                              setSelectedQty((prev) => ({
+                                ...prev,
+                                [line.id]: parseReturnQtyDraft(text, maxQty),
+                              }));
+                            }}
+                            onBlur={() => {
+                              setSelectedQty((prev) => ({
+                                ...prev,
+                                [line.id]: clampReturnQty(prev[line.id], maxQty),
+                              }));
+                            }}
+                          />
+                          <Text style={styles.itemMeta}>
+                            {t('ordersFlow.returnRefund.maxReturnQty', { max: maxQty })}
+                          </Text>
+                        </View>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })
+            )}
           </View>
 
           <View style={styles.reasonsContainer}>
@@ -421,6 +738,114 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+  },
+  itemsContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    marginBottom: 8,
+    paddingBottom: 8,
+  },
+  itemsHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    lineHeight: 16,
+  },
+  itemRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  itemRowSelected: {
+    backgroundColor: '#eff6ff',
+  },
+  itemCheckRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxSelected: {
+    backgroundColor: primaryBlue,
+    borderColor: primaryBlue,
+  },
+  itemTextWrap: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  itemMeta: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  returnControls: {
+    marginTop: 10,
+    marginLeft: 32,
+    gap: 10,
+  },
+  stockTypeSection: {
+    gap: 6,
+  },
+  stockTypeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  stockTypeChip: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+    borderRadius: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  stockTypeChipSelected: {
+    borderColor: primaryBlue,
+    backgroundColor: '#dbeafe',
+  },
+  stockTypeChipText: {
+    color: '#111827',
+    fontWeight: '500',
+    fontSize: 13,
+  },
+  stockTypeChipTextSelected: {
+    color: primaryBlue,
+  },
+  qtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  qtyLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  qtyInput: {
+    width: 72,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 14,
+    color: '#111827',
+    backgroundColor: '#ffffff',
   },
   reasonsContainer: {
     backgroundColor: '#ffffff',

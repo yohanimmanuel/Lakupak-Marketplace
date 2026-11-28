@@ -374,6 +374,8 @@ class OrdersService {
       deliveryAddress: string;
       deliveryOption: 'self_pickup' | 'seller_delivery' | 'buyer_courier';
       paymentMethod: 'cod' | 'bank_transfer';
+      preferredPickupDate?: string | null;
+      preferredPickupTime?: string | null;
     },
     token?: string,
   ): Promise<void> {

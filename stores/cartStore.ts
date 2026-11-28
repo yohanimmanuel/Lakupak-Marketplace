@@ -632,6 +632,9 @@ export const useCartStore = create<CartState>()(
       endEditOrder: () => {
         const { editOrderId, savedItems } = get();
         if (!editOrderId) return;
+        void import('../utils/editCheckoutDraft')
+          .then(({ clearEditCheckoutDraft }) => clearEditCheckoutDraft())
+          .catch(() => {});
         set({
           editOrderId: '',
           savedItems: null,

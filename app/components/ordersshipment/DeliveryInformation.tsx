@@ -505,7 +505,10 @@ export default function DeliveryInformation() {
                   ]}>
                     {item.status}
                   </Text>
-                  {item.isLatest && item.id === 'delivered' && order?.pod && (
+                  {showDeliveryPhases &&
+                    item.isLatest &&
+                    item.id === 'delivered' &&
+                    order?.pod && (
                     <TouchableOpacity 
                       style={styles.proofButton}
                       onPress={() => setShowPodModal(true)}
