@@ -104,6 +104,13 @@ export default function ReturnRefundModal() {
       Alert.alert(t('ordersFlow.returnRefund.alerts.provideDetailsTitle'), t('ordersFlow.returnRefund.alerts.provideDetailsBody'));
       return;
     }
+    if (imageUrls.length === 0) {
+      Alert.alert(
+        t('ordersFlow.returnRefund.alerts.photosRequiredTitle'),
+        t('ordersFlow.returnRefund.alerts.photosRequiredBody')
+      );
+      return;
+    }
     if (!token) {
       Alert.alert(t('ordersFlow.common.errors.sessionExpiredTitle'), t('ordersFlow.common.errors.sessionExpiredBody'));
       return;
@@ -151,7 +158,12 @@ export default function ReturnRefundModal() {
     }
   };
 
-  const canSubmit = !!selectedReason && (selectedReason !== 'other' || !!reasonDetail.trim()) && !uploadingPhotos && !isLoading;
+  const canSubmit =
+    !!selectedReason &&
+    (selectedReason !== 'other' || !!reasonDetail.trim()) &&
+    imageUrls.length > 0 &&
+    !uploadingPhotos &&
+    !isLoading;
 
   return (
     <View style={styles.container}>
