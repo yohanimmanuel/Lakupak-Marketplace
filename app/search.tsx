@@ -446,7 +446,6 @@ export default function SearchScreen() {
     setComposeQuery(paramQ);
     setActiveQuery(paramQ);
     void performSearch(paramQ, 'All', 'relevance', 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only bootstrap for this stack entry
   }, []);
 
 
